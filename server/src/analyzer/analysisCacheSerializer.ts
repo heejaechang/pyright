@@ -4,13 +4,13 @@
 * Licensed under the MIT license.
 * Author: Eric Traut
 *
-* Logic that saves analysis cache documents to the analysis cache.
+* Logic that serializes the type information for a source file into
+* a "document" that can be persisted to a JSON file.
 */
 
 import * as assert from 'assert';
 
 import { Diagnostic } from '../common/diagnostic';
-import { AnalysisCache } from './analysisCache';
 import { AnalysisCacheDoc, CachedClassType, CachedDeclaration, CachedDiagnostic,
     CachedFunctionType, CachedModuleType, CachedObjectType,
     CachedOverloadedFunctionType, CachedPropertyType, CachedSymbol,
@@ -31,8 +31,9 @@ interface SerializerInfo {
 }
 
 export class AnalysisCacheSerializer {
-    writeToCache(cache: AnalysisCache, sourceFilePath: string, optionsStr: string,
-            diagnostics: Diagnostic[], moduleType: ModuleType) {
+    serializeToDocument(sourceFilePath: string, optionsStr: string,
+            fileContentsHash: number, diagnostics: Diagnostic[],
+            moduleType: ModuleType) {
 
         const typeMap: CachedTypeMap = {};
         const serializerInfo: SerializerInfo = {
@@ -48,6 +49,7 @@ export class AnalysisCacheSerializer {
             cacheVersion: currentCacheDocVersion,
             filePath: sourceFilePath,
             optionsString: optionsStr,
+            fileContentsHash,
             diagnostics: [],
             primaryModuleType,
             types: typeMap,
@@ -62,7 +64,7 @@ export class AnalysisCacheSerializer {
             cacheDoc.dependsOnFilePaths.push(path);
         });
 
-        cache.writeCacheEntry(sourceFilePath, optionsStr, cacheDoc);
+        return cacheDoc;
     }
 
     private _serializeSymbolTable(symbolTable: SymbolTable,

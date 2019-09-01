@@ -108,7 +108,9 @@ export interface CachedTypeVarType extends CachedType {
 
 export interface CachedTypeRef {
     localTypeId: number;
-    // TODO - need to implement
+    remoteTypeCategory?: TypeCategory;
+    remotePath?: string;
+    remoteTypeSourceId?: string;
 }
 
 export interface CachedDeclaration {
@@ -136,6 +138,7 @@ export interface AnalysisCacheDoc {
     cacheVersion: number;
     filePath: string;
     optionsString: string;
+    fileContentsHash: number;
     diagnostics: CachedDiagnostic[];
     primaryModuleType: CachedTypeRef;
     types: CachedTypeMap;

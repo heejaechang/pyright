@@ -201,6 +201,10 @@ export class ModuleType extends Type {
         this._isPartialModule = true;
     }
 
+    setFields(fields: SymbolTable) {
+        this._fields = fields;
+    }
+
     isPartialModule() {
         return this._isPartialModule;
     }
@@ -655,6 +659,10 @@ export class ObjectType extends Type {
         return this._literalValue;
     }
 
+    setClassType(classType: ClassType) {
+        this._classType = classType;
+    }
+
     getClassType() {
         return this._classType;
     }
@@ -1099,6 +1107,10 @@ export class PropertyType extends Type {
 
     constructor(getter: FunctionType) {
         super();
+        this._getter = getter;
+    }
+
+    setGetter(getter: FunctionType) {
         this._getter = getter;
     }
 

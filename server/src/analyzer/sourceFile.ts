@@ -64,10 +64,11 @@ export enum AnalysisPhase {
 export interface AnalysisJob {
     fileContentsVersion: number;
     nextPhaseToRun: AnalysisPhase;
-    parseTreeNeedsCleaning: boolean;
-    parseResults?: ParseResults;
     moduleSymbolTable?: SymbolTable;
     moduleType?: ModuleType;
+
+    parseTreeNeedsCleaning: boolean;
+    parseResults?: ParseResults;
 
     parseDiagnostics: Diagnostic[];
     semanticAnalysisDiagnostics: Diagnostic[];
