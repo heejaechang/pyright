@@ -15,50 +15,56 @@ import { InferredType, TypeSourceId } from './inferredType';
 import { SymbolTable } from './symbol';
 
 export enum TypeCategory {
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
+
     // Name is not bound to a value of any type.
-    Unbound,
+    Unbound = 1,
 
     // Type exists but is not currently known by the
     // type analyzer (e.g. there is no available typings file).
     // Unknown types are treated the same as "Any" at analysis time.
-    Unknown,
+    Unknown = 2,
 
     // Type can be anything.
-    Any,
+    Any = 3,
+
+    // A special form of Any.
+    Ellipsis = 4,
 
     // Special "None" type defined in Python.
-    None,
+    None = 5,
 
     // Used in type constraints to indicate that all possible
     // union types have been filtered, and execution should never
     // get to this point.
-    Never,
+    Never = 6,
 
     // Callable type with typed input parameters and return parameter.
-    Function,
+    Function = 7,
 
     // Functions defined with @overload decorator in stub files that
     // have multiple function declarations for a common implementation.
-    OverloadedFunction,
+    OverloadedFunction = 8,
 
     // Value that has associated getter/setter/deleter function.
-    Property,
+    Property = 9,
 
     // Class definition, including associated instance methods,
     // class methods, static methods, properties, and variables.
-    Class,
+    Class = 10,
 
     // Class instance.
-    Object,
+    Object = 11,
 
     // Module instance.
-    Module,
+    Module = 12,
 
     // Composite type (e.g. Number OR String OR None).
-    Union,
+    Union = 13,
 
     // Type variable (defined with TypeVar)
-    TypeVar
+    TypeVar = 14
 }
 
 export type LiteralValue = number | boolean | string;
@@ -69,10 +75,18 @@ export type InheritanceChain = (ClassType | UnknownType)[];
 
 export class TypeVarMap extends StringMap<Type> {}
 
+let _nextTypeId = 1;
+
 export abstract class Type {
     abstract category: TypeCategory;
 
+    // A unique ID for each type instance across the
+    // entire program (not persisted in cache).
+    id: number;
+
     protected constructor() {
+        this.id = _nextTypeId;
+        _nextTypeId++;
     }
 
     isUnbound(): boolean {
@@ -189,6 +203,9 @@ export class ModuleType extends Type {
 }
 
 export enum ClassTypeFlags {
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
+
     None = 0x00,
 
     // Class is defined in the "builtins" or "typings" file.
@@ -672,6 +689,8 @@ export interface FunctionParameter {
 }
 
 export enum FunctionTypeFlags {
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
     None = 0,
     InstanceMethod = 1,
     ConstructorMethod = 2,
@@ -1131,18 +1150,16 @@ export class NeverType extends NoneType {
 
 export class AnyType extends Type {
     category = TypeCategory.Any;
-    private _isEllipsis: boolean;
 
-    private static _anyInstance = new AnyType(false);
-    private static _ellipsisInstance = new AnyType(true);
-    static create(isEllipsis = false) {
+    private static _anyInstance = new AnyType();
+
+    static create() {
         // Use a single instance to reduce memory allocation.
-        return isEllipsis ? this._ellipsisInstance : this._anyInstance;
+        return this._anyInstance;
     }
 
-    private constructor(isEllipsis: boolean) {
+    protected constructor() {
         super();
-        this._isEllipsis = isEllipsis;
     }
 
     isAny(): boolean {
@@ -1150,11 +1167,34 @@ export class AnyType extends Type {
     }
 
     isEllipsis(): boolean {
-        return this._isEllipsis;
+        return false;
     }
 
     asStringInternal(): string {
-        return this._isEllipsis ? '...' : 'Any';
+        return 'Any';
+    }
+}
+
+export class EllipsisType extends AnyType {
+    category = TypeCategory.Ellipsis;
+
+    private static _ellipsisInstance = new EllipsisType();
+
+    static create() {
+        // Use a single instance to reduce memory allocation.
+        return this._ellipsisInstance;
+    }
+
+    private constructor() {
+        super();
+    }
+
+    isEllipsis(): boolean {
+        return true;
+    }
+
+    asStringInternal(): string {
+        return '...';
     }
 }
 

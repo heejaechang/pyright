@@ -8,9 +8,11 @@
 */
 
 export enum DiagnosticCategory {
-    Error,
-    Warning,
-    UnusedCode
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
+    Error = 1,
+    Warning = 2,
+    UnusedCode = 3
 }
 
 export interface DiagnosticTextPosition {

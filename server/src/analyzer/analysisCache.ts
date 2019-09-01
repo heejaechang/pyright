@@ -4,16 +4,15 @@
 * Licensed under the MIT license.
 * Author: Eric Traut
 *
-* Maintains a cache of analysis output (symbols, declarations,
-* etc.) for source files, eliminating the need to continually
-* reanalyze each time the type checker is launched.
+* Maintains a cache of analysis output (symbols, declarations, etc.) for
+* source files, eliminating the need to continually reanalyze each time
+* the type checker is launched.
 *
 * Cache files are stored in the system's tmp directory.
 *
-* Files within the cache correspond to individual python source
-* files. The name of the cache file encodes the source file
-* path, the cache version, and the options used to analyze
-* the file.
+* Files within the cache correspond to individual python source files.
+* The name of the cache file encodes the source file path, the cache
+* version, and the options used to analyze the file.
 */
 
 import * as fs from 'fs';
@@ -22,17 +21,12 @@ import { ConsoleInterface } from '../common/console';
 import { getFileExtension, getFileName, getFileSystemEntries,
     stripFileExtension } from '../common/pathUtils';
 import { StringUtils } from '../common/stringUtils';
+import { AnalysisCacheDoc, currentCacheDocVersion } from './analysisCacheDoc';
 
 // TODO - need to figure out the right way to do this on Windows
 const _tempDir = '/tmp/';
 const _cacheDirPrefix = 'pyright-';
 const _maxSourceFileName = 32;
-
-// Increase this number to invalidate the cache (and delete existing
-// cache files) the next time the analyzer runs. This should be done
-// when a breaking change is made to the cache format, new analysis
-// options are added, etc.
-const _currentCacheVersion = 1;
 
 interface CacheFileInfo {
     filePath: string;
@@ -56,27 +50,35 @@ export class AnalysisCache {
         }
     }
 
-    writeCacheEntry(sourceFilePath: string, optionsStr: string, cacheDoc: string) {
+    writeCacheEntry(sourceFilePath: string, optionsStr: string, cacheDoc: AnalysisCacheDoc) {
         const cacheFileName = _tempDir + this._createCacheFileName(sourceFilePath, optionsStr);
         try {
-            fs.writeFileSync(cacheFileName, cacheDoc, { encoding: 'utf8' });
+            fs.writeFileSync(cacheFileName, JSON.stringify(cacheDoc, undefined, 2), { encoding: 'utf8' });
         } catch (e) {
-            this._console.error('Could not write cache file' + cacheFileName);
+            this._console.error('Could not write cache file for ' + sourceFilePath);
         }
     }
 
-    readCacheEntry(sourceFilePath: string, optionsStr: string): string | undefined {
+    readCacheEntry(sourceFilePath: string, optionsStr: string): AnalysisCacheDoc | undefined {
         const cacheFileName = _tempDir + this._createCacheFileName(sourceFilePath, optionsStr);
 
         if (!fs.existsSync(cacheFileName)) {
             return undefined;
         }
 
+        let cacheDocStr: string;
+
         try {
-            const cacheDoc = fs.readFileSync(cacheFileName, { encoding: 'utf8' });
-            return cacheDoc;
+            cacheDocStr = fs.readFileSync(cacheFileName, { encoding: 'utf8' });
         } catch (e) {
-            this._console.error('Could not read cache file ' + cacheFileName);
+            this._console.error('Could not read cache file for ' + sourceFilePath);
+            return undefined;
+        }
+
+        try {
+            return JSON.parse(cacheDocStr);
+        } catch (e) {
+            this._console.error('Could not parse cache file for ' + sourceFilePath);
             return undefined;
         }
     }
@@ -173,7 +175,7 @@ export class AnalysisCache {
             }
 
             // If the cache version is incorrect, the file is invalid.
-            if (cacheVersion !== _currentCacheVersion) {
+            if (cacheVersion !== currentCacheDocVersion) {
                 return undefined;
             }
 
@@ -232,7 +234,7 @@ export class AnalysisCache {
 
         return this._encode8CharHex(pathHash) + '-' +
             this._encode8CharHex(optionsHash) + '-' +
-            this._encode4CharDecimal(_currentCacheVersion) + '-' +
+            this._encode4CharDecimal(currentCacheDocVersion) + '-' +
             sourceFileName + '.json';
     }
 }

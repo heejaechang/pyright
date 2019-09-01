@@ -106,6 +106,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
         const declaration: Declaration = {
             category: DeclarationCategory.Module,
             node: this._moduleNode,
+            typeSourceId: AnalyzerNodeInfo.getTypeSourceId(this._moduleNode, this._fileInfo.filePathHash),
             path: this._fileInfo.filePath,
             range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } }
         };
@@ -286,6 +287,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
         const declaration: Declaration = {
             category: DeclarationCategory.Class,
             node: node.name,
+            typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node.name, this._fileInfo.filePathHash),
             declaredType: decoratedType,
             path: this._fileInfo.filePath,
             range: convertOffsetsToRange(node.name.start, node.name.end, this._fileInfo.lines)
@@ -502,6 +504,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                     declaration = {
                         category: DeclarationCategory.Parameter,
                         node: paramNode,
+                        typeSourceId: AnalyzerNodeInfo.getTypeSourceId(paramNode, this._fileInfo.filePathHash),
                         path: this._fileInfo.filePath,
                         range: convertOffsetsToRange(paramNode.start, paramNode.end, this._fileInfo.lines),
                         declaredType: specializedParamType
@@ -530,6 +533,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
         const declaration: Declaration = {
             category: containingClassNode ? DeclarationCategory.Method : DeclarationCategory.Function,
             node: node.name,
+            typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node.name, this._fileInfo.filePathHash),
             path: this._fileInfo.filePath,
             range: convertOffsetsToRange(node.name.start, node.name.end, this._fileInfo.lines),
             declaredType: decoratedType
@@ -567,6 +571,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                     declaration = {
                         category: DeclarationCategory.Parameter,
                         node: param,
+                        typeSourceId: AnalyzerNodeInfo.getTypeSourceId(param, this._fileInfo.filePathHash),
                         path: this._fileInfo.filePath,
                         range: convertOffsetsToRange(param.start, param.end, this._fileInfo.lines)
                     };
@@ -976,6 +981,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 const declaration: Declaration = {
                     category: DeclarationCategory.Variable,
                     node: node.name,
+                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node.name, this._fileInfo.filePathHash),
                     path: this._fileInfo.filePath,
                     range: convertOffsetsToRange(node.name.start, node.name.end, this._fileInfo.lines)
                 };
@@ -1302,6 +1308,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                         if (importedModule) {
                             const declaration: Declaration = {
                                 category: DeclarationCategory.Module,
+                                typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash),
                                 path: implicitImport.path,
                                 range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 }}
                             };
@@ -1319,6 +1326,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 if (this._fileInfo.importMap[resolvedPath]) {
                     moduleDeclaration = {
                         category: DeclarationCategory.Module,
+                        typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash),
                         path: resolvedPath,
                         range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } }
                     };
@@ -1405,6 +1413,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                             symbolType = moduleType;
                             declaration = {
                                 category: DeclarationCategory.Module,
+                                typeSourceId: AnalyzerNodeInfo.getTypeSourceId(importAs, this._fileInfo.filePathHash),
                                 path: implicitImport.path,
                                 range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } }
                             };
@@ -1740,6 +1749,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 const declaration: Declaration = {
                     category: DeclarationCategory.Class,
                     node: node.leftExpression,
+                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node.leftExpression, this._fileInfo.filePathHash),
                     path: this._fileInfo.filePath,
                     range: convertOffsetsToRange(node.leftExpression.start,
                         node.leftExpression.end, this._fileInfo.lines)
@@ -1790,6 +1800,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 const declaration: Declaration = {
                     category: DeclarationCategory.Class,
                     node: nameNode,
+                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(nameNode, this._fileInfo.filePathHash),
                     path: this._fileInfo.filePath,
                     range: convertOffsetsToRange(nameNode.start,
                         nameNode.end, this._fileInfo.lines)
@@ -1862,6 +1873,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
             const declaration: Declaration = {
                 category: DeclarationCategory.Variable,
                 node: target,
+                typeSourceId: AnalyzerNodeInfo.getTypeSourceId(target, this._fileInfo.filePathHash),
                 isConstant: SymbolUtils.isConstantName(name.value),
                 path: this._fileInfo.filePath,
                 declaredType,
@@ -1918,7 +1930,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
         if (prevDeclarations.length > 0 && declaration.declaredType) {
             const declWithDefinedType = prevDeclarations.find(decl => !!decl.declaredType);
 
-            if (declWithDefinedType && declaration.node !== declWithDefinedType.node) {
+            if (declWithDefinedType && declaration.typeSourceId !== declWithDefinedType.typeSourceId) {
                 // If we're adding a declaration, make sure it's the same type as an existing declaration.
                 if (!declaration.declaredType.isSame(declWithDefinedType.declaredType!)) {
                     this._addError(`Declared type '${ declaration.declaredType.asString() }' is not compatible ` +
@@ -2008,7 +2020,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
         let classOrModuleNode: ClassNode | ModuleNode | undefined;
         if (primaryDeclaration.node) {
             classOrModuleNode = ParseTreeUtils.getEnclosingClassOrModule(
-            primaryDeclaration.node);
+                primaryDeclaration.node);
         }
 
         // If this is the name of a class, find the module or class that contains it rather
@@ -2725,6 +2737,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                     category: srcType instanceof FunctionType ?
                         DeclarationCategory.Method : DeclarationCategory.Variable,
                     node: node.memberName,
+                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(node.memberName, this._fileInfo.filePathHash),
                     isConstant,
                     path: this._fileInfo.filePath,
                     range: convertOffsetsToRange(node.memberName.start, node.memberName.end, this._fileInfo.lines)
@@ -3030,6 +3043,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
             const declaration: Declaration = {
                 category: DeclarationCategory.Variable,
                 node: target,
+                typeSourceId: AnalyzerNodeInfo.getTypeSourceId(target, this._fileInfo.filePathHash),
                 isConstant: SymbolUtils.isConstantName(name.value),
                 path: this._fileInfo.filePath,
                 range: convertOffsetsToRange(name.start, name.end, this._fileInfo.lines)
@@ -3176,6 +3190,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 const declaration: Declaration = {
                     category: DeclarationCategory.Variable,
                     node: target.expression,
+                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(target.expression, this._fileInfo.filePathHash),
                     isConstant: SymbolUtils.isConstantName(name.value),
                     path: this._fileInfo.filePath,
                     range: convertOffsetsToRange(name.start, name.end, this._fileInfo.lines)

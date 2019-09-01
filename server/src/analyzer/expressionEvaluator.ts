@@ -38,8 +38,8 @@ import { Scope, ScopeType } from './scope';
 import { setSymbolPreservingAccess, Symbol } from './symbol';
 import { ConditionalTypeConstraintResults, TypeConstraint,
     TypeConstraintBuilder } from './typeConstraint';
-import { AnyType, ClassType, ClassTypeFlags, FunctionParameter, FunctionType,
-    FunctionTypeFlags, LiteralValue, ModuleType, NeverType, NoneType,
+import { AnyType, ClassType, ClassTypeFlags, EllipsisType, FunctionParameter,
+    FunctionType, FunctionTypeFlags, LiteralValue, ModuleType, NeverType, NoneType,
     ObjectType, OverloadedFunctionType, PropertyType, Type, TypeVarMap,
     TypeVarType, UnionType, UnknownType } from './types';
 import { ClassMember, ClassMemberLookupFlags, TypeUtils } from './typeUtils';
@@ -644,7 +644,7 @@ export class ExpressionEvaluator {
         } else if (node instanceof EllipsisNode) {
             this._reportUsageErrorForReadOnly(node, usage);
             if ((flags & EvaluatorFlags.ConvertEllipsisToAny) !== 0) {
-                typeResult = { type: AnyType.create(true), node };
+                typeResult = { type: EllipsisType.create(), node };
             } else {
                 const ellipsisType = ScopeUtils.getBuiltInType(this._scope, 'ellipsis') ||
                     AnyType.create();
@@ -2195,6 +2195,7 @@ export class ExpressionEvaluator {
                         const declaration: Declaration = {
                             category: DeclarationCategory.Variable,
                             node: stringNode,
+                            typeSourceId: AnalyzerNodeInfo.getTypeSourceId(stringNode, this._fileInfo.filePathHash),
                             path: this._fileInfo.filePath,
                             declaredType: entryType,
                             range: convertOffsetsToRange(
@@ -2348,6 +2349,7 @@ export class ExpressionEvaluator {
                                 const declaration: Declaration = {
                                     category: DeclarationCategory.Variable,
                                     node: stringNode,
+                                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(stringNode, this._fileInfo.filePathHash),
                                     path: this._fileInfo.filePath,
                                     declaredType: entryType,
                                     range: convertOffsetsToRange(
@@ -2423,6 +2425,7 @@ export class ExpressionEvaluator {
                                 const declaration: Declaration = {
                                     category: DeclarationCategory.Variable,
                                     node: entryNameNode,
+                                    typeSourceId: AnalyzerNodeInfo.getTypeSourceId(entryNameNode, this._fileInfo.filePathHash),
                                     path: this._fileInfo.filePath,
                                     declaredType: entryType,
                                     range: convertOffsetsToRange(

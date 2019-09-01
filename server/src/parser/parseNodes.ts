@@ -272,9 +272,11 @@ export class FunctionNode extends ParseNode {
 }
 
 export enum ParameterCategory {
-    Simple,
-    VarArgList,
-    VarArgDictionary
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
+    Simple = 1,
+    VarArgList = 2,
+    VarArgDictionary = 3
 }
 
 export class ParameterNode extends ParseNode {

@@ -48,7 +48,7 @@ export class Symbol {
 
     static areDeclarationsEqual(decl1: Declaration, decl2: Declaration) {
         return decl1.category === decl2.category &&
-            decl1.node === decl2.node &&
+            decl1.typeSourceId === decl2.typeSourceId &&
             decl1.path === decl2.path;
     }
 
@@ -86,7 +86,8 @@ export class Symbol {
             // See if this node was already identified as a declaration. If so,
             // replace it. Otherwise, add it as a new declaration to the end of
             // the list.
-            const declIndex = this._declarations.findIndex(decl => decl.node === declaration.node);
+            const declIndex = this._declarations.findIndex(
+                decl => decl.typeSourceId === declaration.typeSourceId);
             if (declIndex >= 0) {
                 // This declaration has already been added. Update the declared
                 // type if it's available. The other fields in the declaration

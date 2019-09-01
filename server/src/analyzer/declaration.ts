@@ -14,12 +14,14 @@ import { ParseNode } from '../parser/parseNodes';
 import { Type } from './types';
 
 export enum DeclarationCategory {
-    Variable,
-    Parameter,
-    Function,
-    Method,
-    Class,
-    Module
+    // These values are persisted in the analysis cache doc.
+    // Don't change without incrementing the cache doc version.
+    Variable = 1,
+    Parameter = 2,
+    Function = 3,
+    Method = 4,
+    Class = 5,
+    Module = 6
 }
 
 export interface Declaration {
@@ -27,8 +29,14 @@ export interface Declaration {
     // Used by hover provider to display helpful text.
     category: DeclarationCategory;
 
-    // The node that contains the definition.
+    // The node that contains the definition. This is valid
+    // only during analysis and is not persisted to the cache.
     node?: ParseNode;
+
+    // The type source ID of the node that contains
+    // the definition. This is a persistent form of the
+    // node.
+    typeSourceId: string;
 
     // Declared type (if specified) of the symbol.
     declaredType?: Type;
