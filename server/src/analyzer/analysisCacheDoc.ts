@@ -18,17 +18,11 @@ import { ClassTypeFlags, FunctionTypeFlags, TypeCategory } from './types';
 // options are added, etc.
 export const currentCacheDocVersion = 1;
 
-export interface CacheDocInfo {
-    cacheVersion: number;
-    filePath: string;
-    optionsString: string;
-}
-
 export interface CachedDiagnostic {
     category: DiagnosticCategory;
     message: string;
     range: DiagnosticTextRange;
-    actions: DiagnosticAction[];
+    actions?: DiagnosticAction[];
 }
 
 export interface CachedType {
@@ -119,7 +113,7 @@ export interface CachedTypeRef {
 
 export interface CachedDeclaration {
     category: DeclarationCategory;
-    typeSourceRef: string;
+    typeSourceId: string;
     declaredType?: CachedTypeRef;
     isConstant?: boolean;
     path: string;
@@ -127,7 +121,6 @@ export interface CachedDeclaration {
 }
 
 export interface CachedSymbol {
-    name: string;
     inferredType: CachedTypeRef;
     declarations: CachedDeclaration[];
     isInitiallyUnbound: boolean;
@@ -135,13 +128,15 @@ export interface CachedSymbol {
     isAccessed: boolean;
 }
 
-export interface CachedSymbolTable {
-    symbols: CachedSymbol[];
-}
+export type CachedSymbolTable = { [name: string]: CachedSymbol };
+
+export type CachedTypeMap = { [typeId: number]: CachedType };
 
 export interface AnalysisCacheDoc {
-    docInfo: CacheDocInfo;
+    cacheVersion: number;
+    filePath: string;
+    optionsString: string;
     diagnostics: CachedDiagnostic[];
     moduleSymbolTable: CachedSymbolTable;
-    types: { [typeId: number]: CachedType };
+    types: CachedTypeMap;
 }

@@ -280,7 +280,7 @@ export class ClassType extends Type {
         newClassType._classDetails = this._classDetails;
         newClassType.setTypeArguments(typeArguments);
         if (skipAbstractClassTest) {
-            newClassType._setSkipAbstracClassTest();
+            newClassType.setSkipAbstracClassTest();
         }
         return newClassType;
     }
@@ -308,6 +308,14 @@ export class ClassType extends Type {
         }
 
         return true;
+    }
+
+    getClassFlags() {
+        return this._classDetails.flags;
+    }
+
+    getTypeSourceId() {
+        return this._classDetails.typeSourceId;
     }
 
     isSpecialBuiltIn() {
@@ -594,8 +602,12 @@ export class ClassType extends Type {
         return false;
     }
 
-    private _setSkipAbstracClassTest() {
+    setSkipAbstracClassTest() {
         this._skipAbstractClassTest = true;
+    }
+
+    isSkipAbstractClassTest() {
+        return this._skipAbstractClassTest;
     }
 }
 
@@ -784,6 +796,10 @@ export class FunctionType extends Type {
         return newFunction;
     }
 
+    getFlags() {
+        return this._functionDetails.flags;
+    }
+
     isInstanceMethod(): boolean {
         return (this._functionDetails.flags & FunctionTypeFlags.InstanceMethod) !== 0;
     }
@@ -879,6 +895,10 @@ export class FunctionType extends Type {
     getSpecializedReturnType() {
         return this._specializedTypes ? this._specializedTypes.returnType :
             this._functionDetails.declaredReturnType;
+    }
+
+    getSpecializedTypes() {
+        return this._specializedTypes;
     }
 
     setDeclaredReturnType(type?: Type): boolean {
