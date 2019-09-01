@@ -20,6 +20,7 @@ import { DiagnosticSink, TextRangeDiagnosticSink } from '../common/diagnosticSin
 import { TextEditAction } from '../common/editAction';
 import { getFileName, normalizeSlashes } from '../common/pathUtils';
 import StringMap from '../common/stringMap';
+import { StringUtils } from '../common/stringUtils';
 import { TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
 import { timingStats } from '../common/timing';
@@ -286,7 +287,7 @@ export class SourceFile {
                 return true;
             }
 
-            if (this._hashString(fileContents) !== this._lastFileContentHash) {
+            if (StringUtils.hashString(fileContents) !== this._lastFileContentHash) {
                 return true;
             }
         } catch (error) {
@@ -405,7 +406,7 @@ export class SourceFile {
 
                     // Remember the length and hash for comparison purposes.
                     this._lastFileContentLength = fileContents.length;
-                    this._lastFileContentHash = this._hashString(fileContents);
+                    this._lastFileContentHash = StringUtils.hashString(fileContents);
                 });
             } catch (error) {
                 diagSink.addError(`Source file could not be read`, getEmptyRange());
@@ -736,16 +737,6 @@ export class SourceFile {
         this._diagnosticVersion++;
     }
 
-    // This is a simple, non-cryptographic hash function for text.
-    private _hashString(contents: string) {
-        let hash = 0;
-
-        for (let i = 0; i < contents.length; i++) {
-            hash = (hash << 5) - hash + contents.charCodeAt(i++) | 0;
-        }
-        return hash;
-    }
-
     private _buildFileInfo(configOptions: ConfigOptions, importMap?: ImportMap, builtinsScope?: Scope) {
         assert(this._analysisJob.parseResults !== undefined);
         const analysisDiagnostics = new TextRangeDiagnosticSink(this._analysisJob.parseResults!.lines);
@@ -760,6 +751,7 @@ export class SourceFile {
             diagnosticSettings: this._analysisJob.diagnosticSettings,
             lines: this._analysisJob.parseResults!.lines,
             filePath: this._filePath,
+            filePathHash: StringUtils.hashString(this._filePath),
             isStubFile: this._isStubFile,
             isTypingStubFile: this._isTypingStubFile,
             isBuiltInStubFile: this._isBuiltInStubFile,
