@@ -16,8 +16,10 @@ import * as commandLineArgs from 'command-line-args';
 import { CommandLineOptions, OptionDefinition } from 'command-line-args';
 import * as process from 'process';
 
+import { AnalysisCache } from './analyzer/analysisCache';
 import { AnalyzerService } from './analyzer/service';
 import { CommandLineOptions as PyrightCommandLineOptions } from './common/commandLineOptions';
+import { StandardConsole } from './common/console';
 import { DiagnosticCategory } from './common/diagnostic';
 import { FileDiagnostics } from './common/diagnosticSink';
 import { combinePaths, normalizePath } from './common/pathUtils';
@@ -112,7 +114,14 @@ function processArgs() {
     const watch = args.watch !== undefined;
     options.watch = watch;
 
-    const service = new AnalyzerService('<default>');
+    // Use the cached analysis information unless we're creating
+    // type stubs, in which case a full analysis is required.
+    let analysisCache: AnalysisCache | undefined;
+    if (!args.createstub) {
+        analysisCache = new AnalysisCache(new StandardConsole());
+    }
+
+    const service = new AnalyzerService('<default>', analysisCache);
 
     service.setCompletionCallback(results => {
         if (results.fatalErrorOccurred) {

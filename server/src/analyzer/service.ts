@@ -26,13 +26,14 @@ import { combinePaths, FileSpec, forEachAncestorDirectory, getDirectoryPath,
 import { Duration, timingStats } from '../common/timing';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { AnalysisCache } from './analysisCache';
 import { ImportedModuleDescriptor, ImportResolver } from './importResolver';
 import { MaxAnalysisTime, Program } from './program';
 import { PythonPathUtils } from './pythonPathUtils';
 
-const _defaultConfigFileName = 'pyrightconfig.json';
-
 export { MaxAnalysisTime } from './program';
+
+const _defaultConfigFileName = 'pyrightconfig.json';
 
 export interface AnalysisResults {
     diagnostics: FileDiagnostics[];
@@ -46,6 +47,7 @@ export type AnalysisCompleteCallback = (results: AnalysisResults) => void;
 
 export class AnalyzerService {
     private _instanceName: string;
+    private _analysisCache?: AnalysisCache;
     private _program: Program;
     private _configOptions: ConfigOptions;
     private _importResolver: ImportResolver;
@@ -65,8 +67,11 @@ export class AnalyzerService {
     private _requireTrackedFileUpdate = true;
     private _lastUserInteractionTime = Date.now();
 
-    constructor(instanceName: string, console?: ConsoleInterface) {
+    constructor(instanceName: string, analysisCache?: AnalysisCache,
+            console?: ConsoleInterface) {
+
         this._instanceName = instanceName;
+        this._analysisCache = analysisCache;
         this._console = console || new StandardConsole();
         this._program = new Program(this._console);
         this._configOptions = new ConfigOptions(process.cwd());

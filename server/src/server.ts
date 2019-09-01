@@ -13,6 +13,7 @@ import {
 } from 'vscode-languageserver';
 import VSCodeUri from 'vscode-uri';
 
+import { AnalysisCache } from './analyzer/analysisCache';
 import { AnalyzerService } from './analyzer/service';
 import { CommandLineOptions } from './common/commandLineOptions';
 import { CreateTypeStubFileAction, Diagnostic as AnalyzerDiagnostic, DiagnosticCategory,
@@ -67,11 +68,13 @@ _documents.listen(_connection);
 
 const _defaultWorkspacePath = '<default>';
 
+const _analysisCache = new AnalysisCache(_connection.console);
+
 // Creates a service instance that's used for analyzing a
 // program within a workspace.
 function _createAnalyzerService(name: string): AnalyzerService {
     _connection.console.log(`Starting service instance "${ name }"`);
-    const service = new AnalyzerService(name, _connection.console);
+    const service = new AnalyzerService(name, _analysisCache, _connection.console);
 
     // Don't allow the analysis engine to go too long without
     // reporting results. This will keep it responsive.
@@ -118,7 +121,7 @@ function _createTypeStubService(importName: string,
 
     _connection.console.log('Starting type stub service instance');
     const service = new AnalyzerService('Type stub',
-        _connection.console);
+        undefined, _connection.console);
 
     service.setMaxAnalysisDuration({
         openFilesTimeInMs: 500,
