@@ -1706,8 +1706,8 @@ export class TypeAnalyzer extends ParseTreeWalker {
                     };
 
                     // Synthesize a class.
-                    const specialClassType = new ClassType(assignedName,
-                        ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
+                    const specialClassType = new ClassType(this._fileInfo.filePath,
+                        assignedName, ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
                         defaultTypeSourceId);
 
                     // See if we need to locate an alias class to bind it to.
@@ -1769,8 +1769,8 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 'Type', 'ClassVar', 'Final', 'Literal'];
             if (specialTypes.find(t => t === assignedName)) {
                 // Synthesize a class.
-                const specialClassType = new ClassType(assignedName,
-                    ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
+                const specialClassType = new ClassType(this._fileInfo.filePath,
+                    assignedName, ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
                     AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash));
 
                 const aliasClass = ScopeUtils.getBuiltInType(this._currentScope,
@@ -2923,7 +2923,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
             // is not necessarily present. We'll synthesize a module type in
             // this case.
             const symbolTable = new SymbolTable();
-            const moduleType = new ModuleType(symbolTable);
+            const moduleType = new ModuleType(this._fileInfo.filePath, symbolTable);
 
             // Add the implicit imports.
             importResult.implicitImports.forEach(implicitImport => {
@@ -3282,7 +3282,7 @@ export class TypeAnalyzer extends ParseTreeWalker {
             } else {
                 // Build a "partial module" to contain the references
                 // to the next part of the name.
-                const newPartialModule = new ModuleType(new SymbolTable());
+                const newPartialModule = new ModuleType(this._fileInfo.filePath, new SymbolTable());
                 newPartialModule.setIsPartialModule();
                 setSymbolPreservingAccess(targetSymbolTable, name,
                     Symbol.createWithType(newPartialModule, defaultTypeSourceId));

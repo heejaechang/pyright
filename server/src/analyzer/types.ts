@@ -166,6 +166,7 @@ export class UnknownType extends Type {
 
 export class ModuleType extends Type {
     category = TypeCategory.Module;
+    private _sourceFilePath: string;
     private _fields: SymbolTable;
     private _docString?: string;
 
@@ -174,11 +175,18 @@ export class ModuleType extends Type {
     // in a multi-part import (e.g. import a.b.c).
     private _isPartialModule = false;
 
-    constructor(symbolTable: SymbolTable, docString?: string) {
+    constructor(sourceFilePath: string, symbolTable: SymbolTable,
+            docString?: string) {
+
         super();
 
+        this._sourceFilePath = sourceFilePath;
         this._fields = symbolTable;
         this._docString = docString;
+    }
+
+    getSourceFilePath() {
+        return this._sourceFilePath;
     }
 
     getFields() {
@@ -233,9 +241,10 @@ export interface BaseClass {
 }
 
 interface ClassDetails {
+    sourceFilePath: string;
+    typeSourceId: TypeSourceId;
     name: string;
     flags: ClassTypeFlags;
-    typeSourceId: TypeSourceId;
     baseClasses: BaseClass[];
     aliasClass?: ClassType;
     classFields: SymbolTable;
@@ -258,10 +267,14 @@ export class ClassType extends Type {
 
     private _skipAbstractClassTest = false;
 
-    constructor(name: string, flags: ClassTypeFlags, typeSourceId: TypeSourceId, docString?: string) {
+    constructor(sourceFilePath: string, name: string,
+            flags: ClassTypeFlags, typeSourceId: TypeSourceId,
+            docString?: string) {
+
         super();
 
         this._classDetails = {
+            sourceFilePath,
             name,
             flags,
             typeSourceId,
@@ -275,8 +288,9 @@ export class ClassType extends Type {
     }
 
     cloneForSpecialization(typeArguments: Type[], skipAbstractClassTest = false): ClassType {
-        const newClassType = new ClassType(this._classDetails.name,
-            this._classDetails.flags, this._classDetails.typeSourceId);
+        const newClassType = new ClassType(this._classDetails.sourceFilePath,
+            this._classDetails.name, this._classDetails.flags,
+            this._classDetails.typeSourceId);
         newClassType._classDetails = this._classDetails;
         newClassType.setTypeArguments(typeArguments);
         if (skipAbstractClassTest) {
@@ -312,6 +326,10 @@ export class ClassType extends Type {
 
     getClassFlags() {
         return this._classDetails.flags;
+    }
+
+    getSourceFilePath() {
+        return this._classDetails.sourceFilePath;
     }
 
     getTypeSourceId() {

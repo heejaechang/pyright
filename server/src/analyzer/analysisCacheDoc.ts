@@ -137,6 +137,7 @@ export interface AnalysisCacheDoc {
     filePath: string;
     optionsString: string;
     diagnostics: CachedDiagnostic[];
-    moduleSymbolTable: CachedSymbolTable;
+    primaryModuleType: CachedTypeRef;
     types: CachedTypeMap;
+    dependsOnFilePaths: string[];
 }

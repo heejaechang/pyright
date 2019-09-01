@@ -2159,7 +2159,8 @@ export class ExpressionEvaluator {
         // analysis path. If this is the first pass, allocate a new ClassType.
         let classType = cachedCallType as ClassType;
         if (!(classType instanceof ClassType)) {
-            classType = new ClassType(className, ClassTypeFlags.None,
+            classType = new ClassType(this._fileInfo.filePath,
+                className, ClassTypeFlags.None,
                 AnalyzerNodeInfo.getTypeSourceId(errorNode, this._fileInfo.filePathHash));
 
             AnalyzerNodeInfo.setExpressionType(errorNode, classType);
@@ -2241,8 +2242,9 @@ export class ExpressionEvaluator {
             // analysis path. If this is the first pass, allocate a new ClassType.
             let classType = cachedCallType as ClassType;
             if (!(classType instanceof ClassType)) {
-                classType = new ClassType(className, ClassTypeFlags.None,
-                    AnalyzerNodeInfo.getTypeSourceId(errorNode, this._fileInfo.filePathHash));
+                classType = new ClassType(this._fileInfo.filePath, className,
+                    ClassTypeFlags.None, AnalyzerNodeInfo.getTypeSourceId(
+                        errorNode, this._fileInfo.filePathHash));
 
                 AnalyzerNodeInfo.setExpressionType(errorNode, classType);
                 classType.addBaseClass(baseClass, false);
@@ -2286,8 +2288,9 @@ export class ExpressionEvaluator {
         // analysis path. If this is the first pass, allocate a new ClassType.
         let classType = cachedCallType as ClassType;
         if (!(classType instanceof ClassType)) {
-            classType = new ClassType(className, ClassTypeFlags.None,
-                AnalyzerNodeInfo.getTypeSourceId(errorNode, this._fileInfo.filePathHash));
+            classType = new ClassType(this._fileInfo.filePath, className,
+                ClassTypeFlags.None, AnalyzerNodeInfo.getTypeSourceId(
+                    errorNode, this._fileInfo.filePathHash));
 
             AnalyzerNodeInfo.setExpressionType(errorNode, classType);
             const builtInNamedTuple = this.getTypingType('NamedTuple') || UnknownType.create();

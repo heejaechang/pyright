@@ -171,7 +171,8 @@ export abstract class SemanticAnalyzer extends ParseTreeWalker {
             classFlags |= ClassTypeFlags.BuiltInClass;
         }
 
-        const classType = new ClassType(node.name.nameToken.value, classFlags,
+        const classType = new ClassType(this._fileInfo.filePath,
+            node.name.nameToken.value, classFlags,
             AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash),
             this._getDocString(node.suite.statements));
 
@@ -608,7 +609,8 @@ export class ModuleScopeAnalyzer extends SemanticAnalyzer {
         this.walkChildren(this._scopedNode);
 
         // Associate the module's scope with the module type.
-        const moduleType = new ModuleType(this._currentScope.getSymbolTable(),
+        const moduleType = new ModuleType(this._fileInfo.filePath,
+            this._currentScope.getSymbolTable(),
             this._getDocString((this._scopedNode as ModuleNode).statements));
         AnalyzerNodeInfo.setExpressionType(this._scopedNode, moduleType);
     }
