@@ -18,6 +18,7 @@ import { AnalysisCacheDoc, CachedClassType, CachedDeclaration,
     CachedTypeVarType, CachedUnionType, currentCacheDocVersion
     } from './analysisCacheDoc';
 import { Declaration } from './declaration';
+import { defaultTypeSourceId } from './inferredType';
 import { Symbol, SymbolTable } from './symbol';
 import { AnyType, ClassType, EllipsisType, FunctionType, ModuleType,
     NeverType, NoneType, ObjectType, OverloadedFunctionType, PropertyType,
@@ -424,9 +425,61 @@ export class AnalysisCacheDeserializer {
             resolveClassCallback: ResolveClassTypeCallback): SymbolTable {
 
         const symbolTable = new SymbolTable();
-        // TODO - need to implement
+
+        Object.keys(cachedSymbolTable).forEach(name => {
+            const cachedSymbol = cachedSymbolTable[name];
+
+            symbolTable.set(name, this._deserializeSymbol(cachedSymbol,
+                info.deserializedTypeMap, resolveModuleCallback,
+                resolveClassCallback));
+        });
 
         return symbolTable;
+    }
+
+    private _deserializeSymbol(cachedSymbol: CachedSymbol,
+        typeMap: TypeMap,
+        resolveModuleCallback: ResolveModuleTypeCallback,
+        resolveClassCallback: ResolveClassTypeCallback): Symbol {
+
+        const newSymbol = new Symbol(cachedSymbol.isInitiallyUnbound);
+
+        const inferredType = this._getType(cachedSymbol.inferredType,
+            typeMap, resolveModuleCallback, resolveClassCallback);
+        newSymbol.setInferredTypeForSource(inferredType, defaultTypeSourceId);
+
+        cachedSymbol.declarations.forEach(decl => {
+            newSymbol.addDeclaration(this._decodeDeclaration(decl,
+                typeMap, resolveModuleCallback, resolveClassCallback));
+        });
+
+        newSymbol.setIsExternallyHidden(!!cachedSymbol.isExternallyHidden);
+
+        if (cachedSymbol.isAccessed) {
+            newSymbol.setIsAcccessed();
+        }
+
+        return newSymbol;
+    }
+
+    private _decodeDeclaration(cachedDecl: CachedDeclaration, typeMap: TypeMap,
+            resolveModuleCallback: ResolveModuleTypeCallback,
+            resolveClassCallback: ResolveClassTypeCallback): Declaration {
+
+        const newDecl: Declaration = {
+            category: cachedDecl.category,
+            typeSourceId: cachedDecl.typeSourceId,
+            isConstant: cachedDecl.isConstant,
+            path: cachedDecl.path,
+            range: cachedDecl.range
+        };
+
+        if (cachedDecl.declaredType) {
+            newDecl.declaredType = this._getType(cachedDecl.declaredType,
+                typeMap, resolveModuleCallback, resolveClassCallback);
+        }
+
+        return newDecl;
     }
 
     private _getType(cachedTypeRef: CachedTypeRef, typeMap: TypeMap,
