@@ -31,7 +31,7 @@ interface SerializerInfo {
 }
 
 export class AnalysisCacheSerializer {
-    serializeToDocument(sourceFilePath: string, optionsStr: string,
+    static serializeToDocument(sourceFilePath: string, optionsStr: string,
             fileContentsHash: number, diagnostics: Diagnostic[],
             moduleType: ModuleType) {
 
@@ -67,7 +67,7 @@ export class AnalysisCacheSerializer {
         return cacheDoc;
     }
 
-    private _serializeSymbolTable(symbolTable: SymbolTable,
+    private static _serializeSymbolTable(symbolTable: SymbolTable,
             serializerInfo: SerializerInfo): CachedSymbolTable {
 
         const cachedSymbolTable: CachedSymbolTable = {};
@@ -79,7 +79,7 @@ export class AnalysisCacheSerializer {
         return cachedSymbolTable;
     }
 
-    private _serializeSymbol(symbol: Symbol, serializerInfo: SerializerInfo) {
+    private static _serializeSymbol(symbol: Symbol, serializerInfo: SerializerInfo) {
         const cachedSymbol: CachedSymbol = {
             inferredType: this._serializeTypeRef(symbol.getInferredType(), serializerInfo),
             declarations: symbol.getDeclarations().map(
@@ -92,10 +92,34 @@ export class AnalysisCacheSerializer {
         return cachedSymbol;
     }
 
-    private _serializeTypeRef(type: Type, serializerInfo: SerializerInfo): CachedTypeRef {
+    private static _serializeTypeRef(type: Type, serializerInfo: SerializerInfo): CachedTypeRef {
+        // Handle classes and modules specially. We dont't want to
+        // recursively add these because we'll end up pulling in the
+        // entire program. For classes and modules that are outside of
+        // this file, we'll use a remote encoding instead.
+        if (type instanceof ClassType) {
+            if (type.getSourceFilePath() !== serializerInfo.sourceFilePath) {
+                return {
+                    localTypeId: -1,
+                    remotePath: type.getSourceFilePath(),
+                    remoteTypeCategory: TypeCategory.Class,
+                    remoteTypeSourceId: type.getTypeSourceId()
+                };
+            }
+        } else if (type instanceof ModuleType) {
+            if (type.getSourceFilePath() !== serializerInfo.sourceFilePath) {
+                return {
+                    localTypeId: -1,
+                    remotePath: type.getSourceFilePath(),
+                    remoteTypeCategory: TypeCategory.Module
+                };
+            }
+        }
+
         if (!serializerInfo.typeMap[type.id]) {
             // Temporarily enter a dummy entry. This is needed for
-            // auto-referential recursive types.
+            // auto-referential recursive types. If we don't do this,
+            // we will recurse indefinitely.
             serializerInfo.typeMap[type.id] = { category: TypeCategory.Unknown };
             serializerInfo.typeMap[type.id] = this._serializeType(type, serializerInfo);
         }
@@ -105,11 +129,12 @@ export class AnalysisCacheSerializer {
         };
     }
 
-    private _serializeType(type: Type, serializerInfo: SerializerInfo): CachedType {
+    private static _serializeType(type: Type, serializerInfo: SerializerInfo): CachedType {
         let cachedType: CachedType;
 
         switch (type.category) {
             case TypeCategory.Unbound:
+            case TypeCategory.Unknown:
             case TypeCategory.Any:
             case TypeCategory.Ellipsis:
             case TypeCategory.None:
@@ -305,7 +330,7 @@ export class AnalysisCacheSerializer {
         return cachedType;
     }
 
-    private _serializeDeclaration(declaration: Declaration,
+    private static _serializeDeclaration(declaration: Declaration,
             serializerInfo: SerializerInfo): CachedDeclaration {
 
         const cachedDecl: CachedDeclaration = {
@@ -322,7 +347,7 @@ export class AnalysisCacheSerializer {
         return cachedDecl;
     }
 
-    private _serializeDiagnostic(diag: Diagnostic): CachedDiagnostic {
+    private static _serializeDiagnostic(diag: Diagnostic): CachedDiagnostic {
         const cachedDiag: CachedDiagnostic = {
             category: diag.category,
             message: diag.message,

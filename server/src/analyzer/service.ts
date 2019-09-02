@@ -73,7 +73,7 @@ export class AnalyzerService {
         this._instanceName = instanceName;
         this._analysisCache = analysisCache;
         this._console = console || new StandardConsole();
-        this._program = new Program(this._console);
+        this._program = new Program(this._console, this._analysisCache);
         this._configOptions = new ConfigOptions(process.cwd());
         this._importResolver = new ImportResolver(this._configOptions);
         this._executionRootPath = '';

@@ -22,6 +22,7 @@ import { Duration } from '../common/timing';
 import { ModuleSymbolMap } from '../languageService/completionProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { AnalysisCache } from './analysisCache';
 import { ImportMap } from './analyzerFileInfo';
 import { AnalyzerNodeInfo } from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
@@ -65,12 +66,14 @@ export interface MaxAnalysisTime {
 //  Opened - temporarily opened in the editor
 export class Program {
     private _console: ConsoleInterface;
+    private _analysisCache?: AnalysisCache;
     private _sourceFileList: SourceFileInfo[] = [];
     private _sourceFileMap: { [path: string]: SourceFileInfo } = {};
     private _allowThirdPartyImports = false;
 
-    constructor(console?: ConsoleInterface) {
+    constructor(console?: ConsoleInterface, analysisCache?: AnalysisCache) {
         this._console = console || new StandardConsole();
+        this._analysisCache = analysisCache;
     }
 
     // Sets the list of tracked files that make up the program.
@@ -632,7 +635,8 @@ export class Program {
                 }
             }
 
-            this._sourceFileMap[filePath].sourceFile.finalizeAnalysis();
+            this._sourceFileMap[filePath].sourceFile.finalizeAnalysis(
+                options, this._analysisCache);
         });
 
         return false;

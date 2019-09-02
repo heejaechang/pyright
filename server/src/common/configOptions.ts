@@ -137,6 +137,14 @@ export interface DiagnosticSettings {
     reportUnnecessaryIsInstance: DiagnosticLevel;
 }
 
+// The "options string" is a string that represents all of the
+// settings that affect the analysis of a single file. It's used
+// in the analysis cache to determine whether a cached file
+// can be used.
+export function getOptionsString(configOptions: ConfigOptions) {
+    return JSON.stringify(configOptions);
+}
+
 export function cloneDiagnosticSettings(
         diagSettings: DiagnosticSettings): DiagnosticSettings {
 

@@ -12,7 +12,8 @@ import * as fs from 'fs';
 import { CompletionList, SymbolInformation } from 'vscode-languageserver';
 
 import { ConfigOptions, DiagnosticSettings, ExecutionEnvironment,
-    getDefaultDiagnosticSettings } from '../common/configOptions';
+    getDefaultDiagnosticSettings,
+    getOptionsString } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
 import { Diagnostic, DiagnosticCategory, DiagnosticTextPosition,
     DocumentTextRange, getEmptyRange } from '../common/diagnostic';
@@ -35,6 +36,8 @@ import { ModuleNode } from '../parser/parseNodes';
 import { ParseOptions, Parser, ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
 import { TestWalker } from '../tests/testWalker';
+import { AnalysisCache } from './analysisCache';
+import { AnalysisCacheSerializer } from './analysisCacheSerializer';
 import { AnalyzerFileInfo, ImportMap } from './analyzerFileInfo';
 import { AnalyzerNodeInfo } from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
@@ -391,7 +394,9 @@ export class SourceFile {
     // Parse the file and update the state. Callers should wait for completion
     // (or at least cancel) prior to calling again. It returns true if a parse
     // was required and false if the parse information was up to date already.
-    parse(configOptions: ConfigOptions, importResolver: ImportResolver): boolean {
+    parse(configOptions: ConfigOptions, importResolver: ImportResolver,
+            analysisCache?: AnalysisCache): boolean {
+
         // If the file is already parsed, we can skip.
         if (!this.isParseRequired()) {
             return false;
@@ -724,7 +729,7 @@ export class SourceFile {
 
     // This method should be called once type analysis has completed for
     // this file and all of its dependent files.
-    finalizeAnalysis() {
+    finalizeAnalysis(configOptions: ConfigOptions, analysisCache?: AnalysisCache) {
         assert(!this.isTypeAnalysisRequired());
 
         // Mark the type analysis as final.
@@ -736,6 +741,24 @@ export class SourceFile {
             this._analysisJob.typeAnalysisLastPassDiagnostics;
         this._analysisJob.typeAnalysisLastPassDiagnostics = [];
         this._diagnosticVersion++;
+
+        // Write out the file analysis contents to the cache.
+        if (analysisCache) {
+            const optionsString = getOptionsString(configOptions);
+
+            const diagList: Diagnostic[] = [];
+            diagList.concat(
+                this._analysisJob.parseDiagnostics,
+                this._analysisJob.semanticAnalysisDiagnostics,
+                this._analysisJob.typeAnalysisFinalDiagnostics);
+
+            const analysisCacheDoc = AnalysisCacheSerializer.serializeToDocument(
+                this._filePath, optionsString,
+                this._lastFileContentHash || 0,
+                diagList, this._analysisJob.moduleType!);
+
+            analysisCache.writeCacheEntry(this._filePath, optionsString, analysisCacheDoc);
+        }
     }
 
     private _buildFileInfo(configOptions: ConfigOptions, importMap?: ImportMap, builtinsScope?: Scope) {

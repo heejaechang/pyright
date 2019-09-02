@@ -44,7 +44,7 @@ export class StringUtils {
         // has typed more characters, and they largely match the symbol name,
         // it is considered more similar. If the the edit distance is similar
         // to the number of characters the user has typed, then there's almost
-        // no simiarlity.
+        // no similarity.
         if (smallestEditDistance >= typedValue.length) {
             return 0;
         }
@@ -58,8 +58,14 @@ export class StringUtils {
         let hash = 0;
 
         for (let i = 0; i < contents.length; i++) {
-            hash = (hash << 5) - hash + contents.charCodeAt(i++) | 0;
+            hash = (hash << 5) - hash + contents.charCodeAt(i++);
         }
-        return hash;
+
+        // Truncate to 31 bits. We'd normally use 32 bits, but
+        // JS always treats numbers as signed, so the number
+        // is treated as negative if bit 31 is set.
+        const truncatedHash = hash & 0x7FFFFFFF;
+
+        return truncatedHash;
     }
 }

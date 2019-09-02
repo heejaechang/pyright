@@ -18,7 +18,7 @@
 import * as fs from 'fs';
 
 import { ConsoleInterface } from '../common/console';
-import { getFileExtension, getFileName, getFileSystemEntries,
+import { combinePaths, getFileExtension, getFileName, getFileSystemEntries,
     stripFileExtension } from '../common/pathUtils';
 import { StringUtils } from '../common/stringUtils';
 import { AnalysisCacheDoc, currentCacheDocVersion } from './analysisCacheDoc';
@@ -50,8 +50,23 @@ export class AnalysisCache {
         }
     }
 
+    // Deletes all files from the cache.
+    clearCache() {
+        if (this._cacheDirPath) {
+            try {
+                const cacheEntries = getFileSystemEntries(this._cacheDirPath);
+                cacheEntries.files.forEach(filePath => {
+                    this._deleteCacheFile(filePath);
+                });
+            } catch (e) {
+                this._console.error('Failed to delete cache entries');
+            }
+        }
+    }
+
     writeCacheEntry(sourceFilePath: string, optionsStr: string, cacheDoc: AnalysisCacheDoc) {
-        const cacheFileName = _tempDir + this._createCacheFileName(sourceFilePath, optionsStr);
+        const cacheFileName = combinePaths(this._cacheDirPath,
+            this._createCacheFileName(sourceFilePath, optionsStr));
         try {
             fs.writeFileSync(cacheFileName, JSON.stringify(cacheDoc, undefined, 2), { encoding: 'utf8' });
         } catch (e) {
@@ -60,7 +75,8 @@ export class AnalysisCache {
     }
 
     readCacheEntry(sourceFilePath: string, optionsStr: string): AnalysisCacheDoc | undefined {
-        const cacheFileName = _tempDir + this._createCacheFileName(sourceFilePath, optionsStr);
+        const cacheFileName = combinePaths(this._cacheDirPath,
+            this._createCacheFileName(sourceFilePath, optionsStr));
 
         if (!fs.existsSync(cacheFileName)) {
             return undefined;
