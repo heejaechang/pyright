@@ -107,7 +107,7 @@ export interface CachedTypeVarType extends CachedType {
 }
 
 export interface CachedTypeRef {
-    localTypeId: number;
+    localId: number;
     remoteTypeCategory?: TypeCategory;
     remotePath?: string;
     remoteTypeSourceId?: string;

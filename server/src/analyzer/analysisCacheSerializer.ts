@@ -103,7 +103,7 @@ export class AnalysisCacheSerializer {
                 serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
 
                 return {
-                    localTypeId: -1,
+                    localId: -1,
                     remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Class,
                     remoteTypeSourceId: type.getTypeSourceId()
@@ -115,7 +115,7 @@ export class AnalysisCacheSerializer {
                 serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
 
                 return {
-                    localTypeId: -1,
+                    localId: -1,
                     remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Module
                 };
@@ -131,7 +131,7 @@ export class AnalysisCacheSerializer {
         }
 
         return {
-            localTypeId: type.id
+            localId: type.id
         };
     }
 

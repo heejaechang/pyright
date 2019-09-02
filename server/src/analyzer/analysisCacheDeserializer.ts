@@ -67,7 +67,7 @@ export class AnalysisCacheDeserializer {
         const deserializedTypeMap = this._deserializeTypesFirstPass(
                 doc.types, doc.filePath);
         const primaryModuleType = deserializedTypeMap[
-            doc.primaryModuleType.localTypeId] as ModuleType;
+            doc.primaryModuleType.localId] as ModuleType;
 
         if (!(primaryModuleType instanceof ModuleType)) {
             throw new Error('Primary module type does not refer to ModuleType');
@@ -538,7 +538,7 @@ export class AnalysisCacheDeserializer {
         }
 
         // Assume it's a local type.
-        const localType = typeMap[cachedTypeRef.localTypeId];
+        const localType = typeMap[cachedTypeRef.localId];
         if (!localType) {
             throw new Error('Invalid local type reference');
         }

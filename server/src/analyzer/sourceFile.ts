@@ -862,33 +862,34 @@ export class SourceFile {
     private _attemptReadCache(analysisCache: AnalysisCache, configOptions: ConfigOptions,
             fileContentsHash: string): DeserializedInfo | undefined {
 
-        const optionsHash = StringUtils.hashString(getOptionsString(configOptions));
-        const analysisCacheDoc = analysisCache.readCacheEntry(this._filePath, optionsHash);
-        if (!analysisCacheDoc) {
-            return undefined;
-        }
-
-        // Validate that the cache doc is still valid.
-        try {
-            AnalysisCacheDeserializer.validateDocument(analysisCacheDoc,
-                this._filePath, optionsHash, fileContentsHash);
-        } catch (e) {
-            analysisCache.deleteCacheEntry(this._filePath, optionsHash);
-            return undefined;
-        }
-
-        // Perform a first-pass deserialization.
         let deserializedInfo: DeserializedInfo | undefined;
-        try {
-            timingStats.readFromCacheTime.timeOperation(() => {
+
+        timingStats.readFromCacheTime.timeOperation(() => {
+            const optionsHash = StringUtils.hashString(getOptionsString(configOptions));
+            const analysisCacheDoc = analysisCache.readCacheEntry(this._filePath, optionsHash);
+            if (!analysisCacheDoc) {
+                return;
+            }
+
+            // Validate that the cache doc is still valid.
+            try {
+                AnalysisCacheDeserializer.validateDocument(analysisCacheDoc,
+                    this._filePath, optionsHash, fileContentsHash);
+            } catch (e) {
+                analysisCache.deleteCacheEntry(this._filePath, optionsHash);
+                return;
+            }
+
+            // Perform a first-pass deserialization.
+            try {
                 deserializedInfo = AnalysisCacheDeserializer.deserializeFirstPass(
                     analysisCacheDoc);
-            });
-        } catch (e) {
-            // Something went wrong. Delete the cache entry.
-            analysisCache.deleteCacheEntry(this._filePath, optionsHash);
-            return undefined;
-        }
+            } catch (e) {
+                // Something went wrong. Delete the cache entry.
+                analysisCache.deleteCacheEntry(this._filePath, optionsHash);
+                return;
+            }
+        });
 
         return deserializedInfo;
     }
