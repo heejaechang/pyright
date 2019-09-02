@@ -31,8 +31,8 @@ interface SerializerInfo {
 }
 
 export class AnalysisCacheSerializer {
-    static serializeToDocument(sourceFilePath: string, optionsStrHash: number,
-            fileContentsHash: number, diagnostics: Diagnostic[],
+    static serializeToDocument(sourceFilePath: string, optionsStrHash: string,
+            fileContentsHash: string, diagnostics: Diagnostic[],
             moduleType: ModuleType) {
 
         const typeMap: CachedTypeMap = {};

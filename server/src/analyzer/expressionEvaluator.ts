@@ -2162,7 +2162,7 @@ export class ExpressionEvaluator {
             classType = new ClassType(this._fileInfo.filePath,
                 className, ClassTypeFlags.None,
                 AnalyzerNodeInfo.getTypeSourceId(errorNode,
-                this._fileInfo.filePathHash));
+                    this._fileInfo.filePathHash));
 
             AnalyzerNodeInfo.setExpressionType(errorNode, classType);
             classType.addBaseClass(enumClass, false);

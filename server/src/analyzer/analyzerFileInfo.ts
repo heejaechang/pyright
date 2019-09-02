@@ -29,7 +29,7 @@ export interface AnalyzerFileInfo {
     diagnosticSettings: DiagnosticSettings;
     lines: TextRangeCollection<TextRange>;
     filePath: string;
-    filePathHash: number;
+    filePathHash: string;
     isStubFile: boolean;
     isTypingStubFile: boolean;
     isBuiltInStubFile: boolean;

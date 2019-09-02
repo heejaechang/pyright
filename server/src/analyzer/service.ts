@@ -67,7 +67,7 @@ export class AnalyzerService {
     private _requireTrackedFileUpdate = true;
     private _lastUserInteractionTime = Date.now();
 
-    constructor(instanceName: string, analysisCache?: AnalysisCache,
+    constructor(instanceName: string, analysisCache: AnalysisCache | undefined,
             console?: ConsoleInterface) {
 
         this._instanceName = instanceName;
@@ -141,7 +141,8 @@ export class AnalyzerService {
 
         this._recordUserInteractionTime();
         return this._program.getReferencesForPosition(filePath, position,
-            this._configOptions, this._importResolver, includeDeclaration);
+            this._configOptions, this._importResolver, this._analysisCache,
+            includeDeclaration);
     }
 
     getSymbolsForDocument(filePath: string): SymbolInformation[] {
@@ -161,7 +162,7 @@ export class AnalyzerService {
 
         this._recordUserInteractionTime();
         return this._program.getSignatureHelpForPosition(filePath, position,
-            this._configOptions, this._importResolver);
+            this._configOptions, this._importResolver, this._analysisCache);
     }
 
     getCompletionsForPosition(filePath: string, position: DiagnosticTextPosition):
@@ -169,13 +170,13 @@ export class AnalyzerService {
 
         this._recordUserInteractionTime();
         return this._program.getCompletionsForPosition(filePath, position,
-            this._configOptions, this._importResolver);
+            this._configOptions, this._importResolver, this._analysisCache);
     }
 
     sortImports(filePath: string): TextEditAction[] | undefined {
         this._recordUserInteractionTime();
         return this._program.sortImports(filePath, this._configOptions,
-            this._importResolver);
+            this._importResolver, this._analysisCache);
     }
 
     renameSymbolAtPosition(filePath: string, position: DiagnosticTextPosition,
@@ -183,7 +184,8 @@ export class AnalyzerService {
 
         this._recordUserInteractionTime();
         return this._program.renameSymbolAtPosition(filePath, position,
-            newName, this._configOptions, this._importResolver);
+            newName, this._configOptions, this._importResolver,
+            this._analysisCache);
     }
 
     printStats() {

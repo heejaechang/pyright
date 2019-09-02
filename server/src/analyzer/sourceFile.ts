@@ -161,7 +161,7 @@ export class SourceFile {
 
     // Length and hash of the file the last time it was read from disk.
     private _lastFileContentLength: number | undefined = undefined;
-    private _lastFileContentHash: number | undefined = undefined;
+    private _lastFileContentHash: string | undefined = undefined;
 
     // Client's version of the file. Null implies that contents
     // need to be read from disk.
@@ -338,6 +338,12 @@ export class SourceFile {
                 if (this._fileContents !== contents) {
                     this.markDirty();
                 }
+            }
+
+            // If we were previously using the cached analysis, force
+            // a reanalysis so we have access to the full parse tree.
+            if (this._analysisJob.usingCachedAnalysis) {
+                this.markDirty();
             }
 
             // Once a file is opened (and the file contents are passed
@@ -747,11 +753,13 @@ export class SourceFile {
                 this._analysisJob.lastReanalysisReason = '';
                 this._analysisJob.typeAnalysisPassNumber = 0;
 
-                AnalysisCacheDeserializer.deserializeSecondPass(
-                    this._analysisJob.deserializedCacheInfo,
-                    filePath => this._resolveModuleImport(importMap, filePath),
-                    (filePath, typeSourceId) => this._resolveClassImport(
-                        importMap, filePath, typeSourceId));
+                timingStats.readFromCacheTime.timeOperation(() => {
+                    AnalysisCacheDeserializer.deserializeSecondPass(
+                        this._analysisJob.deserializedCacheInfo!,
+                        filePath => this._resolveModuleImport(importMap, filePath),
+                        (filePath, typeSourceId) => this._resolveClassImport(
+                            importMap, filePath, typeSourceId));
+                });
             } else {
                 // Perform static type analysis.
                 const typeAnalyzer = new TypeAnalyzer(this._analysisJob.parseResults!.parseTree,
@@ -815,7 +823,7 @@ export class SourceFile {
             const optionsHash = StringUtils.hashString(optionsString);
             const analysisCacheDoc = AnalysisCacheSerializer.serializeToDocument(
                 this._filePath, optionsHash,
-                this._lastFileContentHash || 0,
+                this._lastFileContentHash || '',
                 diagList, this._analysisJob.moduleType!);
 
             analysisCache.writeCacheEntry(this._filePath, optionsHash, analysisCacheDoc);
@@ -850,7 +858,7 @@ export class SourceFile {
     // a first pass deserialization of its contents. If the cache file isn't
     // present or is out of date, it returns false.
     private _attemptReadCache(analysisCache: AnalysisCache, configOptions: ConfigOptions,
-            fileContentsHash: number): DeserializedInfo | undefined {
+            fileContentsHash: string): DeserializedInfo | undefined {
 
         const optionsHash = StringUtils.hashString(getOptionsString(configOptions));
         const analysisCacheDoc = analysisCache.readCacheEntry(this._filePath, optionsHash);
@@ -868,10 +876,12 @@ export class SourceFile {
         }
 
         // Perform a first-pass deserialization.
-        let deserializedInfo: DeserializedInfo;
+        let deserializedInfo: DeserializedInfo | undefined;
         try {
-            deserializedInfo = AnalysisCacheDeserializer.deserializeFirstPass(
-                analysisCacheDoc);
+            timingStats.readFromCacheTime.timeOperation(() => {
+                deserializedInfo = AnalysisCacheDeserializer.deserializeFirstPass(
+                    analysisCacheDoc);
+            });
         } catch (e) {
             // Something went wrong. Delete the cache entry.
             analysisCache.deleteCacheEntry(this._filePath, optionsHash);

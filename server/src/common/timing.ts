@@ -57,6 +57,7 @@ export class TimingStats {
     resolveImportsTime = new TimingStat();
     semanticAnalyzerTime = new TimingStat();
     typeAnalyzerTime = new TimingStat();
+    readFromCacheTime = new TimingStat();
 
     printSummary(console: ConsoleInterface) {
         console.log(`Completed in ${ this.totalDuration.getDurationInSeconds() }sec`);
@@ -73,6 +74,7 @@ export class TimingStats {
         console.log('Resolve Imports:      ' + this.resolveImportsTime.printTime());
         console.log('Semantic Analyzer:    ' + this.semanticAnalyzerTime.printTime());
         console.log('Type Analyzer:        ' + this.typeAnalyzerTime.printTime());
+        console.log('Read From Cache:      ' + this.readFromCacheTime.printTime());
     }
 }
 

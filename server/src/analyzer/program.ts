@@ -111,15 +111,23 @@ export class Program {
 
     getAverageAnalysisPassCount() {
         let passCount = 0;
+        let fileCount = 0;
+
         this._sourceFileList.forEach(sourceFileInfo => {
-            passCount += sourceFileInfo.sourceFile.getAnalysisPassCount();
+            const filePassCount = sourceFileInfo.sourceFile.getAnalysisPassCount();
+            // If the pass count < 1, it was not analyzed (probably
+            // because it was read from the cache).
+            if (filePassCount >= 1) {
+                passCount += filePassCount;
+                fileCount++;
+            }
         });
 
-        if (this._sourceFileList.length === 0) {
+        if (fileCount === 0) {
             return 0;
         }
 
-        return passCount / this._sourceFileList.length;
+        return passCount / fileCount;
     }
 
     getMaxAnalysisPassCount(): [number, SourceFile?] {
@@ -297,7 +305,8 @@ export class Program {
 
             // Now do semantic analysis of the open files.
             for (const sourceFileInfo of openFiles) {
-                this._doSemanticAnalysis(sourceFileInfo, options, importResolver);
+                this._doSemanticAnalysis(sourceFileInfo, options,
+                    importResolver, analysisCache);
 
                 if (isTimeElapsedOpenFiles()) {
                     return true;
@@ -306,7 +315,9 @@ export class Program {
 
             // Now do type analysis of the open files.
             for (const sourceFileInfo of openFiles) {
-                if (this._doFullAnalysis(sourceFileInfo, options, importResolver, isTimeElapsedOpenFiles)) {
+                if (this._doFullAnalysis(sourceFileInfo, options,
+                    importResolver, analysisCache, isTimeElapsedOpenFiles)) {
+
                     return true;
                 }
             }
@@ -334,7 +345,9 @@ export class Program {
 
         // Now do type parsing and analysis of the remaining.
         for (const sourceFileInfo of allFiles) {
-            if (this._doFullAnalysis(sourceFileInfo, options, importResolver, isTimeElapsedNoOpenFiles)) {
+            if (this._doFullAnalysis(sourceFileInfo, options,
+                    importResolver, analysisCache, isTimeElapsedNoOpenFiles)) {
+
                 return true;
             }
         }
@@ -458,12 +471,14 @@ export class Program {
     // This method is similar to analyze() except that it analyzes
     // a single file (and its dependencies if necessary).
     private _analyzeFile(sourceFileInfo: SourceFileInfo, options: ConfigOptions,
-            importResolver: ImportResolver, maxTime?: MaxAnalysisTime) {
+            importResolver: ImportResolver, analysisCache: AnalysisCache | undefined,
+            maxTime?: MaxAnalysisTime) {
 
         const elapsedTime = new Duration();
 
         if (sourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-            this._doFullAnalysis(sourceFileInfo, options, importResolver, () => {
+            this._doFullAnalysis(sourceFileInfo, options, importResolver, analysisCache,
+            () => {
                 return maxTime !== undefined &&
                     elapsedTime.getDurationInMilliseconds() > maxTime.openFilesTimeInMs;
             });
@@ -496,7 +511,7 @@ export class Program {
 
     private _doSemanticAnalysis(fileToAnalyze: SourceFileInfo,
             options: ConfigOptions, importResolver: ImportResolver,
-            analysisCache?: AnalysisCache) {
+            analysisCache: AnalysisCache | undefined) {
 
         if (!this._isFileNeeded(fileToAnalyze) || !fileToAnalyze.sourceFile.isSemanticAnalysisRequired()) {
             return;
@@ -507,7 +522,8 @@ export class Program {
         // We need to parse and semantically analyze the builtins import first.
         let builtinsScope: Scope | undefined;
         if (fileToAnalyze.builtinsImport) {
-            this._doSemanticAnalysis(fileToAnalyze.builtinsImport, options, importResolver);
+            this._doSemanticAnalysis(fileToAnalyze.builtinsImport, options,
+                importResolver, analysisCache);
 
             // Get the builtins scope to pass to the semantic analyzer pass.
             const parseResults = fileToAnalyze.builtinsImport.sourceFile.getParseResults();
@@ -551,7 +567,8 @@ export class Program {
     }
 
     private _doFullAnalysis(fileToAnalyze: SourceFileInfo, options: ConfigOptions,
-            importResolver: ImportResolver, timeElapsedCallback: () => boolean): boolean {
+            importResolver: ImportResolver, analysisCache: AnalysisCache | undefined,
+            timeElapsedCallback: () => boolean): boolean {
 
         // If the file isn't needed because it was eliminated from the
         // transitive closure or deleted, skip the file rather than wasting
@@ -564,7 +581,8 @@ export class Program {
         const closureMap: { [path: string]: boolean } = {};
         const analysisQueue: SourceFileInfo[] = [];
         if (this._getNonFinalizedImportsRecursive(fileToAnalyze, closureMap,
-                analysisQueue, options, importResolver, timeElapsedCallback, 0)) {
+                analysisQueue, options, importResolver, analysisCache,
+                timeElapsedCallback, 0)) {
             return true;
         }
 
@@ -654,6 +672,7 @@ export class Program {
     private _getNonFinalizedImportsRecursive(fileToAnalyze: SourceFileInfo,
             closureMap: { [path: string]: boolean }, analysisQueue: SourceFileInfo[],
             options: ConfigOptions, importResolver: ImportResolver,
+            analysisCache: AnalysisCache | undefined,
             timeElapsedCallback: () => boolean,
             recursionCount: number): boolean {
 
@@ -677,7 +696,8 @@ export class Program {
         }
 
         // Make sure the file is parsed and semantically analyzed.
-        this._doSemanticAnalysis(fileToAnalyze, options, importResolver);
+        this._doSemanticAnalysis(fileToAnalyze, options,
+            importResolver, analysisCache);
         if (timeElapsedCallback()) {
             return true;
         }
@@ -688,7 +708,7 @@ export class Program {
         // Recursively add the file's imports.
         for (const importedFileInfo of fileToAnalyze.imports) {
             if (this._getNonFinalizedImportsRecursive(importedFileInfo, closureMap,
-                    analysisQueue, options, importResolver,
+                    analysisQueue, options, importResolver, analysisCache,
                     timeElapsedCallback, recursionCount + 1)) {
                 return true;
             }
@@ -829,6 +849,7 @@ export class Program {
 
     getReferencesForPosition(filePath: string, position: DiagnosticTextPosition,
             options: ConfigOptions, importResolver: ImportResolver,
+            analysisCache: AnalysisCache | undefined,
             includeDeclaration: boolean): DocumentTextRange[] | undefined {
 
         const sourceFileInfo = this._sourceFileMap[filePath];
@@ -837,7 +858,7 @@ export class Program {
         }
 
         if (sourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-            this._analyzeFile(sourceFileInfo, options, importResolver, {
+            this._analyzeFile(sourceFileInfo, options, importResolver, analysisCache, {
                 openFilesTimeInMs: _maxAnalysisTimeForCompletions,
                 noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
             });
@@ -855,10 +876,11 @@ export class Program {
             for (const curSourceFileInfo of this._sourceFileList) {
                 if (curSourceFileInfo !== sourceFileInfo) {
                     if (curSourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-                        this._analyzeFile(curSourceFileInfo, options, importResolver, {
-                            openFilesTimeInMs: _maxAnalysisTimeForCompletions,
-                            noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
-                        });
+                        this._analyzeFile(curSourceFileInfo, options, importResolver,
+                            analysisCache, {
+                                openFilesTimeInMs: _maxAnalysisTimeForCompletions,
+                                noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
+                            });
                     }
 
                     curSourceFileInfo.sourceFile.addReferences(referencesResult,
@@ -892,7 +914,8 @@ export class Program {
     }
 
     getSignatureHelpForPosition(filePath: string, position: DiagnosticTextPosition,
-            options: ConfigOptions, importResolver: ImportResolver): SignatureHelpResults | undefined {
+            options: ConfigOptions, importResolver: ImportResolver,
+            analysisCache: AnalysisCache | undefined): SignatureHelpResults | undefined {
 
         const sourceFileInfo = this._sourceFileMap[filePath];
         if (!sourceFileInfo) {
@@ -900,17 +923,19 @@ export class Program {
         }
 
         if (sourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-            this._analyzeFile(sourceFileInfo, options, importResolver, {
-                openFilesTimeInMs: _maxAnalysisTimeForCompletions,
-                noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
-            });
+            this._analyzeFile(sourceFileInfo, options, importResolver,
+            analysisCache, {
+                    openFilesTimeInMs: _maxAnalysisTimeForCompletions,
+                    noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
+                });
         }
 
         return sourceFileInfo.sourceFile.getSignatureHelpForPosition(position);
     }
 
     getCompletionsForPosition(filePath: string, position: DiagnosticTextPosition,
-        options: ConfigOptions, importResolver: ImportResolver): CompletionList | undefined {
+        options: ConfigOptions, importResolver: ImportResolver,
+        analysisCache: AnalysisCache | undefined): CompletionList | undefined {
 
         const sourceFileInfo = this._sourceFileMap[filePath];
         if (!sourceFileInfo) {
@@ -918,10 +943,11 @@ export class Program {
         }
 
         if (sourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-            this._analyzeFile(sourceFileInfo, options, importResolver, {
-                openFilesTimeInMs: _maxAnalysisTimeForCompletions,
-                noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
-            });
+            this._analyzeFile(sourceFileInfo, options, importResolver,
+            analysisCache, {
+                    openFilesTimeInMs: _maxAnalysisTimeForCompletions,
+                    noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
+                });
 
             // If we ran out of time before completing the type
             // analysis, do our best.
@@ -934,7 +960,8 @@ export class Program {
     }
 
     sortImports(filePath: string, options: ConfigOptions,
-            importResolver: ImportResolver): TextEditAction[] | undefined {
+            importResolver: ImportResolver, analysisCache: AnalysisCache | undefined):
+                TextEditAction[] | undefined {
 
         const sourceFileInfo = this._sourceFileMap[filePath];
         if (!sourceFileInfo) {
@@ -942,10 +969,11 @@ export class Program {
         }
 
         if (sourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-            this._analyzeFile(sourceFileInfo, options, importResolver, {
-                openFilesTimeInMs: _maxAnalysisTimeForCompletions,
-                noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
-            });
+            this._analyzeFile(sourceFileInfo, options, importResolver,
+            analysisCache, {
+                    openFilesTimeInMs: _maxAnalysisTimeForCompletions,
+                    noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
+                });
         }
 
         return sourceFileInfo.sourceFile.sortImports();
@@ -953,7 +981,8 @@ export class Program {
 
     renameSymbolAtPosition(filePath: string, position: DiagnosticTextPosition,
             newName: string, options: ConfigOptions,
-            importResolver: ImportResolver): FileEditAction[] | undefined {
+            importResolver: ImportResolver, analysisCache: AnalysisCache | undefined):
+                FileEditAction[] | undefined {
 
         const sourceFileInfo = this._sourceFileMap[filePath];
         if (!sourceFileInfo) {
@@ -972,10 +1001,11 @@ export class Program {
             for (const curSourceFileInfo of this._sourceFileList) {
                 if (curSourceFileInfo !== sourceFileInfo) {
                     if (curSourceFileInfo.sourceFile.isTypeAnalysisRequired()) {
-                        this._analyzeFile(curSourceFileInfo, options, importResolver, {
-                            openFilesTimeInMs: _maxAnalysisTimeForCompletions,
-                            noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
-                        });
+                        this._analyzeFile(curSourceFileInfo, options, importResolver,
+                            analysisCache, {
+                                openFilesTimeInMs: _maxAnalysisTimeForCompletions,
+                                noOpenFilesTimeInMs: _maxAnalysisTimeForCompletions
+                            });
                     }
 
                     curSourceFileInfo.sourceFile.addReferences(referencesResult, true);

@@ -31,8 +31,7 @@ interface CacheFileInfo {
     filePath: string;
 
     // Information encoded in the file name
-    pathHash: number;
-    optionsHash: number;
+    pathAndOptionHash: string;
     cacheVersion: number;
 }
 
@@ -63,7 +62,7 @@ export class AnalysisCache {
         }
     }
 
-    writeCacheEntry(sourceFilePath: string, optionsHash: number, cacheDoc: AnalysisCacheDoc) {
+    writeCacheEntry(sourceFilePath: string, optionsHash: string, cacheDoc: AnalysisCacheDoc) {
         const cacheFileName = combinePaths(this._cacheDirPath,
             this._createCacheFileName(sourceFilePath, optionsHash));
         try {
@@ -73,7 +72,7 @@ export class AnalysisCache {
         }
     }
 
-    readCacheEntry(sourceFilePath: string, optionsStrHash: number): AnalysisCacheDoc | undefined {
+    readCacheEntry(sourceFilePath: string, optionsStrHash: string): AnalysisCacheDoc | undefined {
         const cacheFileName = combinePaths(this._cacheDirPath,
             this._createCacheFileName(sourceFilePath, optionsStrHash));
 
@@ -98,7 +97,7 @@ export class AnalysisCache {
         }
     }
 
-    deleteCacheEntry(sourceFilePath: string, optionsStrHash: number) {
+    deleteCacheEntry(sourceFilePath: string, optionsStrHash: string) {
         const cacheFileName = combinePaths(this._cacheDirPath,
             this._createCacheFileName(sourceFilePath, optionsStrHash));
 
@@ -164,27 +163,19 @@ export class AnalysisCache {
 
         // Parse the file name. It should be of the form:
         // XXXXXXXX-YYYYYYYY-vvvv-ffffffff.json
-        //   XXXXXXXX is the hash of the path (8 characters in hex)
-        //   YYYYYYYY is the hash of the options (8 characters in hex)
-        //   vvvv is the cache version (4 characters in decimal)
+        //   XXXXXXXX is the hash of the path and options (n characters in hex)
+        //   vvvv is the cache version (n characters in decimal)
         //   ffffffff is the name of the source file (variable-sized
         //      but truncated to 32 characters)
 
         try {
-            const pathHash = this._decode8CharHex(cacheFileName.substr(0, 8));
-            if (cacheFileName.charAt(8) !== '-') {
+            const split = cacheFileName.split('-');
+            if (split.length !== 3) {
                 return undefined;
             }
 
-            const optionsHash = this._decode8CharHex(cacheFileName.substr(9, 8));
-            if (cacheFileName.charAt(17) !== '-') {
-                return undefined;
-            }
-
-            const cacheVersion = this._decode4CharDec(cacheFileName.substr(18, 4));
-            if (cacheFileName.charAt(22) !== '-') {
-                return undefined;
-            }
+            const pathAndOptionHash = split[0];
+            const cacheVersion = parseInt(split[1], 10);
 
             // If the cache version is incorrect, the file is invalid.
             if (cacheVersion !== currentCacheDocVersion) {
@@ -193,8 +184,7 @@ export class AnalysisCache {
 
             return {
                 filePath,
-                pathHash,
-                optionsHash,
+                pathAndOptionHash,
                 cacheVersion
             };
         } catch (e) {
@@ -202,50 +192,17 @@ export class AnalysisCache {
         }
     }
 
-    private _decode8CharHex(str: string) {
-        if (str.length !== 8) {
-            throw new Error('Incorrect hex string length');
-        }
-
-        return parseInt(str, 16);
-    }
-
-    private _encode8CharHex(val: number) {
-        let str = val.toString(16);
-        if (str.length < 8) {
-            // Prepend enough zeros to make it 8 characters long.
-            str = '00000000'.substr(0, 8 - str.length) + str;
-        }
-        return str;
-    }
-
-    private _decode4CharDec(str: string) {
-        if (str.length !== 4) {
-            throw new Error('Incorrect decimal string length');
-        }
-
-        return parseInt(str, 10);
-    }
-
-    private _encode4CharDecimal(val: number) {
-        let str = val.toString(10);
-        if (str.length < 4) {
-            // Prepend enough zeros to make it 4 characters long.
-            str = '0000'.substr(0, 4 - str.length) + str;
-        }
-        return str;
-    }
-
-    private _createCacheFileName(sourceFilePath: string, optionsHash: number) {
-        const pathHash = StringUtils.hashString(sourceFilePath);
+    private _createCacheFileName(sourceFilePath: string, optionsHash: string) {
+        const pathAndOptionsHash = StringUtils.hashString(
+            sourceFilePath + optionsHash);
         let sourceFileName = stripFileExtension(getFileName(sourceFilePath));
         if (sourceFileName.length > _maxSourceFileName) {
             sourceFileName = sourceFileName.substr(0, _maxSourceFileName);
         }
+        sourceFileName = sourceFileName.replace(/-/g, '_');
 
-        return this._encode8CharHex(pathHash) + '-' +
-            this._encode8CharHex(optionsHash) + '-' +
-            this._encode4CharDecimal(currentCacheDocVersion) + '-' +
+        return pathAndOptionsHash + '-' +
+            currentCacheDocVersion.toString() + '-' +
             sourceFileName + '.json';
     }
 }

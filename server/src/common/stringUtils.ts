@@ -7,6 +7,7 @@
 * Utility methods for manipulating and comparing strings.
 */
 
+import * as crypto from 'crypto';
 import leven from 'leven';
 
 export class StringUtils {
@@ -54,18 +55,9 @@ export class StringUtils {
     }
 
     // This is a simple, non-cryptographic hash function for text.
-    static hashString(contents: string) {
-        let hash = 0;
-
-        for (let i = 0; i < contents.length; i++) {
-            hash = (hash << 5) - hash + contents.charCodeAt(i++);
-        }
-
-        // Truncate to 31 bits. We'd normally use 32 bits, but
-        // JS always treats numbers as signed, so the number
-        // is treated as negative if bit 31 is set.
-        const truncatedHash = hash & 0x7FFFFFFF;
-
-        return truncatedHash;
+    static hashString(data: string) {
+        const hash = crypto.createHash('sha256');
+        hash.update(data);
+        return hash.digest('hex');
     }
 }

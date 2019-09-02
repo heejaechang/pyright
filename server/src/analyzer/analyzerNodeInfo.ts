@@ -185,10 +185,10 @@ export class AnalyzerNodeInfo {
     // be the same when a file is reanalyzed (assuming no edits). To
     // achieve this, we incorporate the hash of the file path plus
     // the offset of the node's text.
-    static getTypeSourceId(node: ParseNode, filePathHash: number): TypeSourceId {
+    static getTypeSourceId(node: ParseNode, filePathHash: string): TypeSourceId {
         const analyzerNode = node as AnalyzerNodeInfo;
         if (analyzerNode._typeSourceId === undefined) {
-            analyzerNode._typeSourceId = filePathHash.toString(16) + '-' +
+            analyzerNode._typeSourceId = filePathHash + '-' +
                 node.start.toString(10);
         }
 

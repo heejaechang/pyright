@@ -37,8 +37,8 @@ export interface DeserializedInfo {
 export class AnalysisCacheDeserializer {
     // Validates that the cache document contents are correct. Throws an
     // exception if not.
-    static validateDocument(doc: AnalysisCacheDoc, sourceFilePath: string, optionsStringHash: number,
-            fileContentsHash: number) {
+    static validateDocument(doc: AnalysisCacheDoc, sourceFilePath: string,
+            optionsStringHash: string, fileContentsHash: string) {
 
         if (doc.cacheVersion !== currentCacheDocVersion) {
             throw new Error('Wrong cache version');
@@ -249,7 +249,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Function: {
                     const cachedFunctionType = cachedType as CachedFunctionType;
-                    const functionType = doc.types[typeId] as FunctionType;
+                    const functionType = info.deserializedTypeMap[typeId] as FunctionType;
                     assert(functionType instanceof FunctionType);
 
                     cachedFunctionType.parameters.forEach(cachedParam => {
@@ -268,7 +268,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.OverloadedFunction: {
                     const cachedFunctionType = cachedType as CachedOverloadedFunctionType;
-                    const overloadedFunctionType = doc.types[typeId] as OverloadedFunctionType;
+                    const overloadedFunctionType = info.deserializedTypeMap[typeId] as OverloadedFunctionType;
                     assert(overloadedFunctionType instanceof OverloadedFunctionType);
 
                     cachedFunctionType.overloads.forEach(overload => {
@@ -282,7 +282,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Property: {
                     const cachedPropertyType = cachedType as CachedPropertyType;
-                    const propertyType = doc.types[typeId] as PropertyType;
+                    const propertyType = info.deserializedTypeMap[typeId] as PropertyType;
                     assert(propertyType instanceof PropertyType);
 
                     propertyType.setGetter(
@@ -305,7 +305,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Class: {
                     const cachedClassType = cachedType as CachedClassType;
-                    const classType = doc.types[typeId] as ClassType;
+                    const classType = info.deserializedTypeMap[typeId] as ClassType;
                     assert(classType instanceof ClassType);
 
                     cachedClassType.baseClasses.forEach(baseClass => {
@@ -365,7 +365,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Object: {
                     const cachedObjectType = cachedType as CachedObjectType;
-                    const objectType = doc.types[typeId] as ObjectType;
+                    const objectType = info.deserializedTypeMap[typeId] as ObjectType;
                     assert(objectType instanceof ObjectType);
 
                     objectType.setClassType(
@@ -377,7 +377,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Module: {
                     const cachedModuleType = cachedType as CachedModuleType;
-                    const moduleType = doc.types[typeId] as ModuleType;
+                    const moduleType = info.deserializedTypeMap[typeId] as ModuleType;
                     assert(moduleType instanceof ModuleType);
 
                     moduleType.setFields(this._deserializeSymbolTable(
@@ -392,7 +392,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.Union: {
                     const cachedUnionType = cachedType as CachedUnionType;
-                    const unionType = doc.types[typeId] as UnionType;
+                    const unionType = info.deserializedTypeMap[typeId] as UnionType;
                     assert(unionType instanceof UnionType);
 
                     const types = cachedUnionType.types.map(type => {
@@ -405,7 +405,7 @@ export class AnalysisCacheDeserializer {
 
                 case TypeCategory.TypeVar: {
                     const cachedTypeVarType = cachedType as CachedTypeVarType;
-                    const typeVarType = doc.types[typeId] as TypeVarType;
+                    const typeVarType = info.deserializedTypeMap[typeId] as TypeVarType;
                     assert(typeVarType instanceof TypeVarType);
 
                     cachedTypeVarType.constraints.forEach(constraint => {
