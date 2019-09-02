@@ -2161,10 +2161,13 @@ export class ExpressionEvaluator {
         if (!(classType instanceof ClassType)) {
             classType = new ClassType(this._fileInfo.filePath,
                 className, ClassTypeFlags.None,
-                AnalyzerNodeInfo.getTypeSourceId(errorNode, this._fileInfo.filePathHash));
+                AnalyzerNodeInfo.getTypeSourceId(errorNode,
+                this._fileInfo.filePathHash));
 
             AnalyzerNodeInfo.setExpressionType(errorNode, classType);
             classType.addBaseClass(enumClass, false);
+
+            this._recordClassDeclaration(errorNode, classType);
         }
 
         const classFields = classType.getClassFields();
@@ -2248,6 +2251,8 @@ export class ExpressionEvaluator {
 
                 AnalyzerNodeInfo.setExpressionType(errorNode, classType);
                 classType.addBaseClass(baseClass, false);
+
+                this._recordClassDeclaration(errorNode, classType);
             } else {
                 classType.updateBaseClassType(0, baseClass);
             }
@@ -2295,6 +2300,8 @@ export class ExpressionEvaluator {
             AnalyzerNodeInfo.setExpressionType(errorNode, classType);
             const builtInNamedTuple = this.getTypingType('NamedTuple') || UnknownType.create();
             classType.addBaseClass(builtInNamedTuple, false);
+
+            this._recordClassDeclaration(errorNode, classType);
         }
 
         const classFields = classType.getClassFields();
@@ -3693,6 +3700,11 @@ export class ExpressionEvaluator {
     private _buildTypeConstraints(node: ExpressionNode) {
         return TypeConstraintBuilder.buildTypeConstraintsForConditional(node,
             (node: ExpressionNode) => this.getType(node));
+    }
+
+    private _recordClassDeclaration(node: ParseNode, newClass: ClassType) {
+        const moduleType = AnalyzerNodeInfo.getModuleTypeRecursive(node);
+        moduleType.addDeclaredClass(newClass);
     }
 
     private _silenceDiagnostics(callback: () => void) {

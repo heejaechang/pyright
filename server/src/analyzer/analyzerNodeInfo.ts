@@ -11,12 +11,12 @@
 */
 
 import { NameBindings } from '../parser/nameBindings';
-import { ParseNode, StringListNode } from '../parser/parseNodes';
+import { ModuleNode, ParseNode, StringListNode } from '../parser/parseNodes';
 import { Declaration } from './declaration';
 import { ImportResult } from './importResult';
 import { TypeSourceId } from './inferredType';
 import { Scope, ScopeType } from './scope';
-import { Type } from './types';
+import { ModuleType, Type } from './types';
 
 export class AnalyzerNodeInfo {
     //---------------------------------------------------------------
@@ -114,6 +114,21 @@ export class AnalyzerNodeInfo {
         }
 
         return undefined;
+    }
+
+    static getModuleTypeRecursive(node: ParseNode): ModuleType {
+        let curNode: ParseNode | undefined = node;
+
+        while (curNode) {
+            if (curNode instanceof ModuleNode) {
+                const moduleType = this.getExpressionType(curNode) as ModuleType;
+                return moduleType;
+            }
+
+            curNode = curNode.parent;
+        }
+
+        throw new Error('Module node not found');
     }
 
     static getImportInfo(node: ParseNode): ImportResult | undefined {

@@ -24,8 +24,7 @@ import { StringUtils } from '../common/stringUtils';
 import { AnalysisCacheDoc, currentCacheDocVersion } from './analysisCacheDoc';
 
 // TODO - need to figure out the right way to do this on Windows
-const _tempDir = '/tmp/';
-const _cacheDirPrefix = 'pyright-';
+const _tempDirName = '/tmp/pyright-cache';
 const _maxSourceFileName = 32;
 
 interface CacheFileInfo {
@@ -59,24 +58,24 @@ export class AnalysisCache {
                     this._deleteCacheFile(filePath);
                 });
             } catch (e) {
-                this._console.error('Failed to delete cache entries');
+                this._console.log('Failed to delete cache entries');
             }
         }
     }
 
-    writeCacheEntry(sourceFilePath: string, optionsStr: string, cacheDoc: AnalysisCacheDoc) {
+    writeCacheEntry(sourceFilePath: string, optionsHash: number, cacheDoc: AnalysisCacheDoc) {
         const cacheFileName = combinePaths(this._cacheDirPath,
-            this._createCacheFileName(sourceFilePath, optionsStr));
+            this._createCacheFileName(sourceFilePath, optionsHash));
         try {
             fs.writeFileSync(cacheFileName, JSON.stringify(cacheDoc, undefined, 2), { encoding: 'utf8' });
         } catch (e) {
-            this._console.error('Could not write cache file for ' + sourceFilePath);
+            this._console.log('Could not write cache file for ' + sourceFilePath);
         }
     }
 
-    readCacheEntry(sourceFilePath: string, optionsStr: string): AnalysisCacheDoc | undefined {
+    readCacheEntry(sourceFilePath: string, optionsStrHash: number): AnalysisCacheDoc | undefined {
         const cacheFileName = combinePaths(this._cacheDirPath,
-            this._createCacheFileName(sourceFilePath, optionsStr));
+            this._createCacheFileName(sourceFilePath, optionsStrHash));
 
         if (!fs.existsSync(cacheFileName)) {
             return undefined;
@@ -87,45 +86,42 @@ export class AnalysisCache {
         try {
             cacheDocStr = fs.readFileSync(cacheFileName, { encoding: 'utf8' });
         } catch (e) {
-            this._console.error('Could not read cache file for ' + sourceFilePath);
+            this._console.log('Could not read cache file for ' + sourceFilePath);
             return undefined;
         }
 
         try {
             return JSON.parse(cacheDocStr);
         } catch (e) {
-            this._console.error('Could not parse cache file for ' + sourceFilePath);
+            this._console.log('Could not parse cache file for ' + sourceFilePath);
             return undefined;
+        }
+    }
+
+    deleteCacheEntry(sourceFilePath: string, optionsStrHash: number) {
+        const cacheFileName = combinePaths(this._cacheDirPath,
+            this._createCacheFileName(sourceFilePath, optionsStrHash));
+
+        if (!fs.existsSync(cacheFileName)) {
+            fs.rmdirSync(cacheFileName);
         }
     }
 
     private _findOrCreateCacheDir() {
         try {
-            // Create a new unique temporary directory.
-            const tempDirContents = getFileSystemEntries(_tempDir);
-
-            // Determine if there's an existing temporary directory
-            // with the correct prefix.
-            const existingCacheDir = tempDirContents.directories.find(dir => {
-                const folderName = getFileName(dir);
-                return folderName.startsWith(_cacheDirPrefix);
-            });
-
             // If we found an existing temp directory, delete the newly-
             // created one and stick with the old one.
-            let cacheDir: string;
-            if (existingCacheDir) {
-                cacheDir = _tempDir + existingCacheDir;
+            const cacheDir = _tempDirName;
+            if (fs.existsSync(_tempDirName)) {
                 this._console.log('Found existing cache directory ' + cacheDir);
             } else {
-                cacheDir = fs.mkdtempSync(_tempDir + _cacheDirPrefix);
-                fs.mkdirSync(cacheDir);
+                fs.mkdirSync(_tempDirName);
                 this._console.log('Created new cache directory ' + cacheDir);
             }
 
             this._cacheDirPath = cacheDir;
         } catch (e) {
-            this._console.error('Failed to create cache directory');
+            this._console.log('Failed to create cache directory');
             this._cacheDirPath = '';
         }
     }
@@ -142,7 +138,7 @@ export class AnalysisCache {
                 }
             });
         } catch (e) {
-            this._console.error('Failed to enumerate cache entries');
+            this._console.log('Failed to enumerate cache entries');
         }
     }
 
@@ -150,7 +146,7 @@ export class AnalysisCache {
         try {
             fs.rmdirSync(filePath);
         } catch (e) {
-            this._console.error('Could not delete cache file ' + filePath);
+            this._console.log('Could not delete cache file ' + filePath);
         }
     }
 
@@ -240,9 +236,8 @@ export class AnalysisCache {
         return str;
     }
 
-    private _createCacheFileName(sourceFilePath: string, optionsStr: string) {
+    private _createCacheFileName(sourceFilePath: string, optionsHash: number) {
         const pathHash = StringUtils.hashString(sourceFilePath);
-        const optionsHash = StringUtils.hashString(optionsStr);
         let sourceFileName = stripFileExtension(getFileName(sourceFilePath));
         if (sourceFileName.length > _maxSourceFileName) {
             sourceFileName = sourceFileName.substr(0, _maxSourceFileName);

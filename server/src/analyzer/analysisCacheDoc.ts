@@ -137,7 +137,7 @@ export type CachedTypeMap = { [typeId: number]: CachedType };
 export interface AnalysisCacheDoc {
     cacheVersion: number;
     filePath: string;
-    optionsString: string;
+    optionsStringHash: number;
     fileContentsHash: number;
     diagnostics: CachedDiagnostic[];
     primaryModuleType: CachedTypeRef;

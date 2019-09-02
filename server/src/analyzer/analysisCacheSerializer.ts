@@ -31,7 +31,7 @@ interface SerializerInfo {
 }
 
 export class AnalysisCacheSerializer {
-    static serializeToDocument(sourceFilePath: string, optionsStr: string,
+    static serializeToDocument(sourceFilePath: string, optionsStrHash: number,
             fileContentsHash: number, diagnostics: Diagnostic[],
             moduleType: ModuleType) {
 
@@ -48,7 +48,7 @@ export class AnalysisCacheSerializer {
         const cacheDoc: AnalysisCacheDoc = {
             cacheVersion: currentCacheDocVersion,
             filePath: sourceFilePath,
-            optionsString: optionsStr,
+            optionsStringHash: optionsStrHash,
             fileContentsHash,
             diagnostics: [],
             primaryModuleType,
@@ -99,18 +99,24 @@ export class AnalysisCacheSerializer {
         // this file, we'll use a remote encoding instead.
         if (type instanceof ClassType) {
             if (type.getSourceFilePath() !== serializerInfo.sourceFilePath) {
+                const sourceFilePath = type.getSourceFilePath();
+                serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
+
                 return {
                     localTypeId: -1,
-                    remotePath: type.getSourceFilePath(),
+                    remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Class,
                     remoteTypeSourceId: type.getTypeSourceId()
                 };
             }
         } else if (type instanceof ModuleType) {
             if (type.getSourceFilePath() !== serializerInfo.sourceFilePath) {
+                const sourceFilePath = type.getSourceFilePath();
+                serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
+
                 return {
                     localTypeId: -1,
-                    remotePath: type.getSourceFilePath(),
+                    remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Module
                 };
             }

@@ -11,34 +11,33 @@
 import * as assert from 'assert';
 
 import { Diagnostic } from '../common/diagnostic';
-import { AnalysisCacheDoc, CachedClassType, CachedDeclaration,
-    CachedDiagnostic, CachedFunctionType, CachedModuleType, CachedObjectType,
-    CachedOverloadedFunctionType, CachedPropertyType, CachedSymbol,
-    CachedSymbolTable, CachedType, CachedTypeMap, CachedTypeRef,
-    CachedTypeVarType, CachedUnionType, currentCacheDocVersion
-    } from './analysisCacheDoc';
+import { AnalysisCacheDoc, CachedClassType, CachedDeclaration, CachedDiagnostic,
+    CachedFunctionType, CachedModuleType, CachedObjectType, CachedOverloadedFunctionType,
+    CachedPropertyType, CachedSymbol, CachedSymbolTable, CachedTypeMap, CachedTypeRef,
+    CachedTypeVarType, CachedUnionType, currentCacheDocVersion } from './analysisCacheDoc';
 import { Declaration } from './declaration';
 import { defaultTypeSourceId } from './inferredType';
 import { Symbol, SymbolTable } from './symbol';
-import { AnyType, ClassType, EllipsisType, FunctionType, ModuleType,
-    NeverType, NoneType, ObjectType, OverloadedFunctionType, PropertyType,
-    Type, TypeCategory, TypeVarType, UnboundType, UnionType,
-    UnknownType } from './types';
+import { AnyType, ClassType, EllipsisType, FunctionType, ModuleType, NeverType,
+    NoneType, ObjectType, OverloadedFunctionType, PropertyType, Type, TypeCategory,
+    TypeVarType, UnboundType, UnionType, UnknownType } from './types';
 
 export type TypeMap = { [id: number]: Type };
 export type ResolveModuleTypeCallback = (filePath: string) => ModuleType;
 export type ResolveClassTypeCallback = (filePath: string, typeSourceId: string) => ClassType;
 
 export interface DeserializedInfo {
+    analysisDoc: AnalysisCacheDoc;
     diagnostics: Diagnostic[];
     primaryModuleType: ModuleType;
     deserializedTypeMap: TypeMap;
+    dependsOnFilePaths: string[];
 }
 
 export class AnalysisCacheDeserializer {
     // Validates that the cache document contents are correct. Throws an
     // exception if not.
-    validateDocument(doc: AnalysisCacheDoc, sourceFilePath: string, optionsString: string,
+    static validateDocument(doc: AnalysisCacheDoc, sourceFilePath: string, optionsStringHash: number,
             fileContentsHash: number) {
 
         if (doc.cacheVersion !== currentCacheDocVersion) {
@@ -49,7 +48,7 @@ export class AnalysisCacheDeserializer {
             throw new Error('Wrong file path');
         }
 
-        if (doc.optionsString !== optionsString) {
+        if (doc.optionsStringHash !== optionsStringHash) {
             throw new Error('Wrong options string');
         }
 
@@ -64,7 +63,7 @@ export class AnalysisCacheDeserializer {
     // filled in during the second pass. This two-pass process is
     // required to handle circular dependencies both within files
     // and across files.
-    deserializeFirstPass(doc: AnalysisCacheDoc): DeserializedInfo {
+    static deserializeFirstPass(doc: AnalysisCacheDoc): DeserializedInfo {
         const deserializedTypeMap = this._deserializeTypesFirstPass(
                 doc.types, doc.filePath);
         const primaryModuleType = deserializedTypeMap[
@@ -75,30 +74,41 @@ export class AnalysisCacheDeserializer {
         }
 
         const deserializedInfo: DeserializedInfo = {
+            analysisDoc: doc,
             diagnostics: doc.diagnostics.map(diag => this._deserializeDiagnostic(diag)),
             primaryModuleType,
-            deserializedTypeMap
+            deserializedTypeMap,
+            dependsOnFilePaths: doc.dependsOnFilePaths
         };
+
+        // Register any internal class types with the primary module type.
+        Object.keys(deserializedInfo.deserializedTypeMap).forEach(key => {
+            const typeId = parseInt(key, 10);
+            const type = deserializedInfo.deserializedTypeMap[typeId];
+            if (type.category === TypeCategory.Class) {
+                primaryModuleType.addDeclaredClass(type as ClassType);
+            }
+        });
 
         return deserializedInfo;
     }
 
     // Performs a second pass of deserialization. During this pass,
     // type and declaration objects are filled in completely.
-    deserializeSecondPass(doc: AnalysisCacheDoc, info: DeserializedInfo,
+    static deserializeSecondPass(info: DeserializedInfo,
             resolveModuleCallback: ResolveModuleTypeCallback,
             resolveClassCallback: ResolveClassTypeCallback) {
 
-        this._deserializeTypesSecondPass(doc, info,
+        this._deserializeTypesSecondPass(info,
             resolveModuleCallback, resolveClassCallback);
     }
 
-    private _deserializeDiagnostic(cachedDiag: CachedDiagnostic): Diagnostic {
+    private static _deserializeDiagnostic(cachedDiag: CachedDiagnostic): Diagnostic {
         return new Diagnostic(cachedDiag.category, cachedDiag.message,
             cachedDiag.range);
     }
 
-    private _deserializeTypesFirstPass(cachedTypeMap: CachedTypeMap,
+    private static _deserializeTypesFirstPass(cachedTypeMap: CachedTypeMap,
             sourceFilePath: string): TypeMap {
 
         const typeMap: TypeMap = {};
@@ -211,11 +221,11 @@ export class AnalysisCacheDeserializer {
         return typeMap;
     }
 
-    private _deserializeTypesSecondPass(doc: AnalysisCacheDoc,
-            info: DeserializedInfo,
+    private static _deserializeTypesSecondPass(info: DeserializedInfo,
             resolveModuleCallback: ResolveModuleTypeCallback,
             resolveClassCallback: ResolveClassTypeCallback) {
 
+        const doc = info.analysisDoc;
         Object.keys(doc.types).forEach(key => {
             const typeId = parseInt(key, 10);
             const cachedType = doc.types[typeId];
@@ -240,6 +250,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Function: {
                     const cachedFunctionType = cachedType as CachedFunctionType;
                     const functionType = doc.types[typeId] as FunctionType;
+                    assert(functionType instanceof FunctionType);
 
                     cachedFunctionType.parameters.forEach(cachedParam => {
                         functionType.addParameter({
@@ -258,6 +269,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.OverloadedFunction: {
                     const cachedFunctionType = cachedType as CachedOverloadedFunctionType;
                     const overloadedFunctionType = doc.types[typeId] as OverloadedFunctionType;
+                    assert(overloadedFunctionType instanceof OverloadedFunctionType);
 
                     cachedFunctionType.overloads.forEach(overload => {
                         overloadedFunctionType.addOverload(
@@ -271,6 +283,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Property: {
                     const cachedPropertyType = cachedType as CachedPropertyType;
                     const propertyType = doc.types[typeId] as PropertyType;
+                    assert(propertyType instanceof PropertyType);
 
                     propertyType.setGetter(
                         this._getType(cachedPropertyType.getter, info.deserializedTypeMap) as FunctionType
@@ -293,6 +306,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Class: {
                     const cachedClassType = cachedType as CachedClassType;
                     const classType = doc.types[typeId] as ClassType;
+                    assert(classType instanceof ClassType);
 
                     cachedClassType.baseClasses.forEach(baseClass => {
                         classType.addBaseClass(
@@ -352,6 +366,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Object: {
                     const cachedObjectType = cachedType as CachedObjectType;
                     const objectType = doc.types[typeId] as ObjectType;
+                    assert(objectType instanceof ObjectType);
 
                     objectType.setClassType(
                         this._getType(cachedObjectType.classType, info.deserializedTypeMap,
@@ -363,6 +378,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Module: {
                     const cachedModuleType = cachedType as CachedModuleType;
                     const moduleType = doc.types[typeId] as ModuleType;
+                    assert(moduleType instanceof ModuleType);
 
                     moduleType.setFields(this._deserializeSymbolTable(
                         cachedModuleType.fields, doc, info,
@@ -377,6 +393,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.Union: {
                     const cachedUnionType = cachedType as CachedUnionType;
                     const unionType = doc.types[typeId] as UnionType;
+                    assert(unionType instanceof UnionType);
 
                     const types = cachedUnionType.types.map(type => {
                         return this._getType(type, info.deserializedTypeMap,
@@ -389,6 +406,7 @@ export class AnalysisCacheDeserializer {
                 case TypeCategory.TypeVar: {
                     const cachedTypeVarType = cachedType as CachedTypeVarType;
                     const typeVarType = doc.types[typeId] as TypeVarType;
+                    assert(typeVarType instanceof TypeVarType);
 
                     cachedTypeVarType.constraints.forEach(constraint => {
                         typeVarType.addConstraint(
@@ -418,7 +436,7 @@ export class AnalysisCacheDeserializer {
         });
     }
 
-    private _deserializeSymbolTable(cachedSymbolTable: CachedSymbolTable,
+    private static _deserializeSymbolTable(cachedSymbolTable: CachedSymbolTable,
             doc: AnalysisCacheDoc,
             info: DeserializedInfo,
             resolveModuleCallback: ResolveModuleTypeCallback,
@@ -437,7 +455,7 @@ export class AnalysisCacheDeserializer {
         return symbolTable;
     }
 
-    private _deserializeSymbol(cachedSymbol: CachedSymbol,
+    private static _deserializeSymbol(cachedSymbol: CachedSymbol,
         typeMap: TypeMap,
         resolveModuleCallback: ResolveModuleTypeCallback,
         resolveClassCallback: ResolveClassTypeCallback): Symbol {
@@ -462,7 +480,7 @@ export class AnalysisCacheDeserializer {
         return newSymbol;
     }
 
-    private _decodeDeclaration(cachedDecl: CachedDeclaration, typeMap: TypeMap,
+    private static _decodeDeclaration(cachedDecl: CachedDeclaration, typeMap: TypeMap,
             resolveModuleCallback: ResolveModuleTypeCallback,
             resolveClassCallback: ResolveClassTypeCallback): Declaration {
 
@@ -482,7 +500,7 @@ export class AnalysisCacheDeserializer {
         return newDecl;
     }
 
-    private _getType(cachedTypeRef: CachedTypeRef, typeMap: TypeMap,
+    private static _getType(cachedTypeRef: CachedTypeRef, typeMap: TypeMap,
             resolveModuleCallback?: ResolveModuleTypeCallback,
             resolveClassCallback?: ResolveClassTypeCallback) {
 

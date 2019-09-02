@@ -1710,6 +1710,10 @@ export class TypeAnalyzer extends ParseTreeWalker {
                         assignedName, ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
                         defaultTypeSourceId);
 
+                    // Register the new class with the module.
+                    const moduleType = AnalyzerNodeInfo.getModuleTypeRecursive(node);
+                    moduleType.addDeclaredClass(specialClassType);
+
                     // See if we need to locate an alias class to bind it to.
                     const aliasMapEntry = aliasMap[assignedName];
                     if (aliasMapEntry) {
@@ -1772,6 +1776,10 @@ export class TypeAnalyzer extends ParseTreeWalker {
                 const specialClassType = new ClassType(this._fileInfo.filePath,
                     assignedName, ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
                     AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash));
+
+                // Register the new class with the module.
+                const moduleType = AnalyzerNodeInfo.getModuleTypeRecursive(node);
+                moduleType.addDeclaredClass(specialClassType);
 
                 const aliasClass = ScopeUtils.getBuiltInType(this._currentScope,
                     assignedName.toLowerCase());

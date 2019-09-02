@@ -37,20 +37,21 @@ import { ParseOptions, Parser, ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
 import { TestWalker } from '../tests/testWalker';
 import { AnalysisCache } from './analysisCache';
+import { AnalysisCacheDeserializer, DeserializedInfo } from './analysisCacheDeserializer';
 import { AnalysisCacheSerializer } from './analysisCacheSerializer';
 import { AnalyzerFileInfo, ImportMap } from './analyzerFileInfo';
 import { AnalyzerNodeInfo } from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
 import { CommentUtils } from './commentUtils';
 import { ImportResolver } from './importResolver';
-import { ImportResult } from './importResult';
+import { ImportResult, ImportType } from './importResult';
 import { ParseTreeCleanerWalker } from './parseTreeCleaner';
 import { ModuleImport, PostParseWalker } from './postParseWalker';
 import { Scope } from './scope';
 import { ModuleScopeAnalyzer } from './semanticAnalyzer';
 import { SymbolTable } from './symbol';
 import { TypeAnalyzer } from './typeAnalyzer';
-import { ModuleType } from './types';
+import { ClassType, ModuleType } from './types';
 
 const _maxImportCyclesPerFile = 4;
 
@@ -66,6 +67,10 @@ export enum AnalysisPhase {
 // Represents a pending or completed parse or analysis operation.
 export interface AnalysisJob {
     fileContentsVersion: number;
+
+    usingCachedAnalysis: boolean;
+    deserializedCacheInfo?: DeserializedInfo;
+
     nextPhaseToRun: AnalysisPhase;
     moduleSymbolTable?: SymbolTable;
     moduleType?: ModuleType;
@@ -119,10 +124,15 @@ export class SourceFile {
     // True if the file appears to have been deleted.
     private _isFileDeleted = false;
 
+    // Indicates that the file should not be analyzed with
+    // cached contents.
+    private _preventCacheUsage = false;
+
     // Latest analysis job that has completed at least one phase
     // of analysis.
     private _analysisJob: AnalysisJob = {
         fileContentsVersion: -1,
+        usingCachedAnalysis: false,
         nextPhaseToRun: AnalysisPhase.SemanticAnalysis,
         parseTreeNeedsCleaning: false,
 
@@ -194,6 +204,10 @@ export class SourceFile {
 
     getDiagnosticVersion(): number {
         return this._diagnosticVersion;
+    }
+
+    setPreventCacheUsage() {
+        this._preventCacheUsage = true;
     }
 
     isStubFile() {
@@ -326,6 +340,12 @@ export class SourceFile {
                 }
             }
 
+            // Once a file is opened (and the file contents are passed
+            // directly rather than being read from disk), this file
+            // should no longer use the cache because we need the full
+            // parse tree available for various language services.
+            this._preventCacheUsage = true;
+
             this._fileContents = contents;
         }
     }
@@ -403,20 +423,15 @@ export class SourceFile {
         }
 
         const diagSink = new DiagnosticSink();
-        let fileContents = this._fileContents;
+        let fileContents = this._fileContents || '';
         if (this._clientVersion === null) {
             try {
                 timingStats.readFileTime.timeOperation(() => {
                     // Read the file's contents.
                     fileContents = fs.readFileSync(this._filePath, { encoding: 'utf8' });
-
-                    // Remember the length and hash for comparison purposes.
-                    this._lastFileContentLength = fileContents.length;
-                    this._lastFileContentHash = StringUtils.hashString(fileContents);
                 });
             } catch (error) {
                 diagSink.addError(`Source file could not be read`, getEmptyRange());
-                fileContents = '';
 
                 if (!fs.existsSync(this._filePath)) {
                     this._isFileDeleted = true;
@@ -424,79 +439,102 @@ export class SourceFile {
             }
         }
 
-        // Use the configuration options to determine the environment in which
-        // this source file will be executed.
-        const execEnvironment = configOptions.findExecEnvironment(this._filePath);
+        // Remember the length and hash for comparison purposes.
+        this._lastFileContentLength = fileContents.length;
+        this._lastFileContentHash = StringUtils.hashString(fileContents);
 
-        const parseOptions = new ParseOptions();
-        if (this._filePath.endsWith('pyi')) {
-            parseOptions.isStubFile = true;
+        let deserializedCacheInfo: DeserializedInfo | undefined;
+        if (analysisCache && !this._preventCacheUsage) {
+            deserializedCacheInfo = this._attemptReadCache(analysisCache,
+                configOptions, this._lastFileContentHash);
         }
-        parseOptions.pythonVersion = execEnvironment.pythonVersion;
 
-        try {
-            // Parse the token stream, building the abstract syntax tree.
-            const parser = new Parser();
-            const parseResults = parser.parseSourceFile(fileContents!, parseOptions, diagSink);
-
-            // Convert the diagnostic sink into one that knows how to convert
-            // to line numbers.
-            const textRangeDiagSink = new TextRangeDiagnosticSink(parseResults.lines, diagSink.diagnostics);
-
-            // Fill in the parent links and get the list of imports.
-            const walker = new PostParseWalker(textRangeDiagSink, parseResults.parseTree);
-            timingStats.postParseWalkerTime.timeOperation(() => {
-                walker.analyze();
-            });
-
-            // If we're in "test mode" (used for unit testing), run an additional
-            // "test walker" over the parse tree to validate its internal consistency.
-            if (configOptions.internalTestMode) {
-                const testWalker = new TestWalker();
-                testWalker.walk(parseResults.parseTree);
-            }
-
-            // Save information in the analysis job.
-            this._analysisJob.parseResults = parseResults;
-
-            timingStats.resolveImportsTime.timeOperation(() => {
-                [this._analysisJob.imports, this._analysisJob.builtinsImport, this._analysisJob.typingModulePath] =
-                    this._resolveImports(importResolver, walker.getImportedModules(), execEnvironment);
-            });
-            this._analysisJob.parseDiagnostics = diagSink.diagnostics;
-
-            // Is this file in a "strict" path?
-            const useStrict = configOptions.strict.find(
-                strictFileSpec => strictFileSpec.regExp.test(this._filePath)) !== undefined;
-
-            this._analysisJob.diagnosticSettings = CommentUtils.getFileLevelDirectives(
-                this._analysisJob.parseResults.tokens, configOptions.diagnosticSettings,
-                useStrict);
-        } catch (e) {
-            let message: string;
-            if (e instanceof Error) {
-                message = e.stack || e.message;
-            } else {
-                message = JSON.stringify(e);
-            }
-
-            this._console.log(
-                `An internal error occurred while parsing ${ this.getFilePath() }: ` + message);
-
-            this._analysisJob.parseResults = {
-                parseTree: new ModuleNode(new TextRange(0, 0)),
-                futureImports: new StringMap<boolean>(),
-                tokens: new TextRangeCollection<Token>([]),
-                lines: new TextRangeCollection<TextRange>([]),
-                predominantLineEndSequence: '\n',
-                predominantTabSequence: '    '
-            };
-            this._analysisJob.imports = undefined;
+        if (deserializedCacheInfo) {
+            this._analysisJob.usingCachedAnalysis = true;
+            this._analysisJob.deserializedCacheInfo = deserializedCacheInfo;
+            this._analysisJob.parseDiagnostics = [];
+            this._analysisJob.imports =
+                this._synthesizeImportsFromCacheInfo(deserializedCacheInfo);
             this._analysisJob.builtinsImport = undefined;
+            this._analysisJob.typingModulePath = undefined;
+        } else {
+            this._analysisJob.usingCachedAnalysis = false;
+            this._analysisJob.deserializedCacheInfo = undefined;
 
-            const diagSink = new DiagnosticSink();
-            diagSink.addError(`An internal error occurred while parsing file`, getEmptyRange());
-            this._analysisJob.parseDiagnostics = diagSink.diagnostics;
+            // Use the configuration options to determine the environment in which
+            // this source file will be executed.
+            const execEnvironment = configOptions.findExecEnvironment(this._filePath);
+
+            const parseOptions = new ParseOptions();
+            if (this._filePath.endsWith('pyi')) {
+                parseOptions.isStubFile = true;
+            }
+            parseOptions.pythonVersion = execEnvironment.pythonVersion;
+
+            try {
+                // Parse the token stream, building the abstract syntax tree.
+                const parser = new Parser();
+                const parseResults = parser.parseSourceFile(fileContents, parseOptions, diagSink);
+
+                // Convert the diagnostic sink into one that knows how to convert
+                // to line numbers.
+                const textRangeDiagSink = new TextRangeDiagnosticSink(parseResults.lines, diagSink.diagnostics);
+
+                // Fill in the parent links and get the list of imports.
+                const walker = new PostParseWalker(textRangeDiagSink, parseResults.parseTree);
+                timingStats.postParseWalkerTime.timeOperation(() => {
+                    walker.analyze();
+                });
+
+                // If we're in "test mode" (used for unit testing), run an additional
+                // "test walker" over the parse tree to validate its internal consistency.
+                if (configOptions.internalTestMode) {
+                    const testWalker = new TestWalker();
+                    testWalker.walk(parseResults.parseTree);
+                }
+
+                // Save information in the analysis job.
+                this._analysisJob.parseResults = parseResults;
+
+                timingStats.resolveImportsTime.timeOperation(() => {
+                    [this._analysisJob.imports, this._analysisJob.builtinsImport, this._analysisJob.typingModulePath] =
+                        this._resolveImports(importResolver, walker.getImportedModules(), execEnvironment);
+                });
+                this._analysisJob.parseDiagnostics = diagSink.diagnostics;
+
+                // Is this file in a "strict" path?
+                const useStrict = configOptions.strict.find(
+                    strictFileSpec => strictFileSpec.regExp.test(this._filePath)) !== undefined;
+
+                this._analysisJob.diagnosticSettings = CommentUtils.getFileLevelDirectives(
+                    this._analysisJob.parseResults.tokens, configOptions.diagnosticSettings,
+                    useStrict);
+            } catch (e) {
+                let message: string;
+                if (e instanceof Error) {
+                    message = e.stack || e.message;
+                } else {
+                    message = JSON.stringify(e);
+                }
+
+                this._console.log(
+                    `An internal error occurred while parsing ${ this.getFilePath() }: ` + message);
+
+                this._analysisJob.parseResults = {
+                    parseTree: new ModuleNode(new TextRange(0, 0)),
+                    futureImports: new StringMap<boolean>(),
+                    tokens: new TextRangeCollection<Token>([]),
+                    lines: new TextRangeCollection<TextRange>([]),
+                    predominantLineEndSequence: '\n',
+                    predominantTabSequence: '    '
+                };
+                this._analysisJob.imports = undefined;
+                this._analysisJob.builtinsImport = undefined;
+
+                const diagSink = new DiagnosticSink();
+                diagSink.addError(`An internal error occurred while parsing file`, getEmptyRange());
+                this._analysisJob.parseDiagnostics = diagSink.diagnostics;
+            }
         }
 
         this._analysisJob.fileContentsVersion = this._fileContentsVersion;
@@ -633,29 +671,37 @@ export class SourceFile {
     doSemanticAnalysis(configOptions: ConfigOptions, builtinsScope?: Scope) {
         assert(!this.isParseRequired());
         assert(this.isSemanticAnalysisRequired());
-        assert(this._analysisJob.parseResults);
         assert(this._analysisJob.nextPhaseToRun === AnalysisPhase.SemanticAnalysis);
 
         const fileInfo = this._buildFileInfo(configOptions, undefined, builtinsScope);
 
         try {
-            this._cleanParseTreeIfRequired();
+            // Are we using the cache? If so, we can skip the semantic analysis stage.
+            if (this._analysisJob.usingCachedAnalysis && this._analysisJob.deserializedCacheInfo) {
+                this._analysisJob.moduleType =
+                    this._analysisJob.deserializedCacheInfo.primaryModuleType;
+                this._analysisJob.moduleSymbolTable =
+                    this._analysisJob.moduleType.getFields();
+                this._analysisJob.semanticAnalysisDiagnostics = [];
+            } else {
+                this._cleanParseTreeIfRequired();
 
-            // Perform semantic analysis.
-            const scopeAnalyzer = new ModuleScopeAnalyzer(
-                this._analysisJob.parseResults!.parseTree, fileInfo);
-            timingStats.semanticAnalyzerTime.timeOperation(() => {
-                scopeAnalyzer.analyze();
-            });
+                // Perform semantic analysis.
+                const scopeAnalyzer = new ModuleScopeAnalyzer(
+                    this._analysisJob.parseResults!.parseTree, fileInfo);
+                timingStats.semanticAnalyzerTime.timeOperation(() => {
+                    scopeAnalyzer.analyze();
+                });
 
-            this._analysisJob.semanticAnalysisDiagnostics = fileInfo.diagnosticSink.diagnostics;
-            const moduleScope = AnalyzerNodeInfo.getScope(this._analysisJob.parseResults!.parseTree);
-            assert(moduleScope !== undefined);
-            this._analysisJob.moduleSymbolTable = moduleScope!.getSymbolTable();
-            const moduleType = AnalyzerNodeInfo.getExpressionType(
-                this._analysisJob.parseResults!.parseTree);
-            assert(moduleType instanceof ModuleType);
-            this._analysisJob.moduleType = moduleType as ModuleType;
+                this._analysisJob.semanticAnalysisDiagnostics = fileInfo.diagnosticSink.diagnostics;
+                const moduleScope = AnalyzerNodeInfo.getScope(this._analysisJob.parseResults!.parseTree);
+                assert(moduleScope !== undefined);
+                this._analysisJob.moduleSymbolTable = moduleScope!.getSymbolTable();
+                const moduleType = AnalyzerNodeInfo.getExpressionType(
+                    this._analysisJob.parseResults!.parseTree);
+                assert(moduleType instanceof ModuleType);
+                this._analysisJob.moduleType = moduleType as ModuleType;
+            }
         } catch (e) {
             let message: string;
             if (e instanceof Error) {
@@ -688,25 +734,39 @@ export class SourceFile {
         assert(!this.isParseRequired());
         assert(!this.isSemanticAnalysisRequired());
         assert(this.isTypeAnalysisRequired());
-        assert(this._analysisJob.parseResults);
         assert(this._analysisJob.nextPhaseToRun === AnalysisPhase.TypeAnalysis);
 
         const fileInfo = this._buildFileInfo(configOptions, importMap, undefined);
 
         try {
-            // Perform static type analysis.
-            const typeAnalyzer = new TypeAnalyzer(this._analysisJob.parseResults!.parseTree,
-                fileInfo, this._analysisJob.typeAnalysisPassNumber);
-            this._analysisJob.typeAnalysisPassNumber++;
+            // Are we using the cache? If so, we can skip the type analysis stage.
+            if (this._analysisJob.usingCachedAnalysis && this._analysisJob.deserializedCacheInfo) {
+                this._analysisJob.isTypeAnalysisPassNeeded = false;
+                this._analysisJob.typeAnalysisLastPassDiagnostics =
+                    this._analysisJob.deserializedCacheInfo.diagnostics;
+                this._analysisJob.lastReanalysisReason = '';
+                this._analysisJob.typeAnalysisPassNumber = 0;
 
-            timingStats.typeAnalyzerTime.timeOperation(() => {
-                // Repeatedly call the analyzer until everything converges.
-                this._analysisJob.isTypeAnalysisPassNeeded = typeAnalyzer.analyze();
-                this._analysisJob.typeAnalysisLastPassDiagnostics = fileInfo.diagnosticSink.diagnostics;
-                if (this._analysisJob.isTypeAnalysisPassNeeded) {
-                    this._analysisJob.lastReanalysisReason = typeAnalyzer.getLastReanalysisReason();
-                }
-            });
+                AnalysisCacheDeserializer.deserializeSecondPass(
+                    this._analysisJob.deserializedCacheInfo,
+                    filePath => this._resolveModuleImport(importMap, filePath),
+                    (filePath, typeSourceId) => this._resolveClassImport(
+                        importMap, filePath, typeSourceId));
+            } else {
+                // Perform static type analysis.
+                const typeAnalyzer = new TypeAnalyzer(this._analysisJob.parseResults!.parseTree,
+                    fileInfo, this._analysisJob.typeAnalysisPassNumber);
+                this._analysisJob.typeAnalysisPassNumber++;
+
+                timingStats.typeAnalyzerTime.timeOperation(() => {
+                    // Repeatedly call the analyzer until everything converges.
+                    this._analysisJob.isTypeAnalysisPassNeeded = typeAnalyzer.analyze();
+                    this._analysisJob.typeAnalysisLastPassDiagnostics = fileInfo.diagnosticSink.diagnostics;
+                    if (this._analysisJob.isTypeAnalysisPassNeeded) {
+                        this._analysisJob.lastReanalysisReason = typeAnalyzer.getLastReanalysisReason();
+                    }
+                });
+            }
         } catch (e) {
             let message: string;
             if (e instanceof Error) {
@@ -752,28 +812,113 @@ export class SourceFile {
                 this._analysisJob.semanticAnalysisDiagnostics,
                 this._analysisJob.typeAnalysisFinalDiagnostics);
 
+            const optionsHash = StringUtils.hashString(optionsString);
             const analysisCacheDoc = AnalysisCacheSerializer.serializeToDocument(
-                this._filePath, optionsString,
+                this._filePath, optionsHash,
                 this._lastFileContentHash || 0,
                 diagList, this._analysisJob.moduleType!);
 
-            analysisCache.writeCacheEntry(this._filePath, optionsString, analysisCacheDoc);
+            analysisCache.writeCacheEntry(this._filePath, optionsHash, analysisCacheDoc);
         }
     }
 
+    private _resolveModuleImport(importMap: ImportMap, targetFilePath: string): ModuleType {
+        const moduleType = importMap[targetFilePath];
+        if (moduleType) {
+            return moduleType;
+        }
+
+        throw new Error('Could not resolve module import for cached analysis');
+    }
+
+    private _resolveClassImport(importMap: ImportMap, targetFilePath: string,
+            typeSourceId: string): ClassType {
+
+        const moduleType = importMap[targetFilePath];
+        if (moduleType) {
+            const classMap = moduleType.getDeclaredClasses();
+            const classType = classMap[typeSourceId];
+            if (classType) {
+                return classType;
+            }
+        }
+
+        throw new Error('Could not resolve class import for cached analysis');
+    }
+
+    // Attempts to read the source file's entry from the cache and perform
+    // a first pass deserialization of its contents. If the cache file isn't
+    // present or is out of date, it returns false.
+    private _attemptReadCache(analysisCache: AnalysisCache, configOptions: ConfigOptions,
+            fileContentsHash: number): DeserializedInfo | undefined {
+
+        const optionsHash = StringUtils.hashString(getOptionsString(configOptions));
+        const analysisCacheDoc = analysisCache.readCacheEntry(this._filePath, optionsHash);
+        if (!analysisCacheDoc) {
+            return undefined;
+        }
+
+        // Validate that the cache doc is still valid.
+        try {
+            AnalysisCacheDeserializer.validateDocument(analysisCacheDoc,
+                this._filePath, optionsHash, fileContentsHash);
+        } catch (e) {
+            analysisCache.deleteCacheEntry(this._filePath, optionsHash);
+            return undefined;
+        }
+
+        // Perform a first-pass deserialization.
+        let deserializedInfo: DeserializedInfo;
+        try {
+            deserializedInfo = AnalysisCacheDeserializer.deserializeFirstPass(
+                analysisCacheDoc);
+        } catch (e) {
+            // Something went wrong. Delete the cache entry.
+            analysisCache.deleteCacheEntry(this._filePath, optionsHash);
+            return undefined;
+        }
+
+        return deserializedInfo;
+    }
+
+    // In the non-cached case, the import resolver builds an array of ImportResult
+    // objects. We'll synthesize these from information stored in the cache info.
+    private _synthesizeImportsFromCacheInfo(cacheInfo: DeserializedInfo): ImportResult[] {
+        return cacheInfo.dependsOnFilePaths.map(path => {
+            const importResult: ImportResult = {
+                importName: '',
+                isImportFound: true,
+                importType: ImportType.Local,
+                resolvedPaths: [path],
+                isNamespacePackage: false,
+                isStubFile: false,
+                isPydFile: false,
+                implicitImports: []
+            };
+            return importResult;
+        });
+    }
+
     private _buildFileInfo(configOptions: ConfigOptions, importMap?: ImportMap, builtinsScope?: Scope) {
-        assert(this._analysisJob.parseResults !== undefined);
-        const analysisDiagnostics = new TextRangeDiagnosticSink(this._analysisJob.parseResults!.lines);
+        const analysisDiagnostics = new TextRangeDiagnosticSink(
+                this._analysisJob.parseResults ?
+                    this._analysisJob.parseResults.lines :
+                    new TextRangeCollection<TextRange>([]));
 
         const fileInfo: AnalyzerFileInfo = {
             importMap: importMap || {},
-            futureImports: this._analysisJob.parseResults!.futureImports,
+            futureImports: this._analysisJob.parseResults ?
+                this._analysisJob.parseResults.futureImports :
+                new StringMap(),
             builtinsScope,
-            typingModulePath: this._analysisJob.typingModulePath,
+            typingModulePath: this._analysisJob.parseResults ?
+                this._analysisJob.typingModulePath : '',
             diagnosticSink: analysisDiagnostics,
             executionEnvironment: configOptions.findExecEnvironment(this._filePath),
             diagnosticSettings: this._analysisJob.diagnosticSettings,
-            lines: this._analysisJob.parseResults!.lines,
+            lines: this._analysisJob.parseResults ?
+                this._analysisJob.parseResults.lines :
+                new TextRangeCollection<TextRange>([]),
             filePath: this._filePath,
             filePathHash: StringUtils.hashString(this._filePath),
             isStubFile: this._isStubFile,

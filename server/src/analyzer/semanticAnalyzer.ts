@@ -176,6 +176,10 @@ export abstract class SemanticAnalyzer extends ParseTreeWalker {
             AnalyzerNodeInfo.getTypeSourceId(node, this._fileInfo.filePathHash),
             this._getDocString(node.suite.statements));
 
+        // Register the new class with the module.
+        const moduleType = AnalyzerNodeInfo.getModuleTypeRecursive(node);
+        moduleType.addDeclaredClass(classType);
+
         // Don't walk the arguments for stub files because of forward
         // declarations.
         if (!this._fileInfo.isStubFile) {
@@ -606,13 +610,13 @@ export class ModuleScopeAnalyzer extends SemanticAnalyzer {
         assert(nameBindings !== undefined);
         this._addNamesToScope(nameBindings!.getGlobalNames());
 
-        this.walkChildren(this._scopedNode);
-
         // Associate the module's scope with the module type.
         const moduleType = new ModuleType(this._fileInfo.filePath,
             this._currentScope.getSymbolTable(),
             this._getDocString((this._scopedNode as ModuleNode).statements));
         AnalyzerNodeInfo.setExpressionType(this._scopedNode, moduleType);
+
+        this.walkChildren(this._scopedNode);
     }
 
     analyzeDeferred() {

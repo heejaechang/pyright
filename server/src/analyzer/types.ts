@@ -67,6 +67,8 @@ export enum TypeCategory {
     TypeVar = 14
 }
 
+export type DeclaredClassMap = { [typeSourceId: string ]: ClassType };
+
 export type LiteralValue = number | boolean | string;
 
 const _maxRecursionCount = 16;
@@ -170,6 +172,10 @@ export class ModuleType extends Type {
     private _fields: SymbolTable;
     private _docString?: string;
 
+    // We track all of the classes that are declared within
+    // this module. This includes nested classes.
+    private _declaredClasses: DeclaredClassMap = {};
+
     // A partial module is one that is not fully initialized
     // but contains only the symbols that have been imported
     // in a multi-part import (e.g. import a.b.c).
@@ -183,6 +189,20 @@ export class ModuleType extends Type {
         this._sourceFilePath = sourceFilePath;
         this._fields = symbolTable;
         this._docString = docString;
+    }
+
+    addDeclaredClass(declaredClass: ClassType) {
+        const typeSourceId = declaredClass.getTypeSourceId();
+        assert(declaredClass.getSourceFilePath() === this._sourceFilePath);
+        this._declaredClasses[typeSourceId] = declaredClass;
+    }
+
+    setDeclaredClasses(classMap: DeclaredClassMap) {
+        this._declaredClasses = classMap;
+    }
+
+    getDeclaredClasses() {
+        return this._declaredClasses;
     }
 
     getSourceFilePath() {

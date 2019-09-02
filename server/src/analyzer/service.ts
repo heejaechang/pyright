@@ -849,7 +849,8 @@ export class AnalyzerService {
         try {
             const duration = new Duration();
             moreToAnalyze = this._program.analyze(this._configOptions,
-                this._importResolver, this._maxAnalysisTime, this._useInteractiveMode());
+                this._importResolver, this._analysisCache,
+                this._maxAnalysisTime, this._useInteractiveMode());
 
             const results: AnalysisResults = {
                 diagnostics: this._program.getDiagnostics(this._configOptions),
@@ -865,8 +866,15 @@ export class AnalyzerService {
                     this._onCompletionCallback(results);
                 }
             }
-        } catch (err) {
-            this._console.log('Error performing analysis: ' + JSON.stringify(err));
+        } catch (e) {
+            let message: string;
+            if (e instanceof Error) {
+                message = e.stack || e.message;
+            } else {
+                message = JSON.stringify(e);
+            }
+
+            this._console.log('Error performing analysis: ' + message);
 
             if (this._onCompletionCallback) {
                 this._onCompletionCallback({

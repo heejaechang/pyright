@@ -271,6 +271,7 @@ export class Program {
     // analysis. In interactive mode, the timeout is always limited
     // to the smaller value to maintain responsiveness.
     analyze(options: ConfigOptions, importResolver: ImportResolver,
+            analysisCache?: AnalysisCache,
             maxTime?: MaxAnalysisTime, interactiveMode?: boolean): boolean {
 
         const elapsedTime = new Duration();
@@ -287,7 +288,7 @@ export class Program {
 
             // Start by parsing the open files.
             for (const sourceFileInfo of openFiles) {
-                this._parseFile(sourceFileInfo, options, importResolver);
+                this._parseFile(sourceFileInfo, options, importResolver, analysisCache);
 
                 if (isTimeElapsedOpenFiles()) {
                     return true;
@@ -470,13 +471,13 @@ export class Program {
     }
 
     private _parseFile(fileToParse: SourceFileInfo, options: ConfigOptions,
-            importResolver: ImportResolver) {
+            importResolver: ImportResolver, analysisCache?: AnalysisCache) {
 
         if (!this._isFileNeeded(fileToParse) || !fileToParse.sourceFile.isParseRequired()) {
             return;
         }
 
-        if (fileToParse.sourceFile.parse(options, importResolver)) {
+        if (fileToParse.sourceFile.parse(options, importResolver, analysisCache)) {
             this._updateSourceFileImports(fileToParse, options);
         }
 
@@ -494,13 +495,14 @@ export class Program {
     }
 
     private _doSemanticAnalysis(fileToAnalyze: SourceFileInfo,
-            options: ConfigOptions, importResolver: ImportResolver) {
+            options: ConfigOptions, importResolver: ImportResolver,
+            analysisCache?: AnalysisCache) {
 
         if (!this._isFileNeeded(fileToAnalyze) || !fileToAnalyze.sourceFile.isSemanticAnalysisRequired()) {
             return;
         }
 
-        this._parseFile(fileToAnalyze, options, importResolver);
+        this._parseFile(fileToAnalyze, options, importResolver, analysisCache);
 
         // We need to parse and semantically analyze the builtins import first.
         let builtinsScope: Scope | undefined;
