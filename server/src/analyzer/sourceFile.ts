@@ -810,24 +810,26 @@ export class SourceFile {
         this._analysisJob.typeAnalysisLastPassDiagnostics = [];
         this._diagnosticVersion++;
 
-        // Write out the file analysis contents to the cache.
-        if (analysisCache) {
-            const optionsString = getOptionsString(configOptions);
+        timingStats.writeToCacheTime.timeOperation(() => {
+            // Write out the file analysis contents to the cache.
+            if (analysisCache && !this._analysisJob.usingCachedAnalysis) {
+                const optionsString = getOptionsString(configOptions);
 
-            const diagList: Diagnostic[] = [];
-            diagList.concat(
-                this._analysisJob.parseDiagnostics,
-                this._analysisJob.semanticAnalysisDiagnostics,
-                this._analysisJob.typeAnalysisFinalDiagnostics);
+                const diagList: Diagnostic[] = [];
+                diagList.concat(
+                    this._analysisJob.parseDiagnostics,
+                    this._analysisJob.semanticAnalysisDiagnostics,
+                    this._analysisJob.typeAnalysisFinalDiagnostics);
 
-            const optionsHash = StringUtils.hashString(optionsString);
-            const analysisCacheDoc = AnalysisCacheSerializer.serializeToDocument(
-                this._filePath, optionsHash,
-                this._lastFileContentHash || '',
-                diagList, this._analysisJob.moduleType!);
+                const optionsHash = StringUtils.hashString(optionsString);
+                const analysisCacheDoc = AnalysisCacheSerializer.serializeToDocument(
+                    this._filePath, optionsHash,
+                    this._lastFileContentHash || '',
+                    diagList, this._analysisJob.moduleType!);
 
-            analysisCache.writeCacheEntry(this._filePath, optionsHash, analysisCacheDoc);
-        }
+                analysisCache.writeCacheEntry(this._filePath, optionsHash, analysisCacheDoc);
+            }
+        });
     }
 
     private _resolveModuleImport(importMap: ImportMap, targetFilePath: string): ModuleType {
