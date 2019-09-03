@@ -10,7 +10,7 @@
 
 import * as assert from 'assert';
 
-import { Diagnostic } from '../common/diagnostic';
+import { Diagnostic, DiagnosticTextRange } from '../common/diagnostic';
 import { AnalysisCacheDoc, CachedClassType, CachedDeclaration, CachedDiagnostic,
     CachedFunctionType, CachedModuleType, CachedObjectType,
     CachedOverloadedFunctionType, CachedPropertyType, CachedSymbol,
@@ -43,7 +43,8 @@ export class AnalysisCacheSerializer {
         };
 
         const primaryModuleType = this._serializeTypeRef(
-            moduleType, serializerInfo);
+            moduleType, serializerInfo) as number;
+        assert(typeof primaryModuleType === 'number');
 
         const cacheDoc: AnalysisCacheDoc = {
             cacheVersion: currentCacheDocVersion,
@@ -80,13 +81,18 @@ export class AnalysisCacheSerializer {
     }
 
     private static _serializeSymbol(symbol: Symbol, serializerInfo: SerializerInfo) {
+        const declarations = symbol.getDeclarations();
+        const isInitiallyUnbound = symbol.isInitiallyUnbound;
+        const isExternallyHidden = symbol.isExternallyHidden;
+
         const cachedSymbol: CachedSymbol = {
             inferredType: this._serializeTypeRef(symbol.getInferredType(), serializerInfo),
-            declarations: symbol.getDeclarations().map(
-                decl => this._serializeDeclaration(decl, serializerInfo)),
-            isInitiallyUnbound: symbol.isInitiallyUnbound(),
-            isExternallyHidden: symbol.isExternallyHidden(),
-            isAccessed: symbol.isAccessed()
+            declarations: declarations.length > 0 ?
+                symbol.getDeclarations().map(
+                    decl => this._serializeDeclaration(decl, serializerInfo)) :
+                undefined,
+            isInitiallyUnbound: isInitiallyUnbound ? true : undefined,
+            isExternallyHidden: isExternallyHidden ? true : undefined
         };
 
         return cachedSymbol;
@@ -103,7 +109,6 @@ export class AnalysisCacheSerializer {
                 serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
 
                 return {
-                    localId: -1,
                     remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Class,
                     remoteTypeSourceId: type.getTypeSourceId()
@@ -115,7 +120,6 @@ export class AnalysisCacheSerializer {
                 serializerInfo.dependencyMap[sourceFilePath] = sourceFilePath;
 
                 return {
-                    localId: -1,
                     remotePath: sourceFilePath,
                     remoteTypeCategory: TypeCategory.Module
                 };
@@ -130,9 +134,7 @@ export class AnalysisCacheSerializer {
             serializerInfo.typeMap[type.id] = this._serializeType(type, serializerInfo);
         }
 
-        return {
-            localId: type.id
-        };
+        return type.id;
     }
 
     private static _serializeType(type: Type, serializerInfo: SerializerInfo): CachedType {
@@ -347,7 +349,7 @@ export class AnalysisCacheSerializer {
                 undefined,
             isConstant: declaration.isConstant,
             path: declaration.path,
-            range: declaration.range
+            range: this._serializeRange(declaration.range)
         };
 
         return cachedDecl;
@@ -357,10 +359,17 @@ export class AnalysisCacheSerializer {
         const cachedDiag: CachedDiagnostic = {
             category: diag.category,
             message: diag.message,
-            range: diag.range,
+            range: this._serializeRange(diag.range),
             actions: diag.getActions()
         };
 
         return cachedDiag;
+    }
+
+    private static _serializeRange(range: DiagnosticTextRange): string {
+        return range.start.line.toString() + ':' +
+            range.start.column.toString() + ':' +
+            range.end.line.toString() + ':' +
+            range.end.column.toString();
     }
 }

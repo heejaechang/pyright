@@ -10,7 +10,7 @@
 
 import * as assert from 'assert';
 
-import { Diagnostic } from '../common/diagnostic';
+import { Diagnostic, DiagnosticTextRange } from '../common/diagnostic';
 import { AnalysisCacheDoc, CachedClassType, CachedDeclaration, CachedDiagnostic,
     CachedFunctionType, CachedModuleType, CachedObjectType, CachedOverloadedFunctionType,
     CachedPropertyType, CachedSymbol, CachedSymbolTable, CachedTypeMap, CachedTypeRef,
@@ -67,7 +67,7 @@ export class AnalysisCacheDeserializer {
         const deserializedTypeMap = this._deserializeTypesFirstPass(
                 doc.types, doc.filePath);
         const primaryModuleType = deserializedTypeMap[
-            doc.primaryModuleType.localId] as ModuleType;
+            doc.primaryModuleType] as ModuleType;
 
         if (!(primaryModuleType instanceof ModuleType)) {
             throw new Error('Primary module type does not refer to ModuleType');
@@ -105,7 +105,7 @@ export class AnalysisCacheDeserializer {
 
     private static _deserializeDiagnostic(cachedDiag: CachedDiagnostic): Diagnostic {
         return new Diagnostic(cachedDiag.category, cachedDiag.message,
-            cachedDiag.range);
+            this._deserializeRange(cachedDiag.range));
     }
 
     private static _deserializeTypesFirstPass(cachedTypeMap: CachedTypeMap,
@@ -460,22 +460,20 @@ export class AnalysisCacheDeserializer {
         resolveModuleCallback: ResolveModuleTypeCallback,
         resolveClassCallback: ResolveClassTypeCallback): Symbol {
 
-        const newSymbol = new Symbol(cachedSymbol.isInitiallyUnbound);
+        const newSymbol = new Symbol(!!cachedSymbol.isInitiallyUnbound);
 
         const inferredType = this._getType(cachedSymbol.inferredType,
             typeMap, resolveModuleCallback, resolveClassCallback);
         newSymbol.setInferredTypeForSource(inferredType, defaultTypeSourceId);
 
-        cachedSymbol.declarations.forEach(decl => {
+        const cachedDeclarations = cachedSymbol.declarations || [];
+
+        cachedDeclarations.forEach(decl => {
             newSymbol.addDeclaration(this._decodeDeclaration(decl,
                 typeMap, resolveModuleCallback, resolveClassCallback));
         });
 
         newSymbol.setIsExternallyHidden(!!cachedSymbol.isExternallyHidden);
-
-        if (cachedSymbol.isAccessed) {
-            newSymbol.setIsAcccessed();
-        }
 
         return newSymbol;
     }
@@ -489,7 +487,7 @@ export class AnalysisCacheDeserializer {
             typeSourceId: cachedDecl.typeSourceId,
             isConstant: cachedDecl.isConstant,
             path: cachedDecl.path,
-            range: cachedDecl.range
+            range: this._deserializeRange(cachedDecl.range)
         };
 
         if (cachedDecl.declaredType) {
@@ -505,7 +503,7 @@ export class AnalysisCacheDeserializer {
             resolveClassCallback?: ResolveClassTypeCallback) {
 
         // Is it a remote type?
-        if (cachedTypeRef.remoteTypeCategory !== undefined) {
+        if (typeof cachedTypeRef === 'object') {
             if (!cachedTypeRef.remotePath) {
                 throw new Error('Invalid remote path');
             }
@@ -538,11 +536,29 @@ export class AnalysisCacheDeserializer {
         }
 
         // Assume it's a local type.
-        const localType = typeMap[cachedTypeRef.localId];
+        const localType = typeMap[cachedTypeRef];
         if (!localType) {
             throw new Error('Invalid local type reference');
         }
 
         return localType;
+    }
+
+    private static _deserializeRange(str: string): DiagnosticTextRange {
+        const split = str.split(':');
+        if (split.length !== 4) {
+            throw new Error('Invalid range');
+        }
+
+        return {
+            start: {
+                line: parseInt(split[0], 10),
+                column: parseInt(split[1], 10)
+            },
+            end: {
+                line: parseInt(split[2], 10),
+                column: parseInt(split[3], 10)
+            }
+        };
     }
 }

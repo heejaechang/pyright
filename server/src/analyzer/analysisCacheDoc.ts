@@ -21,7 +21,7 @@ export const currentCacheDocVersion = 1;
 export interface CachedDiagnostic {
     category: DiagnosticCategory;
     message: string;
-    range: DiagnosticTextRange;
+    range: string;
     actions?: DiagnosticAction[];
 }
 
@@ -106,12 +106,14 @@ export interface CachedTypeVarType extends CachedType {
     isContravariant: boolean;
 }
 
-export interface CachedTypeRef {
-    localId: number;
-    remoteTypeCategory?: TypeCategory;
-    remotePath?: string;
+export type LocalTypeRef = number;
+export interface RemoteTypeRef {
+    remoteTypeCategory: TypeCategory.Class | TypeCategory.Module;
+    remotePath: string;
     remoteTypeSourceId?: string;
 }
+
+export type CachedTypeRef = LocalTypeRef | RemoteTypeRef;
 
 export interface CachedDeclaration {
     category: DeclarationCategory;
@@ -119,15 +121,14 @@ export interface CachedDeclaration {
     declaredType?: CachedTypeRef;
     isConstant?: boolean;
     path: string;
-    range: DiagnosticTextRange;
+    range: string;
 }
 
 export interface CachedSymbol {
     inferredType: CachedTypeRef;
-    declarations: CachedDeclaration[];
-    isInitiallyUnbound: boolean;
-    isExternallyHidden: boolean;
-    isAccessed: boolean;
+    declarations?: CachedDeclaration[];
+    isInitiallyUnbound?: boolean;
+    isExternallyHidden?: boolean;
 }
 
 export type CachedSymbolTable = { [name: string]: CachedSymbol };
@@ -140,7 +141,7 @@ export interface AnalysisCacheDoc {
     optionsStringHash: string;
     fileContentsHash: string;
     diagnostics: CachedDiagnostic[];
-    primaryModuleType: CachedTypeRef;
+    primaryModuleType: LocalTypeRef;
     types: CachedTypeMap;
     dependsOnFilePaths: string[];
 }
