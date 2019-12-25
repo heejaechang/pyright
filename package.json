@@ -1,0 +1,31 @@
+{
+    "name": "pyrx",
+    "displayName": "PyRx",
+    "description": "Language server and type checker for Python",
+    "version": "1.0.0",
+    "license": "MIT",
+    "author": {
+        "name": "Microsoft Corporation"
+    },
+    "publisher": "Microsoft Corporation",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/pyrx"
+    },
+    "scripts": {
+        "build": "tsc -p ./",
+        "package": "npm install && npm run build"
+    },
+    "devDependencies": {
+        "@types/node": "^12.12.21",
+        "@typescript-eslint/eslint-plugin": "^2.12.0",
+        "@typescript-eslint/parser": "^2.12.0",
+        "eslint": "^6.8.0",
+        "typescript": "^3.7.3"
+    },
+    "dependencies": {},
+    "main": "index.js",
+    "bin": {
+        "pyrx": "index.js"
+    }
+}
