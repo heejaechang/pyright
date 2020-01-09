@@ -1,4 +1,4 @@
-## PyRight Language Service Extension
+## PyRx: PyRight Language Service Extension
 
 ### To Build
 
