@@ -10,12 +10,12 @@ const path = require('path');
 
 module.exports = {
     context: path.resolve(__dirname),
-    entry: 'src/pyrx.ts',
+    entry: 'src/server.ts',
     mode: 'production',
     target: 'node',
     devtool: 'source-map',
     output: {
-        filename: 'pyrx.bundle.js',
+        filename: 'server.bundle.js',
         path: path.resolve(__dirname, 'dist')
     },
     optimization: {
