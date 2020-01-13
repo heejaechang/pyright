@@ -1,16 +1,17 @@
 {
-    "name": "pyright",
-    "displayName": "Pyright",
-    "description": "VS Code static type checking for Python",
-    "version": "1.1.20",
+    "name": "pyrx",
+    "displayName": "PyRx",
+    "description": "PyRx extension to VS Code (FOR DEBUGGING ONLY)",
+    "version": "0.1.0",
+    "private": true,
     "license": "MIT",
     "author": {
         "name": "Microsoft Corporation"
     },
-    "publisher": "ms-pyright",
+    "publisher": "ms-pyrx",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/pyright"
+        "url": "https://github.com/Microsoft/pyrx"
     },
     "engines": {
         "vscode": "^1.26.0"
@@ -25,7 +26,7 @@
         "onLanguage:python",
         "workspaceContains:**/pyrightconfig.json"
     ],
-    "icon": "images/pyright-icon.png",
+    "icon": "images/pyrx-icon.png",
     "main": "./out/src/extension",
     "contributes": {
         "languages": [
@@ -44,22 +45,22 @@
             {
                 "command": "pyright.organizeimports",
                 "title": "Organize Imports",
-                "category": "Pyright"
+                "category": "PyRx"
             }
         ],
         "menus": {
             "editor/context": [
                 {
                     "command": "pyright.organizeimports",
-                    "title": "Pyright: Organize Imports",
-                    "group": "Pyright",
+                    "title": "PyRx: Organize Imports",
+                    "group": "PyRx",
                     "when": "editorLangId == python"
                 }
             ]
         },
         "configuration": {
             "type": "object",
-            "title": "Pyright Configuration",
+            "title": "PyRx Configuration",
             "properties": {
                 "python.analysis.typeshedPaths": {
                     "type": "array",

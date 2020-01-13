@@ -4,12 +4,11 @@
 * Copyright (c) Microsoft Corporation.
 * Licensed under the MIT license.
 *
-* Provides client for Pyright Python language server. This portion runs
+* Provides client for PyRx Python language server. This portion runs
 * in the context of the VS Code process and talks to the server, which
-* runs in another process.
+* runs in another process. FOR DEBUGGING ONLY.
 */
 
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { ExtensionContext, commands, TextEditor, Range, Position, TextEditorEdit } from 'vscode';
@@ -18,18 +17,13 @@ import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind,
 import { ProgressReporting } from './progress';
 
 export function activate(context: ExtensionContext) {
-	const bundlePath = context.asAbsolutePath(path.join('server', 'server.bundle.js'));
-	const nonBundlePath = context.asAbsolutePath(path.join('server', 'server.js'));
+	const nonBundlePath = context.asAbsolutePath(path.join('server', 'server.bundle.js'));
 	const debugOptions = { execArgv: ["--nolazy", "--inspect=6600"] };
 	
 	// If the extension is launched in debug mode, then the debug server options are used.
 	const serverOptions: ServerOptions = {
-		run : { module: bundlePath, transport: TransportKind.ipc },
-		// In debug mode, use the non-bundled code if it's present. The production
-		// build includes only the bundled package, so we don't want to crash if
-		// someone starts the production extension in debug mode.
-		debug: { module: fs.existsSync(nonBundlePath) ? nonBundlePath : bundlePath,
-			transport: TransportKind.ipc, options: debugOptions }
+		run : { module: nonBundlePath, transport: TransportKind.ipc },
+		debug: { module: nonBundlePath, transport: TransportKind.ipc, options: debugOptions }
 	}
 	
 	// Options to control the language client
@@ -46,7 +40,7 @@ export function activate(context: ExtensionContext) {
 	}
 	
 	// Create the language client and start the client.
-	const languageClient = new LanguageClient('python', 'Pyright', serverOptions, clientOptions);
+	const languageClient = new LanguageClient('python', 'PyRx', serverOptions, clientOptions);
 	const disposable = languageClient.start();
 	
 	// Push the disposable to the context's subscriptions so that the 

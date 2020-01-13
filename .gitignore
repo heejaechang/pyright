@@ -8,5 +8,10 @@ node_modules
 .vs
 
 # Output files
+# Output files
 dist
 out
+server/out/
+client/out/
+client/server/
+client/*.vsix

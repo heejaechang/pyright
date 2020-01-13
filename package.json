@@ -14,13 +14,17 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "build": "npm run build:debug",
-        "build:debug": "tsc -p ./",
-        "build:prod": "webpack",
-        "package": "npm install && npm run build:prod"
+        "install:all": "npm install && cd server && npm install && cd ../client && npm install && cd ..",
+        "build": "npm run build:clientServerDebug",
+        "build:client": "cd client && npm run build && cd ..",
+        "build:clientServerDebug": "npm run build:client && npm run build:serverDebug",
+        "build:serverProd": "cd server && npm run build:serverProd && cd ..",
+        "build:serverDebug": "cd server && npm run build:serverDebug && cd ..",
+        "package": "npm run install:all && npm run build:serverProd && npm run build && cd client && cd .."
     },
     "devDependencies": {
         "@types/node": "^12.12.21",
+        "@types/mocha": "^5.2.7",
         "@typescript-eslint/eslint-plugin": "^2.12.0",
         "@typescript-eslint/parser": "^2.12.0",
         "eslint": "^6.8.0",

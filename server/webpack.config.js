@@ -10,13 +10,13 @@ const path = require('path');
 
 module.exports = {
     context: path.resolve(__dirname),
-    entry: 'src/server.ts',
+    entry: './src/server.ts',
     mode: 'production',
     target: 'node',
     devtool: 'source-map',
     output: {
         filename: 'server.bundle.js',
-        path: path.resolve(__dirname, 'dist')
+        path: path.resolve(__dirname, '../client/server')
     },
     optimization: {
         usedExports: true,

@@ -9,12 +9,12 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"rootDir": ".",
-		"outDir": "out",
+		"outDir": "../client/server",
 		"lib": [ "es2016" ],
 		"sourceMap": true
 	},
     "include": [
-        "src"
+        "src", "server/src/server.ts"
     ],
 	"exclude": [
 		"node_modules",
