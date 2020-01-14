@@ -1,9 +1,8 @@
 /**
-* webpack.config.js
+* webpack.config-debug.js
 * Copyright: Microsoft 2019
 *
-* Configuration for webpack to bundle the javascript into a single file
-* for the PyRx language server.
+* Configuration for webpack to bundle the javascript into a folder in the client for debugging.
 */
 
 const path = require('path');
@@ -11,11 +10,12 @@ const path = require('path');
 module.exports = {
     context: path.resolve(__dirname),
     entry: './src/server.ts',
-    mode: 'production',
+    mode: 'development',
     target: 'node',
+    devtool: 'source-map',
     output: {
-        filename: 'server.bundle.js',
-        path: path.resolve(__dirname, '../dist')
+        filename: 'server.js',
+        path: path.resolve(__dirname, '../client/server')
     },
     optimization: {
         usedExports: true,

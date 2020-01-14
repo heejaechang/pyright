@@ -8,16 +8,11 @@
 		"target": "es6",
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"rootDir": ".",
-		"outDir": "../client/server",
+		"sourceMap": true,
 		"lib": [ "es2016" ],
-		"sourceMap": true
+		"outDir": "../client/server"
 	},
-    "include": [
-        "src", "server/src/server.ts"
-    ],
 	"exclude": [
-		"node_modules",
-		"server"
+		"node_modules"
 	]
 }

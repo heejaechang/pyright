@@ -17,7 +17,7 @@ import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind,
 import { ProgressReporting } from './progress';
 
 export function activate(context: ExtensionContext) {
-	const nonBundlePath = context.asAbsolutePath(path.join('server', 'server.bundle.js'));
+	const nonBundlePath = context.asAbsolutePath(path.join('server', 'server.js'));
 	const debugOptions = { execArgv: ["--nolazy", "--inspect=6600"] };
 	
 	// If the extension is launched in debug mode, then the debug server options are used.

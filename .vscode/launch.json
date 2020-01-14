@@ -16,11 +16,11 @@
       "internalConsoleOptions": "openOnSessionStart"
     },
     {
-      "name": "PyRx Language Client",
+      "name": "PyRx Debug Client",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${workspaceRoot}/client/out/src/extension.js",
-      "preLaunchTask": "npm: build:clientServerDebug",
+      "preLaunchTask": "npm: build",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/client"
       ],
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "name": "PyRx Language Server",
+      "name": "PyRx Server",
       "type": "node",
       "request": "attach",
       "protocol": "inspector",

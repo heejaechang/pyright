@@ -1,7 +1,7 @@
 {
     "name": "pyrx-server",
     "displayName": "PyRx",
-    "description": "Language server for the Python language",
+    "description": "Python language server",
     "version": "0.1.0",
     "license": "MIT",
     "author": {
@@ -16,12 +16,13 @@
         "start": "npm run start:serverDebug && npm run start:server",
         "start:serverDebug": "npm i && npm run build:serverDebug",
         "start:serverProd": "npm i && npm run build:serverProd",
-        "build": "npm run build:serverProd && npm run build:serverDebug && npm run build:cli",
-        "build:serverDebug": "tsc",
-        "build:serverProd": "npm run installServer && webpack --config webpack.config.js",
+        "build:all": "npm run build:serverProd && npm run build:serverDebug",
+        "build:serverDebug": "tsc && npm run installServer && webpack --config webpack.config-debug.js",
+        "build:serverProd": "tsc && npx webpack",
         "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json",
-        "watch": "tsc --watch",
+        "eslint": "eslint src/**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
+        "watch": "tsc --watch",
         "test": "jest"
     },
     "dependencies": {
@@ -41,6 +42,9 @@
         "@types/fs-extra": "^8.0.1",
         "@types/jest": "^24.0.24",
         "@types/node": "^12.12.21",
+        "@typescript-eslint/eslint-plugin": "^2.12.0",
+        "@typescript-eslint/parser": "^2.12.0",
+        "eslint": "^6.8.0",
         "fs-extra": "^8.1.0",
         "jest": "^24.9.0",
         "node-loader": "^0.6.0",
