@@ -13,12 +13,14 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
+        "install:all": "npm run build:copyTypeshed && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ..",
         "start": "npm run start:serverDebug && npm run start:server",
         "start:serverDebug": "npm i && npm run build:serverDebug",
         "start:serverProd": "npm i && npm run build:serverProd",
         "build:all": "npm run build:serverProd && npm run build:serverDebug",
         "build:serverDebug": "tsc && npm run installServer && webpack --config webpack.config-debug.js",
-        "build:serverProd": "tsc && npx webpack",
+        "build:serverProd": "tsc",
+        "build:copyTypeshed": "node ./copyTypeshedFallback.js",
         "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json",
         "eslint": "eslint src/**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",

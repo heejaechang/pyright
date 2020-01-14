@@ -20,8 +20,7 @@ PyRight is include as a subtree. After cloning PyRx
 * Open PR in Pyright repo from your fork to Pyright master.
 
 ### To Build
-* `npm run install:all` to install latest npm dependencies
-* `npm run build` to build the project
+* `npm run package` to run complete build and install of latest npm dependencies
 
 ### Packaging
 From the `server` folder of the repo run `npx webpack`.

@@ -14,7 +14,7 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm install && cd server && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ../../../client && npm install && cd ..",
+        "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ..",
         "build": "npm run build:debug",
         "build:client": "cd client && npm run build && cd ..",
         "build:debug": "npm run build:client && npm run build:serverDebug",

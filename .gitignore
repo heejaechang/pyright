@@ -14,4 +14,4 @@ out
 server/out/
 client/out/
 client/server/
-client/*.vsix
+client/typeshed-fallback/**
