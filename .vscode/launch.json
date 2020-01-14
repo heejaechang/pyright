@@ -28,7 +28,7 @@
       "smartStep": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/client/out/**/*.js"
+        "${workspaceRoot}/server/out/**/*.js"
       ]
     },
     {
@@ -40,7 +40,7 @@
       "smartStep": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/client/server/**/*.js"
+        "${workspaceRoot}/server/out/**/*.js"
       ]
     }
   ]

@@ -4,11 +4,11 @@
 * Implements PyRx language server.
 */
 
-import { LanguageServerBase } from "../pyright/server/src/languageServerBase";
+import { LanguageServerBase } from './pyright/server/src/languageServerBase';
 
 class Server extends LanguageServerBase {
     constructor() {
-        super("PyRx");
+        super('PyRx');
     }
 }
 

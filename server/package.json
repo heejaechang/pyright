@@ -16,10 +16,10 @@
         "install:all": "npm run build:copyTypeshed && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ..",
         "start": "npm i && npm run build:server",
         "build": "npm run build:server && npm run installServer",
-        "build:server": "tsc -p ./",
+        "build:server": "tsc",
         "build:copyTypeshed": "node ./copyTypeshedFallback.js",
-        "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json && npm run eslint && webpack --config webpack.config-debug.js",
-        "eslint": "eslint src/**/*.ts",
+        "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json",
+        "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
         "test": "jest"
