@@ -14,4 +14,4 @@ out
 server/out/
 client/out/
 client/server/
-client/typeshed-fallback/**
+client/typeshed-fallback/

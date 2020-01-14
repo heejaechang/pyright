@@ -28,7 +28,7 @@
       "smartStep": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/server/out/**/*.js"
+        "${workspaceRoot}/client/out/**/*.js"
       ]
     },
     {
@@ -37,9 +37,10 @@
       "request": "attach",
       "protocol": "inspector",
       "port": 6600,
+      "smartStep": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceRoot}/server/out/**/*.js"
+        "${workspaceRoot}/client/server/**/*.js"
       ]
     }
   ]
