@@ -1,23 +1,23 @@
 ## PyRx: PyRight Language Service Extension
 
 ### Initial population
-PyRight is include as a subtree. After cloning PyRx
-* Add Pyright as remote: `git remote add -f pyright https://github.com/microsoft/pyright.git`
-* Add Pyright subtree to the server `git subtree add --prefix server/pyright pyright master`
+PyRight is included as a subtree. After cloning PyRx
+* Add PyRight as remote: `git remote add -f pyright https://github.com/microsoft/pyright.git`
+* Add PyRight subtree to the server `git subtree add --prefix server/pyright pyright master`
 
 [Subtree tutorial](https://www.atlassian.com/git/tutorials/git-subtree)
 
-### To update Pyright
+### To update PyRight
 * `git fetch pyright master`
 * `git subtree pull --prefix server/pyright pyright master`
 
-### To contribute to Pyright from PyRx
-* Fork Pyright.
+### To contribute to PyRight from PyRx
+* Fork PyRight.
 * `git remote add MyPyrightFork https://github.com/MyName/pyright.git`
-* Make changes to Pyright locally.
+* Make changes to PyRight locally.
 * `git subtree push --prefix=server/pyright MyPyrightFork BRANCH`
 * `git push using: MyPyrightFork BRANCH`
-* Open PR in Pyright repo from your fork to Pyright master.
+* Open PR in PyRight repo from your fork to PyRight master.
 
 ### To Build
 * `npm run package` to run complete build and install of latest npm dependencies
