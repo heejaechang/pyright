@@ -6,11 +6,13 @@
 * for the PyRx language server.
 */
 
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     context: path.resolve(__dirname),
-    entry: './src/server.ts',
+    entry: './server.ts',
     mode: 'production',
     target: 'node',
     output: {
@@ -46,5 +48,15 @@ module.exports = {
         fs: 'empty',
         __dirname: false,
         __filename: false
-    }
-};
+    },
+    plugins: [
+        new CopyPlugin([
+          'typeshed-fallback/**',
+          {
+            from: 'pyright/client/typeshed-fallback/**',
+            globOptions: {
+              dot: false,
+            },
+          },
+        ]),
+      ],};

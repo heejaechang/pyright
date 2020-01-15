@@ -29,10 +29,10 @@ From the `server` folder of the repo run `npx webpack`.
 Locally:
 * If you have Python extension installed, change `python.languageServer` to `None`.
 * Do a production build from the command-line (`npm run package`). This will ensure that all of the npm dependencies are downloaded and the project builds.
-* Within VS Code, open the pyright project. 
+* Within VS Code, open the PyRx folder. 
 * In the debugger panel make sure `PyRx Debug Client` is selected. 
 * Press F5 to start. This will launch a second instance of VS Code. 
-* Go back to the first instance and switch the menu in the debugger panel to `PyRx Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
+* Go back to the first instance and switch the menu in the debugger panel to `PyRx Attach Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
 
 In VS Code Python extension
 * Clone [Python Extension](https://github.com/Microsoft/vscode-python)

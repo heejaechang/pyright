@@ -32,7 +32,7 @@
       ]
     },
     {
-      "name": "PyRx Server",
+      "name": "PyRx Attach Server",
       "type": "node",
       "request": "attach",
       "protocol": "inspector",
