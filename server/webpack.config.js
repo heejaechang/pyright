@@ -10,7 +10,7 @@ const path = require('path');
 
 module.exports = {
     context: path.resolve(__dirname),
-    entry: './src/server.ts',
+    entry: './server.ts',
     mode: 'production',
     target: 'node',
     output: {
