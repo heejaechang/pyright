@@ -41,4 +41,10 @@ In VS Code Python extension
 * Set `"python.languageServer": "Node",`
 * Launch the extension and open a Python file. The extension should then start PyRx language server.
 
+### Code style
+Code style should generally match Python extension in order to simplify work
+on both products in VS Code.
+* Formatting: install [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+* Linting: install `TSLint` and `ESLint` extensions
+
 
