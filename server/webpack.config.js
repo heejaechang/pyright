@@ -13,7 +13,6 @@ module.exports = {
     context: path.resolve(__dirname),
     entry: './server.ts',
     mode: 'production',
-    devtool: 'source-map',
     target: 'node',
     output: {
         filename: 'server.bundle.js',

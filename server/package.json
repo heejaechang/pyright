@@ -53,8 +53,7 @@
         "tslint-microsoft-contrib": "^6.2.0",
         "typescript": "^3.7.3",
         "webpack": "^4.41.3",
-        "webpack-cli": "^3.3.10",
-        "copy-webpack-plugin": "^5.1.1"
+        "webpack-cli": "^3.3.10"
     },
     "types": "out/main.d.ts",
     "main": "out/main.js"
