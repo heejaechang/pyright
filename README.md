@@ -16,7 +16,6 @@ PyRight is included as a subtree. After cloning PyRx
 * `git remote add MyPyrightFork https://github.com/MyName/pyright.git`
 * Make changes to PyRight locally.
 * `git subtree push --prefix=server/pyright MyPyrightFork BRANCH`
-* `git push using: MyPyrightFork BRANCH`
 * Open PR in PyRight repo from your fork to PyRight master.
 
 ### To Build
