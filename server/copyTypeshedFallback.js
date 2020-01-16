@@ -6,8 +6,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const fsExtra = require('fs-extra');
 
-// No need for this in production since webpack copy plugin takes care of copying
+// Production mode
+fsExtra.emptyDirSync('../dist/typeshed-fallback');
+fsExtra.copySync('./pyright/client/typeshed-fallback', '../dist/typeshed-fallback');
+
 // Debug mode
 fsExtra.emptyDirSync('../client/typeshed-fallback');
-fsExtra.copySync('./pyright/client/typeshed-fallback', '../client/server/pyright/server/typeshed-fallback');
-
+fsExtra.copySync('./pyright/client/typeshed-fallback', '../client/server/typeshed-fallback');
