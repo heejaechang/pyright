@@ -1,11 +1,12 @@
 /**
-* webpack.config.js
-* Copyright: Microsoft 2019
-*
-* Configuration for webpack to bundle the javascript into a single file
-* for the PyRx language server.
-*/
+ * webpack.config.js
+ * Copyright: Microsoft 2019
+ *
+ * Configuration for webpack to bundle the javascript into a single file
+ * for the PyRx language server.
+ */
 
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 
 module.exports = {
@@ -18,13 +19,10 @@ module.exports = {
         path: path.resolve(__dirname, '../dist')
     },
     optimization: {
-        usedExports: true,
+        usedExports: true
     },
     resolve: {
-        modules: [
-            path.resolve(__dirname, '.'),
-            'node_modules'
-        ],
+        modules: [path.resolve(__dirname, '.'), 'node_modules'],
         extensions: ['.js', '.ts']
     },
     module: {

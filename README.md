@@ -16,7 +16,6 @@ PyRight is included as a subtree. After cloning PyRx
 * `git remote add MyPyrightFork https://github.com/MyName/pyright.git`
 * Make changes to PyRight locally.
 * `git subtree push --prefix=server/pyright MyPyrightFork BRANCH`
-* `git push using: MyPyrightFork BRANCH`
 * Open PR in PyRight repo from your fork to PyRight master.
 
 ### To Build
@@ -29,10 +28,10 @@ From the `server` folder of the repo run `npx webpack`.
 Locally:
 * If you have Python extension installed, change `python.languageServer` to `None`.
 * Do a production build from the command-line (`npm run package`). This will ensure that all of the npm dependencies are downloaded and the project builds.
-* Within VS Code, open the pyright project. 
+* Within VS Code, open the PyRx folder. 
 * In the debugger panel make sure `PyRx Debug Client` is selected. 
 * Press F5 to start. This will launch a second instance of VS Code. 
-* Go back to the first instance and switch the menu in the debugger panel to `PyRx Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
+* Go back to the first instance and switch the menu in the debugger panel to `PyRx Attach Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
 
 In VS Code Python extension
 * Clone [Python Extension](https://github.com/Microsoft/vscode-python)
@@ -40,5 +39,11 @@ In VS Code Python extension
 * Copy contents of `dist` folder to `nodeLanguageServer` subfolder in the Python extension.
 * Set `"python.languageServer": "Node",`
 * Launch the extension and open a Python file. The extension should then start PyRx language server.
+
+### Code style
+Code style should generally match Python extension in order to simplify work
+on both products in VS Code.
+* Formatting: install [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+* Linting: install `TSLint` and `ESLint` extensions
 
 

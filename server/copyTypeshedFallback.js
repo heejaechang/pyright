@@ -3,13 +3,13 @@
 // This script helps build the command-line version of pyright
 // by copying the typeshed-fallback directory to the dist directory.
 
-var fsExtra = require('fs-extra');
+/* eslint-disable @typescript-eslint/no-var-requires */
+const fsExtra = require('fs-extra');
 
-// Clean the dist directory
-fsExtra.emptyDirSync('../dist');
-fsExtra.mkdirSync('../dist/typeshed-fallback');
+// Production mode
+fsExtra.emptyDirSync('../dist/typeshed-fallback');
 fsExtra.copySync('./pyright/client/typeshed-fallback', '../dist/typeshed-fallback');
 
+// Debug mode
 fsExtra.emptyDirSync('../client/typeshed-fallback');
-fsExtra.copySync('./pyright/client/typeshed-fallback', '../client/typeshed-fallback');
-
+fsExtra.copySync('./pyright/client/typeshed-fallback', '../client/server/typeshed-fallback');
