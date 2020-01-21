@@ -25,7 +25,7 @@ PyRight is included as a subtree. After cloning PyRx
 From the `server` folder of the repo run `npx webpack`.
 
 ### Running
-**Locally**
+**Using PyRx test extension**
 
 * If you have Python extension installed, change `python.languageServer` to `None`.
 * Do a production build from the command-line (`npm run package`). This will ensure that all of the npm dependencies are downloaded and the project builds.
