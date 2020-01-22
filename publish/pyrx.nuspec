@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>PyRx-Language-Server</id>
-    <version>0.1.0</version>
+    <version>$version$</version>
     <title>PyRx Language Server</title>
     <authors>Microsoft</authors>
     <owners>Microsoft</owners>
