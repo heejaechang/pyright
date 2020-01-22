@@ -3,14 +3,6 @@
         "./node_modules/tslint-microsoft-contrib"
     ],
     "rules": {
-        // Rules from tslint-microsoft-contrib
-        "function-name": [true, {
-            "method-regex": "^[a-z]\\w+$",
-            "private-method-regex": "^_[a-z]\\w+$",
-            "protected-method-regex": "^[a-z_]\\w+$",
-            "static-method-regex": "^[a-z]\\w+$",
-            "function-regex": "^\\w+$"
-        }],
         "no-delete-expression": true,
         "no-disable-auto-sanitization": true,
         "no-document-domain": true,
@@ -20,7 +12,6 @@
         "no-string-based-set-interval": true,
         "no-string-based-set-timeout": true,
 
-        // Rules that are built in to tslint
         "align": [true, "statements"],
         "array-type": [true, "array"],
         "arrow-parens": [true, "ban-single-arg-parens"],
