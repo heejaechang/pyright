@@ -7,6 +7,8 @@
     <PackageReference Include="Nuget.CommandLine" Version="5.2.0" />
   </ItemGroup>
 
+  <Target Name="Build" />
+  
   <ItemGroup>
     <FilesToSign Include="pyrx-*.nupkg">
       <Authenticode>NuGet</Authenticode>
