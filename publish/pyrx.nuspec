@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>PyRx-Language-Server</id>
+    <version>0.1.0</version>
+    <title>PyRx Language Server</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <license type="expression">MS-RL</license>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Microsoft PyRx Language Server</description>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>Python;VS Code</tags>
+  </metadata>
+  <files>
+    <file src="dist/**" exclude="nuget/*;pyrx.nuspec;**/*.map" />
+  </files>
+</package>
