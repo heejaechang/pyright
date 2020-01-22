@@ -8,8 +8,8 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LanguageServerBase, WorkspaceServiceInstance, ServerSettings } from './pyright/server/src/languageServerBase';
 import { isArray } from 'util';
+import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 
 class Server extends LanguageServerBase {
     constructor() {
@@ -26,18 +26,18 @@ class Server extends LanguageServerBase {
         try {
             const pythonSection = await this.getConfiguration(workspace, 'python');
             if (pythonSection) {
-                serverSettings.pythonPath = pythonSection['pythonPath'];
-                serverSettings.venvPath = pythonSection['venvPath'];
+                serverSettings.pythonPath = pythonSection.pythonPath;
+                serverSettings.venvPath = pythonSection.venvPath;
             }
-            
+
             const pythonAnalysisSection = await this.getConfiguration(workspace, 'python.analysis');
             if (pythonAnalysisSection) {
-                const typeshedPaths = pythonAnalysisSection['typeshedPaths'];
+                const typeshedPaths = pythonAnalysisSection.typeshedPaths;
                 if (typeshedPaths && isArray(typeshedPaths) && typeshedPaths.length > 0) {
                     serverSettings.typeshedPath = typeshedPaths[0];
                 }
-                serverSettings.openFilesOnly = !!pythonAnalysisSection['openFilesOnly'];
-                serverSettings.useLibraryCodeForTypes = !!pythonAnalysisSection['useLibraryCodeForTypes'];
+                serverSettings.openFilesOnly = !!pythonAnalysisSection.openFilesOnly;
+                serverSettings.useLibraryCodeForTypes = !!pythonAnalysisSection.useLibraryCodeForTypes;
             } else {
                 serverSettings.openFilesOnly = true;
                 serverSettings.useLibraryCodeForTypes = true;
