@@ -68,7 +68,7 @@
         "eofline": true,
         "switch-final-break": false,
         "no-implicit-dependencies": [
-            "vscode"
+            true
         ],
         "no-unnecessary-type-assertion": false,
         "no-submodule-imports": false,
