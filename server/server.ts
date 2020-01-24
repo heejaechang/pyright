@@ -14,7 +14,7 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 class Server extends LanguageServerBase {
     constructor() {
         assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
-        super('PyRx', __dirname);
+        super('PyRx', __dirname, 'mspythonconfig.json');
         this.console.log(`PyRx server root directory: ${__dirname}`);
     }
 
