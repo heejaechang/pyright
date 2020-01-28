@@ -14,6 +14,6 @@
     <tags>Python;VS Code</tags>
   </metadata>
   <files>
-    <file src="dist/**" exclude="nuget/*;pyrx.nuspec;**/*.map" />
+    <file src="**/*" exclude="nuget/*;**/*.nuspec;**/*.map" />
   </files>
 </package>
