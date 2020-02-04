@@ -20,21 +20,21 @@ export class CommandController extends PyrightCommandController {
     }
 
     async execute(cmdParams: ExecuteCommandParams): Promise<any> {
-        let translatedId: PyrightCommands | undefined;
+        let pyrightCommand: PyrightCommands | undefined;
 
         switch (cmdParams.command) {
             case Commands.createTypeStub:
-                translatedId = PyrightCommands.createTypeStub;
+                pyrightCommand = PyrightCommands.createTypeStub;
                 break;
             case Commands.orderImports:
-                translatedId = PyrightCommands.orderImports;
+                pyrightCommand = PyrightCommands.orderImports;
                 break;
             case Commands.addMissingOptionalToParam:
-                translatedId = PyrightCommands.addMissingOptionalToParam;
+                pyrightCommand = PyrightCommands.addMissingOptionalToParam;
                 break;
         }
 
-        cmdParams.command = translatedId || cmdParams.command;
+        cmdParams.command = pyrightCommand || cmdParams.command;
         return super.execute(cmdParams);
     }
 }
