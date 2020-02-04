@@ -6,9 +6,9 @@
 
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController as PyrightCommandController } from '../pyright/server/src/commands/commandController';
-import { CommandId as PyrightCommandId } from '../pyright/server/src/commands/commands';
+import { Commands as PyrightCommands } from '../pyright/server/src/commands/commands';
 import { LanguageServerBase } from '../pyright/server/src/languageServerBase';
-import { CommandId } from './commands';
+import { Commands } from './commands';
 
 export interface ServerCommand {
     execute(cmdParams: ExecuteCommandParams): Promise<any>;
@@ -20,17 +20,17 @@ export class CommandController extends PyrightCommandController {
     }
 
     async execute(cmdParams: ExecuteCommandParams): Promise<any> {
-        let translatedId: PyrightCommandId | undefined;
+        let translatedId: PyrightCommands | undefined;
 
         switch (cmdParams.command) {
-            case CommandId.createTypeStub:
-                translatedId = PyrightCommandId.createTypeStub;
+            case Commands.createTypeStub:
+                translatedId = PyrightCommands.createTypeStub;
                 break;
-            case CommandId.orderImports:
-                translatedId = PyrightCommandId.orderImports;
+            case Commands.orderImports:
+                translatedId = PyrightCommands.orderImports;
                 break;
-            case CommandId.addMissingOptionalToParam:
-                translatedId = PyrightCommandId.addMissingOptionalToParam;
+            case Commands.addMissingOptionalToParam:
+                translatedId = PyrightCommands.addMissingOptionalToParam;
                 break;
         }
 

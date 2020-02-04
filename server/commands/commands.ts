@@ -4,8 +4,8 @@
 * Command identifier strings.
 */
 
-export enum CommandId {
-    createTypeStub = 'python.createtypestub',
-    orderImports = 'python.organizeimports',
-    addMissingOptionalToParam = 'python.addoptionalforparam'
+export enum Commands {
+    createTypeStub = 'python.createTypeStub',
+    orderImports = 'python.orderImports',
+    addMissingOptionalToParam = 'python.addOptionalForParam'
 }
