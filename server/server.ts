@@ -9,13 +9,18 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import { isArray } from 'util';
+import { ExecuteCommandParams } from 'vscode-languageserver';
+import { CommandController } from './commands/commandController';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 
 class Server extends LanguageServerBase {
+    private _controller: CommandController;
+
     constructor() {
         assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
         super('PyRx', __dirname);
         this.console.log(`PyRx server root directory: ${__dirname}`);
+        this._controller = new CommandController(this);
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -46,6 +51,10 @@ class Server extends LanguageServerBase {
             this.console.log(`Error reading settings: ${error}`);
         }
         return serverSettings;
+    }
+
+    protected executeCommand(cmdParams: ExecuteCommandParams): Promise<any> {
+        return this._controller.execute(cmdParams);
     }
 }
 
