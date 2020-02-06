@@ -11,6 +11,7 @@ import * as path from 'path';
 import { isArray } from 'util';
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
+import { normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 
 class Server extends LanguageServerBase {
@@ -31,15 +32,15 @@ class Server extends LanguageServerBase {
         try {
             const pythonSection = await this.getConfiguration(workspace, 'python');
             if (pythonSection) {
-                serverSettings.pythonPath = pythonSection.pythonPath;
-                serverSettings.venvPath = pythonSection.venvPath;
+                serverSettings.pythonPath = normalizeSlashes(pythonSection.pythonPath);
+                serverSettings.venvPath = normalizeSlashes(pythonSection.venvPath);
             }
 
             const pythonAnalysisSection = await this.getConfiguration(workspace, 'python.analysis');
             if (pythonAnalysisSection) {
                 const typeshedPaths = pythonAnalysisSection.typeshedPaths;
                 if (typeshedPaths && isArray(typeshedPaths) && typeshedPaths.length > 0) {
-                    serverSettings.typeshedPath = typeshedPaths[0];
+                    serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
                 }
                 serverSettings.openFilesOnly = !!pythonAnalysisSection.openFilesOnly;
                 serverSettings.useLibraryCodeForTypes = !!pythonAnalysisSection.useLibraryCodeForTypes;
