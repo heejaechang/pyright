@@ -631,7 +631,7 @@ function comparePathsWorker(a: string, b: string, componentComparer: (a: string,
 
     // check path for these segments: '', '.'. '..'
     const escapedSeparator = getRegexEscapedSeparator();
-    const relativePathSegmentRegExp = new RegExp(`(^|${escapedSeparator})\.{0,2}($|${escapedSeparator})`);
+    const relativePathSegmentRegExp = new RegExp(`(^|${escapedSeparator}).{0,2}($|${escapedSeparator})`);
 
     // NOTE: Performance optimization - shortcut if there are no relative path segments in
     //       the non-root portion of the path
