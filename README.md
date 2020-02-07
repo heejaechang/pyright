@@ -9,13 +9,13 @@ PyRight is included as a subtree. After cloning PyRx
 
 ### To update PyRight
 * `git fetch pyright master`
-* `git subtree pull --prefix server/pyright pyright master`
+* `git subtree pull --prefix server/pyright pyright master --squash`
 
 ### To contribute to PyRight from PyRx
 * Fork PyRight.
 * `git remote add MyPyrightFork https://github.com/MyName/pyright.git`
 * Make changes to PyRight locally.
-* `git subtree push --prefix=server/pyright MyPyrightFork BRANCH`
+* `git subtree push --squash --prefix=server/pyright MyPyrightFork BRANCH`
 * Open PR in PyRight repo from your fork to PyRight master.
 
 ### To Build
