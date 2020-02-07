@@ -2,7 +2,7 @@
     "name": "pyright-server",
     "displayName": "pyright",
     "description": "Type checker for the Python language",
-    "version": "1.1.20",
+    "version": "1.1.21",
     "license": "MIT",
     "scripts": {
         "start": "npm run start:serverDebug && npm run start:server",
@@ -15,7 +15,7 @@
         "build:cli": "node ./copyTypeshedFallback.js && npm run eslint && webpack --config webpack.config-cli.js",
         "eslint": "eslint src/**/*.ts",
         "watch": "tsc --watch",
-        "test": "jest"
+        "test": "jest --detectOpenHandles --forceExit"
     },
     "dependencies": {
         "assert": "^2.0.0",

@@ -18,8 +18,10 @@
 
 import * as assert from 'assert';
 
+import { Commands } from '../commands/commands';
 import { DiagnosticLevel } from '../common/configOptions';
-import { CreateTypeStubFileAction, getEmptyRange } from '../common/diagnostic';
+import { CreateTypeStubFileAction } from '../common/diagnostic';
+import { getEmptyRange } from '../common/textRange';
 import { DiagnosticRule } from '../common/diagnosticRules';
 import { convertOffsetsToRange } from '../common/positionUtils';
 import { PythonVersion } from '../common/pythonVersion';
@@ -208,7 +210,7 @@ export class Binder extends ParseTreeWalker {
                     if (diagnostic) {
                         // Add a diagnostic action for resolving this diagnostic.
                         const createTypeStubAction: CreateTypeStubFileAction = {
-                            action: 'pyright.createtypestub',
+                            action: Commands.createTypeStub,
                             moduleName: importResult.importName
                         };
                         diagnostic.addAction(createTypeStubAction);
@@ -2119,7 +2121,7 @@ export class Binder extends ParseTreeWalker {
         let finalTypeNode: ExpressionNode | undefined;
 
         if (typeAnnotation) {
-            if (typeAnnotation.nodeType == ParseNodeType.Name) {
+            if (typeAnnotation.nodeType === ParseNodeType.Name) {
                 // We need to make an assumption in this code that the symbol "Final"
                 // will resolve to typing.Final. This is because of the poor way
                 // the "Final" support was specified. We need to evaluate it
@@ -2402,4 +2404,3 @@ export class YieldFinder extends ParseTreeWalker {
         return false;
     }
 }
-

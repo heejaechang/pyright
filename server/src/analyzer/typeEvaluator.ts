@@ -16,9 +16,10 @@
 
 import * as assert from 'assert';
 
+import { Commands } from '../commands/commands';
 import { DiagnosticLevel } from '../common/configOptions';
-import { AddMissingOptionalToParamAction, Diagnostic, DiagnosticAddendum,
-    getEmptyRange } from '../common/diagnostic';
+import { AddMissingOptionalToParamAction, Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
+import { getEmptyRange } from '../common/textRange';
 import { DiagnosticRule } from '../common/diagnosticRules';
 import { convertOffsetsToRange } from '../common/positionUtils';
 import { PythonVersion } from '../common/pythonVersion';
@@ -30,6 +31,7 @@ import { ArgumentCategory, AssignmentNode, AugmentedAssignmentNode, BinaryOperat
     NameNode, ParameterCategory, ParameterNode, ParseNode, ParseNodeType, SetNode,
     SliceNode, StringListNode, TernaryNode, TupleNode, UnaryOperationNode, WithItemNode,
     YieldFromNode, YieldNode } from '../parser/parseNodes';
+import { ParseOptions, Parser } from '../parser/parser';
 import { KeywordType, OperatorType, StringTokenFlags } from '../parser/tokenizerTypes';
 import { AnalyzerFileInfo, ImportLookup, ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
@@ -112,7 +114,10 @@ export const enum EvaluatorFlags {
     AllowForwardReferences = 4,
 
     // Skip the check for unknown arguments.
-    DoNotCheckForUnknownArgs = 8
+    DoNotCheckForUnknownArgs = 8,
+
+    // Treat string literal as a type.
+    EvaluateStringLiteralAsType = 16
 }
 
 interface EvaluatorUsage {
@@ -530,9 +535,30 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
 
             case ParseNodeType.StringList: {
-                if (node.typeAnnotation && !isAnnotationLiteralValue(node)) {
-                    typeResult = getTypeOfExpression(
-                        node.typeAnnotation, undefined, flags | EvaluatorFlags.AllowForwardReferences);
+                const expectingType = (flags & EvaluatorFlags.EvaluateStringLiteralAsType) !== 0 &&
+                    !isAnnotationLiteralValue(node);
+
+                if (expectingType) {
+                    if (node.typeAnnotation) {
+                        typeResult = getTypeOfExpression(node.typeAnnotation, undefined,
+                            flags | EvaluatorFlags.AllowForwardReferences);
+                    } else if (!node.typeAnnotation && node.strings.length === 1) {
+                        // We didn't know at parse time that this string node was going
+                        // to be evaluated as a forward-referenced type. We need
+                        // to re-invoke the parser at this stage.
+                        const expr = parseStringAsTypeAnnotation(node);
+                        if (expr) {
+                            typeResult = getTypeOfExpression(expr, undefined,
+                                flags | EvaluatorFlags.AllowForwardReferences);
+                        }
+                    }
+                }
+                
+                if (expectingType) {
+                    if (!typeResult) {
+                        addError(`Expecting type but received a string literal`, node);
+                        typeResult = { node, type: UnknownType.create() };
+                    }
                 } else {
                     // Evaluate the format string expressions in this context.
                     node.strings.forEach(str => {
@@ -675,7 +701,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
 
             case ParseNodeType.TypeAnnotation: {
-                typeResult = getTypeOfExpression(node.typeAnnotation);
+                typeResult = getTypeOfExpression(node.typeAnnotation, undefined,
+                    EvaluatorFlags.EvaluateStringLiteralAsType);
                 break;
             }
 
@@ -716,7 +743,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
-        let evaluatorFlags = EvaluatorFlags.ConvertEllipsisToAny;
+        let evaluatorFlags = EvaluatorFlags.ConvertEllipsisToAny |
+            EvaluatorFlags.EvaluateStringLiteralAsType;
 
         const isAnnotationEvaluationPostponed =
             fileInfo.futureImports.get('annotations') !== undefined ||
@@ -1251,7 +1279,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             variableNameNode = statement.valueExpression;
                             variableType = convertClassToObject(
                                 getTypeOfExpression(statement.typeAnnotation, undefined,
-                                    EvaluatorFlags.ConvertEllipsisToAny).type);
+                                    EvaluatorFlags.ConvertEllipsisToAny |
+                                        EvaluatorFlags.EvaluateStringLiteralAsType
+                            ).type);
                         }
                     }
 
@@ -2856,7 +2886,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             };
         } else {
             typeResult = getTypeOfExpression(node, undefined,
-                flags | EvaluatorFlags.ConvertEllipsisToAny);
+                flags | EvaluatorFlags.ConvertEllipsisToAny | EvaluatorFlags.EvaluateStringLiteralAsType);
         }
 
         return typeResult;
@@ -3191,7 +3221,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 if (functionType) {
                     if (functionType.details.builtInName === 'cast' && argList.length === 2) {
                         // Verify that the cast is necessary.
-                        const castToType = getTypeForArgument(argList[0]);
+                        const castToType = getTypeForArgument(argList[0], true);
                         const castFromType = getTypeForArgument(argList[1]);
                         if (castToType.category === TypeCategory.Class && castFromType.category === TypeCategory.Object) {
                             if (isTypeSame(castToType, castFromType.classType)) {
@@ -3930,13 +3960,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             `A TypeVar cannot be both bound and constrained`,
                             argList[i].valueExpression || errorNode);
                     } else {
-                        if (requiresSpecialization(getTypeForArgument(argList[i]))) {
+                        const argType = getTypeForArgument(argList[i], true);
+                        if (requiresSpecialization(argType)) {
                             addError(
                                 `A TypeVar bound type cannot be generic`,
                                 argList[i].valueExpression || errorNode);
                         }
-                        typeVar.boundType = convertClassToObject(
-                            getTypeForArgument(argList[i]));
+                        typeVar.boundType = convertClassToObject(argType);
                     }
                 } else if (paramName === 'covariant') {
                     if (argList[i].valueExpression && getBooleanValue(argList[i].valueExpression!)) {
@@ -3971,13 +4001,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         `A TypeVar cannot be both bound and constrained`,
                         argList[i].valueExpression || errorNode);
                 } else {
-                    if (requiresSpecialization(getTypeForArgument(argList[i]))) {
+                    const argType = getTypeForArgument(argList[i], true);
+                    if (requiresSpecialization(argType)) {
                         addError(
                             `A TypeVar constraint type cannot be generic`,
                             argList[i].valueExpression || errorNode);
                     }
-                    TypeVarType.addConstraint(typeVar, convertClassToObject(
-                        getTypeForArgument(argList[i])));
+                    TypeVarType.addConstraint(typeVar, convertClassToObject(argType));
                 }
             }
         }
@@ -4078,7 +4108,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
 
         if (argList.length >= 2) {
-            const baseClass = getTypeForArgument(argList[1]);
+            const baseClass = getTypeForArgument(argList[1], true);
 
             if (baseClass.category === TypeCategory.Class) {
                 const classFlags = baseClass.details.flags & ~(
@@ -4308,7 +4338,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                                 if (entry.nodeType === ParseNodeType.Tuple && entry.expressions.length === 2) {
                                     entryNameNode = entry.expressions[0];
                                     entryTypeNode = entry.expressions[1];
-                                    const entryTypeInfo = getTypeOfExpression(entryTypeNode);
+                                    const entryTypeInfo = getTypeOfExpression(entryTypeNode, undefined,
+                                        EvaluatorFlags.EvaluateStringLiteralAsType);
                                     if (entryTypeInfo) {
                                         entryType = convertClassToObject(entryTypeInfo.type);
                                     }
@@ -6164,7 +6195,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
                         if (isNoneWithoutOptional) {
                             const addOptionalAction: AddMissingOptionalToParamAction = {
-                                action: 'pyright.addoptionalforparam',
+                                action: Commands.addMissingOptionalToParam,
                                 offsetOfTypeNode: param.typeAnnotation.start + 1
                             };
                             if (diag) {
@@ -7671,7 +7702,18 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
             }
 
-            return getTypeFromFlowNode(flowNode!, reference, targetSymbolId, initialType);
+            if (!flowNode) {
+                // This should happen only in cases where we're evaluating
+                // parse nodes that are created after the initial parse
+                // (namely, string literals that are used for forward
+                // referenced types).
+                return {
+                    type: initialType,
+                    isIncomplete: false
+                };
+            }
+
+            return getTypeFromFlowNode(flowNode, reference, targetSymbolId, initialType);
         }
 
         return {
@@ -8174,14 +8216,15 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         return specializedClass;
     }
 
-    function getTypeForArgument(arg: FunctionArgument): Type {
+    function getTypeForArgument(arg: FunctionArgument, expectingType = false): Type {
         if (arg.type) {
             return arg.type;
         }
 
         // If there was no defined type provided, there should always
         // be a value expression from which we can retrieve the type.
-        return getTypeOfExpression(arg.valueExpression!).type;
+        return getTypeOfExpression(arg.valueExpression!, undefined,
+            expectingType ? EvaluatorFlags.EvaluateStringLiteralAsType : EvaluatorFlags.None).type;
     }
 
     function getBuiltInType(node: ParseNode, name: string): Type {
@@ -10209,10 +10252,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
 
             if (param.category === ParameterCategory.Simple) {
-                const paramType = FunctionType.getEffectiveParameterType(type, index);
-                const paramTypeString = recursionCount < maxTypeRecursionCount ?
-                    printType(paramType, recursionCount + 1) : '';
-                paramString += ': ' + paramTypeString;
+                if (param.name) {
+                    const paramType = FunctionType.getEffectiveParameterType(type, index);
+                    const paramTypeString = recursionCount < maxTypeRecursionCount ?
+                        printType(paramType, recursionCount + 1) : '';
+                    paramString += ': ' + paramTypeString;
+                } else {
+                    paramString += '/'
+                }
             }
 
             if (type.details.declaration) {
@@ -10361,6 +10408,43 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
 
         return '';
+    }
+
+    // Calls back into the parser to parse the contents of a string literal.
+    // This is unfortunately needed in some cases — specifically where the
+    // parser couldn't determine that the string literal would be used in
+    // a context where it should be treated as a forward-declared type. This
+    // call produces an expression tree that is not attached to the main parse
+    // expression tree because we don't want to mutate the latter; the
+    // expression tree created by this function is therefore used only temporarily.
+    function parseStringAsTypeAnnotation(node: StringListNode): ExpressionNode | undefined {
+        const fileInfo = getFileInfo(node);
+        const parser = new Parser();
+        const textValue = node.strings[0].value;
+
+        // Determine the offset within the file where the string
+        // literal's contents begin.
+        const valueOffset = node.strings[0].start +
+            node.strings[0].token.prefixLength +
+            node.strings[0].token.quoteMarkLength;
+
+        const parseOptions = new ParseOptions();
+        parseOptions.isStubFile = fileInfo.isStubFile;
+        parseOptions.pythonVersion = fileInfo.executionEnvironment.pythonVersion;
+
+        const parseResults = parser.parseTextExpression(fileInfo.fileContents,
+            valueOffset, textValue.length, parseOptions, true);
+
+        if (parseResults.parseTree) {
+            parseResults.diagnostics.forEach(diag => {
+                addError(diag.message, node);
+            });
+
+            parseResults.parseTree.parent = node;
+            return parseResults.parseTree;
+        }
+
+        return undefined;
     }
 
     return {

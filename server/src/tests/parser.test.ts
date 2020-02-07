@@ -1,12 +1,12 @@
 /*
-* parser.test.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Unit tests for Python parser. These are very basic because
-* the parser gets lots of exercise in the type checker tests.
-*/
+ * parser.test.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Unit tests for Python parser. These are very basic because
+ * the parser gets lots of exercise in the type checker tests.
+ */
 
 import * as assert from 'assert';
 
@@ -23,10 +23,10 @@ test('Empty', () => {
 
 test('Sample1', () => {
     const diagSink = new DiagnosticSink();
-    const parseResults = TestUtils.parseSampleFile('sample1.py', diagSink);
+    const parseInfo = TestUtils.parseSampleFile('sample1.py', diagSink);
 
     assert.equal(diagSink.fetchAndClear().length, 0);
-    assert.equal(parseResults.parseTree.statements.length, 4);
+    assert.equal(parseInfo.parseResults.parseTree.statements.length, 4);
 });
 
 test('TypeSyntax1', () => {
