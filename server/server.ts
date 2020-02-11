@@ -11,7 +11,7 @@ import { isArray } from 'util';
 import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
 import * as debug from './pyright/server/src/common/debug';
-import { convertUriToPath, getDirectoryPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
+import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 
@@ -19,8 +19,21 @@ class Server extends LanguageServerBase {
     private _controller: CommandController;
 
     constructor() {
-        debug.assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
-        super('PyRx', getDirectoryPath(__dirname));
+        // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
+        // but __dirname points to "client/server" same as pyright.
+        // the difference comes from the fact that pyright deploy everything under client but pyrx
+        // let users to download only server part.
+        //
+        // make sure root directory points to __dirname which is "client/server" where we can discover
+        // "typeshed-fallback" folder
+        //
+        // root directory will be used for 2 different purpose.
+        // 1. to find "typeshed-fallback" folder.
+        // 2. to set "cwd" to run python to find search path.
+        const rootDirectory = __dirname;
+        debug.assert(fs.existsSync(path.join(rootDirectory, 'typeshed-fallback')), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
+        super('PyRx', rootDirectory);
+
         this._controller = new CommandController(this);
     }
 
