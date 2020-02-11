@@ -5,22 +5,22 @@
  */
 'use strict';
 
-import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import { isArray } from 'util';
-import { ExecuteCommandParams } from 'vscode-languageserver';
+import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
-import { normalizeSlashes } from './pyright/server/src/common/pathUtils';
+import * as debug from './pyright/server/src/common/debug';
+import { convertUriToPath, getDirectoryPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
+import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
 
     constructor() {
-        assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
-        super('PyRx', __dirname);
-        this.console.log(`PyRx server root directory: ${__dirname}`);
+        debug.assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
+        super('PyRx', getDirectoryPath(__dirname));
         this._controller = new CommandController(this);
     }
 
@@ -49,13 +49,21 @@ class Server extends LanguageServerBase {
                 serverSettings.useLibraryCodeForTypes = true;
             }
         } catch (error) {
-            this.console.log(`Error reading settings: ${error}`);
+            this.console.log(`Error reading settings: ${ error }`);
         }
         return serverSettings;
     }
 
     protected executeCommand(cmdParams: ExecuteCommandParams): Promise<any> {
         return this._controller.execute(cmdParams);
+    }
+
+    protected async executeCodeAction(cmdParams: CodeActionParams): Promise<(Command | CodeAction)[] | undefined | null> {
+        this.recordUserInteractionTime();
+
+        const filePath = convertUriToPath(cmdParams.textDocument.uri);
+        const workspace = this.workspaceMap.getWorkspaceForFile(filePath);
+        return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, cmdParams.range);
     }
 }
 
