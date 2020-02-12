@@ -13,11 +13,12 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm run build:copyTypeshed && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ..",
+        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ..",
         "start": "npm i && npm run build:server",
         "build": "npm run build:server && npm run installServer",
         "build:server": "tsc",
         "build:copyTypeshed": "node ./copyTypeshedFallback.js",
+        "build:copyBundledStubs": "node ./copyBundledStubs.js",
         "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json",
         "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",

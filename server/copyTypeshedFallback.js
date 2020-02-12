@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// This script helps build the command-line version of pyright
+// This script helps build the command-line version of pyrx
 // by copying the typeshed-fallback directory to the dist directory.
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -11,5 +11,5 @@ fsExtra.emptyDirSync('../dist/typeshed-fallback');
 fsExtra.copySync('./pyright/client/typeshed-fallback', '../dist/typeshed-fallback');
 
 // Debug mode
-fsExtra.emptyDirSync('../client/typeshed-fallback');
+fsExtra.emptyDirSync('../client/server/typeshed-fallback');
 fsExtra.copySync('./pyright/client/typeshed-fallback', '../client/server/typeshed-fallback');

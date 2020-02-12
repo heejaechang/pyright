@@ -3,9 +3,8 @@
  *
  * Implements PyRx language server.
  */
-'use strict';
 
-import * as fs from 'fs';
+ import * as fs from 'fs';
 import * as path from 'path';
 import { isArray } from 'util';
 import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
@@ -13,7 +12,11 @@ import { CommandController } from './commands/commandController';
 import * as debug from './pyright/server/src/common/debug';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
+import { ConfigOptions } from './pyright/server/src/common/configOptions';
+import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
+import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
+import { createPyrxImportResolver } from './pyrxImportResolver';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
@@ -71,6 +74,10 @@ class Server extends LanguageServerBase {
         return this._controller.execute(cmdParams);
     }
 
+    protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
+        return createPyrxImportResolver(fs, options);
+    }
+    
     protected async executeCodeAction(cmdParams: CodeActionParams): Promise<(Command | CodeAction)[] | undefined | null> {
         this.recordUserInteractionTime();
 
