@@ -20,7 +20,8 @@ class Server extends LanguageServerBase {
     constructor() {
         // pyright has "typeshed-fallback" under "client" and __dirname points to "client/server"
         // make sure root directory point to "client", one level up from "client/server" where we can discover
-        // "typeshed-fallback" folder
+        // "typeshed-fallback" folder. in release, root is "extension" instead of "client" but
+        // folder structure is same (extension/server).
         //
         // root directory will be used for 2 different purposes.
         // 1. to find "typeshed-fallback" folder.
