@@ -15,7 +15,7 @@ import { Program } from '../../../analyzer/program';
 import { AnalyzerService } from '../../../analyzer/service';
 import { ConfigOptions } from '../../../common/configOptions';
 import { NullConsole } from '../../../common/console';
-import { Comparison, isNumber, isString } from '../../../common/core';
+import { Comparison, isNumber, isString, toBoolean } from '../../../common/core';
 import * as debug from '../../../common/debug';
 import { DiagnosticCategory } from '../../../common/diagnostic';
 import { combinePaths, comparePaths, getBaseFileName, normalizePath, normalizeSlashes } from '../../../common/pathUtils';
@@ -28,7 +28,7 @@ import { createFromFileSystem } from '../vfs/factory';
 import * as vfs from '../vfs/filesystem';
 import {
     CompilerSettings, FourSlashData, FourSlashFile, GlobalMetadataOptionNames, Marker,
-    MultiMap, pythonSettingFilename, Range, TestCancellationToken
+    MetadataOptionNames, MultiMap, pythonSettingFilename, Range, TestCancellationToken
 } from './fourSlashTypes';
 
 export interface TextChange {
@@ -64,6 +64,7 @@ export class TestState {
         this._cancellationToken = new TestCancellationToken();
         const configOptions = this._convertGlobalOptionsToConfigOptions(this.testData.globalOptions);
 
+        const sourceFiles = [];
         const files: vfs.FileSet = {};
         for (const file of testData.files) {
             // if one of file is configuration file, set config options from the given json
@@ -76,8 +77,13 @@ export class TestState {
                 }
 
                 configOptions.initializeFromJson(configJson, new NullConsole());
+                this._applyTestConfigOptions(configOptions);
             } else {
                 files[file.fileName] = new vfs.File(file.content, { meta: file.fileOptions, encoding: 'utf8' });
+
+                if (!toBoolean(file.fileOptions[MetadataOptionNames.library])) {
+                    sourceFiles.push(file.fileName);
+                }
             }
         }
 
@@ -88,7 +94,7 @@ export class TestState {
         // this should be change to AnalyzerService rather than Program
         const importResolver = importResolverFactory(fs, configOptions);
         const program = new Program(importResolver, configOptions);
-        program.setTrackedFiles(Object.keys(files));
+        program.setTrackedFiles(sourceFiles);
 
         // make sure these states are consistent between these objects.
         // later make sure we just hold onto AnalyzerService and get all these
@@ -97,7 +103,7 @@ export class TestState {
         this.configOptions = configOptions;
         this.importResolver = importResolver;
         this.program = program;
-        this._files.push(...Object.keys(files));
+        this._files = sourceFiles;
 
         if (this._files.length > 0) {
             // Open the first file by default
@@ -368,7 +374,7 @@ export class TestState {
 
         // expected number of files
         if (resultPerFile.size !== rangePerFile.size) {
-            this._raiseError(`actual and expected doesn't match - expected: ${ stringify(rangePerFile) }, actual: ${ stringify(rangePerFile) }`);
+            this._raiseError(`actual and expected doesn't match - expected: ${ stringify(resultPerFile) }, actual: ${ stringify(rangePerFile) }`);
         }
 
         for (const [file, ranges] of rangePerFile.entries()) {
@@ -469,8 +475,18 @@ export class TestState {
 
         // add more global options as we need them
 
+        return this._applyTestConfigOptions(configOptions);
+    }
+
+    private _applyTestConfigOptions(configOptions: ConfigOptions) {
         // Always enable "test mode".
         configOptions.internalTestMode = true;
+
+        // run test in venv mode under root so that
+        // under test we can point to local lib folder
+        configOptions.venvPath = vfs.MODULE_PATH;
+        configOptions.defaultVenv = vfs.MODULE_PATH;
+
         return configOptions;
     }
 

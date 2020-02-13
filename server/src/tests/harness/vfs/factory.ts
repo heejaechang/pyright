@@ -30,6 +30,7 @@ export interface FileSystemCreateOptions extends FileSystemOptions {
     documents?: readonly TextDocument[];
 }
 
+export const libFolder = combinePaths(MODULE_PATH, normalizeSlashes(combinePaths(consts.LIB, consts.SITE_PACKAGES)));
 export const typeshedFolder = combinePaths(MODULE_PATH, normalizeSlashes(consts.TYPESHED_FALLBACK));
 export const srcFolder = normalizeSlashes('/.src');
 
