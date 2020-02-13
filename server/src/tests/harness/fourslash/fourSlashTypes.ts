@@ -13,7 +13,8 @@ export const pythonSettingFilename = 'python.json';
 /** well known global option names */
 export const enum GlobalMetadataOptionNames {
     projectRoot = 'projectroot',
-    ignoreCase = 'ignorecase'
+    ignoreCase = 'ignorecase',
+    typeshed = 'typeshed'
 }
 
 /** Any option name not belong to this will become global option */

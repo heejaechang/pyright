@@ -12,6 +12,7 @@ import * as path from 'path';
 import Char from 'typescript-char';
 import { ImportResolver, ImportResolverFactory } from '../../../analyzer/importResolver';
 import { Program } from '../../../analyzer/program';
+import { AnalyzerService } from '../../../analyzer/service';
 import { ConfigOptions } from '../../../common/configOptions';
 import { NullConsole } from '../../../common/console';
 import { Comparison, isNumber, isString } from '../../../common/core';
@@ -23,11 +24,12 @@ import { getStringComparer } from '../../../common/stringUtils';
 import { Position, TextRange } from '../../../common/textRange';
 import * as host from '../host';
 import { stringify } from '../utils';
-import { createFromFileSystem, createResolver } from '../vfs/factory';
+import { createFromFileSystem } from '../vfs/factory';
 import * as vfs from '../vfs/filesystem';
-import { CompilerSettings, FourSlashData, FourSlashFile, GlobalMetadataOptionNames, Marker,
-    MultiMap, pythonSettingFilename, Range, TestCancellationToken } from './fourSlashTypes';
-import { AnalyzerService } from '../../../analyzer/service';
+import {
+    CompilerSettings, FourSlashData, FourSlashFile, GlobalMetadataOptionNames, Marker,
+    MultiMap, pythonSettingFilename, Range, TestCancellationToken
+} from './fourSlashTypes';
 
 export interface TextChange {
     span: TextRange;
@@ -53,7 +55,9 @@ export class TestState {
     // The file that's currently 'opened'
     activeFile!: FourSlashFile;
 
-    constructor(private _basePath: string, public testData: FourSlashData, extraMountedPaths?: Map<string, string>, importResolverFactory?: ImportResolverFactory) {
+    constructor(private _basePath: string, public testData: FourSlashData, mountPaths?: Map<string, string>,
+        importResolverFactory?: ImportResolverFactory) {
+
         const strIgnoreCase = GlobalMetadataOptionNames.ignoreCase;
         const ignoreCase = testData.globalOptions[strIgnoreCase]?.toUpperCase() === 'TRUE';
 
@@ -77,14 +81,7 @@ export class TestState {
             }
         }
 
-        const resolver = createResolver(host.HOST);
-        const fs = createFromFileSystem(host.HOST, resolver, ignoreCase, { cwd: _basePath, files, meta: testData.globalOptions });
-
-        if (extraMountedPaths) {
-            extraMountedPaths.forEach((physicalPath, virtualPath) => {
-                fs.mountSync(physicalPath, virtualPath, resolver);
-            });
-        }
+        const fs = createFromFileSystem(host.HOST, ignoreCase, { cwd: _basePath, files, meta: testData.globalOptions }, mountPaths);
 
         importResolverFactory = importResolverFactory || AnalyzerService.createImportResolver;
 
@@ -394,11 +391,12 @@ export class TestState {
                 }
 
                 for (const range of ranges) {
-                    const rangeSpan =  TextRange.fromBounds(range.pos, range.end);
+                    const rangeSpan = TextRange.fromBounds(range.pos, range.end);
                     const matches = actual.filter(d => {
                         const diagnosticSpan = TextRange.fromBounds(convertPositionToOffset(d.range.start, lines)!,
                             convertPositionToOffset(d.range.end, lines)!);
-                        return this._deepEqual(diagnosticSpan, rangeSpan); });
+                        return this._deepEqual(diagnosticSpan, rangeSpan);
+                    });
 
                     if (matches.length === 0) {
                         this._raiseError(`doesn't contain expected range: ${ stringify(range) }`);
