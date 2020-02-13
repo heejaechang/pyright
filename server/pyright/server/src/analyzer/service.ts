@@ -87,7 +87,7 @@ export class AnalyzerService {
         this._clearReanalysisTimer();
     }
 
-    static createImportResolver(fs: VirtualFileSystem, options: ConfigOptions) : ImportResolver {
+    static createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
         return new ImportResolver(fs, options);
     }
 
