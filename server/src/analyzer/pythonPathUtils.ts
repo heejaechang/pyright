@@ -50,14 +50,14 @@ export function findPythonSearchPaths(fs: VirtualFileSystem, configOptions: Conf
     }
 
     if (venvPath) {
-        let libPath = combinePaths(venvPath, 'lib');
+        let libPath = combinePaths(venvPath, consts.LIB);
         if (fs.existsSync(libPath)) {
-            importFailureInfo.push(`Found path '${ libPath }'; looking for site-packages`);
+            importFailureInfo.push(`Found path '${ libPath }'; looking for ${ consts.SITE_PACKAGES }`);
         } else {
             importFailureInfo.push(`Did not find '${ libPath }'; trying 'Lib' instead`);
             libPath = combinePaths(venvPath, 'Lib');
             if (fs.existsSync(libPath)) {
-                importFailureInfo.push(`Found path '${ libPath }'; looking for site-packages`);
+                importFailureInfo.push(`Found path '${ libPath }'; looking for ${ consts.SITE_PACKAGES }`);
             } else {
                 importFailureInfo.push(`Did not find '${ libPath }'`);
                 libPath = '';
@@ -65,7 +65,7 @@ export function findPythonSearchPaths(fs: VirtualFileSystem, configOptions: Conf
         }
 
         if (libPath) {
-            const sitePackagesPath = combinePaths(libPath, 'site-packages');
+            const sitePackagesPath = combinePaths(libPath, consts.SITE_PACKAGES);
             if (fs.existsSync(sitePackagesPath)) {
                 importFailureInfo.push(`Found path '${ sitePackagesPath }'`);
                 return [sitePackagesPath];
@@ -79,7 +79,7 @@ export function findPythonSearchPaths(fs: VirtualFileSystem, configOptions: Conf
             for (let i = 0; i < entries.directories.length; i++) {
                 const dirName = entries.directories[i];
                 if (dirName.startsWith('python')) {
-                    const dirPath = combinePaths(libPath, dirName, 'site-packages');
+                    const dirPath = combinePaths(libPath, dirName, consts.SITE_PACKAGES);
                     if (fs.existsSync(dirPath)) {
                         importFailureInfo.push(`Found path '${ dirPath }'`);
                         return [dirPath];
@@ -90,7 +90,7 @@ export function findPythonSearchPaths(fs: VirtualFileSystem, configOptions: Conf
             }
         }
 
-        importFailureInfo.push(`Did not find site-packages. Falling back on python interpreter.`);
+        importFailureInfo.push(`Did not find '${ consts.SITE_PACKAGES }'. Falling back on python interpreter.`);
     }
 
     // Fall back on the python interpreter.

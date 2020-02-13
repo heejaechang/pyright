@@ -49,7 +49,7 @@ test('Multiple files', () => {
 
 test('Configuration', () => {
     const code = `
-// @filename: python.json
+// @filename: mspythonconfig.json
 //// {
 ////   "include": [
 ////     "src"
