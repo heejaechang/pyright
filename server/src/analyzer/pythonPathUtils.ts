@@ -9,6 +9,7 @@
 
 import * as child_process from 'child_process';
 import { ConfigOptions } from '../common/configOptions';
+import * as consts from '../common/consts';
 import {
     combinePaths, ensureTrailingDirectorySeparator, getDirectoryPath,
     getFileSystemEntries, isDirectory, normalizePath
@@ -22,7 +23,7 @@ export function getTypeShedFallbackPath(moduleDirectory?: string) {
         moduleDirectory = normalizePath(moduleDirectory);
         return combinePaths(getDirectoryPath(
             ensureTrailingDirectorySeparator(moduleDirectory)),
-            'typeshed-fallback');
+            consts.TYPESHED_FALLBACK);
     }
 
     return undefined;
@@ -74,7 +75,7 @@ export function findPythonSearchPaths(fs: VirtualFileSystem, configOptions: Conf
 
             // We didn't find a site-packages directory directly in the lib
             // directory. Scan for a "python*" directory instead.
-            const entries = getFileSystemEntries(this._fs, libPath);
+            const entries = getFileSystemEntries(fs, libPath);
             for (let i = 0; i < entries.directories.length; i++) {
                 const dirName = entries.directories[i];
                 if (dirName.startsWith('python')) {

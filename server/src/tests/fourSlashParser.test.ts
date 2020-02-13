@@ -273,8 +273,7 @@ test('fourSlashWithFileSystem', () => {
     const documents = data.files.map(f => new factory.TextDocument(f.fileName, f.content,
         new Map<string, string>(Object.entries(f.fileOptions))));
 
-    const resolver = factory.createResolver(host.HOST);
-    const fs = factory.createFromFileSystem(host.HOST, resolver, /* ignoreCase */ false, { documents, cwd: normalizeSlashes('/') });
+    const fs = factory.createFromFileSystem(host.HOST, /* ignoreCase */ false, { documents, cwd: normalizeSlashes('/') });
 
     for (const file of data.files) {
         assert.equal(fs.readFileSync(file.fileName, 'utf8'), getContent(getBaseFileName(file.fileName, '.py', false)));
@@ -282,7 +281,7 @@ test('fourSlashWithFileSystem', () => {
 });
 
 function getContent(className: string) {
-    return `class ${className}:
+    return `class ${ className }:
     pass`;
 }
 
