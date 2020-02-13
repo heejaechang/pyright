@@ -7,3 +7,5 @@
  */
 
 export const TYPESHED_FALLBACK = 'typeshed-fallback';
+export const LIB = 'lib';
+export const SITE_PACKAGES = 'site-packages';
