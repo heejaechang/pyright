@@ -4,17 +4,17 @@
  * Implements PyRx language server.
  */
 
- import * as fs from 'fs';
 import * as path from 'path';
 import { isArray } from 'util';
 import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
+import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
+import { ConfigOptions } from './pyright/server/src/common/configOptions';
+import * as consts from './pyright/server/src/common/consts';
 import * as debug from './pyright/server/src/common/debug';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
-import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
-import { ConfigOptions } from './pyright/server/src/common/configOptions';
-import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
+import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver } from './pyrxImportResolver';
 
@@ -22,6 +22,9 @@ class Server extends LanguageServerBase {
     private _controller: CommandController;
 
     constructor() {
+        const rootDirectory = __dirname;
+        super('PyRx', rootDirectory);
+
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
         // the difference comes from the fact that pyright deploy everything under client but pyrx
@@ -33,10 +36,7 @@ class Server extends LanguageServerBase {
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
         // 2. to set "cwd" to run python to find search path.
-        const rootDirectory = __dirname;
-        debug.assert(fs.existsSync(path.join(rootDirectory, 'typeshed-fallback')), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
-        super('PyRx', rootDirectory);
-
+        debug.assert(this.fs.existsSync(path.join(rootDirectory, consts.TYPESHED_FALLBACK)), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
         this._controller = new CommandController(this);
     }
 
@@ -77,7 +77,7 @@ class Server extends LanguageServerBase {
     protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
         return createPyrxImportResolver(fs, options);
     }
-    
+
     protected async executeCodeAction(cmdParams: CodeActionParams): Promise<(Command | CodeAction)[] | undefined | null> {
         this.recordUserInteractionTime();
 
