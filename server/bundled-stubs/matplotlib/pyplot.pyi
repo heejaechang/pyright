@@ -6,7 +6,7 @@ from typing import (
     Any, BinaryIO, Callable, ContextManager, Dict, IO, List, Literal, Mapping,
     NewType, Optional, Sequence, Tuple, Type, Union, overload)
 
-from matplotlib._typing import ArrayLike, PIL_Image, Scalar, ndarray
+from matplotlib._typing import ArrayLike, Scalar, ndarray
 from matplotlib.artist import Artist
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import Event, FigureManagerBase
@@ -30,6 +30,7 @@ from matplotlib.table import Table
 from matplotlib.text import Annotation, Text
 from matplotlib.transforms import Bbox
 from matplotlib.widgets import SubplotTool
+from PIL.Image import Image
 
 # TODO: data params need to be Dicts/mappings?
 # TODO: Are some of these more reasonable in tooltips when split out as overloads?
@@ -389,7 +390,7 @@ def imread(fname: Union[str, BinaryIO], format: Optional[str] = ...) -> ndarray:
 def imsave(fname: Union[str, BinaryIO], arr: ArrayLike, **kwargs: Any) -> None: ...
 
 def imshow(
-    X: Union[ArrayLike, PIL_Image],
+    X: Union[ArrayLike, Image],
     cmap: Optional[Union[str, Colormap]] = ...,
     norm: Optional[Normalize] = ...,
     aspect: Optional[Union[Literal["equal", "auto"], float]] = ...,

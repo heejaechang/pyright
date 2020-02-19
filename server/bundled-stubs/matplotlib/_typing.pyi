@@ -24,8 +24,3 @@ ArrayLike = Union[
     Scalar, # TODO: Should this be here?
 ]
 # ArrayLike = Any
-
-
-# TODO: type PIL
-PIL_Image = NewType("PIL_IMAGE", object)
-# PIL_Image = Any
