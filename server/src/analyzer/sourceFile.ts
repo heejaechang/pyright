@@ -20,9 +20,10 @@ import { DiagnosticSink, TextRangeDiagnosticSink } from '../common/diagnosticSin
 import { TextEditAction } from '../common/editAction';
 import { getFileName, normalizeSlashes } from '../common/pathUtils';
 import * as StringUtils from '../common/stringUtils';
-import { TextRange, getEmptyRange, Position, DocumentRange } from '../common/textRange';
+import { DocumentRange, getEmptyRange, Position, TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
 import { timingStats } from '../common/timing';
+import { VirtualFileSystem } from '../common/vfs';
 import { CompletionItemData, CompletionProvider, ModuleSymbolMap } from '../languageService/completionProvider';
 import { DefinitionProvider } from '../languageService/definitionProvider';
 import { DocumentSymbolProvider } from '../languageService/documentSymbolProvider';
@@ -46,7 +47,6 @@ import { Scope } from './scope';
 import { SymbolTable } from './symbol';
 import { TestWalker } from './testWalker';
 import { TypeEvaluator } from './typeEvaluator';
-import { VirtualFileSystem } from '../common/vfs';
 
 const _maxImportCyclesPerFile = 4;
 
