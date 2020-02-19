@@ -7,7 +7,7 @@
 import { ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController as PyrightCommandController } from '../pyright/server/src/commands/commandController';
 import { Commands as PyrightCommands } from '../pyright/server/src/commands/commands';
-import { LanguageServerBase } from '../pyright/server/src/languageServerBase';
+import { LanguageServerInterface } from '../pyright/server/src/languageServerBase';
 import { Commands } from './commands';
 
 export interface ServerCommand {
@@ -15,7 +15,7 @@ export interface ServerCommand {
 }
 
 export class CommandController extends PyrightCommandController {
-    constructor(_ls: LanguageServerBase) {
+    constructor(_ls: LanguageServerInterface) {
         super(_ls);
     }
 

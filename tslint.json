@@ -4,7 +4,8 @@
     ],
     "linterOptions": {
         "exclude": [
-            "src/ipywidgets"
+            "src/ipywidgets",
+            "**/tests/fourslash/**/*.ts"
         ]
     },
     "extends": [

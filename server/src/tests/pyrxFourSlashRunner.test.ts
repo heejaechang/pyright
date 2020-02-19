@@ -42,8 +42,8 @@ describe('pyrx fourslash tests', () => {
             const fn = normalizeSlashes(file);
             const justName = fn.replace(/^.*[\\/]/, '');
 
-            it('fourslash test ' + justName + ' runs correctly', () => {
-                runFourSlashTest(srcFolder, fn, mountedPaths, createPyrxImportResolver);
+            it('fourslash test ' + justName + ' runs correctly', cb => {
+                runFourSlashTest(srcFolder, fn, cb, mountedPaths, createPyrxImportResolver);
             });
         });
     });
