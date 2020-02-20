@@ -11,8 +11,7 @@
 * into an abstract syntax tree (AST).
 */
 
-import * as assert from 'assert';
-
+import { assert } from '../common/debug';
 import { Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
 import { DiagnosticSink } from '../common/diagnosticSink';
 import { convertOffsetsToRange, convertPositionToOffset } from '../common/positionUtils';
@@ -515,6 +514,15 @@ export class Parser {
                     if (!symbolName) {
                         this._addError('Expected symbol name after "as"', this._peekToken());
                     }
+                } else {
+                    // Handle the python 2.x syntax in a graceful manner.
+                    const peekToken = this._peekToken();
+                    if (this._consumeTokenIfType(TokenType.Comma)) {
+                        this._addError(`Expected 'as' after exception type`, peekToken);
+
+                        // Parse the expression expected in python 2.x, but discard it.
+                        this._parseTestExpression(false);
+                    }
                 }
             }
 
@@ -759,7 +767,17 @@ export class Parser {
                 const paramNode = ParameterNode.create(firstToken, ParameterCategory.Simple);
                 return paramNode;
             }
-            this._addError('Expected parameter name', this._peekToken());
+
+            // Check for the Python 2.x parameter sublist syntax and handle it gracefully.
+            if (this._peekTokenType() === TokenType.OpenParenthesis) {
+                const sublistStart = this._getNextToken();
+                if (this._consumeTokensUntilType(TokenType.CloseParenthesis)) {
+                    this._getNextToken();
+                }
+                this._addError(`Sublist parameters are not supported in Python 3.x`, sublistStart);
+            } else {
+                this._addError('Expected parameter name', this._peekToken());
+            }
         }
 
         let paramType = ParameterCategory.Simple;
@@ -879,7 +897,7 @@ export class Parser {
     // decorator: '@' dotted_name [ '(' [arglist] ')' ] NEWLINE
     private _parseDecorator(): DecoratorNode {
         const atOperator = this._getNextToken() as OperatorToken;
-        assert.equal(atOperator.operatorType, OperatorType.MatrixMultiply);
+        assert(atOperator.operatorType === OperatorType.MatrixMultiply);
 
         let callNameExpr: ExpressionNode | undefined;
         while (true) {
@@ -2148,6 +2166,23 @@ export class Parser {
             return this._parseStringList();
         }
 
+        if (nextToken.type === TokenType.Backtick) {
+            this._getNextToken();
+
+            // Atoms with backticks are no longer allowed in Python 3.x, but they
+            // were a thing in Python 2.x. We'll parse them to improve parse recovery
+            // and emit an error.
+            this._addError(
+                'Expressions surrounded by backticks are not supported in Python 3.x; use repr instead',
+                nextToken);
+            
+            const expressionNode = this._parseTestListAsExpression(ErrorExpressionCategory.MissingExpression,
+                'Expected expression');
+            
+            this._consumeTokenIfType(TokenType.Backtick);
+            return expressionNode;
+        }
+
         if (nextToken.type === TokenType.OpenParenthesis) {
             const tupleNode = this._parseTupleAtom();
             if (this._isParsingTypeAnnotation && !this._isParsingIndexTrailer) {
@@ -2265,7 +2300,7 @@ export class Parser {
     // testlist_comp: (test | star_expr) (comp_for | (',' (test | star_expr))* [','])
     private _parseTupleAtom(): ExpressionNode {
         const startParen = this._getNextToken();
-        assert.equal(startParen.type, TokenType.OpenParenthesis);
+        assert(startParen.type === TokenType.OpenParenthesis);
 
         const yieldExpr = this._tryParseYieldExpression();
         if (yieldExpr) {
@@ -2298,7 +2333,7 @@ export class Parser {
     // testlist_comp: (test | star_expr) (comp_for | (',' (test | star_expr))* [','])
     private _parseListAtom(): ListNode | ErrorNode {
         const startBracket = this._getNextToken();
-        assert.equal(startBracket.type, TokenType.OpenBracket);
+        assert(startBracket.type === TokenType.OpenBracket);
 
         const exprListResult = this._parseTestListWithComprehension();
         const closeBracket: Token | undefined = this._peekToken();
@@ -2345,7 +2380,7 @@ export class Parser {
     // setentry: test | star_expr
     private _parseDictionaryOrSetAtom(): DictionaryNode | SetNode {
         const startBrace = this._getNextToken();
-        assert.equal(startBrace.type, TokenType.OpenCurlyBrace);
+        assert(startBrace.type === TokenType.OpenCurlyBrace);
 
         const dictionaryEntries: DictionaryEntryNode[] = [];
         const setEntries: ExpressionNode[] = [];
@@ -2752,8 +2787,9 @@ export class Parser {
                     }
                 } else if (curChar === '!') {
                     if (!ignoreSeparator) {
+                        // Allow !=, as per PEP 498
                         if (segmentExprLength === segmentValue.length - 1 ||
-                                segmentValue[segmentExprLength + 1] !== '!') {
+                                segmentValue[segmentExprLength + 1] !== '=') {
                             break;
                         }
                     }
@@ -3067,7 +3103,7 @@ export class Parser {
     private _getKeywordToken(keywordType: KeywordType): KeywordToken {
         const keywordToken = this._getNextToken() as KeywordToken;
         assert(keywordToken.type === TokenType.Keyword);
-        assert.equal(keywordToken.keywordType, keywordType);
+        assert(keywordToken.keywordType === keywordType);
         return keywordToken;
     }
 

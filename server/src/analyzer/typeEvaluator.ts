@@ -14,23 +14,22 @@
 * taken by the TypeScript compiler.
 */
 
-import * as assert from 'assert';
-
 import { Commands } from '../commands/commands';
 import { DiagnosticLevel } from '../common/configOptions';
+import { assert, fail } from '../common/debug';
 import { AddMissingOptionalToParamAction, Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
-import { getEmptyRange } from '../common/textRange';
 import { DiagnosticRule } from '../common/diagnosticRules';
 import { convertOffsetsToRange } from '../common/positionUtils';
 import { PythonVersion } from '../common/pythonVersion';
+import { getEmptyRange } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { ArgumentCategory, AssignmentNode, AugmentedAssignmentNode, BinaryOperationNode,
     CallNode, ClassNode, ConstantNode, DecoratorNode, DictionaryNode, ExceptNode, ExpressionNode,
     ForNode, FunctionNode, ImportAsNode, ImportFromAsNode, ImportFromNode, IndexItemsNode,
     IndexNode, isExpressionNode, LambdaNode, ListComprehensionNode, ListNode, MemberAccessNode,
     NameNode, ParameterCategory, ParameterNode, ParseNode, ParseNodeType, SetNode,
-    SliceNode, StringListNode, TernaryNode, TupleNode, UnaryOperationNode, WithItemNode,
-    YieldFromNode, YieldNode } from '../parser/parseNodes';
+    SliceNode, StringListNode, TernaryNode, TupleNode, TypeAnnotationNode, UnaryOperationNode,
+    WithItemNode, YieldFromNode, YieldNode } from '../parser/parseNodes';
 import { ParseOptions, Parser } from '../parser/parser';
 import { KeywordType, OperatorType, StringTokenFlags } from '../parser/tokenizerTypes';
 import { AnalyzerFileInfo, ImportLookup, ImportLookupResult } from './analyzerFileInfo';
@@ -47,7 +46,7 @@ import { evaluateStaticBoolExpression } from './staticExpressions';
 import { indeterminateSymbolId, Symbol, SymbolFlags } from './symbol';
 import { isConstantName, isPrivateOrProtectedName } from './symbolNameUtils';
 import { getLastTypedDeclaredForSymbol, isFinalVariable } from './symbolUtils';
-import { AnyType, ClassType, ClassTypeFlags, combineTypes, FunctionParameter,
+import { AnyType, ClassType, ClassTypeFlags, combineTypes, DataClassEntry,FunctionParameter,
     FunctionType, FunctionTypeFlags, InheritanceChain, isAnyOrUnknown, isNoneOrNever,
     isPossiblyUnbound, isSameWithoutLiteralValue, isTypeSame, isUnbound, LiteralValue,
     maxTypeRecursionCount, ModuleType, NeverType, NoneType, ObjectType,
@@ -721,7 +720,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         if (!typeResult) {
             // We shouldn't get here. If we do, report an error.
-            assert.fail(`Unhandled expression type '${ ParseTreeUtils.printExpression(node) }'`);
+            fail(`Unhandled expression type '${ ParseTreeUtils.printExpression(node) }'`);
             typeResult = { type: UnknownType.create(), node };
         }
 
@@ -940,7 +939,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     // Try to get the __new__ method first. We skip the base "object",
                     // which typically provides the __new__ method. We'll fall back on
                     // the __init__ if there is no custom __new__.
-                    let methodType = getBoundMethod(subtype, '__new__', true);
+                    let methodType: FunctionType | OverloadedFunctionType | undefined;
+
+                    // Skip the __new__ lookup for data classes, which always have a
+                    // generic synthesized new method.
+                    if (!ClassType.isDataClass(subtype)) {
+                       methodType = getBoundMethod(subtype, '__new__', true);
+                    }
                     if (!methodType) {
                         methodType = getBoundMethod(subtype, '__init__', false);
                     }
@@ -1245,39 +1250,43 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         });
         initType.details.declaredReturnType = NoneType.create();
 
-        // Maintain a list of all dataclass parameters (including
+        // Maintain a list of all dataclass entries (including
         // those from inherited classes) plus a list of only those
-        // parameters added by this class.
-        const localDataClassParameters: FunctionParameter[] = [];
-        const fullDataClassParameters: FunctionParameter[] = [];
-        addInheritedDataClassParametersRecursive(classType, fullDataClassParameters);
+        // entries added by this class.
+        const localDataClassEntries: DataClassEntry[] = [];
+        const fullDataClassEntries: DataClassEntry[] = [];
+        addInheritedDataClassEntriesRecursive(classType, fullDataClassEntries);
+
+        // Maintain a list of "type evaluators".
+        type TypeEvaluator = () => Type;
+        const localEntryTypeEvaluator: { entry: DataClassEntry; evaluator: TypeEvaluator }[] = [];
 
         node.suite.statements.forEach(statementList => {
             if (statementList.nodeType === ParseNodeType.StatementList) {
                 statementList.statements.forEach(statement => {
                     let variableNameNode: NameNode | undefined;
-                    let variableType: Type | undefined;
+                    let variableTypeEvaluator: TypeEvaluator | undefined;
                     let hasDefaultValue = false;
 
                     if (statement.nodeType === ParseNodeType.Assignment) {
                         if (statement.leftExpression.nodeType === ParseNodeType.Name) {
                             variableNameNode = statement.leftExpression;
-                            variableType = stripLiteralValue(
+                            variableTypeEvaluator = () => stripLiteralValue(
                                 getTypeOfExpression(statement.rightExpression).type);
                         } else if (statement.leftExpression.nodeType === ParseNodeType.TypeAnnotation &&
                             statement.leftExpression.valueExpression.nodeType === ParseNodeType.Name) {
 
                             variableNameNode = statement.leftExpression.valueExpression;
-                            variableType = convertClassToObject(
-                                getTypeOfExpression(statement.leftExpression.typeAnnotation, undefined,
-                                    EvaluatorFlags.ConvertEllipsisToAny).type);
+                            variableTypeEvaluator = () => convertClassToObject(
+                                getTypeOfExpression((statement.leftExpression as TypeAnnotationNode).typeAnnotation,
+                                    undefined, EvaluatorFlags.ConvertEllipsisToAny).type);
                         }
 
                         hasDefaultValue = true;
                     } else if (statement.nodeType === ParseNodeType.TypeAnnotation) {
                         if (statement.valueExpression.nodeType === ParseNodeType.Name) {
                             variableNameNode = statement.valueExpression;
-                            variableType = convertClassToObject(
+                            variableTypeEvaluator = () => convertClassToObject(
                                 getTypeOfExpression(statement.typeAnnotation, undefined,
                                     EvaluatorFlags.ConvertEllipsisToAny |
                                         EvaluatorFlags.EvaluateStringLiteralAsType
@@ -1285,37 +1294,39 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         }
                     }
 
-                    if (variableNameNode && variableType) {
+                    if (variableNameNode && variableTypeEvaluator) {
                         const variableName = variableNameNode.value;
 
-                        // Add the new variable to the init function.
-                        const paramInfo: FunctionParameter = {
-                            category: ParameterCategory.Simple,
+                        // Create a new data class entry, but defer evaluation of the type until
+                        // we've compiled the full list of data class entries for this class. This
+                        // allows us to handle circular references in types.
+                        const dataClassEntry: DataClassEntry = {
                             name: variableName,
                             hasDefault: hasDefaultValue,
-                            type: variableType
+                            type: UnknownType.create()
                         };
+                        localEntryTypeEvaluator.push({ entry: dataClassEntry, evaluator: variableTypeEvaluator });
 
-                        // Add the new parameter to the local parameter list.
-                        let insertIndex = localDataClassParameters.findIndex(p => p.name === variableName);
+                        // Add the new entry to the local entry list.
+                        let insertIndex = localDataClassEntries.findIndex(e => e.name === variableName);
                         if (insertIndex >= 0) {
-                            localDataClassParameters[insertIndex] = paramInfo;
+                            localDataClassEntries[insertIndex] = dataClassEntry;
                         } else {
-                            localDataClassParameters.push(paramInfo);
+                            localDataClassEntries.push(dataClassEntry);
                         }
 
-                        // Add the new parameter to the full parameter list.
-                        insertIndex = fullDataClassParameters.findIndex(p => p.name === variableName);
+                        // Add the new entry to the full entry list.
+                        insertIndex = fullDataClassEntries.findIndex(p => p.name === variableName);
                         if (insertIndex >= 0) {
-                            fullDataClassParameters[insertIndex] = paramInfo;
+                            fullDataClassEntries[insertIndex] = dataClassEntry;
                         } else {
-                            fullDataClassParameters.push(paramInfo);
-                            insertIndex = fullDataClassParameters.length - 1;
+                            fullDataClassEntries.push(dataClassEntry);
+                            insertIndex = fullDataClassEntries.length - 1;
                         }
 
-                        // If we've already seen a variable with a default value defined,
-                        // all subsequent variables must also have default values.
-                        const firstDefaultValueIndex = fullDataClassParameters.findIndex(p => p.hasDefault);
+                        // If we've already seen a entry with a default value defined,
+                        // all subsequent entries must also have default values.
+                        const firstDefaultValueIndex = fullDataClassEntries.findIndex(p => p.hasDefault);
                         if (!hasDefaultValue && firstDefaultValueIndex >= 0 && firstDefaultValueIndex < insertIndex) {
                             addError(`Data fields without default value cannot appear after ` +
                                 `data fields with default values`, variableNameNode);
@@ -1325,11 +1336,27 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         });
 
-        classType.details.dataClassParameters = localDataClassParameters;
+        classType.details.dataClassEntries = localDataClassEntries;
+
+        // Now that the dataClassEntries field has been set with a complete list
+        // of local data class entries for this class, perform deferred type
+        // evaluations. This could involve circular type dependencies, so it's
+        // required that the list be complete (even if types are not yet accurate)
+        // before we perform the type evaluations.
+        localEntryTypeEvaluator.forEach(entryEvaluator => {
+            entryEvaluator.entry.type = entryEvaluator.evaluator();
+        });
 
         if (!skipSynthesizeInit) {
-            fullDataClassParameters.forEach(paramInfo => {
-                FunctionType.addParameter(initType, paramInfo);
+            fullDataClassEntries.forEach(entry => {
+                const functionParam: FunctionParameter = {
+                    category: ParameterCategory.Simple,
+                    name: entry.name,
+                    hasDefault: entry.hasDefault,
+                    type: entry.type
+                };
+
+                FunctionType.addParameter(initType, functionParam);
             });
 
             const symbolTable = classType.details.fields;
@@ -1546,7 +1573,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         const symbolWithScope = lookUpSymbolRecursive(nameNode, nameValue);
         if (!symbolWithScope) {
-            assert.fail(`Missing symbol '${ nameValue }'`);
+            fail(`Missing symbol '${ nameValue }'`);
             return;
         }
 
@@ -1631,6 +1658,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         if (ClassType.isSameGenericClass(baseTypeResult.type, classTypeResults.classType)) {
                             assignTypeToMemberVariable(target, type, false, srcExpr);
                         }
+                    }
+
+                    // Assignments to instance or class variables through "self" or "cls" is not
+                    // allowed for protocol classes.
+                    if (ClassType.isProtocolClass(classTypeResults.classType)) {
+                        addError(
+                            `Assignment to instance or class variables not allowed within a Protocol class`,
+                            target.memberName);
                     }
                 }
             }
@@ -1993,29 +2028,29 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
     }
 
-    // Builds a sorted list of dataclass parameters that are inherited by
-    // the specified class. These parameters must be unique and in reverse-MRO
+    // Builds a sorted list of dataclass entries that are inherited by
+    // the specified class. These entries must be unique and in reverse-MRO
     // order.
-    function addInheritedDataClassParametersRecursive(classType: ClassType, params: FunctionParameter[]) {
+    function addInheritedDataClassEntriesRecursive(classType: ClassType, entries: DataClassEntry[]) {
         // Recursively call for reverse-MRO ordering.
         classType.details.baseClasses.forEach(baseClass => {
             if (baseClass.category === TypeCategory.Class) {
-                addInheritedDataClassParametersRecursive(baseClass, params);
+                addInheritedDataClassEntriesRecursive(baseClass, entries);
             }
         });
 
         classType.details.baseClasses.forEach(baseClass => {
             if (baseClass.category === TypeCategory.Class) {
-                const dataClassParams = ClassType.getDataClassParameters(baseClass);
+                const dataClassEntries = ClassType.getDataClassEntries(baseClass);
 
-                // Add the parameters to the end of the list, replacing same-named
-                // parameters if found.
-                dataClassParams.forEach(param => {
-                    const existingIndex = params.findIndex(p => p.name === param.name);
+                // Add the entries to the end of the list, replacing same-named
+                // entries if found.
+                dataClassEntries.forEach(entry => {
+                    const existingIndex = entries.findIndex(e => e.name === entry.name);
                     if (existingIndex >= 0) {
-                        params[existingIndex] = param;
+                        entries[existingIndex] = entry;
                     } else {
-                        params.push(param);
+                        entries.push(entry);
                     }
                 });
             }
@@ -2619,14 +2654,18 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     function getTypeFromIndexWithBaseType(node: IndexNode, baseType: Type,
         usage: EvaluatorUsage, flags: EvaluatorFlags): TypeResult {
 
-        // Handle the special case where we're we're specializing a generic
-        // union of class types.
+        // Handle the special case where we're specializing a
+        // generic union of classes.
         if (baseType.category === TypeCategory.Union) {
             const typeParameters: TypeVarType[] = [];
             let isUnionOfClasses = true;
 
             baseType.subtypes.forEach(subtype => {
-                if (subtype.category === TypeCategory.Class || subtype.category === TypeCategory.TypeVar) {
+                if (subtype.category === TypeCategory.Class ||
+                    subtype.category === TypeCategory.TypeVar ||
+                    subtype.category === TypeCategory.Function ||
+                    subtype.category === TypeCategory.None) {
+
                     addTypeVarsToListIfUnique(typeParameters,
                         getTypeVarArgumentsRecursive(subtype));
                 } else {
@@ -2634,8 +2673,24 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
             });
 
-            if (isUnionOfClasses) {
+            if (isUnionOfClasses && typeParameters.length > 0) {
                 const typeArgs = getTypeArgs(node.items, flags).map(t => t.type);
+                const typeVarMap = buildTypeVarMap(typeParameters, typeArgs);
+                const type = specializeType(baseType, typeVarMap);
+                return { type, node };
+            }
+        }
+
+        // Handle the special case where we're specializing a
+        // generic callable.
+        if (baseType.category === TypeCategory.Function) {
+            const typeParameters: TypeVarType[] = [];
+            addTypeVarsToListIfUnique(typeParameters,
+                getTypeVarArgumentsRecursive(baseType));
+
+            if (typeParameters.length > 0) {
+                const typeArgs = getTypeArgs(node.items, flags).map(
+                    t => convertClassToObject(t.type));
                 const typeVarMap = buildTypeVarMap(typeParameters, typeArgs);
                 const type = specializeType(baseType, typeVarMap);
                 return { type, node };
@@ -3232,12 +3287,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                                     errorNode);
                             }
                         }
-                    }
 
-                    type = validateCallArguments(errorNode, argList, callType,
-                        new TypeVarMap(), skipUnknownArgCheck).returnType;
-                    if (!type) {
-                        type = UnknownType.create();
+                        type = convertClassToObject(castToType);
+                    } else {
+                        type = validateCallArguments(errorNode, argList, functionType,
+                            new TypeVarMap(), skipUnknownArgCheck).returnType;
+                        if (!type) {
+                            type = UnknownType.create();
+                        }
                     }
                 } else {
                     const exprString = ParseTreeUtils.printExpression(errorNode);
@@ -3824,7 +3881,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         // Run through all args and validate them against their matched parameter.
         // We'll do two passes. The first one will match any type arguments. The second
-        // will perform the actual validation.
+        // will perform the actual validation. We can skip the first pass if there
+        // are no type vars to match.
         if (validateArgTypeParams.some(arg => arg.requiresTypeVarMatching)) {
             useSpeculativeMode(() => {
                 validateArgTypeParams.forEach(argParam => {
@@ -3833,6 +3891,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     }
                 });
             });
+
+            // Lock the type var map so it cannot be modified and revalidate the
+            // arguments in a second pass.
+            typeVarMap.lock();
         }
 
         validateArgTypeParams.forEach(argParam => {
@@ -5014,30 +5076,44 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getTypeFromList(node: ListNode, expectedType?: Type): TypeResult {
+        // Define a local helper function that determines whether a
+        // type is a list and returns the list element type if it is.
+        const getListTypeArg = (potentialList: Type) => {
+            if (potentialList.category !== TypeCategory.Object) {
+                return undefined;
+            }
+
+            const classAlias = potentialList.classType.details.aliasClass || potentialList.classType;
+            if (!ClassType.isBuiltIn(classAlias, 'list') || !potentialList.classType.typeArguments) {
+                return undefined;
+            }
+
+            return potentialList.classType.typeArguments[0];
+        };
+
+        const expectedEntryType = expectedType ? getListTypeArg(expectedType) : undefined;
+
         let entryTypes = node.entries.map(entry => {
             if (entry.nodeType === ParseNodeType.ListComprehension) {
                 return getElementTypeFromListComprehension(entry);
             }
-            return getTypeOfExpression(entry).type;
+            return getTypeOfExpression(entry, expectedEntryType).type;
         });
 
         // If there is an expected type, see if we can match it.
         if (expectedType && entryTypes.length > 0) {
             const narrowedExpectedType = doForSubtypes(expectedType, subtype => {
-                if (subtype.category === TypeCategory.Object) {
-                    const classAlias = subtype.classType.details.aliasClass || subtype.classType;
-                    if (ClassType.isBuiltIn(classAlias, 'list') && subtype.classType.typeArguments) {
-                        const typeArg = subtype.classType.typeArguments[0];
-                        const typeVarMap = new TypeVarMap();
+                const listElementType = getListTypeArg(subtype);
+                if (listElementType) {
+                    const typeVarMap = new TypeVarMap();
 
-                        for (const entryType of entryTypes) {
-                            if (!canAssignType(typeArg, entryType, new DiagnosticAddendum(), typeVarMap)) {
-                                return undefined;
-                            }
+                    for (const entryType of entryTypes) {
+                        if (!canAssignType(listElementType, entryType, new DiagnosticAddendum(), typeVarMap)) {
+                            return undefined;
                         }
-
-                        return specializeType(subtype, typeVarMap);
                     }
+
+                    return specializeType(subtype, typeVarMap);
                 }
 
                 return undefined;
@@ -5052,7 +5128,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         let inferredEntryType: Type = AnyType.create();
         if (entryTypes.length > 0) {
-            if (getFileInfo(node).diagnosticSettings.strictListInference) {
+            // If there was an expected type or we're using strict list inference,
+            // combine the types into a union.
+            if (expectedType || getFileInfo(node).diagnosticSettings.strictListInference) {
                 inferredEntryType = combineTypes(entryTypes);
             } else {
                 // Is the list homogeneous? If so, use stricter rules. Otherwise relax the rules.
@@ -5336,9 +5414,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             addError(`Module not allowed in this context`, typeArgs[0].node);
         }
 
-        return combineTypes([
-            convertClassToObject(typeArgs[0].type),
-            NoneType.create()]);
+        return combineTypes([typeArgs[0].type, NoneType.create()]);
     }
 
     function cloneBuiltinTypeWithLiteral(node: ParseNode, builtInName: string, value: LiteralValue): Type {
@@ -5718,7 +5794,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 const declaredType = getDeclaredTypeForExpression(node.leftExpression);
 
                 // Evaluate the type of the right-hand side.
-                // Don't specialize it in case it's a type alias with no specialized
+                // Don't specialize it in case it's a type alias with generic
                 // type arguments.
                 let flags: EvaluatorFlags = EvaluatorFlags.DoNotSpecialize;
                 if (fileInfo.isStubFile) {
@@ -5859,6 +5935,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V36) {
                             if (ClassType.isBuiltIn(argType, 'NamedTuple')) {
                                 classType.details.flags |= ClassTypeFlags.DataClass;
+                            }
+                        }
+
+                        if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V38) {
+                            if (ClassType.isBuiltIn(argType, 'Protocol')) {
+                                classType.details.flags |= ClassTypeFlags.ProtocolClass;
                             }
                         }
 
@@ -7110,7 +7192,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function evaluateTypeOfParameter(node: ParameterNode): void {
-        assert(node.name);
+        assert(node.name !== undefined);
 
         // We need to handle lambdas differently from functions because
         // the former never have parameter type annotations but can
@@ -7233,17 +7315,17 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             curNode = curNode.parent;
         }
 
-        assert.fail('Unexpected assignment target');
+        fail('Unexpected assignment target');
         return undefined;
     }
 
     function getTypeFromWildcardImport(flowNode: FlowWildcardImport, name: string): Type {
         const importInfo = AnalyzerNodeInfo.getImportInfo(flowNode.node.module);
-        assert(importInfo && importInfo.isImportFound);
+        assert(importInfo !== undefined && importInfo.isImportFound);
         assert(flowNode.node.isWildcardImport);
 
         const symbolWithScope = lookUpSymbolRecursive(flowNode.node, name);
-        assert(symbolWithScope);
+        assert(symbolWithScope !== undefined);
         const decls = symbolWithScope!.symbol.getDeclarations();
         const wildcardDecl = decls.find(decl => decl.node === flowNode.node);
 
@@ -7473,6 +7555,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
 
                 const partialType = cachedEntry as PartialType;
+
                 if (partialType.speculativeModeId !== invalidSpeculativeModeId) {
                     if (!isSpeculativeMode()) {
                         return undefined;
@@ -7506,7 +7589,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     evaluateTypesForStatement(flowNode.node);
                     cachedType = readTypeCache(nodeForCacheLookup);
                     if (!cachedType) {
-                        assert.fail('evaluateAssignmentFlowNode failed to evaluate target');
+                        fail('evaluateAssignmentFlowNode failed to evaluate target');
                         cachedType = UnknownType.create();
                     }
                 }
@@ -7697,7 +7780,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     }
 
                     // We shouldn't get here.
-                    assert.fail('Unexpected flow node flags');
+                    fail('Unexpected flow node flags');
                     return setCacheEntry(curFlowNode, undefined, false);
                 }
             }
@@ -7812,7 +7895,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
 
                 // We shouldn't get here.
-                assert.fail('Unexpected flow node flags');
+                fail('Unexpected flow node flags');
                 return false;
             }
         }
@@ -7928,24 +8011,34 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
 
         if (testExpression.nodeType === ParseNodeType.Call) {
-            // Look for "isinstance(X, Y)" or "issubclass(X, Y)".
-            if (testExpression.leftExpression.nodeType === ParseNodeType.Name &&
-                (testExpression.leftExpression.value === 'isinstance' ||
-                    testExpression.leftExpression.value === 'issubclass') &&
-                testExpression.arguments.length === 2) {
+            if (testExpression.leftExpression.nodeType === ParseNodeType.Name) {
+                // Look for "isinstance(X, Y)" or "issubclass(X, Y)".
+                if ((testExpression.leftExpression.value === 'isinstance' ||
+                        testExpression.leftExpression.value === 'issubclass') &&
+                    testExpression.arguments.length === 2) {
 
-                // Make sure the first parameter is a supported expression type
-                // and the second parameter is a valid class type or a tuple
-                // of valid class types.
-                const isInstanceCheck = testExpression.leftExpression.value === 'isinstance';
-                const arg0Expr = testExpression.arguments[0].valueExpression;
-                const arg1Expr = testExpression.arguments[1].valueExpression;
-                if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
-                    const arg1Type = getTypeOfExpression(arg1Expr).type;
-                    const classTypeList = getIsInstanceClassTypes(arg1Type);
-                    if (classTypeList) {
+                    // Make sure the first parameter is a supported expression type
+                    // and the second parameter is a valid class type or a tuple
+                    // of valid class types.
+                    const isInstanceCheck = testExpression.leftExpression.value === 'isinstance';
+                    const arg0Expr = testExpression.arguments[0].valueExpression;
+                    const arg1Expr = testExpression.arguments[1].valueExpression;
+                    if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
+                        const arg1Type = getTypeOfExpression(arg1Expr).type;
+                        const classTypeList = getIsInstanceClassTypes(arg1Type);
+                        if (classTypeList) {
+                            return (type: Type) => {
+                                return narrowTypeForIsInstance(type, classTypeList, isInstanceCheck, isPositiveTest);
+                            };
+                        }
+                    }
+                } else if (testExpression.leftExpression.value === 'callable' &&
+                    testExpression.arguments.length === 1) {
+
+                    const arg0Expr = testExpression.arguments[0].valueExpression;
+                    if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
                         return (type: Type) => {
-                            return narrowTypeForIsInstance(type, classTypeList, isInstanceCheck, isPositiveTest);
+                            return narrowTypeForCallable(type, isPositiveTest, testExpression);
                         };
                     }
                 }
@@ -8092,6 +8185,51 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         // Return the original type.
         return type;
+    }
+
+    // Attempts to narrow a type (make it more constrained) based on a
+    // call to "callable". For example, if the original type of expression "x" is
+    // Union[Callable[..., Any], Type[int], int], it would remove the "int" because
+    // it's not callable.
+    function narrowTypeForCallable(type: Type, isPositiveTest: boolean, errorNode: ExpressionNode): Type {
+        return doForSubtypes(type, subtype => {
+            switch (subtype.category) {
+                case TypeCategory.Function:
+                case TypeCategory.OverloadedFunction:
+                case TypeCategory.Class: {
+                    return isPositiveTest ? subtype : undefined;
+                }
+
+                case TypeCategory.Module: {
+                    return isPositiveTest ? undefined : subtype;
+                }
+
+                case TypeCategory.Object: {
+                    const classFromTypeObject = getClassFromPotentialTypeObject(subtype);
+                    if (classFromTypeObject && classFromTypeObject.category === TypeCategory.Class) {
+                        // It's a Type object, which is a class.
+                        return isPositiveTest ? subtype : undefined;
+                    }
+                    
+                    // See if the object is callable.
+                    const callMemberType = getTypeFromObjectMember(errorNode,
+                        subtype, '__call__', { method: 'get' }, new DiagnosticAddendum(),
+                        MemberAccessFlags.SkipForMethodLookup);
+                    if (!callMemberType) {
+                        return isPositiveTest ? undefined : subtype;
+                    } else {
+                        return isPositiveTest ? subtype : undefined;
+                    }
+                }
+
+                default: {
+                    // For all other types, we can't determine whether it's
+                    // callable or not, so we can't eliminate them.
+                    return subtype;
+                }
+            }
+        });
+
     }
 
     // Specializes the specified (potentially generic) class type using
@@ -8682,11 +8820,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
                     type = stripLiteralTypeArgsValue(type);
 
-                    // If the symbol is private or constant, we can retain the literal
-                    // value. Otherwise, strip them off to make the type less specific,
-                    // allowing other values to be assigned to it in subclasses.
-                    if (!isPrivate && !isConstant && !isFinalVar) {
-                        type = stripLiteralValue(type);
+                    if (decl.type === DeclarationType.Variable) {
+                        // If the symbol is private or constant, we can retain the literal
+                        // value. Otherwise, strip them off to make the type less specific,
+                        // allowing other values to be assigned to it in subclasses.
+                        if (!isPrivate && !isConstant && !isFinalVar) {
+                            type = stripLiteralValue(type);
+                        }
                     }
                     typesToCombine.push(type);
                 }
@@ -8697,9 +8837,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getDeclaredTypeOfSymbol(symbol: Symbol): Type | undefined {
-        const undeclaredType = symbol.getUndeclaredType();
-        if (undeclaredType) {
-            return undeclaredType;
+        const synthesizedType = symbol.getSynthesizedType();
+        if (synthesizedType) {
+            return synthesizedType;
         }
 
         const typedDecls = symbol.getTypedDeclarations();
@@ -8935,6 +9075,107 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         return UnknownType.create();
     }
 
+    function canAssignClassToProtocol(destType: ClassType, srcType: ClassType, diag: DiagnosticAddendum,
+            typeVarMap: TypeVarMap | undefined, recursionCount: number): boolean {
+
+        const destClassFields = destType.details.fields;
+
+        // Some protocol definitions include recursive references to themselves.
+        // We need to protect against infinite recursion, so we'll check for that here.
+        if (isTypeSame(srcType, destType)) {
+            return true;
+        }
+
+        // Strip the type arguments off the dest protocol if they are provided.
+        const genericDestType = ClassType.cloneForSpecialization(destType, undefined);
+        const genericDestTypeVarMap = new TypeVarMap();
+
+        let typesAreConsistent = true;
+        const srcClassTypeVarMap = buildTypeVarMapFromSpecializedClass(srcType);
+
+        destClassFields.forEach((symbol, name) => {
+            if (symbol.isClassMember() && !symbol.isIgnoredForProtocolMatch()) {
+                const memberInfo = lookUpClassMember(srcType, name, importLookup);
+                if (!memberInfo) {
+                    diag.addMessage(`'${ name }' is not present`);
+                    typesAreConsistent = false;
+                } else {
+                    const declaredType = getDeclaredTypeOfSymbol(symbol);
+                    if (declaredType) {
+                        const srcMemberType = specializeType(
+                            getTypeOfMember(memberInfo), srcClassTypeVarMap, false,
+                            recursionCount + 1);
+
+                        if (!canAssignType(declaredType, srcMemberType,
+                                diag.createAddendum(), genericDestTypeVarMap, CanAssignFlags.Default,
+                                recursionCount + 1)) {
+
+                            diag.addMessage(`'${ name }' is an incompatible type`);
+                            typesAreConsistent = false;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Now handle base classes of the dest protocol.
+        destType.details.baseClasses.forEach(baseClass => {
+            if (baseClass.category === TypeCategory.Class &&
+                !ClassType.isBuiltIn(baseClass, 'object') &&
+                !ClassType.isBuiltIn(baseClass, 'Protocol')) {
+
+                const specializedBaseClass = specializeForBaseClass(destType, baseClass, recursionCount + 1);
+                if (!canAssignClassToProtocol(specializedBaseClass, srcType, diag, typeVarMap, recursionCount + 1)) {
+                    typesAreConsistent = false;
+                }
+            }
+        });
+
+        // If the dest protocol has type parameters, make sure the source type arguments match.
+        if (typesAreConsistent && destType.details.typeParameters.length > 0) {
+            // Create a specialized version of the protocol defined by the dest and
+            // make sure the resulting type args can be assigned.
+            const specializedSrcProtocol = specializeType(genericDestType, genericDestTypeVarMap,
+                false, recursionCount + 1) as ClassType;
+            if (!verifyTypeArgumentsAssignable(destType, specializedSrcProtocol, diag, typeVarMap, recursionCount)) {
+                typesAreConsistent = false;
+            }
+        }
+
+        return typesAreConsistent;
+    }
+
+    function canAssignTypedDict(destType: ClassType, srcType: ClassType, diag: DiagnosticAddendum,
+        recursionCount: number) {
+        
+        let typesAreConsistent = true;
+        const destEntries = getTypedDictMembersForClass(destType);
+        const srcEntries = getTypedDictMembersForClass(srcType);
+
+        destEntries.forEach((destEntry, name) => {
+            const srcEntry = srcEntries.get(name);
+            if (!srcEntry) {
+                diag.addMessage(`'${ name }' is missing from ${ printType(srcType) }`);
+                typesAreConsistent = false;
+            } else {
+                if (destEntry.isRequired && !srcEntry.isRequired) {
+                    diag.addMessage(`'${ name }' is required in ${ printType(destType) }`);
+                    typesAreConsistent = false;
+                } else if (!destEntry.isRequired && srcEntry.isRequired) {
+                    diag.addMessage(`'${ name }' is not required in ${ printType(destType) }`);
+                    typesAreConsistent = false;
+                }
+
+                if (!isTypeSame(destEntry.valueType, srcEntry.valueType, recursionCount + 1)) {
+                    diag.addMessage(`'${ name }' is an incompatible type`);
+                    typesAreConsistent = false;
+                }
+            }
+        });
+
+        return typesAreConsistent;
+    }
+
     function canAssignClass(destType: ClassType, srcType: ClassType, diag: DiagnosticAddendum,
             typeVarMap: TypeVarMap | undefined, flags: CanAssignFlags, recursionCount: number,
             reportErrorsUsingObjType: boolean): boolean {
@@ -8942,88 +9183,37 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         // Is it a structural type (i.e. a protocol)? If so, we need to
         // perform a member-by-member check.
         if (ClassType.isProtocol(destType)) {
-            const destClassFields = destType.details.fields;
-
-            // Some protocol definitions include recursive references to themselves.
-            // We need to protect against infinite recursion, so we'll check for that here.
-            if (isTypeSame(srcType, destType)) {
-                return true;
-            }
-
-            // Strip the type arguments off the dest protocol if they are provided.
-            const genericDestType = ClassType.cloneForSpecialization(destType, undefined);
-            const genericDestTypeVarMap = new TypeVarMap();
-
-            let typesAreConsistent = true;
-            const srcClassTypeVarMap = buildTypeVarMapFromSpecializedClass(srcType);
-
-            destClassFields.forEach((symbol, name) => {
-                if (symbol.isClassMember() && !symbol.isIgnoredForProtocolMatch()) {
-                    const memberInfo = lookUpClassMember(srcType, name, importLookup,
-                        ClassMemberLookupFlags.SkipInstanceVariables);
-                    if (!memberInfo) {
-                        diag.addMessage(`'${ name }' is not present`);
-                        typesAreConsistent = false;
-                    } else {
-                        const declaredType = getDeclaredTypeOfSymbol(symbol);
-                        if (declaredType) {
-                            const srcMemberType = specializeType(
-                                getTypeOfMember(memberInfo), srcClassTypeVarMap, false,
-                                recursionCount + 1);
-
-                            if (!canAssignType(declaredType, srcMemberType,
-                                    diag.createAddendum(), genericDestTypeVarMap, CanAssignFlags.Default,
-                                    recursionCount + 1)) {
-
-                                diag.addMessage(`'${ name }' is an incompatible type`);
-                                typesAreConsistent = false;
-                            }
-                        }
-                    }
-                }
-            });
-
-            // If the dest protocol has type parameters, make sure the source type arguments match.
-            if (typesAreConsistent && destType.details.typeParameters.length > 0) {
-                // Create a specialized version of the protocol defined by the dest and
-                // make sure the resulting type args can be assigned.
-                const specializedSrcProtocol = specializeType(genericDestType, genericDestTypeVarMap,
-                    false, recursionCount + 1) as ClassType;
-                if (!verifyTypeArgumentsAssignable(destType, specializedSrcProtocol, diag, typeVarMap, recursionCount)) {
-                    typesAreConsistent = false;
-                }
-            }
-
-            return typesAreConsistent;
+            return canAssignClassToProtocol(destType, srcType, diag, typeVarMap, recursionCount);
         }
 
         // Handle typed dicts. They also use a form of structural typing for type
         // checking, as defined in PEP 589.
         if (ClassType.isTypedDictClass(destType) && ClassType.isTypedDictClass(srcType)) {
+            return canAssignTypedDict(destType, srcType, diag, recursionCount);
+        }
+
+        // Handle property classes. They are special because each property
+        // class has a different source ID, so they wouldn't otherwise match.
+        // We need to see if the return types of the properties match.
+        if (ClassType.isPropertyClass(destType) && ClassType.isPropertyClass(srcType)) {
             let typesAreConsistent = true;
-            const destEntries = getTypedDictMembersForClass(destType);
-            const srcEntries = getTypedDictMembersForClass(srcType);
 
-            destEntries.forEach((destEntry, name) => {
-                const srcEntry = srcEntries.get(name);
-                if (!srcEntry) {
-                    diag.addMessage(`'${ name }' is missing from ${ printType(srcType) }`);
-                    typesAreConsistent = false;
-                } else {
-                    if (destEntry.isRequired && !srcEntry.isRequired) {
-                        diag.addMessage(`'${ name }' is required in ${ printType(destType) }`);
-                        typesAreConsistent = false;
-                    } else if (!destEntry.isRequired && srcEntry.isRequired) {
-                        diag.addMessage(`'${ name }' is not required in ${ printType(destType) }`);
-                        typesAreConsistent = false;
-                    }
+            const fgetDest = destType.details.fields.get('fget');
+            const fgetSrc = srcType.details.fields.get('fget');
+            if (fgetDest && fgetSrc) {
+                const fgetDestType = getDeclaredTypeOfSymbol(fgetDest);
+                const fgetSrcType = getDeclaredTypeOfSymbol(fgetSrc);
+                if (fgetDestType && fgetSrcType &&
+                            fgetDestType.category === TypeCategory.Function &&
+                            fgetSrcType.category === TypeCategory.Function) {
 
-                    if (!isTypeSame(destEntry.valueType, srcEntry.valueType, recursionCount + 1)) {
-                        diag.addMessage(`'${ name }' is an incompatible type`);
+                    const fgetDestReturnType = getFunctionEffectiveReturnType(fgetDestType);
+                    const fgetSrcReturnType = getFunctionEffectiveReturnType(fgetSrcType);
+                    if (!canAssignType(fgetDestReturnType, fgetSrcReturnType, diag)) {
                         typesAreConsistent = false;
                     }
                 }
-            });
+            }
 
             return typesAreConsistent;
         }
@@ -9045,20 +9235,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
-        if ((flags & CanAssignFlags.EnforceInvariance) !== 0 && !ClassType.isSameGenericClass(srcType, destType)) {
-            const destErrorType = reportErrorsUsingObjType ? ObjectType.create(destType) : destType;
-            const srcErrorType = reportErrorsUsingObjType ? ObjectType.create(srcType) : srcType;
-            diag.addMessage(`'${ printType(srcErrorType) }' is incompatible with ` +
-                `'${ printType(destErrorType) }'`);
-            return false;
-        }
+        if ((flags & CanAssignFlags.EnforceInvariance) === 0 || ClassType.isSameGenericClass(srcType, destType)) {
+            const inheritanceChain: InheritanceChain = [];
+            if (ClassType.isDerivedFrom(srcType, destType, inheritanceChain)) {
+                assert(inheritanceChain.length > 0);
 
-        const inheritanceChain: InheritanceChain = [];
-        if (ClassType.isDerivedFrom(srcType, destType, inheritanceChain)) {
-            assert(inheritanceChain.length > 0);
-
-            return canAssignClassWithTypeArgs(destType, srcType, inheritanceChain,
-                diag, typeVarMap, recursionCount + 1);
+                return canAssignClassWithTypeArgs(destType, srcType, inheritanceChain,
+                    diag, typeVarMap, recursionCount + 1);
+            }
         }
 
         const destErrorType = reportErrorsUsingObjType ? ObjectType.create(destType) : destType;
@@ -9241,7 +9425,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     // Assigns the source type to the dest type var in the type map. If an existing type is
     // already associated with that type var name, it attempts to either widen or narrow
     // the type (depending on the value of the canNarrowType parameter). The goal is to
-    // produce the narrowest type that meets all of the requirements.
+    // produce the narrowest type that meets all of the requirements. If the type var map
+    // has been "locked", it simply validates that the srcType is compatible (with no attempt
+    // to widen or narrow).
     function assignTypeToTypeVar(destType: TypeVarType, srcType: Type, canNarrowType: boolean,
             diag: DiagnosticAddendum, typeVarMap: TypeVarMap, flags = CanAssignFlags.Default,
             recursionCount = 0): boolean {
@@ -9277,7 +9463,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         
         // Handle the unconstrained (but possibly bound) case.
         let updatedType = srcType;
-        const curTypeIsNarrowable = typeVarMap.isNarrowable(destType.name);
+        const curTypeIsNarrowable = typeVarMap.isNarrowable(destType.name) && !typeVarMap.isLocked();
         const updatedTypeIsNarrowable = canNarrowType && curTypeIsNarrowable;
 
         if (curTypeVarMapping) {
@@ -9315,11 +9501,19 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             updatedType = curTypeVarMapping;
                         }
                     }
-                } else if (!canAssignType(srcType, curTypeVarMapping, new DiagnosticAddendum(),
+                } else {
+                    if (typeVarMap.isLocked()) {
+                        diag.addMessage(`Type '${ printType(curTypeVarMapping) }' cannot be assigned to ` +
+                            `type '${ printType(srcType) }'`);
+                        return false;
+                    }
+
+                    if (!canAssignType(srcType, curTypeVarMapping, new DiagnosticAddendum(),
                             typeVarMap, flags, recursionCount + 1)) {
 
-                    // Create a union, widening the type.
-                    updatedType = combineTypes([curTypeVarMapping, srcType]);
+                        // Create a union, widening the type.
+                        updatedType = combineTypes([curTypeVarMapping, srcType]);
+                    }
                 }
             }
         }
@@ -9335,7 +9529,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
-        typeVarMap.set(destType.name, updatedType, updatedTypeIsNarrowable);
+        if (!typeVarMap.isLocked()) {
+            typeVarMap.set(destType.name, updatedType, updatedTypeIsNarrowable);
+        }
 
         return true;
     }
@@ -9601,7 +9797,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         // of the way it's defined in enum.pyi. The type var _T must be
                         // manually set to the corresponding enum object type.
                         if (typeVarMap && ClassType.isBuiltIn(metaclass, 'EnumMeta')) {
-                            typeVarMap.set('_T', ObjectType.create(srcType), false);
+                            if (!typeVarMap.isLocked()) {
+                                typeVarMap.set('_T', ObjectType.create(srcType), false);
+                            }
                         }
 
                         return canAssignClass(destClassType, metaclass, diag,

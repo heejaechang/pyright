@@ -7,6 +7,7 @@
  */
 
 import * as path from 'path';
+
 import { ConsoleInterface } from '../../../common/console';
 import * as debug from '../../../common/debug';
 import { VirtualFileSystem } from '../../../common/vfs';

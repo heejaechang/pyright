@@ -7,10 +7,9 @@
 * Utility routines for traversing a parse tree.
 */
 
-import * as assert from 'assert';
-
-import { Position } from '../common/textRange';
+import { fail } from '../common/debug';
 import { convertPositionToOffset } from '../common/positionUtils';
+import { Position } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
 import { ArgumentCategory, AssignmentExpressionNode, ClassNode, EvaluationScopeNode,
@@ -420,7 +419,7 @@ export function getEnclosingModule(node: ParseNode): ModuleNode {
         curNode = curNode.parent;
     }
 
-    assert.fail('Module node not found');
+    fail('Module node not found');
     return undefined!;
 }
 
@@ -536,7 +535,7 @@ export function getEvaluationScopeNode(node: ParseNode): EvaluationScopeNode {
         curNode = curNode.parent;
     }
 
-    assert.fail('Did not find evaluation scope');
+    fail('Did not find evaluation scope');
     return undefined!;
 }
 

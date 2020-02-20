@@ -164,6 +164,12 @@ test('TypeConstraint8', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint9.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -430,6 +436,12 @@ test('Tuples3', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Tuples4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
@@ -659,6 +671,12 @@ test('Assignment4', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Assignment5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment5.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -858,6 +876,18 @@ test('GenericTypes16', () => {
     validateResults(analysisResults, 0);
 });
 
+test('GenericTypes17', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes17.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('GenericTypes18', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes18.py']);
+
+    validateResults(analysisResults, 3);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -868,6 +898,30 @@ test('Protocol2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol2.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('Protocol3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Protocol4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol4.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('Protocol5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol5.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Protocol6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol6.py']);
+
+    validateResults(analysisResults, 2);
 });
 
 test('TypedDict1', () => {
@@ -910,6 +964,12 @@ test('TypedDict7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict7.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('TypedDict8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict8.py']);
+
+    validateResults(analysisResults, 2);
 });
 
 test('TypeIgnore1', () => {
@@ -1072,4 +1132,16 @@ test('ParamName1', () => {
     configOptions.diagnosticSettings.reportSelfClsParameterName = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['paramNames1.py'], configOptions);
     validateResults(analysisResults, 4, 0);
+});
+
+test('DataClass8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass8.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Python2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['python2.py']);
+
+    validateResults(analysisResults, 6);
 });
