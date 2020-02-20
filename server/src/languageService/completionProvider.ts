@@ -22,15 +22,15 @@ import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { Symbol, SymbolTable } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
-import { TypeEvaluator, CallSignatureInfo } from '../analyzer/typeEvaluator';
-import { FunctionType, TypeCategory, ClassType, Type } from '../analyzer/types';
+import { CallSignatureInfo,TypeEvaluator } from '../analyzer/typeEvaluator';
+import { ClassType, FunctionType, Type,TypeCategory } from '../analyzer/types';
 import { doForSubtypes, getMembersForClass, getMembersForModule } from '../analyzer/typeUtils';
 import { ConfigOptions } from '../common/configOptions';
-import { comparePositions, Position } from '../common/textRange';
 import { TextEditAction } from '../common/editAction';
 import { combinePaths, getDirectoryPath, getFileName, stripFileExtension } from '../common/pathUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import * as StringUtils from '../common/stringUtils';
+import { comparePositions, Position } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { ErrorExpressionCategory, ErrorNode, ExpressionNode,
     FunctionNode, ImportFromNode, isExpressionNode, ModuleNameNode, NameNode,
@@ -1128,9 +1128,9 @@ export class CompletionProvider {
                 undefined, undefined, autoImportText, textEdit,
                 additionalTextEdits, symbol.id);
         } else {
-            // Does the symbol have no declaration but instead has an "undeclared" type?
-            const undeclaredType = symbol.getUndeclaredType();
-            if (undeclaredType) {
+            // Does the symbol have no declaration but instead has a synthesized type?
+            const synthesizedType = symbol.getSynthesizedType();
+            if (synthesizedType) {
                const itemKind: CompletionItemKind = CompletionItemKind.Variable;
                this._addNameToCompletionList(name, itemKind, priorWord, completionList,
                     undefined, undefined, undefined, textEdit,

@@ -5,6 +5,7 @@
  */
 
 import { ExecuteCommandParams, TextEdit } from 'vscode-languageserver';
+
 import { convertUriToPath } from '../common/pathUtils';
 import { LanguageServerInterface } from '../languageServerBase';
 import { ServerCommand } from './commandController';

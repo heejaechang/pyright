@@ -8,8 +8,7 @@
 * line/column positions.
 */
 
-import * as assert from 'assert';
-
+import { assert } from './debug';
 import { Position, Range, TextRange } from './textRange';
 import { TextRangeCollection } from './textRangeCollection';
 
