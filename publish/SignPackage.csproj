@@ -10,7 +10,7 @@
   <Target Name="Build" />
   
   <ItemGroup>
-    <FilesToSign Include="pyrx-*.nupkg">
+    <FilesToSign Include="*.nupkg">
       <Authenticode>NuGet</Authenticode>
     </FilesToSign>
   </ItemGroup>

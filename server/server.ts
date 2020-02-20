@@ -23,7 +23,7 @@ class Server extends LanguageServerBase {
 
     constructor() {
         const rootDirectory = __dirname;
-        super('PyRx', rootDirectory);
+        super('Python', rootDirectory);
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
