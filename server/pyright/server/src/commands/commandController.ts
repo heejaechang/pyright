@@ -5,6 +5,7 @@
  */
 
 import { ExecuteCommandParams, ResponseError } from 'vscode-languageserver';
+
 import { LanguageServerInterface } from '../languageServerBase';
 import { Commands } from './commands';
 import { CreateTypeStubCommand } from './createTypeStub';

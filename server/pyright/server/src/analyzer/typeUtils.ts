@@ -9,13 +9,13 @@
 
 import { ParameterCategory } from '../parser/parseNodes';
 import { ImportLookup } from './analyzerFileInfo';
+import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
 import { isTypedDictMemberAccessedThroughIndex } from './symbolUtils';
 import { AnyType, ClassType, combineTypes, FunctionType, isAnyOrUnknown, isNoneOrNever,
     isTypeSame, maxTypeRecursionCount, ModuleType, NeverType, ObjectType,
     OverloadedFunctionType, SpecializedFunctionTypes, Type, TypeCategory,
     TypeVarType, UnknownType } from './types';
-import { DeclarationType } from './declaration';
 import { TypeVarMap } from './typeVarMap';
 
 export interface ClassMember {
@@ -652,9 +652,14 @@ export function stripFirstParameter(type: FunctionType): FunctionType {
     return type;
 }
 
-// Recursively finds all of the type arguments to the specified srcType.
+// Recursively finds all of the type arguments and sets them
+// to the specified srcType.
 export function setTypeArgumentsRecursive(destType: Type, srcType: Type,
         typeVarMap: TypeVarMap, recursionCount = 0) {
+
+    if (typeVarMap.isLocked()) {
+        return;
+    }
 
     switch (destType.category) {
         case TypeCategory.Union:
@@ -715,7 +720,21 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type,
 // _T1 with str and _T2 with int.
 export function buildTypeVarMapFromSpecializedClass(classType: ClassType): TypeVarMap {
     const typeParameters = ClassType.getTypeParameters(classType);
-    return buildTypeVarMap(typeParameters, classType.typeArguments);
+    let typeArguments = classType.typeArguments;
+
+    // Handle the special case where the source is a Tuple with heterogenous
+    // type arguments. In this case, we'll create a union out of the heterogeneous
+    // types.
+    if (ClassType.isBuiltIn(classType, 'Tuple') && classType.typeArguments) {
+        if (classType.typeArguments.length > 1) {
+            const lastTypeArg = classType.typeArguments[classType.typeArguments.length - 1];
+            if (!isEllipsisType(lastTypeArg)) {
+                typeArguments = [combineTypes(classType.typeArguments)];
+            }
+        }
+    }
+
+    return buildTypeVarMap(typeParameters, typeArguments);
 }
 
 export function buildTypeVarMap(typeParameters: TypeVarType[], typeArgs: Type[] | undefined): TypeVarMap {
@@ -1183,11 +1202,9 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
                 ) !== undefined;
             }
 
-            if (ClassType.getTypeParameters(type).length === 0) {
-                return false;
-            }
-
-            return true;
+            // If there are any type parameters, we need to specialize
+            // since there are no corresponding type arguments.
+            return ClassType.getTypeParameters(type).length > 0;
         }
 
         case TypeCategory.Object: {

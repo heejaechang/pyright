@@ -12,9 +12,8 @@
 * cannot (or should not be) performed lazily.
 */
 
-import * as assert from 'assert';
-
 import { DiagnosticLevel } from '../common/configOptions';
+import { assert } from '../common/debug';
 import { Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
 import { DiagnosticRule } from '../common/diagnosticRules';
 import { TextRange } from '../common/textRange';
@@ -28,6 +27,7 @@ import { AssertNode, AssignmentExpressionNode, AssignmentNode, AugmentedAssignme
 import { AnalyzerFileInfo } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { Declaration, DeclarationType } from './declaration';
+import { isFinalVariableDeclaration } from './declarationUtils';
 import { getTopLevelImports } from './importStatementUtils';
 import * as ParseTreeUtils from './parseTreeUtils';
 import { ParseTreeWalker } from './parseTreeWalker';
@@ -41,7 +41,6 @@ import { ClassType, combineTypes, FunctionType, isAnyOrUnknown, isNoneOrNever, i
 import { containsUnknown, derivesFromClassRecursive, doForSubtypes,
     getDeclaredGeneratorReturnType, getDeclaredGeneratorYieldType, getSymbolFromBaseClasses,
     isNoReturnType, isProperty, specializeType, transformTypeObjectToClass } from './typeUtils';
-import { isFinalVariableDeclaration } from './declarationUtils';
 
 export class Checker extends ParseTreeWalker {
     private readonly _moduleNode: ModuleNode;
@@ -803,7 +802,7 @@ export class Checker extends ParseTreeWalker {
                 } else if (primaryType && !isProperty(primaryType)) {
                     if (primaryDecl.type === DeclarationType.Function || primaryDecl.type === DeclarationType.Class) {
                         const diag = this._evaluator.addError(
-                            `Declared ${ primaryDeclType } already exists for '${ name }'`,
+                            `Declared ${ primaryDeclType }already exists for '${ name }'`,
                             otherDecl.node
                         );
                         addPrimaryDeclInfo(diag);
