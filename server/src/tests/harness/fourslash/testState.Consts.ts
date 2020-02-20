@@ -10,9 +10,16 @@
  */
 
 import * as lsp from 'vscode-languageserver';
-import * as cmd from '../../../commands/commands';
 
 export namespace Consts {
     export import CodeActionKind = lsp.CodeActionKind;
-    export import Commands = cmd.Commands;
+
+    // it is duped here since original definition in '../../../commands/commands'
+    // is marked as const enum and we can't import "const enum" which get removed
+    // once compiled
+    export enum Commands {
+        createTypeStub = 'pyright.createtypestub',
+        orderImports = 'pyright.organizeimports',
+        addMissingOptionalToParam = 'pyright.addoptionalforparam'
+    }
 }

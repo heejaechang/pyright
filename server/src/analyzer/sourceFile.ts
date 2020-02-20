@@ -7,7 +7,6 @@
 * Class that represents a single python source file.
 */
 
-import * as assert from 'assert';
 import { CompletionItem, CompletionList, DocumentSymbol, SymbolInformation } from 'vscode-languageserver';
 
 import {
@@ -15,6 +14,7 @@ import {
     getDefaultDiagnosticSettings
 } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
+import { assert } from '../common/debug';
 import { Diagnostic, DiagnosticCategory } from '../common/diagnostic';
 import { DiagnosticSink, TextRangeDiagnosticSink } from '../common/diagnosticSink';
 import { TextEditAction } from '../common/editAction';
@@ -674,7 +674,7 @@ export class SourceFile {
         assert(!this.isParseRequired());
         assert(this.isBindingRequired());
         assert(!this._isBindingInProgress);
-        assert(this._parseResults);
+        assert(this._parseResults !== undefined);
 
         try {
             // Perform name binding.
@@ -727,7 +727,7 @@ export class SourceFile {
         assert(!this.isBindingRequired());
         assert(!this._isBindingInProgress);
         assert(this.isCheckingRequired());
-        assert(this._parseResults);
+        assert(this._parseResults !== undefined);
 
         try {
             timingStats.typeCheckerTime.timeOperation(() => {
@@ -796,10 +796,8 @@ export class SourceFile {
         }
     }
 
-    private _resolveImports(importResolver: ImportResolver,
-        moduleImports: ModuleImport[],
-        execEnv: ExecutionEnvironment):
-        [ImportResult[], ImportResult?, string?, string?] {
+    private _resolveImports(importResolver: ImportResolver, moduleImports: ModuleImport[],
+        execEnv: ExecutionEnvironment): [ImportResult[], ImportResult?, string?, string?] {
 
         const imports: ImportResult[] = [];
 
