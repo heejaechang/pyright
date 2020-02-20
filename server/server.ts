@@ -10,8 +10,8 @@ import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vsc
 import { CommandController } from './commands/commandController';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
-import * as consts from './pyright/server/src/common/consts';
 import * as debug from './pyright/server/src/common/debug';
+import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
@@ -36,7 +36,7 @@ class Server extends LanguageServerBase {
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
         // 2. to set "cwd" to run python to find search path.
-        debug.assert(this.fs.existsSync(path.join(rootDirectory, consts.TYPESHED_FALLBACK)), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
+        debug.assert(this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
         this._controller = new CommandController(this);
     }
 

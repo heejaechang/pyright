@@ -7,7 +7,7 @@
  * register jest tests for them and run
  */
 import * as path from 'path';
-import * as consts from '../../pyright/server/src/common/consts';
+import * as consts from '../../pyright/server/src/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
 import { runFourSlashTest } from '../../pyright/server/src/tests/harness/fourslash/runner';
 import * as host from '../../pyright/server/src/tests/harness/host';
@@ -25,7 +25,7 @@ describe('pyrx fourslash tests', () => {
 
     // make sure default folders exist
     const bundledStubsFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../bundled-stubs');
-    const typeshedFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../pyright/client/' + consts.TYPESHED_FALLBACK);
+    const typeshedFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../pyright/client/' + consts.typeshedFallback);
     if (!host.HOST.directoryExists(bundledStubsFolderPath) ||
         !host.HOST.directoryExists(typeshedFolderPath)) {
 
