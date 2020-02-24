@@ -457,7 +457,19 @@ test('AbstractClass1', () => {
 test('AbstractClass2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass2.py']);
 
+    validateResults(analysisResults, 1);
+});
+
+test('AbstractClass3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass3.py']);
+
     validateResults(analysisResults, 0);
+});
+
+test('AbstractClass4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass4.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Module1', () => {
@@ -885,7 +897,7 @@ test('GenericTypes17', () => {
 test('GenericTypes18', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes18.py']);
 
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 4);
 });
 
 test('Protocol1', () => {
