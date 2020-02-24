@@ -59,9 +59,8 @@ class Server extends LanguageServerBase {
                     serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
                 }
 
-                serverSettings.openFilesOnly = !!pythonAnalysisSection.openFilesOnly;
-
-                // default useLibraryCodeForTypes to "true" unless user have set it explicitly
+                // default openFilesOnly and useLibraryCodeForTypes to "true" unless users have set it explicitly
+                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? true;
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes ?? true;
             } else {
                 serverSettings.openFilesOnly = true;
