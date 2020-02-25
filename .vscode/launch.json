@@ -1,47 +1,166 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "PyRx Tests",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceRoot}/server/node_modules/jest/bin/jest.js",
-      "protocol": "inspector",
-      "cwd": "${workspaceRoot}/server",
-      "args": [
-        "--config",
-        "${workspaceRoot}/server/jest.config.js",
-        "-runInBand"
-      ],
-      "internalConsoleOptions": "openOnSessionStart"
-    },
-    {
-      "name": "PyRx Debug Client",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${workspaceRoot}/client/out/src/extension.js",
-      "preLaunchTask": "npm: build",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/client"
-      ],
-      "stopOnEntry": false,
-      "smartStep": true,
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceRoot}/server/out/**/*.js"
-      ]
-    },
-    {
-      "name": "PyRx Attach Server",
-      "type": "node",
-      "request": "attach",
-      "protocol": "inspector",
-      "port": 6600,
-      "smartStep": true,
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceRoot}/server/out/**/*.js"
-      ]
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "PyRx Tests",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "--config",
+                "${workspaceRoot}/server/jest.config.js",
+                "-runInBand"
+            ],
+            "cwd": "${workspaceRoot}/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
+        },
+        {
+            "name": "PyRx Debug Client",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceRoot}/client/out/src/extension.js",
+            "preLaunchTask": "npm: build",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/client"
+            ],
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/server/out/**/*.js"
+            ]
+        },
+        {
+            "name": "PyRx Attach Server",
+            "type": "node",
+            "request": "attach",
+            "protocol": "inspector",
+            "port": 6600,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/server/out/**/*.js"
+            ]
+        },
+        {
+            "name": "PyRx jest current file",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "${fileBasenameNoExtension}",
+                "--config",
+                "${workspaceRoot}/server/jest.config.js"
+            ],
+            "cwd": "${workspaceFolder}/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest",
+            "windows": {
+                "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
+            }
+        },
+        {
+            "name": "PyRx fourslash current file",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "pyrxFourSlashRunner.test.ts",
+                "-t ${fileBasenameNoExtension}",
+                "--config",
+                "${workspaceRoot}/server/jest.config.js"
+            ],
+            "cwd": "${workspaceFolder}/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest",
+            "windows": {
+                "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
+            }
+        },
+        {
+            "name": "PyRight Tests",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "--config",
+                "${workspaceRoot}/server/pyright/server/jest.config.js",
+                "-runInBand"
+            ],
+            "cwd": "${workspaceRoot}/server/pyright/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
+        },
+        {
+            "name": "Pyright Debug Client",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceRoot}/server/pyright/client/out/src/extension.js",
+            "preLaunchTask": "npm: build:pyrightDebug",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/server/pyright/client"
+            ],
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/server/pyright/server/out/**/*.js"
+            ]
+        },
+        {
+            "name": "Pyright Attach Server",
+            "type": "node",
+            "request": "attach",
+            "protocol": "inspector",
+            "port": 6600,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/server/pyright/server/out/**/*.js"
+            ]
+        },
+        {
+            // we have pyright and pyrx since jest.config.js is different.
+            "name": "PyRight jest current file",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "${fileBasenameNoExtension}",
+                "--config",
+                "${workspaceRoot}/server/pyright/server/jest.config.js"
+            ],
+            "cwd": "${workspaceRoot}/server/pyright/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest",
+            "windows": {
+                "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
+            }
+        },
+        {
+            "name": "PyRight fourslash current file",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "fourSlashRunner.test.ts",
+                "-t ${fileBasenameNoExtension}",
+                "--config",
+                "${workspaceRoot}/server/pyright/server/jest.config.js"
+            ],
+            "cwd": "${workspaceRoot}/server/pyright/server",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest",
+            "windows": {
+                "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
+            }
+        }
+    ]
 }

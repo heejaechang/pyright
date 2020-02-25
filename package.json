@@ -18,6 +18,7 @@
         "build": "npm run clean:pyright && npm run build:client && npm run build:server",
         "build:client": "cd client && npm run build && cd ..",
         "build:server": "cd server && npm run build && cd ..",
+        "build:pyrightDebug": "cd server/pyright && npm run build:clientServerDebug && cd ../..",
         "clean": "del-cli \"./client/server\" && del-cli \"./client/out\" && del-cli \"./dist\"",
         "clean:pyright": "cd server/pyright && npm run clean && cd ../..",
         "clean:all": "npm run clean && npm run clean:pyright",
