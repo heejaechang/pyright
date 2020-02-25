@@ -1,4 +1,5 @@
 *.json
+**/pyright/**/*.md
 **/dist/**
 **/out/**
 **/client/server/**

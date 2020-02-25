@@ -7,7 +7,7 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
-    "[markdown]": {
+    "[markdown]": { // Will only apply in pyrx, not the pyright subtree.
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true
     },
