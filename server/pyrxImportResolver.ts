@@ -9,21 +9,30 @@ import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common
 import { ImportResolver, ImportedModuleDescriptor } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
-import { normalizePath, getDirectoryPath, ensureTrailingDirectorySeparator, combinePaths } from './pyright/server/src/common/pathUtils';
+import {
+    normalizePath,
+    getDirectoryPath,
+    ensureTrailingDirectorySeparator,
+    combinePaths
+} from './pyright/server/src/common/pathUtils';
 
 function getBundledTypeStubsPath(moduleDirectory?: string) {
     if (moduleDirectory) {
         moduleDirectory = normalizePath(moduleDirectory);
-        return combinePaths(getDirectoryPath(
-            ensureTrailingDirectorySeparator(moduleDirectory)),
-            'bundled-stubs');
+        return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled-stubs');
     }
 
     return undefined;
 }
 
 export class PyrxImportResolver extends ImportResolver {
-    protected resolveImportEx(sourceFilePath: string, execEnv: ExecutionEnvironment, moduleDescriptor: ImportedModuleDescriptor, importName: string, importFailureInfo: string[] = []): ImportResult | undefined {
+    protected resolveImportEx(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
+        importName: string,
+        importFailureInfo: string[] = []
+    ): ImportResult | undefined {
         const stubsPath = getBundledTypeStubsPath(this.fileSystem.getModulePath());
         if (stubsPath) {
             importFailureInfo.push(`Looking in bundled stubs path '${stubsPath}'`);

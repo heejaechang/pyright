@@ -25,11 +25,12 @@ describe('pyrx fourslash tests', () => {
 
     // make sure default folders exist
     const bundledStubsFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../bundled-stubs');
-    const typeshedFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../pyright/client/' + consts.typeshedFallback);
-    if (!host.HOST.directoryExists(bundledStubsFolderPath) ||
-        !host.HOST.directoryExists(typeshedFolderPath)) {
-
-        throw new Error(`expected folder not exist ${ bundledStubsFolderPath } or ${ typeshedFolderPath }`);
+    const typeshedFolderPath = resolvePaths(
+        host.HOST.getWorkspaceRoot(),
+        '../../pyright/client/' + consts.typeshedFallback
+    );
+    if (!host.HOST.directoryExists(bundledStubsFolderPath) || !host.HOST.directoryExists(typeshedFolderPath)) {
+        throw new Error(`expected folder not exist ${bundledStubsFolderPath} or ${typeshedFolderPath}`);
     }
 
     const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));

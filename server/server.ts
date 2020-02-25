@@ -36,7 +36,10 @@ class Server extends LanguageServerBase {
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
         // 2. to set "cwd" to run python to find search path.
-        debug.assert(this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)), `Unable to locate typeshed fallback folder at '${ rootDirectory }'`);
+        debug.assert(
+            this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)),
+            `Unable to locate typeshed fallback folder at '${rootDirectory}'`
+        );
         this._controller = new CommandController(this);
     }
 
@@ -67,7 +70,7 @@ class Server extends LanguageServerBase {
                 serverSettings.useLibraryCodeForTypes = true;
             }
         } catch (error) {
-            this.console.log(`Error reading settings: ${ error }`);
+            this.console.log(`Error reading settings: ${error}`);
         }
         return serverSettings;
     }
@@ -80,7 +83,9 @@ class Server extends LanguageServerBase {
         return createPyrxImportResolver(fs, options);
     }
 
-    protected async executeCodeAction(cmdParams: CodeActionParams): Promise<(Command | CodeAction)[] | undefined | null> {
+    protected async executeCodeAction(
+        cmdParams: CodeActionParams
+    ): Promise<(Command | CodeAction)[] | undefined | null> {
         this.recordUserInteractionTime();
 
         const filePath = convertUriToPath(cmdParams.textDocument.uri);

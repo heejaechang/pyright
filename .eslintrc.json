@@ -1,6 +1,7 @@
 {
     "extends": [
         "eslint:recommended",
+        "prettier",
         "plugin:@typescript-eslint/recommended"
     ],
     "env": {
@@ -12,7 +13,8 @@
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint/eslint-plugin"
+        "@typescript-eslint/eslint-plugin",
+        "simple-import-sort"
     ],
     "rules": {
         "no-constant-condition": 0,
