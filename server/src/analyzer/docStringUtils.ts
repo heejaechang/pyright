@@ -1,13 +1,13 @@
 /*
-* docStringUtils.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Static methods that format and parse doc strings based on
-* the rules specified in PEP 257
-* (https://www.python.org/dev/peps/pep-0257/).
-*/
+ * docStringUtils.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Static methods that format and parse doc strings based on
+ * the rules specified in PEP 257
+ * (https://www.python.org/dev/peps/pep-0257/).
+ */
 
 export function decodeDocString(rawString: string): string {
     // Remove carriage returns and replace tabs.
@@ -101,11 +101,4 @@ export function extractParameterDocumentation(functionDocString: string, paramNa
     }
 
     return undefined;
-}
-
-export function convertDocStringToMarkdown(docString: string): string {
-    // For now, simply return the string. In the future, we may
-    // want to do more sophisticated parsing of the doc string
-    // to format code, etc.
-    return docString;
 }
