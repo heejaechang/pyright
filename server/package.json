@@ -23,7 +23,7 @@
         "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
-        "test": "jest --detectOpenHandles --forceExit",
+        "test": "jest --detectOpenHandles --forceExit  --coverage --coverageReporters=cobertura",
         "test:all": "npm run test && cd pyright/server && npm run test"
     },
     "dependencies": {
