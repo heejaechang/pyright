@@ -23,7 +23,7 @@
         "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
-        "test": "jest --detectOpenHandles --forceExit  --coverage --coverageReporters=cobertura",
+        "test": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",
         "test:all": "npm run test && cd pyright/server && npm run test"
     },
     "dependencies": {
