@@ -65,9 +65,11 @@ class Server extends LanguageServerBase {
                 // default openFilesOnly and useLibraryCodeForTypes to "true" unless users have set it explicitly
                 serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? true;
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes ?? true;
+                serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths ?? true;
             } else {
                 serverSettings.openFilesOnly = true;
                 serverSettings.useLibraryCodeForTypes = true;
+                serverSettings.autoSearchPaths = true;
             }
         } catch (error) {
             this.console.log(`Error reading settings: ${error}`);
