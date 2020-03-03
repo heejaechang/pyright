@@ -612,29 +612,6 @@ export class TestState {
         }
     }
 
-    verifyHover(map: { [marker: string]: { value: string; kind: string } }): void {
-        this._analyze();
-
-        for (const range of this.getRanges()) {
-            const name = this.getMarkerName(range.marker!);
-            const expected = map[name];
-
-            const rangePos = this._convertOffsetsToRange(range.fileName, range.pos, range.end);
-
-            const actual = convertHoverResults(this.program.getHoverForPosition(range.fileName, rangePos.start));
-            debug.assertDefined(actual);
-
-            assert.deepEqual(actual!.range, rangePos);
-
-            if (MarkupContent.is(actual!.contents)) {
-                assert.equal(actual!.contents.value, expected.value);
-                assert.equal(actual!.contents.kind, expected.kind);
-            } else {
-                assert.fail(`Unexpected type of contents object "${actual!.contents}", should be MarkupContent.`);
-            }
-        }
-    }
-
     verifyCaretAtMarker(markerName = '') {
         const pos = this.getMarkerByName(markerName);
         if (pos.fileName !== this.activeFile.fileName) {
