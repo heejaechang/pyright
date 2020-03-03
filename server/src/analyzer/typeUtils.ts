@@ -8,7 +8,6 @@
  */
 
 import { ParameterCategory } from '../parser/parseNodes';
-import { ImportLookup } from './analyzerFileInfo';
 import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
 import { isTypedDictMemberAccessedThroughIndex } from './symbolUtils';
@@ -237,18 +236,18 @@ export function transformTypeObjectToClass(type: Type): Type {
 // None is always falsy. All other types are generally truthy
 // unless they are objects that support the __bool__ or __len__
 // methods.
-export function canBeFalsy(type: Type, importLookup: ImportLookup): boolean {
+export function canBeFalsy(type: Type): boolean {
     if (type.category === TypeCategory.None) {
         return true;
     }
 
     if (type.category === TypeCategory.Object) {
-        const lenMethod = lookUpObjectMember(type, '__len__', importLookup);
+        const lenMethod = lookUpObjectMember(type, '__len__');
         if (lenMethod) {
             return true;
         }
 
-        const boolMethod = lookUpObjectMember(type, '__bool__', importLookup);
+        const boolMethod = lookUpObjectMember(type, '__bool__');
         if (boolMethod) {
             return true;
         }
@@ -331,6 +330,9 @@ export function isProperty(type: Type): boolean {
 
 // Partially specializes a type within the context of a specified
 // (presumably specialized) class.
+export function partiallySpecializeType(type: ClassType, contextClassType: ClassType): ClassType;
+export function partiallySpecializeType(type: Type, contextClassType: ClassType): Type;
+
 export function partiallySpecializeType(type: Type, contextClassType: ClassType): Type {
     // If the context class is not specialized (or doesn't need specialization),
     // then there's no need to do any more work.
@@ -448,11 +450,10 @@ export function specializeType(
 export function lookUpObjectMember(
     objectType: Type,
     memberName: string,
-    importLookup: ImportLookup,
     flags = ClassMemberLookupFlags.Default
 ): ClassMember | undefined {
     if (objectType.category === TypeCategory.Object) {
-        return lookUpClassMember(objectType.classType, memberName, importLookup, flags);
+        return lookUpClassMember(objectType.classType, memberName, flags);
     }
 
     return undefined;
@@ -469,7 +470,6 @@ export function lookUpObjectMember(
 export function lookUpClassMember(
     classType: Type,
     memberName: string,
-    importLookup: ImportLookup,
     flags = ClassMemberLookupFlags.Default
 ): ClassMember | undefined {
     const declaredTypesOnly = (flags & ClassMemberLookupFlags.DeclaredTypesOnly) !== 0;
@@ -532,7 +532,6 @@ export function lookUpClassMember(
                 const methodType = lookUpClassMember(
                     partiallySpecializeType(baseClass, classType),
                     memberName,
-                    importLookup,
                     flags & ~ClassMemberLookupFlags.SkipOriginalClass
                 );
                 if (methodType) {
@@ -830,7 +829,7 @@ export function removeFalsinessFromType(type: Type): Type {
 // and a custom class "Foo" that has no __len__ or __nonzero__
 // method, this method would strip off the "Foo"
 // and return only the "None".
-export function removeTruthinessFromType(type: Type, importLookup: ImportLookup): Type {
+export function removeTruthinessFromType(type: Type): Type {
     return doForSubtypes(type, subtype => {
         if (subtype.category === TypeCategory.Object) {
             if (subtype.literalValue !== undefined) {
@@ -847,7 +846,7 @@ export function removeTruthinessFromType(type: Type, importLookup: ImportLookup)
         }
 
         // If it's possible for the type to be falsy, include it.
-        if (canBeFalsy(subtype, importLookup)) {
+        if (canBeFalsy(subtype)) {
             return subtype;
         }
 
@@ -1273,6 +1272,102 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
     }
 
     return false;
+}
+
+// Computes the method resolution ordering for a class whose base classes
+// have already been filled in. The algorithm for computing MRO is described
+// here: https://www.python.org/download/releases/2.3/mro/. It returns true
+// if an MRO was possible, false otherwise.
+export function computeMroLinearization(classType: ClassType): boolean {
+    let isMroFound = true;
+
+    // Construct the list of class lists that need to be merged.
+    const classListsToMerge: Type[][] = [];
+
+    classType.details.baseClasses.forEach(baseClass => {
+        if (baseClass.category === TypeCategory.Class) {
+            classListsToMerge.push(baseClass.details.mro.map(mroClass => partiallySpecializeType(mroClass, classType)));
+        } else {
+            classListsToMerge.push([baseClass]);
+        }
+    });
+
+    classListsToMerge.push(
+        classType.details.baseClasses.map(baseClass => partiallySpecializeType(baseClass, classType))
+    );
+
+    // The first class in the MRO is the class itself.
+    classType.details.mro.push(classType);
+
+    // Helper function that returns true if the specified searchClass
+    // is found in the "tail" (i.e. in elements 1 through n) of any
+    // of the class lists.
+    const isInTail = (searchClass: ClassType, classLists: Type[][]) => {
+        return classLists.some(classList => {
+            return (
+                classList.findIndex(
+                    value => value.category === TypeCategory.Class && value.details === searchClass.details
+                ) > 0
+            );
+        });
+    };
+
+    const filterClass = (classToFilter: ClassType, classLists: Type[][]) => {
+        for (let i = 0; i < classLists.length; i++) {
+            classLists[i] = classLists[i].filter(
+                value => value.category !== TypeCategory.Class || value.details !== classToFilter.details
+            );
+        }
+    };
+
+    while (true) {
+        let foundValidHead = false;
+        let nonEmptyList: Type[] | undefined = undefined;
+
+        for (const classList of classListsToMerge) {
+            if (classList.length > 0) {
+                if (nonEmptyList === undefined) {
+                    nonEmptyList = classList;
+                }
+
+                if (classList[0].category !== TypeCategory.Class) {
+                    foundValidHead = true;
+                    classType.details.mro.push(classList[0]);
+                    classList.shift();
+                    continue;
+                } else if (!isInTail(classList[0], classListsToMerge)) {
+                    foundValidHead = true;
+                    classType.details.mro.push(classList[0]);
+                    filterClass(classList[0], classListsToMerge);
+                    continue;
+                }
+            }
+        }
+
+        // If all lists are empty, we are done.
+        if (!nonEmptyList) {
+            break;
+        }
+
+        // We made it all the way through the list of class lists without
+        // finding a valid head, but there is at least one list that's not
+        // yet empty. This means there's no valid MRO order.
+        if (!foundValidHead) {
+            isMroFound = false;
+
+            // Handle the situation by pull the head off the first empty list.
+            // This allows us to make forward progress.
+            if (nonEmptyList[0].category !== TypeCategory.Class) {
+                classType.details.mro.push(nonEmptyList[0]);
+                nonEmptyList.shift();
+            } else {
+                classType.details.mro.push(nonEmptyList[0]);
+                filterClass(nonEmptyList[0], classListsToMerge);
+            }
+        }
+    }
+
+    return isMroFound;
 }
 
 export function printLiteralValue(type: ObjectType): string {

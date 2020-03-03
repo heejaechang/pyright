@@ -9,10 +9,12 @@
 
 import { isAbsolute } from 'path';
 
+import * as pathConsts from '../common/pathConsts';
 import { ConsoleInterface } from './console';
 import { DiagnosticRule } from './diagnosticRules';
 import { combinePaths, ensureTrailingDirectorySeparator, FileSpec, getFileSpec, normalizePath } from './pathUtils';
 import { latestStablePythonVersion, PythonVersion, versionFromString } from './pythonVersion';
+import { VirtualFileSystem } from './vfs';
 
 export class ExecutionEnvironment {
     // Default to "." which indicates every file in the project.
@@ -405,6 +407,22 @@ export class ConfigOptions {
         }
 
         return execEnv;
+    }
+
+    addExecEnvironmentForAutoSearchPaths(fs: VirtualFileSystem) {
+        // Auto-detect the common scenario where the sources are under the src folder
+        const srcPath = combinePaths(this.projectRoot, pathConsts.src);
+        if (fs.existsSync(srcPath) && !fs.existsSync(combinePaths(srcPath, '__init__.py'))) {
+            const execEnv = new ExecutionEnvironment(
+                this.projectRoot,
+                this.defaultPythonVersion,
+                this.defaultPythonPlatform
+            );
+
+            execEnv.extraPaths.push(srcPath);
+
+            this.executionEnvironments.push(execEnv);
+        }
     }
 
     // Initialize the structure from a JSON object.
@@ -801,7 +819,7 @@ export class ConfigOptions {
             }
         }
 
-        // Read the "typeshedPath".
+        // Read the "typeshedPath" setting.
         this.typeshedPath = undefined;
         if (configObj.typeshedPath !== undefined) {
             if (typeof configObj.typeshedPath !== 'string') {
@@ -813,13 +831,24 @@ export class ConfigOptions {
             }
         }
 
-        // Read the "typingsPath".
+        // Read the "typingsPath" setting.
         this.typingsPath = undefined;
         if (configObj.typingsPath !== undefined) {
             if (typeof configObj.typingsPath !== 'string') {
                 console.log(`Config "typingsPath" field must contain a string.`);
             } else {
                 this.typingsPath = normalizePath(combinePaths(this.projectRoot, configObj.typingsPath));
+            }
+        }
+
+        // Read the "verboseOutput" setting.
+        // Don't initialize to a default value because we want the command-line "verbose"
+        // switch to apply if this setting isn't specified in the config file.
+        if (configObj.verboseOutput !== undefined) {
+            if (typeof configObj.verboseOutput !== 'boolean') {
+                console.log(`Config "verboseOutput" field must be true or false.`);
+            } else {
+                this.verboseOutput = configObj.verboseOutput;
             }
         }
 
