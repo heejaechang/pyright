@@ -24,7 +24,7 @@
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
         "test": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",
-        "test:all": "npm run test && cd pyright/server && npm run test"
+        "test:all": "npm add jest-junit && npm run test && cd pyright/server && npm run test"
     },
     "dependencies": {
         "assert": "^2.0.0",
