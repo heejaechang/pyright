@@ -759,6 +759,12 @@ test('Classes2', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Mro1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro1.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -1189,6 +1195,11 @@ test('Import9', () => {
 test('Overload1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload1.py']);
     validateResults(analysisResults, 2);
+});
+
+test('Overload2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload2.py']);
+    validateResults(analysisResults, 0);
 });
 
 test('Final1', () => {
