@@ -11,7 +11,7 @@ import * as consts from '../../pyright/server/src/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
 import { runFourSlashTest } from '../../pyright/server/src/tests/harness/fourslash/runner';
 import * as host from '../../pyright/server/src/tests/harness/host';
-import { srcFolder, typeshedFolder } from '../../pyright/server/src/tests/harness/vfs/factory';
+import { typeshedFolder } from '../../pyright/server/src/tests/harness/vfs/factory';
 import { MODULE_PATH } from '../../pyright/server/src/tests/harness/vfs/filesystem';
 import { createPyrxImportResolver } from '../../pyrxImportResolver';
 
@@ -44,7 +44,7 @@ describe('pyrx fourslash tests', () => {
             const justName = fn.replace(/^.*[\\/]/, '');
 
             it('fourslash test ' + justName + ' runs correctly', cb => {
-                runFourSlashTest(srcFolder, fn, cb, mountedPaths, createPyrxImportResolver);
+                runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, createPyrxImportResolver);
             });
         });
     });
