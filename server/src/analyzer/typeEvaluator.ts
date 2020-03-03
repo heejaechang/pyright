@@ -139,6 +139,7 @@ import {
     canBeTruthy,
     ClassMember,
     ClassMemberLookupFlags,
+    computeMroLinearization,
     containsUnknown,
     convertClassToObject,
     derivesFromClassRecursive,
@@ -1031,7 +1032,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         const memberInfo = lookUpClassMember(
             classType,
             memberName,
-            importLookup,
             ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.SkipObjectBaseClass
         );
 
@@ -1199,7 +1199,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     classMemberInfo = lookUpObjectMember(
                         baseType,
                         expression.memberName.value,
-                        importLookup,
                         ClassMemberLookupFlags.DeclaredTypesOnly
                     );
                     classOrObjectBase = baseType;
@@ -1207,7 +1206,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     classMemberInfo = lookUpClassMember(
                         baseType,
                         expression.memberName.value,
-                        importLookup,
                         ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.DeclaredTypesOnly
                     );
                     classOrObjectBase = baseType;
@@ -1222,7 +1220,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             case ParseNodeType.Index: {
                 const baseType = getDeclaredTypeForExpression(expression.baseExpression);
                 if (baseType && baseType.category === TypeCategory.Object) {
-                    const setItemMember = lookUpClassMember(baseType.classType, '__setitem__', importLookup);
+                    const setItemMember = lookUpClassMember(baseType.classType, '__setitem__');
                     if (setItemMember) {
                         const setItemType = getTypeOfMember(setItemMember);
                         if (setItemType.category === TypeCategory.Function) {
@@ -1244,7 +1242,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             if (declaredType) {
                 // If it's a property, we need to get the fset type.
                 if (isProperty(declaredType)) {
-                    const setterInfo = lookUpClassMember((declaredType as ObjectType).classType, 'fset', importLookup);
+                    const setterInfo = lookUpClassMember((declaredType as ObjectType).classType, 'fset');
                     const setter = setterInfo ? getTypeOfMember(setterInfo) : undefined;
                     if (!setter || setter.category !== TypeCategory.Function || setter.details.parameters.length < 2) {
                         return undefined;
@@ -1913,7 +1911,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             let memberInfo = lookUpClassMember(
                 classTypeInfo.classType,
                 memberName,
-                importLookup,
                 isInstanceMember ? ClassMemberLookupFlags.Default : ClassMemberLookupFlags.SkipInstanceVariables
             );
 
@@ -1983,7 +1980,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             memberInfo = lookUpClassMember(
                 classTypeInfo.classType,
                 memberName,
-                importLookup,
                 ClassMemberLookupFlags.DeclaredTypesOnly
             );
             if (memberInfo) {
@@ -2330,12 +2326,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getSpecializedReturnType(objType: ObjectType, memberName: string) {
-        const classMember = lookUpObjectMember(
-            objType,
-            memberName,
-            importLookup,
-            ClassMemberLookupFlags.SkipInstanceVariables
-        );
+        const classMember = lookUpObjectMember(objType, memberName, ClassMemberLookupFlags.SkipInstanceVariables);
         if (!classMember) {
             return undefined;
         }
@@ -2364,7 +2355,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         const classMember = lookUpObjectMember(
             ObjectType.create(metaclass),
             memberName,
-            importLookup,
             ClassMemberLookupFlags.SkipInstanceVariables
         );
         if (!classMember) {
@@ -2699,14 +2689,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         let memberInfo = lookUpClassMember(
             classType,
             memberName,
-            importLookup,
             classLookupFlags | ClassMemberLookupFlags.DeclaredTypesOnly
         );
 
         // If we couldn't find a symbol with a declared type, use
         // a symbol with an inferred type.
         if (!memberInfo) {
-            memberInfo = lookUpClassMember(classType, memberName, importLookup, classLookupFlags);
+            memberInfo = lookUpClassMember(classType, memberName, classLookupFlags);
         }
 
         if (memberInfo) {
@@ -2754,7 +2743,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     const accessMethod = lookUpClassMember(
                         memberClassType,
                         accessMethodName,
-                        importLookup,
                         ClassMemberLookupFlags.SkipInstanceVariables
                     );
 
@@ -3450,7 +3438,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             const lookupResults = lookUpClassMember(
                 targetClassType,
                 memberName,
-                importLookup,
                 ClassMemberLookupFlags.SkipOriginalClass
             );
             if (lookupResults && lookupResults.classType.category === TypeCategory.Class) {
@@ -4524,6 +4511,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         const classType = ClassType.create(className, ClassTypeFlags.EnumClass, errorNode.id);
         classType.details.baseClasses.push(enumClass);
+        computeMroLinearization(classType);
 
         const classFields = classType.details.fields;
         classFields.set(
@@ -4600,6 +4588,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     baseClass.details.flags & ~(ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn);
                 const classType = ClassType.create(className, classFlags, errorNode.id);
                 classType.details.baseClasses.push(baseClass);
+                computeMroLinearization(classType);
                 return classType;
             }
         }
@@ -4632,6 +4621,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         const classType = ClassType.create(className, ClassTypeFlags.TypedDictClass, errorNode.id);
         classType.details.baseClasses.push(typedDictClass);
+        computeMroLinearization(classType);
 
         if (argList.length >= 3) {
             if (
@@ -4751,6 +4741,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         const classType = ClassType.create(className, ClassTypeFlags.None, errorNode.id);
         const builtInNamedTuple = getTypingType(errorNode, 'NamedTuple') || UnknownType.create();
         classType.details.baseClasses.push(builtInNamedTuple);
+        computeMroLinearization(classType);
 
         const classFields = classType.details.fields;
         classFields.set(
@@ -5259,7 +5250,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             // If it's an AND or OR, we need to handle short-circuiting by
             // eliminating any known-truthy or known-falsy types.
             if (operator === OperatorType.And) {
-                leftType = removeTruthinessFromType(leftType, importLookup);
+                leftType = removeTruthinessFromType(leftType);
             } else if (operator === OperatorType.Or) {
                 leftType = removeFalsinessFromType(leftType);
             }
@@ -6175,6 +6166,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         } else {
             specialClassType.details.baseClasses.push(UnknownType.create());
         }
+        computeMroLinearization(specialClassType);
 
         return specialClassType;
     }
@@ -6445,7 +6437,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         } else if (ClassType.isTypedDictClass(classType) && !ClassType.isTypedDictClass(argType)) {
                             // TypedDict classes must derive only from other
                             // TypedDict classes.
-                            addError(`All base classes for TypedDict classes must ` + 'als be TypedDict classes', arg);
+                            addError(`All base classes for TypedDict classes must also be TypedDict classes`, arg);
                         }
 
                         // Validate that the class isn't deriving from itself, creating a
@@ -6471,12 +6463,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
 
                 if (isMetaclass) {
-                    classType.details.metaClass = argType;
-                    if (argType.category === TypeCategory.Class) {
-                        if (ClassType.isBuiltIn(argType, 'EnumMeta')) {
-                            classType.details.flags |= ClassTypeFlags.EnumClass;
-                        } else if (ClassType.isBuiltIn(argType, 'ABCMeta')) {
-                            classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
+                    if (argType.category === TypeCategory.Class || argType.category === TypeCategory.Unknown) {
+                        classType.details.metaClass = argType;
+                        if (argType.category === TypeCategory.Class) {
+                            if (ClassType.isBuiltIn(argType, 'EnumMeta')) {
+                                classType.details.flags |= ClassTypeFlags.EnumClass;
+                            } else if (ClassType.isBuiltIn(argType, 'ABCMeta')) {
+                                classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
+                            }
                         }
                     }
                 } else {
@@ -6548,6 +6542,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         // typeParameters is a proper subset.
         classType.details.typeParameters = genericTypeParameters || typeParameters;
 
+        if (!computeMroLinearization(classType)) {
+            addError('Cannot create consistent method ordering', node.name);
+        }
+
         // The scope for this class becomes the "fields" for the corresponding type.
         const innerScope = ScopeUtils.getScopeForNode(node.suite);
         classType.details.fields = innerScope.symbolTable;
@@ -6594,12 +6592,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             if (!skipSynthesizedInit) {
                 // See if there's already a non-synthesized __init__ method.
                 // We shouldn't override it.
-                const initSymbol = lookUpClassMember(
-                    classType,
-                    '__init__',
-                    importLookup,
-                    ClassMemberLookupFlags.SkipBaseClasses
-                );
+                const initSymbol = lookUpClassMember(classType, '__init__', ClassMemberLookupFlags.SkipBaseClasses);
                 if (initSymbol) {
                     const initSymbolType = getTypeOfMember(initSymbol);
                     if (initSymbolType.category === TypeCategory.Function) {
@@ -6870,9 +6863,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
-        // If there was no decorator, see if there are any overloads provided
-        // by previous function declarations.
-        if (decoratedType === functionType) {
+        // See if there are any overloads provided by previous function declarations.
+        if (decoratedType.category === TypeCategory.Function) {
             decoratedType = addOverloadsToFunctionType(node, decoratedType);
         }
 
@@ -7040,11 +7032,20 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
+        // Copy the overload flag from the input function type.
+        if (inputFunctionType.category === TypeCategory.Function && returnType.category === TypeCategory.Function) {
+            if (FunctionType.isOverloaded(inputFunctionType)) {
+                returnType.details.flags |= FunctionTypeFlags.Overloaded;
+            }
+        }
+
         return returnType;
     }
 
     function createProperty(className: string, fget: FunctionType, typeSourceId: TypeSourceId): ObjectType {
         const propertyClass = ClassType.create(className, ClassTypeFlags.PropertyClass, typeSourceId);
+        computeMroLinearization(propertyClass);
+
         const propertyObject = ObjectType.create(propertyClass);
 
         // Fill in the fget method.
@@ -7101,6 +7102,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             classType.details.flags,
             classType.details.typeSourceId
         );
+        computeMroLinearization(propertyClass);
+
         const propertyObject = ObjectType.create(propertyClass);
 
         // Clone the symbol table of the old class type.
@@ -7158,6 +7161,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             classType.details.flags,
             classType.details.typeSourceId
         );
+        computeMroLinearization(propertyClass);
+
         const propertyObject = ObjectType.create(propertyClass);
 
         // Clone the symbol table of the old class type.
@@ -7215,11 +7220,27 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     if (!declTypeInfo) {
                         break;
                     }
-                    if (!FunctionType.isOverloaded(declTypeInfo.functionType)) {
+
+                    if (declTypeInfo.decoratedType.category === TypeCategory.Function) {
+                        if (FunctionType.isOverloaded(declTypeInfo.decoratedType)) {
+                            overloadedTypes.unshift(declTypeInfo.decoratedType);
+                        } else {
+                            break;
+                        }
+                    } else if (declTypeInfo.decoratedType.category === TypeCategory.OverloadedFunction) {
+                        // If the previous declaration was itself an overloaded function,
+                        // copy the last entry out of it.
+                        const lastOverload =
+                            declTypeInfo.decoratedType.overloads[declTypeInfo.decoratedType.overloads.length - 1];
+                        if (FunctionType.isOverloaded(lastOverload)) {
+                            overloadedTypes.unshift(lastOverload);
+                        } else {
+                            break;
+                        }
+                    } else {
                         break;
                     }
 
-                    overloadedTypes.unshift(declTypeInfo.functionType);
                     declIndex--;
                 }
 
@@ -7916,10 +7937,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             if (baseType.category === TypeCategory.Module) {
                 symbol = ModuleType.getField(baseType, memberName);
             } else if (baseType.category === TypeCategory.Class) {
-                const classMemberInfo = lookUpClassMember(baseType, memberName, importLookup);
+                const classMemberInfo = lookUpClassMember(baseType, memberName);
                 symbol = classMemberInfo ? classMemberInfo.symbol : undefined;
             } else if (baseType.category === TypeCategory.Object) {
-                const classMemberInfo = lookUpClassMember(baseType.classType, memberName, importLookup);
+                const classMemberInfo = lookUpClassMember(baseType.classType, memberName);
                 symbol = classMemberInfo ? classMemberInfo.symbol : undefined;
             }
 
@@ -8617,7 +8638,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             return subtype;
                         }
                     } else {
-                        if (canBeFalsy(subtype, importLookup)) {
+                        if (canBeFalsy(subtype)) {
                             return subtype;
                         }
                     }
@@ -9045,14 +9066,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     if (subtype.category === TypeCategory.Class) {
                         // Try to find a member that has a declared type. If so, that
                         // overrides any inferred types.
-                        let member = lookUpClassMember(
-                            subtype,
-                            memberName,
-                            importLookup,
-                            ClassMemberLookupFlags.DeclaredTypesOnly
-                        );
+                        let member = lookUpClassMember(subtype, memberName, ClassMemberLookupFlags.DeclaredTypesOnly);
                         if (!member) {
-                            member = lookUpClassMember(subtype, memberName, importLookup);
+                            member = lookUpClassMember(subtype, memberName);
                         }
                         if (member) {
                             symbol = member.symbol;
@@ -9060,14 +9076,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     } else if (subtype.category === TypeCategory.Object) {
                         // Try to find a member that has a declared type. If so, that
                         // overrides any inferred types.
-                        let member = lookUpObjectMember(
-                            subtype,
-                            memberName,
-                            importLookup,
-                            ClassMemberLookupFlags.DeclaredTypesOnly
-                        );
+                        let member = lookUpObjectMember(subtype, memberName, ClassMemberLookupFlags.DeclaredTypesOnly);
                         if (!member) {
-                            member = lookUpObjectMember(subtype, memberName, importLookup);
+                            member = lookUpObjectMember(subtype, memberName);
                         }
                         if (member) {
                             symbol = member.symbol;
@@ -9696,7 +9707,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         destClassFields.forEach((symbol, name) => {
             if (symbol.isClassMember() && !symbol.isIgnoredForProtocolMatch()) {
-                const memberInfo = lookUpClassMember(srcType, name, importLookup);
+                const memberInfo = lookUpClassMember(srcType, name);
                 if (!memberInfo) {
                     diag.addMessage(`'${name}' is not present`);
                     typesAreConsistent = false;
@@ -10564,7 +10575,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             } else if (srcType.category === TypeCategory.Function) {
                 srcFunction = srcType;
             } else if (srcType.category === TypeCategory.Object) {
-                const callMember = lookUpObjectMember(srcType, '__call__', importLookup);
+                const callMember = lookUpObjectMember(srcType, '__call__');
                 if (callMember) {
                     const memberType = getTypeOfMember(callMember);
                     if (memberType.category === TypeCategory.Function) {
@@ -10583,7 +10594,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 const newMemberInfo = lookUpClassMember(
                     srcType,
                     '__new__',
-                    importLookup,
                     ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.SkipObjectBaseClass
                 );
                 const memberType = newMemberInfo ? getTypeOfMember(newMemberInfo) : undefined;
@@ -10637,7 +10647,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             return undefined;
         }
 
-        const callMember = lookUpObjectMember(objType, '__call__', importLookup);
+        const callMember = lookUpObjectMember(objType, '__call__');
         if (!callMember) {
             return undefined;
         }
@@ -11319,7 +11329,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 }
 
                 if (isProperty(type)) {
-                    const getterInfo = lookUpObjectMember(type, 'fget', importLookup);
+                    const getterInfo = lookUpObjectMember(type, 'fget');
                     if (getterInfo) {
                         const getter = getTypeOfMember(getterInfo);
                         if (getter.category === TypeCategory.Function) {
