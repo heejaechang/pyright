@@ -23,10 +23,8 @@
         "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
-        "test": "jest --detectOpenHandles --forceExit",
-        "test:all": "npm run test && cd pyright/server && npm run test",
-        "test:pipeline": "npm add jest-junit && npm run test --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",
-        "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline"
+        "test": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",	        
+        "test:all": "npm add jest-junit && npm run test && cd pyright/server && npm run test"
     },
     "dependencies": {
         "assert": "^2.0.0",
