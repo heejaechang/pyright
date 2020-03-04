@@ -15,13 +15,15 @@
         "build:cli": "node ./copyTypeshedFallback.js && npm run eslint && webpack --config webpack.config-cli.js",
         "eslint": "eslint src/**/*.ts",
         "watch": "tsc --watch",
-        "test": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",
+        "test": "jest --detectOpenHandles --forceExit",
+        "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html"
     },
     "dependencies": {
         "assert": "^2.0.0",
         "chalk": "^2.4.2",
         "chokidar": "^3.3.1",
         "command-line-args": "^5.1.1",
+        "jest-junit": "^10.0.0",
         "leven": "^3.1.0",
         "typescript-char": "^0.0.0",
         "vscode-languageserver": "^5.3.0-next.10",
