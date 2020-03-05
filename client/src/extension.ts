@@ -97,6 +97,10 @@ export function activate(context: ExtensionContext) {
             })
         );
     });
+
+    languageClient.onTelemetry(eventInfo => {
+        console.log(`onTelemetry EventName: ${eventInfo.EventName}`);
+    });
 }
 
 export function deactivate() {

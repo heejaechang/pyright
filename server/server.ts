@@ -9,6 +9,7 @@ import { isArray } from 'util';
 import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
+import { AnalysisResults } from './pyright/server/src/analyzer/service';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import * as debug from './pyright/server/src/common/debug';
 import * as consts from './pyright/server/src/common/pathConsts';
@@ -17,9 +18,11 @@ import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver } from './pyrxImportResolver';
+import { AnalysisTracker } from './src/telemetry/analysisTracker';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
+    private _analysisTracker: AnalysisTracker;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -41,6 +44,7 @@ class Server extends LanguageServerBase {
             `Unable to locate typeshed fallback folder at '${rootDirectory}'`
         );
         this._controller = new CommandController(this);
+        this._analysisTracker = new AnalysisTracker();
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -93,6 +97,15 @@ class Server extends LanguageServerBase {
         const filePath = convertUriToPath(cmdParams.textDocument.uri);
         const workspace = this.getWorkspaceForFile(filePath);
         return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, cmdParams.range);
+    }
+
+    protected onAnalysisCompletedHandler(results: AnalysisResults): void {
+        super.onAnalysisCompletedHandler(results);
+
+        const te = this._analysisTracker.updateTelemetry(results);
+        if (te) {
+            this._connection.telemetry.logEvent(te);
+        }
     }
 }
 
