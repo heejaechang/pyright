@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="1" failures="0" time="5.477">
-  <testsuite name="pyrx fourslash tests" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:08" time="3.172" tests="1">
-    <testcase classname="pyrx fourslash tests C:\Projects\pyrx\server\src\tests\fourslash\importresolvedwithbundledstubs.fourslash.ts fourslash test importresolvedwithbundledstubs.fourslash.ts runs correctly" name="pyrx fourslash tests C:\Projects\pyrx\server\src\tests\fourslash\importresolvedwithbundledstubs.fourslash.ts fourslash test importresolvedwithbundledstubs.fourslash.ts runs correctly" time="0.779">
-    </testcase>
-  </testsuite>
-</testsuites>
