@@ -24,9 +24,9 @@
         "tslint": "tslint --project tsconfig.json --fix",
         "watch": "tsc --watch",
         "test": "jest --detectOpenHandles --forceExit",
-        "test:all": "npm run test && cd pyright/server && npm run test",
-        "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html",
-        "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline"
+        "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json",
+        "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd../.. && npm run test:combine:codecoverage",
+        "test:combine:codecoverage" : "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/coverage-final.json"
     },
     "dependencies": {
         "assert": "^2.0.0",
@@ -58,7 +58,8 @@
         "tslint-microsoft-contrib": "^6.2.0",
         "typescript": "^3.8.2",
         "webpack": "^4.41.6",
-        "webpack-cli": "^3.3.11"
+        "webpack-cli": "^3.3.11",
+        "istanbul-combine": "^1.1.1"
     },
     "types": "out/main.d.ts",
     "main": "out/main.js"
