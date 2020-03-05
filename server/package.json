@@ -27,7 +27,8 @@
         "test:all": "npm run test && cd pyright/server && npm run test",
         "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json",
         "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd../.. && npm run test:combine:codecoverage",
-        "test:combine:codecoverage" : "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/coverage-final.json && t2s --spaces 4 combinedcoverageoutput/cobertura-coverage.xml"
+        "test:combine:codecoverage-backup" : "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/coverage-final.json",
+        "test:combine:codecoverage" : "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/cobertura-coverage.xml"
     },
     "dependencies": {
         "assert": "^2.0.0",
@@ -61,7 +62,6 @@
         "webpack-cli": "^3.3.11",
         "jest-junit": "^10.0.0",
         "istanbul-combine": "^0.3.0",
-        "tabs-to-spaces":"^0.0.1"
     },
     "types": "out/main.d.ts",
     "main": "out/main.js"
