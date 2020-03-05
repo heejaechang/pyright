@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\languageService\quickActions.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header low">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\languageService\quickActions.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">17.14% <small>(6 / 35)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">0% <small>(0 / 16)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">0% <small>(0 / 3)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">17.65% <small>(6 / 34)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/languageService/</a> &#187; quickActions.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * quickActions.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Provides support for miscellaneous quick actions.
+ */
+&nbsp;
+import { ImportType } from '../analyzer/importResult';
+import * as ImportStatementUtils from '../analyzer/importStatementUtils';
+import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
+import { Commands } from '../commands/commands';
+import { TextEditAction } from '../common/editAction';
+import { convertOffsetToPosition } from '../common/positionUtils';
+import { TextRange } from '../common/textRange';
+import { ParseNode, ParseNodeType } from '../parser/parseNodes';
+import { ParseResults } from '../parser/parser';
+import { ImportSorter } from './importSorter';
+&nbsp;
+export function performQuickAction(command: string, args: any[], parseResults: ParseResults<span class="fstat-no" title="function not covered" >) {</span>
+<span class="cstat-no" title="statement not covered" >    if (command === Commands.orderImports) {</span>
+        const importSorter = <span class="cstat-no" title="statement not covered" >new ImportSorter(parseResults);</span>
+<span class="cstat-no" title="statement not covered" >        return importSorter.sort();</span>
+    } else <span class="cstat-no" title="statement not covered" >if (command === Commands.addMissingOptionalToParam) {</span>
+<span class="cstat-no" title="statement not covered" >        if (args.length &gt;= 1) {</span>
+            const nodeOffset = <span class="cstat-no" title="statement not covered" >parseInt(args[0], 10);</span>
+<span class="cstat-no" title="statement not covered" >            return _addMissingOptionalToParam(parseResults, nodeOffset);</span>
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return [];</span>
+}
+&nbsp;
+// Inserts text into the document to wrap an existing type annotation
+// with "Optional[X]".
+function _addMissingOptionalToParam(parseResults: ParseResults, offset: number<span class="fstat-no" title="function not covered" >): TextEditAction[] {</span>
+    let node: ParseNode | undefined = <span class="cstat-no" title="statement not covered" >ParseTreeUtils.findNodeByOffset(parseResults.parseTree, offset);</span>
+<span class="cstat-no" title="statement not covered" >    while (node) {</span>
+<span class="cstat-no" title="statement not covered" >        if (node.nodeType === ParseNodeType.Parameter) {</span>
+<span class="cstat-no" title="statement not covered" >            break;</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        node = node.parent;</span>
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    if (!node || !node.typeAnnotation) {</span>
+<span class="cstat-no" title="statement not covered" >        return [];</span>
+    }
+&nbsp;
+    const editActions: TextEditAction[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+    const startPos = <span class="cstat-no" title="statement not covered" >convertOffsetToPosition(node.typeAnnotation.start, parseResults.tokenizerOutput.lines);</span>
+    const endPos = <span class="cstat-no" title="statement not covered" >convertOffsetToPosition(TextRange.getEnd(node.typeAnnotation), parseResults.tokenizerOutput.lines);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    editActions.push({</span>
+        range: { start: startPos, end: startPos },
+        replacementText: 'Optional['
+    });
+<span class="cstat-no" title="statement not covered" >    editActions.push({</span>
+        range: { start: endPos, end: endPos },
+        replacementText: ']'
+    });
+&nbsp;
+    // Add the import statement if necessary.
+    const importStatements = <span class="cstat-no" title="statement not covered" >ImportStatementUtils.getTopLevelImports(parseResults.parseTree);</span>
+    const importStatement = <span class="cstat-no" title="statement not covered" >importStatements.orderedImports.find(imp =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >imp.moduleName === 'typing')</span></span>;</span>
+&nbsp;
+    // If there's an existing import statement, insert into it.
+<span class="cstat-no" title="statement not covered" >    if (importStatement &amp;&amp; importStatement.node.nodeType === ParseNodeType.ImportFrom) {</span>
+        const additionalEditActions = <span class="cstat-no" title="statement not covered" >ImportStatementUtils.getTextEditsForAutoImportSymbolAddition(</span>
+            'Optional',
+            importStatement,
+            parseResults
+        );
+<span class="cstat-no" title="statement not covered" >        editActions.push(...additionalEditActions);</span>
+    } else {
+        const additionalEditActions = <span class="cstat-no" title="statement not covered" >ImportStatementUtils.getTextEditsForAutoImportInsertion(</span>
+            'Optional',
+            importStatements,
+            'typing',
+            ImportType.BuiltIn,
+            parseResults
+        );
+<span class="cstat-no" title="statement not covered" >        editActions.push(...additionalEditActions);</span>
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return editActions;</span>
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

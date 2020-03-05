@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\tests\harness\fourslash\fourSlashParser.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header high">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\tests\harness\fourslash\fourSlashParser.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">94.77% <small>(163 / 172)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">91.35% <small>(95 / 104)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">91.67% <small>(11 / 12)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">94.67% <small>(160 / 169)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/tests/harness/fourslash/</a> &#187; fourSlashParser.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">200</span>
+<span class="cline-any cline-yes">129</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-yes">890</span>
+<span class="cline-any cline-yes">890</span>
+<span class="cline-any cline-yes">455</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">890</span>
+<span class="cline-any cline-yes">538</span>
+<span class="cline-any cline-yes">538</span>
+<span class="cline-any cline-yes">352</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">352</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">93</span>
+<span class="cline-any cline-yes">93</span>
+<span class="cline-any cline-yes">72</span>
+<span class="cline-any cline-yes">72</span>
+<span class="cline-any cline-yes">72</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">65</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">57</span>
+<span class="cline-any cline-yes">57</span>
+<span class="cline-any cline-yes">57</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">57</span>
+<span class="cline-any cline-yes">57</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">259</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">143</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">74</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">205</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">246</span>
+<span class="cline-any cline-yes">246</span>
+<span class="cline-any cline-yes">237</span>
+<span class="cline-any cline-yes">10174</span>
+<span class="cline-any cline-yes">10174</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9580</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">209</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">43</span>
+<span class="cline-any cline-yes">9537</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">208</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">44</span>
+<span class="cline-any cline-yes">207</span>
+<span class="cline-any cline-yes">9493</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9621</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9579</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">257</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">18</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">258</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">338</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">27</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-yes">47</span>
+<span class="cline-any cline-yes">40</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-yes">298</span>
+<span class="cline-any cline-yes">39</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">176</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">176</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">342</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10178</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">10344</span>
+<span class="cline-any cline-yes">633</span>
+<span class="cline-any cline-yes">463</span>
+<span class="cline-any cline-yes">463</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9711</span>
+<span class="cline-any cline-yes">9711</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">49</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71</span>
+<span class="cline-any cline-yes">76</span>
+<span class="cline-any cline-yes">455</span>
+<span class="cline-any cline-yes">43</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">412</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * fourSlashParser.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ *
+ * Parse fourslash markup code and return parsed content with marker/range data
+ */
+&nbsp;
+import { contains } from '../../../common/collectionUtils';
+import { toBoolean } from '../../../common/core';
+import {
+    combinePaths,
+    getRelativePath,
+    isRootedDiskPath,
+    normalizePath,
+    normalizeSlashes
+} from '../../../common/pathUtils';
+import { libFolder } from '../vfs/factory';
+import { fileMetadataNames, FourSlashData, FourSlashFile, Marker, MetadataOptionNames, Range } from './fourSlashTypes';
+&nbsp;
+/**
+ * Parse given fourslash markup code and return content with markup/range data
+ *
+ * @param basePath this will be combined with given `fileName` to form filepath to this content
+ * @param contents content with fourslash markups.
+ * @param fileName this will be a default filename for the first no named content in `contents`.
+ *                 if content is marked with `@filename`, that will override this given `filename`
+ */
+export function parseTestData(basePath: string, contents: string, fileName: string): FourSlashData {
+    const normalizedBasePath = normalizeSlashes(basePath);
+&nbsp;
+    // Regex for parsing options in the format "@Alpha: Value of any sort"
+    const optionRegex = /^\s*@(\w+):\s*(.*)\s*/;
+&nbsp;
+    // List of all the subfiles we've parsed out
+    const files: FourSlashFile[] = [];
+    // Global options
+    const globalOptions: { [s: string]: string } = {};
+    // Marker positions
+&nbsp;
+    // Split up the input file by line
+    // Note: IE JS engine incorrectly handles consecutive delimiters here when using RegExp split, so
+    // we have to string-based splitting instead and try to figure out the delimiting chars
+    const lines = contents.split('\n');
+    let i = 0;
+&nbsp;
+    const markerPositions = new Map&lt;string, Marker&gt;();
+    const markers: Marker[] = [];
+    const ranges: Range[] = [];
+&nbsp;
+    // Stuff related to the subfile we're parsing
+    let currentFileContent: string | undefined;
+    let currentFileName = normalizeSlashes(fileName);
+    let currentFileOptions: { [s: string]: string } = {};
+&nbsp;
+    function nextFile() {
+        if (currentFileContent === undefined) {
+            return;
+        }
+&nbsp;
+        if (toBoolean(currentFileOptions[MetadataOptionNames.library])) {
+            currentFileName = normalizePath(
+                combinePaths(libFolder, getRelativePath(currentFileName, normalizedBasePath))
+            );
+        }
+&nbsp;
+        const file = parseFileContent(currentFileContent, currentFileName, markerPositions, markers, ranges);
+        file.fileOptions = currentFileOptions;
+&nbsp;
+        // Store result file
+        files.push(file);
+&nbsp;
+        currentFileContent = undefined;
+        currentFileOptions = {};
+        currentFileName = fileName;
+    }
+&nbsp;
+    for (let line of lines) {
+        i++;
+        if (line.length &gt; 0 &amp;&amp; line.charAt(line.length - 1) === '\r') {
+            line = line.substr(0, line.length - 1);
+        }
+&nbsp;
+        if (line.substr(0, 4) === '////') {
+            const text = line.substr(4);
+            currentFileContent = currentFileContent === undefined ? text : currentFileContent + '\n' + text;
+        } else <span class="missing-if-branch" title="if path not taken" >I</span>if (line.substr(0, 3) === '///' &amp;&amp; currentFileContent !== undefined) {
+<span class="cstat-no" title="statement not covered" >            throw new Error(`Three-slash line in the middle of four-slash region at line ${i}`);</span>
+        } else if (line.substr(0, 2) === '//') {
+            // Comment line, check for global/file @options and record them
+            const match = optionRegex.exec(line.substr(2));
+            if (match) {
+                const key = match[1].toLowerCase();
+                const value = match[2];
+                if (!contains(fileMetadataNames, key)) {
+                    // Check if the match is already existed in the global options
+                    <span class="missing-if-branch" title="if path not taken" >I</span>if (globalOptions[key] !== undefined) {
+<span class="cstat-no" title="statement not covered" >                        throw new Error(`Global option '${key}' already exists`);</span>
+                    }
+                    globalOptions[key] = value;
+                } else {
+                    switch (key) {
+                        case MetadataOptionNames.fileName: {
+                            // Found an @FileName directive, if this is not the first then create a new subfile
+                            nextFile();
+                            const normalizedPath = normalizeSlashes(value);
+                            currentFileName = isRootedDiskPath(normalizedPath)
+                                ? normalizedPath
+                                : combinePaths(normalizedBasePath, normalizedPath);
+                            currentFileOptions[key] = value;
+                            break;
+                        }
+                        default:
+                            // Add other fileMetadata flag
+                            currentFileOptions[key] = value;
+                    }
+                }
+            }
+        } else if (line !== '') {
+            // Previously blank lines between fourslash content caused it to be considered as 2 files,
+            // Remove this behavior since it just causes errors now
+            //
+            // Code line, terminate current subfile if there is one
+            nextFile();
+        }
+    }
+&nbsp;
+    return {
+        markerPositions,
+        markers,
+        globalOptions,
+        files,
+        ranges
+    };
+}
+&nbsp;
+interface LocationInformation {
+    position: number;
+    sourcePosition: number;
+    sourceLine: number;
+    sourceColumn: number;
+}
+&nbsp;
+interface RangeLocationInformation extends LocationInformation {
+    marker?: Marker;
+}
+&nbsp;
+const enum State {
+    none,
+    inSlashStarMarker,
+    inObjectMarker
+}
+&nbsp;
+function reportError(fileName: string, line: number, col: number, message: string<span class="fstat-no" title="function not covered" >) {</span>
+    const errorMessage = <span class="cstat-no" title="statement not covered" >`${fileName}(${line},${col}): ${message}`;</span>
+<span class="cstat-no" title="statement not covered" >    throw new Error(errorMessage);</span>
+}
+&nbsp;
+function recordObjectMarker(
+    fileName: string,
+    location: LocationInformation,
+    text: string,
+    markerMap: Map&lt;string, Marker&gt;,
+    markers: Marker[]
+): Marker | undefined {
+    let markerValue: any;
+    try {
+        // Attempt to parse the marker value as JSON
+        markerValue = JSON.parse('{ ' + text + ' }');
+    } catch (e) {
+<span class="cstat-no" title="statement not covered" >        reportError(fileName, location.sourceLine, location.sourceColumn, `Unable to parse marker text ${e.message}`);</span>
+    }
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (markerValue === undefined) {
+<span class="cstat-no" title="statement not covered" >        reportError(fileName, location.sourceLine, location.sourceColumn, 'Object markers can not be empty');</span>
+<span class="cstat-no" title="statement not covered" >        return undefined;</span>
+    }
+&nbsp;
+    const marker: Marker = {
+        fileName,
+        position: location.position,
+        data: markerValue
+    };
+&nbsp;
+    // Object markers can be anonymous
+    if (markerValue.name) {
+        markerMap.set(markerValue.name, marker);
+    }
+&nbsp;
+    markers.push(marker);
+&nbsp;
+    return marker;
+}
+&nbsp;
+function recordMarker(
+    fileName: string,
+    location: LocationInformation,
+    name: string,
+    markerMap: Map&lt;string, Marker&gt;,
+    markers: Marker[]
+): Marker | undefined {
+    const marker: Marker = {
+        fileName,
+        position: location.position
+    };
+&nbsp;
+    // Verify markers for uniqueness
+    if (markerMap.has(name)) {
+        const message = "Marker '" + name + "' is duplicated in the source file contents.";
+        reportError(marker.fileName, location.sourceLine, location.sourceColumn, message);
+        return undefined;
+    } else {
+        markerMap.set(name, marker);
+        markers.push(marker);
+        return marker;
+    }
+}
+&nbsp;
+function parseFileContent(
+    content: string,
+    fileName: string,
+    markerMap: Map&lt;string, Marker&gt;,
+    markers: Marker[],
+    ranges: Range[]
+): FourSlashFile {
+    content = chompLeadingSpace(content);
+&nbsp;
+    // Any slash-star comment with a character not in this string is not a marker.
+    const validMarkerChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$1234567890_';
+&nbsp;
+    /// The file content (minus metacharacters) so far
+    let output = '';
+&nbsp;
+    /// The current marker (or maybe multi-line comment?) we're parsing, possibly
+    let openMarker: LocationInformation | undefined;
+&nbsp;
+    /// A stack of the open range markers that are still unclosed
+    const openRanges: RangeLocationInformation[] = [];
+&nbsp;
+    /// A list of ranges we've collected so far */
+    let localRanges: Range[] = [];
+&nbsp;
+    /// The latest position of the start of an unflushed plain text area
+    let lastNormalCharPosition = 0;
+&nbsp;
+    /// The total number of metacharacters removed from the file (so far)
+    let difference = 0;
+&nbsp;
+    /// The fourslash file state object we are generating
+    let state: State = State.none;
+&nbsp;
+    /// Current position data
+    let line = 1;
+    let column = 1;
+&nbsp;
+    const flush = (lastSafeCharIndex: number | undefined) =&gt; {
+        output =
+            output +
+            content.substr(
+                lastNormalCharPosition,
+                lastSafeCharIndex === undefined ? undefined : lastSafeCharIndex - lastNormalCharPosition
+            );
+    };
+&nbsp;
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (content.length &gt; 0) {
+        let previousChar = content.charAt(0);
+        for (let i = 1; i &lt; content.length; i++) {
+            const currentChar = content.charAt(i);
+            switch (state) {
+                case State.none:
+                    if (previousChar === '[' &amp;&amp; currentChar === '|') {
+                        // found a range start
+                        openRanges.push({
+                            position: i - 1 - difference,
+                            sourcePosition: i - 1,
+                            sourceLine: line,
+                            sourceColumn: column
+                        });
+                        // copy all text up to marker position
+                        flush(i - 1);
+                        lastNormalCharPosition = i + 1;
+                        difference += 2;
+                    } else if (previousChar === '|' &amp;&amp; currentChar === ']') {
+                        // found a range end
+                        const rangeStart = openRanges.pop();
+                        if (!rangeStart) {
+                            reportError(fileName, line, column, 'Found range end with no matching start.');
+                        }
+&nbsp;
+                        const range: Range = {
+                            fileName,
+                            pos: rangeStart!.position,
+                            end: i - 1 - difference,
+                            marker: rangeStart!.marker
+                        };
+                        localRanges.push(range);
+&nbsp;
+                        // copy all text up to range marker position
+                        flush(i - 1);
+                        lastNormalCharPosition = i + 1;
+                        difference += 2;
+                    } else if (previousChar === '/' &amp;&amp; currentChar === '*') {
+                        // found a possible marker start
+                        state = State.inSlashStarMarker;
+                        openMarker = {
+                            position: i - 1 - difference,
+                            sourcePosition: i - 1,
+                            sourceLine: line,
+                            sourceColumn: column
+                        };
+                    } else if (previousChar === '{' &amp;&amp; currentChar === '|') {
+                        // found an object marker start
+                        state = State.inObjectMarker;
+                        openMarker = {
+                            position: i - 1 - difference,
+                            sourcePosition: i - 1,
+                            sourceLine: line,
+                            sourceColumn: column
+                        };
+                        flush(i - 1);
+                    }
+                    break;
+&nbsp;
+                case State.inObjectMarker:
+                    // Object markers are only ever terminated by |} and have no content restrictions
+                    if (previousChar === '|' &amp;&amp; currentChar === '}') {
+                        // Record the marker
+                        const objectMarkerNameText = content.substring(openMarker!.sourcePosition + 2, i - 1).trim();
+                        const marker = recordObjectMarker(
+                            fileName,
+                            openMarker!,
+                            objectMarkerNameText,
+                            markerMap,
+                            markers
+                        );
+&nbsp;
+                        if (openRanges.length &gt; 0) {
+                            openRanges[openRanges.length - 1].marker = marker;
+                        }
+&nbsp;
+                        // Set the current start to point to the end of the current marker to ignore its text
+                        lastNormalCharPosition = i + 1;
+                        difference += i + 1 - openMarker!.sourcePosition;
+&nbsp;
+                        // Reset the state
+                        openMarker = undefined;
+                        state = State.none;
+                    }
+                    break;
+&nbsp;
+                case State.inSlashStarMarker:
+                    if (previousChar === '*' &amp;&amp; currentChar === '/') {
+                        // Record the marker
+                        // start + 2 to ignore the */, -1 on the end to ignore the * (/ is next)
+                        const markerNameText = content.substring(openMarker!.sourcePosition + 2, i - 1).trim();
+                        const marker = recordMarker(fileName, openMarker!, markerNameText, markerMap, markers);
+&nbsp;
+                        if (openRanges.length &gt; 0) {
+                            openRanges[openRanges.length - 1].marker = marker;
+                        }
+&nbsp;
+                        // Set the current start to point to the end of the current marker to ignore its text
+                        flush(openMarker!.sourcePosition);
+                        lastNormalCharPosition = i + 1;
+                        difference += i + 1 - openMarker!.sourcePosition;
+&nbsp;
+                        // Reset the state
+                        openMarker = undefined;
+                        state = State.none;
+                    } else if (validMarkerChars.indexOf(currentChar) &lt; 0) {
+                        if (currentChar === '*' &amp;&amp; i &lt; content.length - 1 &amp;&amp; content.charAt(i + 1) === '/') {
+                            // The marker is about to be closed, ignore the 'invalid' char
+                        } else {
+                            // We've hit a non-valid marker character, so we were actually in a block comment
+                            // Bail out the text we've gathered so far back into the output
+                            flush(i);
+                            lastNormalCharPosition = i;
+<span class="cstat-no" title="statement not covered" >                            openMarker = undefined;</span>
+&nbsp;
+                            state = State.none;
+                        }
+                    }
+                    break;
+            }
+&nbsp;
+            if (currentChar === '\n' &amp;&amp; previousChar === '\r') {
+                // Ignore trailing \n after a \r
+                continue;
+            } else if (currentChar === '\n' || currentChar === '\r') {
+                line++;
+                column = 1;
+                continue;
+            }
+&nbsp;
+            column++;
+            previousChar = currentChar;
+        }
+    }
+&nbsp;
+    // Add the remaining text
+    flush(/*lastSafeCharIndex*/ undefined);
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (openRanges.length &gt; 0) {
+        const openRange = openRanges[0];
+<span class="cstat-no" title="statement not covered" >        reportError(fileName, openRange.sourceLine, openRange.sourceColumn, 'Unterminated range.');</span>
+    }
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (openMarker) {
+        reportError(fileName, openMarker.sourceLine, openMarker.sourceColumn, 'Unterminated marker.');
+    }
+&nbsp;
+    // put ranges in the correct order
+    localRanges = localRanges.sort((a, b) =&gt; (a.pos &lt; b.pos ? -1 : a.pos === b.pos &amp;&amp; a.end &gt; b.end ? <span class="branch-0 cbranch-no" title="branch not covered" >-1 </span>: 1));
+    localRanges.forEach(r =&gt; {
+        ranges.push(r);
+    });
+&nbsp;
+    return {
+        content: output,
+        fileOptions: {},
+        version: 0,
+        fileName
+    };
+}
+&nbsp;
+function chompLeadingSpace(content: string) {
+    const lines = content.split('\n');
+    for (const line of lines) {
+        if (line.length !== 0 &amp;&amp; line.charAt(0) !== ' ') {
+            return content;
+        }
+    }
+&nbsp;
+    return lines.map(s =&gt; s.substr(1)).join('\n');
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../../../sorter.js"></script>
+</body>
+</html>

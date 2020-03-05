@@ -1,0 +1,3108 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\importResolver.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\importResolver.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">60.6% <small>(243 / 401)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">52.17% <small>(156 / 299)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">61.29% <small>(19 / 31)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">60.51% <small>(236 / 390)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; importResolver.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+862
+863
+864
+865
+866
+867
+868
+869
+870
+871
+872
+873
+874
+875
+876
+877
+878
+879
+880
+881
+882
+883
+884
+885
+886
+887
+888
+889
+890
+891
+892
+893
+894
+895
+896
+897
+898
+899
+900
+901
+902
+903
+904
+905
+906
+907
+908
+909
+910
+911
+912
+913
+914
+915
+916
+917
+918
+919
+920
+921
+922
+923
+924
+925
+926
+927
+928
+929
+930
+931
+932
+933
+934
+935
+936
+937
+938
+939
+940
+941
+942
+943
+944
+945
+946
+947
+948
+949
+950
+951
+952
+953
+954
+955
+956
+957
+958
+959
+960
+961
+962
+963
+964
+965
+966
+967
+968
+969
+970
+971
+972
+973
+974
+975
+976
+977
+978
+979
+980
+981
+982
+983
+984
+985
+986
+987
+988
+989
+990
+991
+992
+993
+994
+995
+996
+997
+998
+999
+1000
+1001
+1002
+1003
+1004
+1005
+1006
+1007
+1008
+1009
+1010
+1011
+1012
+1013
+1014
+1015
+1016
+1017
+1018
+1019
+1020
+1021
+1022</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">239</span>
+<span class="cline-any cline-yes">239</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">239</span>
+<span class="cline-any cline-yes">239</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4153</span>
+<span class="cline-any cline-yes">4153</span>
+<span class="cline-any cline-yes">2501</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-yes">1441</span>
+<span class="cline-any cline-yes">1441</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4153</span>
+<span class="cline-any cline-yes">4153</span>
+<span class="cline-any cline-yes">201</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3952</span>
+<span class="cline-any cline-yes">3952</span>
+<span class="cline-any cline-yes">1451</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2501</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-yes">201</span>
+<span class="cline-any cline-yes">201</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">415</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">415</span>
+<span class="cline-any cline-yes">201</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">415</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1863</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1863</span>
+<span class="cline-any cline-yes">1863</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1859</span>
+<span class="cline-any cline-yes">1859</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1859</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17292</span>
+<span class="cline-any cline-yes">17292</span>
+<span class="cline-any cline-yes">17292</span>
+<span class="cline-any cline-yes">5564</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5564</span>
+<span class="cline-any cline-yes">1640</span>
+<span class="cline-any cline-yes">1640</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15652</span>
+<span class="cline-any cline-yes">219</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15433</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">219</span>
+<span class="cline-any cline-yes">219</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1863</span>
+<span class="cline-any cline-yes">1652</span>
+<span class="cline-any cline-yes">1450</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">211</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-yes">1842</span>
+<span class="cline-any cline-yes">1842</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">403</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">399</span>
+<span class="cline-any cline-yes">200</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">399</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5840</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5875</span>
+<span class="cline-any cline-yes">225</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">35</span>
+<span class="cline-any cline-yes">35</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">190</span>
+<span class="cline-any cline-yes">190</span>
+<span class="cline-any cline-yes">190</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">190</span>
+<span class="cline-any cline-yes">179</span>
+<span class="cline-any cline-yes">179</span>
+<span class="cline-any cline-yes">179</span>
+<span class="cline-any cline-yes">179</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">179</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">190</span>
+<span class="cline-any cline-yes">188</span>
+<span class="cline-any cline-yes">188</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5652</span>
+<span class="cline-any cline-yes">5652</span>
+<span class="cline-any cline-yes">5652</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5652</span>
+<span class="cline-any cline-yes">1465</span>
+<span class="cline-any cline-yes">1465</span>
+<span class="cline-any cline-yes">1465</span>
+<span class="cline-any cline-yes">1465</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4187</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4175</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5652</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5828</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5828</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5844</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">2013</span>
+<span class="cline-any cline-yes">2013</span>
+<span class="cline-any cline-yes">2013</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2163</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2154</span>
+<span class="cline-any cline-yes">2142</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-yes">42</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">193</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">193</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">193</span>
+<span class="cline-any cline-yes">426</span>
+<span class="cline-any cline-yes">424</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">839</span>
+<span class="cline-any cline-yes">232</span>
+<span class="cline-any cline-yes">232</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">232</span>
+<span class="cline-any cline-yes">232</span>
+<span class="cline-any cline-yes">232</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">193</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-yes">15</span>
+<span class="cline-any cline-yes">15</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19</span>
+<span class="cline-any cline-yes">34</span>
+<span class="cline-any cline-yes">17</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">193</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">4176</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4230</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * importResolver.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Provides the logic for resolving imports according to the
+ * runtime rules of Python.
+ */
+&nbsp;
+import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
+import {
+    combinePaths,
+    ensureTrailingDirectorySeparator,
+    getDirectoryPath,
+    getFileExtension,
+    getFileSystemEntries,
+    getPathComponents,
+    isDirectory,
+    isFile,
+    stripFileExtension,
+    stripTrailingDirectorySeparator
+} from '../common/pathUtils';
+import { versionToString } from '../common/pythonVersion';
+import * as StringUtils from '../common/stringUtils';
+import { VirtualFileSystem } from '../common/vfs';
+import { ImplicitImport, ImportResult, ImportType } from './importResult';
+import * as PythonPathUtils from './pythonPathUtils';
+import { isDunderName } from './symbolNameUtils';
+&nbsp;
+export interface ImportedModuleDescriptor {
+    leadingDots: number;
+    nameParts: string[];
+    hasTrailingDot?: boolean;
+    importedSymbols: string[] | undefined;
+}
+&nbsp;
+export interface ModuleNameAndType {
+    moduleName: string;
+    importType: ImportType;
+}
+&nbsp;
+type CachedImportResults = Map&lt;string, ImportResult&gt;;
+&nbsp;
+export class ImportResolver {
+    private _configOptions: ConfigOptions;
+    private _cachedPythonSearchPaths = new Map&lt;string, string[]&gt;();
+    private _cachedImportResults = new Map&lt;string, CachedImportResults&gt;();
+    private _cachedTypeshedStdLibPath: string | undefined;
+    private _cachedTypeshedThirdPartyPath: string | undefined;
+&nbsp;
+    readonly fileSystem: VirtualFileSystem;
+&nbsp;
+    constructor(fs: VirtualFileSystem, configOptions: ConfigOptions) {
+        this.fileSystem = fs;
+        this._configOptions = configOptions;
+    }
+&nbsp;
+    invalidateCache() {
+        this._cachedPythonSearchPaths = new Map&lt;string, string[]&gt;();
+        this._cachedImportResults = new Map&lt;string, CachedImportResults&gt;();
+    }
+&nbsp;
+    // Resolves the import and returns the path if it exists, otherwise
+    // returns undefined.
+    resolveImport(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor
+    ): ImportResult {
+        const importName = this._formatImportName(moduleDescriptor);
+        const importFailureInfo: string[] = [];
+&nbsp;
+        // Is it a relative import?
+        if (moduleDescriptor.leadingDots &gt; 0) {
+            const relativeImport = this._resolveRelativeImport(
+                sourceFilePath,
+                moduleDescriptor,
+                importName,
+                importFailureInfo
+            );
+&nbsp;
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (relativeImport) {
+                relativeImport.isRelative = true;
+                return relativeImport;
+            }
+        } else {
+            // Is it already cached?
+            const cachedResults = this._lookUpResultsInCache(execEnv, importName, moduleDescriptor.importedSymbols);
+            if (cachedResults) {
+                return cachedResults;
+            }
+&nbsp;
+            // First check for a typeshed file.
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (moduleDescriptor.nameParts.length &gt; 0) {
+                const builtInImport = this._findTypeshedPath(
+                    execEnv,
+                    moduleDescriptor,
+                    importName,
+                    true,
+                    importFailureInfo
+                );
+                if (builtInImport) {
+                    builtInImport.isTypeshedFile = true;
+                    return this._addResultsToCache(
+                        execEnv,
+                        importName,
+                        builtInImport,
+                        moduleDescriptor.importedSymbols
+                    );
+                }
+            }
+&nbsp;
+            let bestResultSoFar: ImportResult | undefined;
+&nbsp;
+            // Look for it in the root directory of the execution environment.
+            importFailureInfo.push(`Looking in root directory of execution environment ` + `'${execEnv.root}'`);
+            let localImport = this.resolveAbsoluteImport(execEnv.root, moduleDescriptor, importName, importFailureInfo);
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (localImport &amp;&amp; localImport.isImportFound) {
+<span class="cstat-no" title="statement not covered" >                return this._addResultsToCache(execEnv, importName, localImport, moduleDescriptor.importedSymbols);</span>
+            }
+            bestResultSoFar = localImport;
+&nbsp;
+            for (const extraPath of execEnv.extraPaths) {
+<span class="cstat-no" title="statement not covered" >                importFailureInfo.push(`Looking in extraPath '${extraPath}'`);</span>
+<span class="cstat-no" title="statement not covered" >                localImport = this.resolveAbsoluteImport(extraPath, moduleDescriptor, importName, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >                if (localImport &amp;&amp; localImport.isImportFound) {</span>
+<span class="cstat-no" title="statement not covered" >                    return this._addResultsToCache(execEnv, importName, localImport, moduleDescriptor.importedSymbols);</span>
+                }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                if (</span>
+                    localImport &amp;&amp;
+                    (bestResultSoFar === undefined ||
+                        localImport.resolvedPaths.length &gt; bestResultSoFar.resolvedPaths.length)
+                ) {
+<span class="cstat-no" title="statement not covered" >                    bestResultSoFar = localImport;</span>
+                }
+            }
+&nbsp;
+            // Check for a typings file.
+            if (this._configOptions.typingsPath) {
+                importFailureInfo.push(`Looking in typingsPath '${this._configOptions.typingsPath}'`);
+                const typingsImport = this.resolveAbsoluteImport(
+                    this._configOptions.typingsPath,
+                    moduleDescriptor,
+                    importName,
+                    importFailureInfo
+                );
+                <span class="missing-if-branch" title="if path not taken" >I</span>if (typingsImport &amp;&amp; typingsImport.isImportFound) {
+                    // We will treat typings files as "local" rather than "third party".
+<span class="cstat-no" title="statement not covered" >                    typingsImport.importType = ImportType.Local;</span>
+<span class="cstat-no" title="statement not covered" >                    typingsImport.isLocalTypingsFile = true;</span>
+<span class="cstat-no" title="statement not covered" >                    return this._addResultsToCache(</span>
+                        execEnv,
+                        importName,
+                        typingsImport,
+                        moduleDescriptor.importedSymbols
+                    );
+                }
+            }
+&nbsp;
+            // Check for a typeshed file.
+            importFailureInfo.push(`Looking for typeshed path`);
+            const typeshedImport = this._findTypeshedPath(
+                execEnv,
+                moduleDescriptor,
+                importName,
+                false,
+                importFailureInfo
+            );
+            if (typeshedImport) {
+                typeshedImport.isTypeshedFile = true;
+                return this._addResultsToCache(execEnv, importName, typeshedImport, moduleDescriptor.importedSymbols);
+            }
+&nbsp;
+            // Look for the import in the list of third-party packages.
+            const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
+            if (pythonSearchPaths.length &gt; 0) {
+                for (const searchPath of pythonSearchPaths) {
+                    // Allow partial resolution because some third-party packages
+                    // use tricks to populate their package namespaces.
+                    importFailureInfo.push(`Looking in python search path '${searchPath}'`);
+                    const thirdPartyImport = this.resolveAbsoluteImport(
+                        searchPath,
+                        moduleDescriptor,
+                        importName,
+                        importFailureInfo,
+                        true,
+                        true,
+                        true
+                    );
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (thirdPartyImport) {
+                        thirdPartyImport.importType = ImportType.ThirdParty;
+&nbsp;
+                        <span class="missing-if-branch" title="if path not taken" >I</span>if (thirdPartyImport.isImportFound &amp;&amp; thirdPartyImport.isStubFile) {
+<span class="cstat-no" title="statement not covered" >                            return this._addResultsToCache(</span>
+                                execEnv,
+                                importName,
+                                thirdPartyImport,
+                                moduleDescriptor.importedSymbols
+                            );
+                        }
+&nbsp;
+                        // We did not find it, or we did and it's not from a
+                        // stub, so give chance for resolveImportEx to find
+                        // one from a stub.
+                        if (
+                            bestResultSoFar === undefined ||
+                            thirdPartyImport.resolvedPaths.length &gt; bestResultSoFar.resolvedPaths.length
+                        ) {
+                            bestResultSoFar = thirdPartyImport;
+                        }
+                    }
+                }
+            } else {
+                importFailureInfo.push('No python interpreter search path');
+            }
+&nbsp;
+            const extraResults = this.resolveImportEx(
+                sourceFilePath,
+                execEnv,
+                moduleDescriptor,
+                importName,
+                importFailureInfo
+            );
+            if (extraResults !== undefined) {
+                return this._addResultsToCache(execEnv, importName, extraResults, moduleDescriptor.importedSymbols);
+            }
+&nbsp;
+            // We weren't able to find an exact match, so return the best
+            // partial match.
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (bestResultSoFar) {
+                return this._addResultsToCache(execEnv, importName, bestResultSoFar, moduleDescriptor.importedSymbols);
+            }
+        }
+&nbsp;
+        const notFoundResult: ImportResult = <span class="cstat-no" title="statement not covered" >{</span>
+            importName,
+            isRelative: false,
+            isImportFound: false,
+            importFailureInfo,
+            resolvedPaths: [],
+            importType: ImportType.Local,
+            isStubFile: false,
+            isPydFile: false,
+            implicitImports: []
+        };
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return this._addResultsToCache(execEnv, importName, notFoundResult, undefined);</span>
+    }
+&nbsp;
+    // Intended to be overridden by subclasses to provide additional stub
+    // resolving capabilities. Return undefined if no stubs were found for
+    // this import.
+    protected resolveImportEx(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
+        importName: string,
+        importFailureInfo: string[] = []
+    ): ImportResult | undefined {
+        return undefined;
+    }
+&nbsp;
+    getCompletionSuggestions(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
+        similarityLimit: number<span class="fstat-no" title="function not covered" ></span>
+    ): string[] {
+        const importFailureInfo: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
+        const suggestions: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+        // Is it a relative import?
+<span class="cstat-no" title="statement not covered" >        if (moduleDescriptor.leadingDots &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >            this._getCompletionSuggestionsRelative(sourceFilePath, moduleDescriptor, suggestions, similarityLimit);</span>
+        } else {
+            // First check for a typeshed file.
+<span class="cstat-no" title="statement not covered" >            if (moduleDescriptor.nameParts.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >                this._getCompletionSuggestionsTypeshedPath(</span>
+                    execEnv,
+                    moduleDescriptor,
+                    true,
+                    suggestions,
+                    similarityLimit
+                );
+            }
+&nbsp;
+            // Look for it in the root directory of the execution environment.
+<span class="cstat-no" title="statement not covered" >            this._getCompletionSuggestionsAbsolute(execEnv.root, moduleDescriptor, suggestions, similarityLimit);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            for (const extraPath of execEnv.extraPaths) {</span>
+<span class="cstat-no" title="statement not covered" >                this._getCompletionSuggestionsAbsolute(extraPath, moduleDescriptor, suggestions, similarityLimit);</span>
+            }
+&nbsp;
+            // Check for a typings file.
+<span class="cstat-no" title="statement not covered" >            if (this._configOptions.typingsPath) {</span>
+<span class="cstat-no" title="statement not covered" >                this._getCompletionSuggestionsAbsolute(</span>
+                    this._configOptions.typingsPath,
+                    moduleDescriptor,
+                    suggestions,
+                    similarityLimit
+                );
+            }
+&nbsp;
+            // Check for a typeshed file.
+<span class="cstat-no" title="statement not covered" >            this._getCompletionSuggestionsTypeshedPath(execEnv, moduleDescriptor, false, suggestions, similarityLimit);</span>
+&nbsp;
+            // Look for the import in the list of third-party packages.
+            const pythonSearchPaths = <span class="cstat-no" title="statement not covered" >this._getPythonSearchPaths(execEnv, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >            for (const searchPath of pythonSearchPaths) {</span>
+<span class="cstat-no" title="statement not covered" >                this._getCompletionSuggestionsAbsolute(searchPath, moduleDescriptor, suggestions, similarityLimit);</span>
+            }
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return suggestions;</span>
+    }
+&nbsp;
+    // Returns the module name (of the form X.Y.Z) that needs to be imported
+    // from the current context to access the module with the specified file path.
+    // In a sense, it's performing the inverse of resolveImport.
+    getModuleNameForImport(filePath: string, execEnv: ExecutionEnvironment<span class="fstat-no" title="function not covered" >): ModuleNameAndType {</span>
+        let moduleName: string | undefined;
+        let importType<span class="cstat-no" title="statement not covered" > = ImportType.BuiltIn;</span>
+&nbsp;
+        const importFailureInfo: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+        // Is this ia stdlib typeshed path?
+        const stdLibTypeshedPath = <span class="cstat-no" title="statement not covered" >this._getTypeshedPath(true, execEnv, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >        if (stdLibTypeshedPath) {</span>
+<span class="cstat-no" title="statement not covered" >            moduleName = this._getModuleNameFromPath(stdLibTypeshedPath, filePath, true);</span>
+<span class="cstat-no" title="statement not covered" >            if (moduleName) {</span>
+<span class="cstat-no" title="statement not covered" >                return { moduleName, importType };</span>
+            }
+        }
+&nbsp;
+        // Look for it in the root directory of the execution environment.
+<span class="cstat-no" title="statement not covered" >        moduleName = this._getModuleNameFromPath(execEnv.root, filePath);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        for (const extraPath of execEnv.extraPaths) {</span>
+            const candidateModuleName = <span class="cstat-no" title="statement not covered" >this._getModuleNameFromPath(extraPath, filePath);</span>
+&nbsp;
+            // Does this candidate look better than the previous best module name?
+            // We'll always try to use the shortest version.
+<span class="cstat-no" title="statement not covered" >            if (!moduleName || (candidateModuleName &amp;&amp; candidateModuleName.length &lt; moduleName.length)) {</span>
+<span class="cstat-no" title="statement not covered" >                moduleName = candidateModuleName;</span>
+<span class="cstat-no" title="statement not covered" >                importType = ImportType.Local;</span>
+            }
+        }
+&nbsp;
+        // Check for a typings file.
+<span class="cstat-no" title="statement not covered" >        if (this._configOptions.typingsPath) {</span>
+            const candidateModuleName = <span class="cstat-no" title="statement not covered" >this._getModuleNameFromPath(this._configOptions.typingsPath, filePath);</span>
+&nbsp;
+            // Does this candidate look better than the previous best module name?
+            // We'll always try to use the shortest version.
+<span class="cstat-no" title="statement not covered" >            if (!moduleName || (candidateModuleName &amp;&amp; candidateModuleName.length &lt; moduleName.length)) {</span>
+<span class="cstat-no" title="statement not covered" >                moduleName = candidateModuleName;</span>
+<span class="cstat-no" title="statement not covered" >                importType = ImportType.ThirdParty;</span>
+            }
+        }
+&nbsp;
+        // Check for a typeshed file.
+        const thirdPartyTypeshedPath = <span class="cstat-no" title="statement not covered" >this._getTypeshedPath(false, execEnv, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >        if (thirdPartyTypeshedPath) {</span>
+            const candidateModuleName = <span class="cstat-no" title="statement not covered" >this._getModuleNameFromPath(thirdPartyTypeshedPath, filePath, true);</span>
+&nbsp;
+            // Does this candidate look better than the previous best module name?
+            // We'll always try to use the shortest version.
+<span class="cstat-no" title="statement not covered" >            if (!moduleName || (candidateModuleName &amp;&amp; candidateModuleName.length &lt; moduleName.length)) {</span>
+<span class="cstat-no" title="statement not covered" >                moduleName = candidateModuleName;</span>
+<span class="cstat-no" title="statement not covered" >                importType = ImportType.ThirdParty;</span>
+            }
+        }
+&nbsp;
+        // Look for the import in the list of third-party packages.
+        const pythonSearchPaths = <span class="cstat-no" title="statement not covered" >this._getPythonSearchPaths(execEnv, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >        for (const searchPath of pythonSearchPaths) {</span>
+            const candidateModuleName = <span class="cstat-no" title="statement not covered" >this._getModuleNameFromPath(searchPath, filePath);</span>
+&nbsp;
+            // Does this candidate look better than the previous best module name?
+            // We'll always try to use the shortest version.
+<span class="cstat-no" title="statement not covered" >            if (!moduleName || (candidateModuleName &amp;&amp; candidateModuleName.length &lt; moduleName.length)) {</span>
+<span class="cstat-no" title="statement not covered" >                moduleName = candidateModuleName;</span>
+<span class="cstat-no" title="statement not covered" >                importType = ImportType.ThirdParty;</span>
+            }
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (moduleName) {</span>
+<span class="cstat-no" title="statement not covered" >            return { moduleName, importType };</span>
+        }
+&nbsp;
+        // We didn't find any module name.
+<span class="cstat-no" title="statement not covered" >        return { moduleName: '', importType: ImportType.Local };</span>
+    }
+&nbsp;
+    private _lookUpResultsInCache(
+        execEnv: ExecutionEnvironment,
+        importName: string,
+        importedSymbols: string[] | undefined
+    ) {
+        const cacheForExecEnv = this._cachedImportResults.get(execEnv.root);
+        if (!cacheForExecEnv) {
+            return undefined;
+        }
+&nbsp;
+        const cachedEntry = cacheForExecEnv.get(importName);
+        if (!cachedEntry) {
+            return undefined;
+        }
+&nbsp;
+        return this._filterImplicitImports(cachedEntry, importedSymbols);
+    }
+&nbsp;
+    private _addResultsToCache(
+        execEnv: ExecutionEnvironment,
+        importName: string,
+        importResult: ImportResult,
+        importedSymbols: string[] | undefined
+    ) {
+        let cacheForExecEnv = this._cachedImportResults.get(execEnv.root);
+        if (!cacheForExecEnv) {
+            cacheForExecEnv = new Map&lt;string, ImportResult&gt;();
+            this._cachedImportResults.set(execEnv.root, cacheForExecEnv);
+        }
+&nbsp;
+        cacheForExecEnv.set(importName, importResult);
+&nbsp;
+        return this._filterImplicitImports(importResult, importedSymbols);
+    }
+&nbsp;
+    private _getModuleNameFromPath(
+        containerPath: string,
+        filePath: string,
+        stripTopContainerDir = false<span class="fstat-no" title="function not covered" ></span>
+    ): string | undefined {
+<span class="cstat-no" title="statement not covered" >        containerPath = ensureTrailingDirectorySeparator(containerPath);</span>
+        let filePathWithoutExtension = <span class="cstat-no" title="statement not covered" >stripFileExtension(filePath);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (!filePathWithoutExtension.startsWith(containerPath)) {</span>
+<span class="cstat-no" title="statement not covered" >            return undefined;</span>
+        }
+&nbsp;
+        // Strip off the '/__init__' if it's present.
+<span class="cstat-no" title="statement not covered" >        if (filePathWithoutExtension.endsWith('__init__')) {</span>
+<span class="cstat-no" title="statement not covered" >            filePathWithoutExtension = filePathWithoutExtension.substr(0, filePathWithoutExtension.length - 9);</span>
+        }
+&nbsp;
+        const relativeFilePath = <span class="cstat-no" title="statement not covered" >filePathWithoutExtension.substr(containerPath.length);</span>
+        const parts = <span class="cstat-no" title="statement not covered" >getPathComponents(relativeFilePath);</span>
+<span class="cstat-no" title="statement not covered" >        parts.shift();</span>
+<span class="cstat-no" title="statement not covered" >        if (stripTopContainerDir) {</span>
+<span class="cstat-no" title="statement not covered" >            if (parts.length === 0) {</span>
+<span class="cstat-no" title="statement not covered" >                return undefined;</span>
+            }
+<span class="cstat-no" title="statement not covered" >            parts.shift();</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (parts.length === 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return undefined;</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return parts.join('.');</span>
+    }
+&nbsp;
+    private _getPythonSearchPaths(execEnv: ExecutionEnvironment, importFailureInfo: string[]) {
+        const cacheKey = execEnv.venv ? <span class="branch-0 cbranch-no" title="branch not covered" >execEnv.venv </span>: '&lt;default&gt;';
+&nbsp;
+        // Find the site packages for the configured virtual environment.
+        if (!this._cachedPythonSearchPaths.has(cacheKey)) {
+            this._cachedPythonSearchPaths.set(
+                cacheKey,
+                PythonPathUtils.findPythonSearchPaths(
+                    this.fileSystem,
+                    this._configOptions,
+                    execEnv.venv,
+                    importFailureInfo
+                ) || <span class="branch-1 cbranch-no" title="branch not covered" >[]</span>
+            );
+        }
+&nbsp;
+        return this._cachedPythonSearchPaths.get(cacheKey)!;
+    }
+&nbsp;
+    private _findTypeshedPath(
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
+        importName: string,
+        isStdLib: boolean,
+        importFailureInfo: string[]
+    ): ImportResult | undefined {
+        importFailureInfo.push(`Looking for typeshed ${isStdLib ? 'stdlib' : 'third_party'} path`);
+&nbsp;
+        const typeshedPath = this._getTypeshedPath(isStdLib, execEnv, importFailureInfo);
+        if (!typeshedPath) {
+            return undefined;
+        }
+&nbsp;
+        const pythonVersion = execEnv.pythonVersion;
+        let minorVersion = pythonVersion &amp; 0xff;
+&nbsp;
+        // Search for module starting at "3.x" down to "3.1", then "3", then "2and3".
+        while (true) {
+            const pythonVersionString =
+                minorVersion &gt; 0 ? versionToString(0x300 + minorVersion) : minorVersion === 0 ? '3' : '2and3';
+            const testPath = combinePaths(typeshedPath, pythonVersionString);
+            if (this.fileSystem.existsSync(testPath)) {
+                const importInfo = this.resolveAbsoluteImport(
+                    testPath,
+                    moduleDescriptor,
+                    importName,
+                    importFailureInfo
+                );
+                if (importInfo &amp;&amp; importInfo.isImportFound) {
+                    importInfo.importType = isStdLib ? ImportType.BuiltIn : ImportType.ThirdParty;
+                    return importInfo;
+                }
+            }
+&nbsp;
+            // We use -1 to indicate "2and3", which is searched after "3.0".
+            if (minorVersion === -1) {
+                break;
+            }
+            minorVersion--;
+        }
+&nbsp;
+        importFailureInfo.push(`Typeshed path not found`);
+        return undefined;
+    }
+&nbsp;
+    private _getCompletionSuggestionsTypeshedPath(
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
+        isStdLib: boolean,
+        suggestions: string[],
+        similarityLimit: number<span class="fstat-no" title="function not covered" ></span>
+    ) {
+        const importFailureInfo: string[] = <span class="cstat-no" title="statement not covered" >[];</span>
+        const typeshedPath = <span class="cstat-no" title="statement not covered" >this._getTypeshedPath(isStdLib, execEnv, importFailureInfo);</span>
+<span class="cstat-no" title="statement not covered" >        if (!typeshedPath) {</span>
+<span class="cstat-no" title="statement not covered" >            return;</span>
+        }
+&nbsp;
+        const pythonVersion = <span class="cstat-no" title="statement not covered" >execEnv.pythonVersion;</span>
+        let minorVersion = <span class="cstat-no" title="statement not covered" >pythonVersion &amp; 0xff;</span>
+&nbsp;
+        // Search for module starting at "3.x" down to "3.1", then "3", then "2and3".
+<span class="cstat-no" title="statement not covered" >        while (true) {</span>
+            const pythonVersionString =
+<span class="cstat-no" title="statement not covered" >                minorVersion &gt; 0 ? versionToString(0x300 + minorVersion) : minorVersion === 0 ? '3' : '2and3';</span>
+            const testPath = <span class="cstat-no" title="statement not covered" >combinePaths(typeshedPath, pythonVersionString);</span>
+<span class="cstat-no" title="statement not covered" >            if (this.fileSystem.existsSync(testPath)) {</span>
+<span class="cstat-no" title="statement not covered" >                this._getCompletionSuggestionsAbsolute(testPath, moduleDescriptor, suggestions, similarityLimit);</span>
+            }
+&nbsp;
+            // We use -1 to indicate "2and3", which is searched after "3.0".
+<span class="cstat-no" title="statement not covered" >            if (minorVersion === -1) {</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            }
+<span class="cstat-no" title="statement not covered" >            minorVersion--;</span>
+        }
+    }
+&nbsp;
+    private _getTypeshedPath(isStdLib: boolean, execEnv: ExecutionEnvironment, importFailureInfo: string[]) {
+        // See if we have it cached.
+        if (isStdLib) {
+            if (this._cachedTypeshedStdLibPath !== undefined) {
+                return this._cachedTypeshedStdLibPath;
+            }
+        } else {
+            if (this._cachedTypeshedThirdPartyPath !== undefined) {
+                return this._cachedTypeshedThirdPartyPath;
+            }
+        }
+&nbsp;
+        let typeshedPath = '';
+&nbsp;
+        // Did the user specify a typeshed path? If not, we'll look in the
+        // python search paths, then in the typeshed-fallback directory.
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (this._configOptions.typeshedPath) {
+            const possibleTypeshedPath = <span class="cstat-no" title="statement not covered" >this._configOptions.typeshedPath;</span>
+<span class="cstat-no" title="statement not covered" >            if (</span>
+                this.fileSystem.existsSync(possibleTypeshedPath) &amp;&amp;
+                isDirectory(this.fileSystem, possibleTypeshedPath)
+            ) {
+<span class="cstat-no" title="statement not covered" >                typeshedPath = possibleTypeshedPath;</span>
+            }
+        } else {
+            const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
+            for (const searchPath of pythonSearchPaths) {
+                const possibleTypeshedPath = combinePaths(searchPath, 'typeshed');
+                <span class="missing-if-branch" title="if path not taken" >I</span>if (
+                    this.fileSystem.existsSync(possibleTypeshedPath) &amp;&amp;
+<span class="branch-1 cbranch-no" title="branch not covered" >                    isDirectory(this.fileSystem, possibleTypeshedPath)</span>
+                ) {
+<span class="cstat-no" title="statement not covered" >                    typeshedPath = possibleTypeshedPath;</span>
+<span class="cstat-no" title="statement not covered" >                    break;</span>
+                }
+            }
+        }
+&nbsp;
+        // If typeshed directory wasn't found in other locations, use the fallback.
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (!typeshedPath) {
+            typeshedPath = PythonPathUtils.getTypeShedFallbackPath(this.fileSystem) || '';
+        }
+&nbsp;
+        typeshedPath = PythonPathUtils.getTypeshedSubdirectory(typeshedPath, isStdLib);
+&nbsp;
+        if (!this.fileSystem.existsSync(typeshedPath) || !isDirectory(this.fileSystem, typeshedPath)) {
+            return undefined;
+        }
+&nbsp;
+        // Cache the results.
+        if (isStdLib) {
+            this._cachedTypeshedStdLibPath = typeshedPath;
+        } else {
+            this._cachedTypeshedThirdPartyPath = typeshedPath;
+        }
+&nbsp;
+        return typeshedPath;
+    }
+&nbsp;
+    private _resolveRelativeImport(
+        sourceFilePath: string,
+        moduleDescriptor: ImportedModuleDescriptor,
+        importName: string,
+        importFailureInfo: string[]
+    ): ImportResult | undefined {
+        importFailureInfo.push('Attempting to resolve relative import');
+&nbsp;
+        // Determine which search path this file is part of.
+        let curDir = getDirectoryPath(sourceFilePath);
+        for (let i = 1; i &lt; moduleDescriptor.leadingDots; i++) {
+<span class="cstat-no" title="statement not covered" >            if (curDir === '') {</span>
+<span class="cstat-no" title="statement not covered" >                importFailureInfo.push(`Invalid relative path '${importName}'`);</span>
+<span class="cstat-no" title="statement not covered" >                return undefined;</span>
+            }
+<span class="cstat-no" title="statement not covered" >            curDir = getDirectoryPath(curDir);</span>
+        }
+&nbsp;
+        // Now try to match the module parts from the current directory location.
+        const absImport = this.resolveAbsoluteImport(curDir, moduleDescriptor, importName, importFailureInfo);
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (!absImport) {
+<span class="cstat-no" title="statement not covered" >            return undefined;</span>
+        }
+&nbsp;
+        return this._filterImplicitImports(absImport, moduleDescriptor.importedSymbols);
+    }
+&nbsp;
+    private _getCompletionSuggestionsRelative(
+        sourceFilePath: string,
+        moduleDescriptor: ImportedModuleDescriptor,
+        suggestions: string[],
+        similarityLimit: number<span class="fstat-no" title="function not covered" ></span>
+    ) {
+        // Determine which search path this file is part of.
+        let curDir = <span class="cstat-no" title="statement not covered" >getDirectoryPath(sourceFilePath);</span>
+<span class="cstat-no" title="statement not covered" >        for (let i = <span class="cstat-no" title="statement not covered" >1;</span> i &lt; moduleDescriptor.leadingDots; i++) {</span>
+<span class="cstat-no" title="statement not covered" >            if (curDir === '') {</span>
+<span class="cstat-no" title="statement not covered" >                return;</span>
+            }
+<span class="cstat-no" title="statement not covered" >            curDir = getDirectoryPath(curDir);</span>
+        }
+&nbsp;
+        // Now try to match the module parts from the current directory location.
+<span class="cstat-no" title="statement not covered" >        this._getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, similarityLimit);</span>
+    }
+&nbsp;
+    // Follows import resolution algorithm defined in PEP-420:
+    // https://www.python.org/dev/peps/pep-0420/
+    protected resolveAbsoluteImport(
+        rootPath: string,
+        moduleDescriptor: ImportedModuleDescriptor,
+        importName: string,
+        importFailureInfo: string[],
+        allowPartial = false,
+        allowPydFile = false,
+        allowStubsFolder = false
+    ): ImportResult | undefined {
+        importFailureInfo.push(`Attempting to resolve using root path '${rootPath}'`);
+&nbsp;
+        // Starting at the specified path, walk the file system to find the
+        // specified module.
+        const resolvedPaths: string[] = [];
+        let dirPath = rootPath;
+        let isNamespacePackage = false;
+        let isStubFile = false;
+        let isPydFile = false;
+        let implicitImports: ImplicitImport[] = [];
+&nbsp;
+        // Handle the "from . import XXX" case.
+        if (moduleDescriptor.nameParts.length === 0) {
+            const pyFilePath = combinePaths(dirPath, '__init__.py');
+            const pyiFilePath = pyFilePath + 'i';
+            const pydFilePath = pyFilePath + 'd';
+&nbsp;
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (this.fileSystem.existsSync(pyiFilePath) &amp;&amp; isFile(this.fileSystem, pyiFilePath)) {
+                importFailureInfo.push(`Resolved import with file '${pyiFilePath}'`);
+                resolvedPaths.push(pyiFilePath);
+                isStubFile = true;
+            } else <span class="cstat-no" title="statement not covered" >if (this.fileSystem.existsSync(pyFilePath) &amp;&amp; isFile(this.fileSystem, pyFilePath)) {</span>
+<span class="cstat-no" title="statement not covered" >                importFailureInfo.push(`Resolved import with file '${pyFilePath}'`);</span>
+<span class="cstat-no" title="statement not covered" >                resolvedPaths.push(pyFilePath);</span>
+            } else <span class="cstat-no" title="statement not covered" >if (</span>
+                allowPydFile &amp;&amp;
+                this.fileSystem.existsSync(pydFilePath) &amp;&amp;
+                isFile(this.fileSystem, pydFilePath)
+            ) {
+<span class="cstat-no" title="statement not covered" >                importFailureInfo.push(`Resolved import with file '${pydFilePath}'`);</span>
+<span class="cstat-no" title="statement not covered" >                resolvedPaths.push(pydFilePath);</span>
+<span class="cstat-no" title="statement not covered" >                isPydFile = true;</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                importFailureInfo.push(`Partially resolved import with directory '${dirPath}'`);</span>
+<span class="cstat-no" title="statement not covered" >                resolvedPaths.push('');</span>
+<span class="cstat-no" title="statement not covered" >                isNamespacePackage = true;</span>
+            }
+&nbsp;
+            implicitImports = this._findImplicitImports(dirPath, [pyFilePath, pyiFilePath]);
+        } else {
+            for (let i = 0; i &lt; moduleDescriptor.nameParts.length; i++) {
+                const isLastPart = i === moduleDescriptor.nameParts.length - 1;
+                dirPath = combinePaths(dirPath, moduleDescriptor.nameParts[i]);
+                let foundDirectory = false;
+&nbsp;
+                if (allowStubsFolder) {
+                    // PEP 561 indicates that package authors can ship their stubs
+                    // separately from their package implementation by appending
+                    // the string '-stubs' to its top-level directory name. We'll
+                    // look there first.
+                    const stubsDirPath = dirPath + '-stubs';
+                    foundDirectory =
+                        this.fileSystem.existsSync(stubsDirPath) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >isDirectory(this.fileSystem, stubsDirPath);</span>
+                    <span class="missing-if-branch" title="if path not taken" >I</span>if (foundDirectory) {
+<span class="cstat-no" title="statement not covered" >                        dirPath = stubsDirPath;</span>
+                    }
+                }
+&nbsp;
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (!foundDirectory) {
+                    foundDirectory = this.fileSystem.existsSync(dirPath) &amp;&amp; isDirectory(this.fileSystem, dirPath);
+                }
+&nbsp;
+                if (foundDirectory) {
+                    if (!isLastPart) {
+                        // We are not at the last part, and we found a directory,
+                        // so continue to look for the next part.
+                        resolvedPaths.push('');
+                        continue;
+                    }
+&nbsp;
+                    // See if we can find an __init__.py[i] in this directory.
+                    const pyFilePath = combinePaths(dirPath, '__init__.py');
+                    const pyiFilePath = pyFilePath + 'i';
+                    let foundInit = false;
+&nbsp;
+                    if (this.fileSystem.existsSync(pyiFilePath) &amp;&amp; isFile(this.fileSystem, pyiFilePath)) {
+                        importFailureInfo.push(`Resolved import with file '${pyiFilePath}'`);
+                        resolvedPaths.push(pyiFilePath);
+                        <span class="missing-if-branch" title="else path not taken" >E</span>if (isLastPart) {
+                            isStubFile = true;
+                        }
+                        foundInit = true;
+                    } else if (this.fileSystem.existsSync(pyFilePath) &amp;&amp; isFile(this.fileSystem, pyFilePath)) {
+                        importFailureInfo.push(`Resolved import with file '${pyFilePath}'`);
+                        resolvedPaths.push(pyFilePath);
+                        foundInit = true;
+                    }
+&nbsp;
+                    if (foundInit) {
+                        implicitImports = this._findImplicitImports(dirPath, [pyFilePath, pyiFilePath]);
+                        break;
+                    }
+                }
+&nbsp;
+                // We weren't able to find a directory or we found a directory with
+                // no __init__.py[i] file. See if we can find a ".py" or ".pyi" file
+                // with this name.
+                const pyFilePath = stripTrailingDirectorySeparator(dirPath) + '.py';
+                const pyiFilePath = pyFilePath + 'i';
+                const pydFilePath = pyFilePath + 'd';
+&nbsp;
+                if (this.fileSystem.existsSync(pyiFilePath) &amp;&amp; isFile(this.fileSystem, pyiFilePath)) {
+                    importFailureInfo.push(`Resolved import with file '${pyiFilePath}'`);
+                    resolvedPaths.push(pyiFilePath);
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (isLastPart) {
+                        isStubFile = true;
+                    }
+                } else if (this.fileSystem.existsSync(pyFilePath) &amp;&amp; isFile(this.fileSystem, pyFilePath)) {
+                    importFailureInfo.push(`Resolved import with file '${pyFilePath}'`);
+                    resolvedPaths.push(pyFilePath);
+                } else <span class="missing-if-branch" title="if path not taken" >I</span>if (
+                    allowPydFile &amp;&amp;
+                    this.fileSystem.existsSync(pydFilePath) &amp;&amp;
+<span class="branch-2 cbranch-no" title="branch not covered" >                    isFile(this.fileSystem, pydFilePath)</span>
+                ) {
+<span class="cstat-no" title="statement not covered" >                    importFailureInfo.push(`Resolved import with file '${pydFilePath}'`);</span>
+<span class="cstat-no" title="statement not covered" >                    resolvedPaths.push(pydFilePath);</span>
+<span class="cstat-no" title="statement not covered" >                    if (isLastPart) {</span>
+<span class="cstat-no" title="statement not covered" >                        isPydFile = true;</span>
+                    }
+                } else if (foundDirectory) {
+                    importFailureInfo.push(`Partially resolved import with directory '${dirPath}'`);
+                    resolvedPaths.push('');
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (isLastPart) {
+                        implicitImports = this._findImplicitImports(dirPath, [pyFilePath, pyiFilePath]);
+                        isNamespacePackage = true;
+                    }
+                } else {
+                    importFailureInfo.push(
+                        `Did not find file '${pyiFilePath}',` + ` '${pyFilePath}' or '${pydFilePath}'`
+                    );
+                }
+                break;
+            }
+        }
+&nbsp;
+        let importFound: boolean;
+        if (allowPartial) {
+            importFound = resolvedPaths.length &gt; 0;
+        } else {
+            importFound = resolvedPaths.length &gt;= moduleDescriptor.nameParts.length;
+&nbsp;
+            // Empty namespace packages are not allowed.
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (isNamespacePackage &amp;&amp; implicitImports.length === 0) {
+<span class="cstat-no" title="statement not covered" >                importFound = false;</span>
+            }
+        }
+&nbsp;
+        return {
+            importName,
+            isRelative: false,
+            isImportFound: importFound,
+            importFailureInfo,
+            importType: ImportType.Local,
+            resolvedPaths,
+            searchPath: rootPath,
+            isStubFile,
+            isPydFile,
+            implicitImports
+        };
+    }
+&nbsp;
+    private _getCompletionSuggestionsAbsolute(
+        rootPath: string,
+        moduleDescriptor: ImportedModuleDescriptor,
+        suggestions: string[],
+        similarityLimit: number<span class="fstat-no" title="function not covered" ></span>
+    ) {
+        // Starting at the specified path, walk the file system to find the
+        // specified module.
+        let dirPath = <span class="cstat-no" title="statement not covered" >rootPath;</span>
+&nbsp;
+        // Copy the nameParts into a new directory and add an extra empty
+        // part if there is a trailing dot.
+        const nameParts = <span class="cstat-no" title="statement not covered" >moduleDescriptor.nameParts.map(name =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >name)</span></span>;</span>
+<span class="cstat-no" title="statement not covered" >        if (moduleDescriptor.hasTrailingDot) {</span>
+<span class="cstat-no" title="statement not covered" >            nameParts.push('');</span>
+        }
+&nbsp;
+        // Handle the case where the user has typed the first
+        // dot (or multiple) in a relative path.
+<span class="cstat-no" title="statement not covered" >        if (nameParts.length === 0) {</span>
+<span class="cstat-no" title="statement not covered" >            this._addFilteredSuggestions(dirPath, '', suggestions, similarityLimit);</span>
+        } else {
+<span class="cstat-no" title="statement not covered" >            for (let i = <span class="cstat-no" title="statement not covered" >0;</span> i &lt; nameParts.length; i++) {</span>
+                // Provide completions only if we're on the last part
+                // of the name.
+<span class="cstat-no" title="statement not covered" >                if (i === nameParts.length - 1) {</span>
+<span class="cstat-no" title="statement not covered" >                    this._addFilteredSuggestions(dirPath, nameParts[i], suggestions, similarityLimit);</span>
+                }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                dirPath = combinePaths(dirPath, nameParts[i]);</span>
+<span class="cstat-no" title="statement not covered" >                if (!this.fileSystem.existsSync(dirPath) || !isDirectory(this.fileSystem, dirPath)) {</span>
+<span class="cstat-no" title="statement not covered" >                    break;</span>
+                }
+            }
+        }
+    }
+&nbsp;
+    private _addFilteredSuggestions(dirPath: string, filter: string, suggestions: string[], similarityLimit: number<span class="fstat-no" title="function not covered" >) {</span>
+        const entries = <span class="cstat-no" title="statement not covered" >getFileSystemEntries(this.fileSystem, dirPath);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        entries.files.forEach(file =&gt;<span class="fstat-no" title="function not covered" > {</span></span>
+            const fileWithoutExtension = <span class="cstat-no" title="statement not covered" >stripFileExtension(file);</span>
+            const fileExtension = <span class="cstat-no" title="statement not covered" >getFileExtension(file);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            if (fileExtension === '.py' || fileExtension === '.pyi' || fileExtension === '.pyd') {</span>
+<span class="cstat-no" title="statement not covered" >                if (fileWithoutExtension !== '__init__') {</span>
+<span class="cstat-no" title="statement not covered" >                    if (</span>
+                        !filter ||
+                        StringUtils.computeCompletionSimilarity(filter, fileWithoutExtension) &gt;= similarityLimit
+                    ) {
+<span class="cstat-no" title="statement not covered" >                        this._addUniqueSuggestion(fileWithoutExtension, suggestions);</span>
+                    }
+                }
+            }
+        });
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        entries.directories.forEach(dir =&gt;<span class="fstat-no" title="function not covered" > {</span></span>
+<span class="cstat-no" title="statement not covered" >            if (!filter || dir.startsWith(filter)) {</span>
+<span class="cstat-no" title="statement not covered" >                this._addUniqueSuggestion(dir, suggestions);</span>
+            }
+        });
+    }
+&nbsp;
+    private _addUniqueSuggestion(suggestionToAdd: string, suggestions: string[]<span class="fstat-no" title="function not covered" >) {</span>
+<span class="cstat-no" title="statement not covered" >        if (suggestions.some(s =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >s === suggestionToAdd)</span></span>) {</span>
+<span class="cstat-no" title="statement not covered" >            return;</span>
+        }
+&nbsp;
+        // Don't add directories with illegal module names.
+<span class="cstat-no" title="statement not covered" >        if (/[.-]/.test(suggestionToAdd)) {</span>
+<span class="cstat-no" title="statement not covered" >            return;</span>
+        }
+&nbsp;
+        // Don't add directories with dunder names like "__pycache__".
+<span class="cstat-no" title="statement not covered" >        if (isDunderName(suggestionToAdd)) {</span>
+<span class="cstat-no" title="statement not covered" >            return;</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        suggestions.push(suggestionToAdd);</span>
+    }
+&nbsp;
+    // Potentially modifies the ImportResult by removing some or all of the
+    // implicit import entries. Only the imported symbols should be included.
+    private _filterImplicitImports(importResult: ImportResult, importedSymbols: string[] | undefined): ImportResult {
+        if (importedSymbols === undefined) {
+            const newImportResult = Object.assign({}, importResult);
+            newImportResult.implicitImports = [];
+            return newImportResult;
+        }
+&nbsp;
+        if (importedSymbols.length === 0) {
+            return importResult;
+        }
+&nbsp;
+        if (importResult.implicitImports.length === 0) {
+            return importResult;
+        }
+&nbsp;
+        const filteredImplicitImports = importResult.implicitImports.filter(implicitImport =&gt; {
+            return importedSymbols.some(sym =&gt; sym === implicitImport.name);
+        });
+&nbsp;
+        if (filteredImplicitImports.length === importResult.implicitImports.length) {
+            return importResult;
+        }
+&nbsp;
+        const newImportResult = Object.assign({}, importResult);
+        newImportResult.implicitImports = filteredImplicitImports;
+        return newImportResult;
+    }
+&nbsp;
+    private _findImplicitImports(dirPath: string, exclusions: string[]): ImplicitImport[] {
+        const implicitImportMap = new Map&lt;string, ImplicitImport&gt;();
+&nbsp;
+        // Enumerate all of the files and directories in the path.
+        const entries = getFileSystemEntries(this.fileSystem, dirPath);
+&nbsp;
+        // Add implicit file-based modules.
+        for (const fileName of entries.files) {
+            if (fileName.endsWith('.py') || fileName.endsWith('.pyi')) {
+                const filePath = combinePaths(dirPath, fileName);
+&nbsp;
+                if (!exclusions.find(exclusion =&gt; exclusion === filePath)) {
+                    const strippedFileName = stripFileExtension(fileName);
+                    const implicitImport: ImplicitImport = {
+                        isStubFile: fileName.endsWith('.pyi'),
+                        name: strippedFileName,
+                        path: filePath
+                    };
+&nbsp;
+                    // Always prefer stub files over non-stub files.
+                    const entry = implicitImportMap.get(implicitImport.name);
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (!entry || !entry.isStubFile) {
+                        implicitImportMap.set(implicitImport.name, implicitImport);
+                    }
+                }
+            }
+        }
+&nbsp;
+        // Add implicit directory-based modules.
+        for (const dirName of entries.directories) {
+            const pyFilePath = combinePaths(dirPath, dirName, '__init__.py');
+            const pyiFilePath = pyFilePath + 'i';
+            let isStubFile = false;
+            let path = '';
+&nbsp;
+            if (this.fileSystem.existsSync(pyiFilePath) &amp;&amp; isFile(this.fileSystem, pyiFilePath)) {
+                isStubFile = true;
+                path = pyiFilePath;
+            } else if (this.fileSystem.existsSync(pyFilePath) &amp;&amp; isFile(this.fileSystem, pyFilePath)) {
+                path = pyFilePath;
+            }
+&nbsp;
+            if (path) {
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (!exclusions.find(exclusion =&gt; exclusion === path)) {
+                    const implicitImport: ImplicitImport = {
+                        isStubFile,
+                        name: dirName,
+                        path
+                    };
+&nbsp;
+                    implicitImportMap.set(implicitImport.name, implicitImport);
+                }
+            }
+        }
+&nbsp;
+        return [...implicitImportMap.values()];
+    }
+&nbsp;
+    private _formatImportName(moduleDescriptor: ImportedModuleDescriptor) {
+        let name = '';
+        for (let i = 0; i &lt; moduleDescriptor.leadingDots; i++) {
+            name += '.';
+        }
+&nbsp;
+        return name + moduleDescriptor.nameParts.map(part =&gt; part).join('.');
+    }
+}
+&nbsp;
+export type ImportResolverFactory = (fs: VirtualFileSystem, options: ConfigOptions) =&gt; ImportResolver;
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

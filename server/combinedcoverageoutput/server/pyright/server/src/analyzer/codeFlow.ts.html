@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\codeFlow.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header high">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\codeFlow.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">100% <small>(35 / 35)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">100% <small>(8 / 8)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">100% <small>(4 / 4)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">100% <small>(35 / 35)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; codeFlow.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">945299</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">532871</span>
+<span class="cline-any cline-yes">532582</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">289</span>
+<span class="cline-any cline-yes">276</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">546112</span>
+<span class="cline-any cline-yes">545839</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">273</span>
+<span class="cline-any cline-yes">273</span>
+<span class="cline-any cline-yes">273</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">273</span>
+<span class="cline-any cline-yes">273</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">546112</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * codeFlow.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Data structures that track the code flow (or more accurately,
+ * the inverse of code flow) starting with return statements and
+ * working back to the entry. This allows us to work out the
+ * types at each point of the code flow.
+ *
+ * This is largely based on the code flow engine in the
+ * TypeScript compiler.
+ */
+&nbsp;
+import { assert } from '../common/debug';
+import {
+    CallNode,
+    ExpressionNode,
+    ImportFromNode,
+    MemberAccessNode,
+    NameNode,
+    ParseNodeType
+} from '../parser/parseNodes';
+&nbsp;
+export enum FlowFlags {
+    Unreachable = 1 &lt;&lt; 0, // Unreachable code
+    Start = 1 &lt;&lt; 1, // Entry point
+    BranchLabel = 1 &lt;&lt; 2, // Junction for forward control flow
+    LoopLabel = 1 &lt;&lt; 3, // Junction for backward control flow
+    Assignment = 1 &lt;&lt; 4, // Assignment statement
+    Unbind = 1 &lt;&lt; 5, // Used with assignment to indicate target should be unbound
+    WildcardImport = 1 &lt;&lt; 6, // For "from X import *" statements
+    TrueCondition = 1 &lt;&lt; 7, // Condition known to be true
+    FalseCondition = 1 &lt;&lt; 9, // Condition known to be false
+    Call = 1 &lt;&lt; 10, // Call node
+    PreFinallyGate = 1 &lt;&lt; 11, // Injected edge that links pre-finally label and pre-try flow
+    PostFinally = 1 &lt;&lt; 12, // Injected edge that links post-finally flow with the rest of the graph
+    AssignmentAlias = 1 &lt;&lt; 13 // Assigned symbol is aliased to another symbol with the same name
+}
+&nbsp;
+let _nextFlowNodeId = 1;
+&nbsp;
+export function getUniqueFlowNodeId() {
+    return _nextFlowNodeId++;
+}
+&nbsp;
+export interface FlowNode {
+    flags: FlowFlags;
+    id: number;
+}
+&nbsp;
+// FlowLabel represents a junction with multiple possible
+// preceding control flows.
+export interface FlowLabel extends FlowNode {
+    antecedents: FlowNode[];
+}
+&nbsp;
+// FlowAssignment represents a node that assigns a value.
+export interface FlowAssignment extends FlowNode {
+    node: NameNode | MemberAccessNode;
+    antecedent: FlowNode;
+    targetSymbolId: number;
+}
+&nbsp;
+// FlowAssignmentAlias handles a case where a symbol
+// takes on the value of a symbol with the same name
+// but within an outer scope, such as when a variable
+// is references within a list comprehension iteration
+// expression before the result is assigned to a
+// local variable of the same name.
+export interface FlowAssignmentAlias extends FlowNode {
+    antecedent: FlowNode;
+    targetSymbolId: number;
+    aliasSymbolId: number;
+}
+&nbsp;
+// Similar to FlowAssignment but used specifically for
+// wildcard "from X import *" statements.
+export interface FlowWildcardImport extends FlowNode {
+    node: ImportFromNode;
+    names: string[];
+    antecedent: FlowNode;
+}
+&nbsp;
+// FlowCondition represents a condition that is known to
+// be true or false at the node's location in the control flow.
+export interface FlowCondition extends FlowNode {
+    expression: ExpressionNode;
+    antecedent: FlowNode;
+}
+&nbsp;
+// Records a call, which may raise exceptions, thus affecting
+// the code flow and making subsequent code unreachable.
+export interface FlowCall extends FlowNode {
+    node: CallNode;
+    antecedent: FlowNode;
+}
+&nbsp;
+// See comment in the visitTry method in binder.ts for a full
+// explanation of the FlowPreFinally and FlowPostFinally nodes.
+export interface FlowPreFinallyGate extends FlowNode {
+    antecedent: FlowNode;
+    isGateClosed: boolean;
+}
+&nbsp;
+export interface FlowPostFinally extends FlowNode {
+    antecedent: FlowNode;
+    preFinallyGate: FlowPreFinallyGate;
+}
+&nbsp;
+export function isCodeFlowSupportedForReference(reference: ExpressionNode): boolean {
+    if (reference.nodeType === ParseNodeType.Name) {
+        return true;
+    }
+&nbsp;
+    if (reference.nodeType === ParseNodeType.MemberAccess) {
+        return isCodeFlowSupportedForReference(reference.leftExpression);
+    }
+&nbsp;
+    return false;
+}
+&nbsp;
+export function createKeyForReference(reference: NameNode | MemberAccessNode): string {
+    let key;
+    if (reference.nodeType === ParseNodeType.Name) {
+        key = reference.value;
+    } else {
+        key = reference.memberName.value;
+        let leftNode = reference.leftExpression;
+        while (leftNode.nodeType === ParseNodeType.MemberAccess) {
+            key = leftNode.memberName.value + `.${key}`;
+            leftNode = leftNode.leftExpression;
+        }
+        assert(leftNode.nodeType === ParseNodeType.Name);
+        key = (leftNode as NameNode).value + `.${key}`;
+    }
+&nbsp;
+    return key;
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

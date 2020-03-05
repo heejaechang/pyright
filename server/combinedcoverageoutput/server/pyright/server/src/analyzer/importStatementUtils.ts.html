@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\importStatementUtils.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header low">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\importStatementUtils.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">41.88% <small>(49 / 117)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">28.41% <small>(25 / 88)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">72.73% <small>(8 / 11)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">41.23% <small>(47 / 114)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; importStatementUtils.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-yes">1484</span>
+<span class="cline-any cline-yes">972</span>
+<span class="cline-any cline-yes">972</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">944</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">802</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">512</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-yes">24</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23</span>
+<span class="cline-any cline-yes">21</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-yes">141</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">142</span>
+<span class="cline-any cline-yes">141</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">141</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">140</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">170</span>
+<span class="cline-any cline-yes">170</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">172</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">170</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * importStatementUtils.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Utility routines for summarizing and manipulating
+ * import statements in a python source file.
+ */
+&nbsp;
+import { TextEditAction } from '../common/editAction';
+import { convertOffsetToPosition } from '../common/positionUtils';
+import { Position } from '../common/textRange';
+import { TextRange } from '../common/textRange';
+import {
+    ImportAsNode,
+    ImportFromAsNode,
+    ImportFromNode,
+    ImportNode,
+    ModuleNameNode,
+    ModuleNode,
+    ParseNodeType
+} from '../parser/parseNodes';
+import { ParseResults } from '../parser/parser';
+import * as AnalyzerNodeInfo from './analyzerNodeInfo';
+import { ImportResult, ImportType } from './importResult';
+import * as SymbolNameUtils from './symbolNameUtils';
+&nbsp;
+export interface ImportStatement {
+    node: ImportNode | ImportFromNode;
+    subnode?: ImportAsNode;
+    importResult: ImportResult | undefined;
+    resolvedPath: string | undefined;
+    moduleName: string;
+    followsNonImportStatement: boolean;
+}
+&nbsp;
+export interface ImportStatements {
+    orderedImports: ImportStatement[];
+    mapByFilePath: Map&lt;string, ImportStatement&gt;;
+}
+&nbsp;
+// Looks for top-level 'import' and 'import from' statements and provides
+// an ordered list and a map (by file path).
+export function getTopLevelImports(parseTree: ModuleNode): ImportStatements {
+    const localImports: ImportStatements = {
+        orderedImports: [],
+        mapByFilePath: new Map&lt;string, ImportStatement&gt;()
+    };
+&nbsp;
+    let followsNonImportStatement = false;
+    let foundFirstImportStatement = false;
+&nbsp;
+    parseTree.statements.forEach(statement =&gt; {
+        if (statement.nodeType === ParseNodeType.StatementList) {
+            statement.statements.forEach(subStatement =&gt; {
+                if (subStatement.nodeType === ParseNodeType.Import) {
+                    foundFirstImportStatement = true;
+                    _processImportNode(subStatement, localImports, followsNonImportStatement);
+                    followsNonImportStatement = false;
+                } else if (subStatement.nodeType === ParseNodeType.ImportFrom) {
+                    foundFirstImportStatement = true;
+                    _processImportFromNode(subStatement, localImports, followsNonImportStatement);
+                    followsNonImportStatement = false;
+                } else {
+                    followsNonImportStatement = foundFirstImportStatement;
+                }
+            });
+        } else {
+            followsNonImportStatement = foundFirstImportStatement;
+        }
+    });
+&nbsp;
+    return localImports;
+}
+&nbsp;
+export function getTextEditsForAutoImportSymbolAddition(
+    symbolName: string,
+    importStatement: ImportStatement,
+    parseResults: ParseResults<span class="fstat-no" title="function not covered" ></span>
+) {
+    const textEditList: TextEditAction[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+    // Scan through the import symbols to find the right insertion point,
+    // assuming we want to keep the imports alphabetized.
+    let priorImport: ImportFromAsNode | undefined;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    if (importStatement.node &amp;&amp; importStatement.node.nodeType === ParseNodeType.ImportFrom) {</span>
+        // Make sure we're not attempting to auto-import a symbol that
+        // already exists in the import list.
+<span class="cstat-no" title="statement not covered" >        if (!importStatement.node.imports.some(importAs =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >importAs.name.value === symbolName)</span></span>) {</span>
+<span class="cstat-no" title="statement not covered" >            for (const curImport of importStatement.node.imports) {</span>
+<span class="cstat-no" title="statement not covered" >                if (curImport.name.value &gt; symbolName) {</span>
+<span class="cstat-no" title="statement not covered" >                    break;</span>
+                }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                priorImport = curImport;</span>
+            }
+&nbsp;
+            const insertionOffset = <span class="cstat-no" title="statement not covered" >priorImport</span>
+                ? TextRange.getEnd(priorImport)
+                : importStatement.node.imports.length &gt; 0
+                ? importStatement.node.imports[0].start
+                : importStatement.node.start + importStatement.node.length;
+            const insertionPosition = <span class="cstat-no" title="statement not covered" >convertOffsetToPosition(insertionOffset, parseResults.tokenizerOutput.lines);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            textEditList.push({</span>
+                range: { start: insertionPosition, end: insertionPosition },
+                replacementText: priorImport ? ', ' + symbolName : symbolName + ', '
+            });
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return textEditList;</span>
+}
+&nbsp;
+export function getTextEditsForAutoImportInsertion(
+    symbolName: string,
+    importStatements: ImportStatements,
+    moduleName: string,
+    importType: ImportType,
+    parseResults: ParseResults<span class="fstat-no" title="function not covered" ></span>
+): TextEditAction[] {
+    const textEditList: TextEditAction[] = <span class="cstat-no" title="statement not covered" >[];</span>
+&nbsp;
+    // We need to emit a new 'from import' statement.
+    let newImportStatement = <span class="cstat-no" title="statement not covered" >`from ${moduleName} import ${symbolName}`;</span>
+    let insertionPosition: Position;
+<span class="cstat-no" title="statement not covered" >    if (importStatements.orderedImports.length &gt; 0) {</span>
+        let insertBefore = <span class="cstat-no" title="statement not covered" >true;</span>
+        let insertionImport = <span class="cstat-no" title="statement not covered" >importStatements.orderedImports[0];</span>
+&nbsp;
+        // Find a good spot to insert the new import statement. Follow
+        // the PEP8 standard sorting order whereby built-in imports are
+        // followed by third-party, which are followed by local.
+        let prevImportType<span class="cstat-no" title="statement not covered" > = ImportType.BuiltIn;</span>
+<span class="cstat-no" title="statement not covered" >        for (const curImport of importStatements.orderedImports) {</span>
+            // If the import was resolved, use its import type. If it wasn't
+            // resolved, assume that it's the same import type as the previous
+            // one.
+            const curImportType: ImportType = <span class="cstat-no" title="statement not covered" >curImport.importResult</span>
+                ? curImport.importResult.importType
+                : prevImportType;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            if (importType &lt; curImportType) {</span>
+<span class="cstat-no" title="statement not covered" >                if (!insertBefore &amp;&amp; prevImportType &lt; importType) {</span>
+                    // Add an extra line to create a new group.
+<span class="cstat-no" title="statement not covered" >                    newImportStatement = parseResults.tokenizerOutput.predominantEndOfLineSequence + newImportStatement;</span>
+                }
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            if (importType === curImportType &amp;&amp; curImport.moduleName &gt; moduleName) {</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            }
+&nbsp;
+            // If we're about to hit the end of the import statements, don't go
+            // any further.
+<span class="cstat-no" title="statement not covered" >            if (curImport.followsNonImportStatement) {</span>
+<span class="cstat-no" title="statement not covered" >                if (importType &gt; prevImportType) {</span>
+                    // Add an extra line to create a new group.
+<span class="cstat-no" title="statement not covered" >                    newImportStatement = parseResults.tokenizerOutput.predominantEndOfLineSequence + newImportStatement;</span>
+                }
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            }
+&nbsp;
+            // If this is the last import, see if we need to create a new group.
+<span class="cstat-no" title="statement not covered" >            if (curImport === importStatements.orderedImports[importStatements.orderedImports.length - 1]) {</span>
+<span class="cstat-no" title="statement not covered" >                if (importType &gt; curImportType) {</span>
+                    // Add an extra line to create a new group.
+<span class="cstat-no" title="statement not covered" >                    newImportStatement = parseResults.tokenizerOutput.predominantEndOfLineSequence + newImportStatement;</span>
+                }
+            }
+&nbsp;
+            // Are we starting a new group?
+<span class="cstat-no" title="statement not covered" >            if (!insertBefore &amp;&amp; importType &lt; prevImportType &amp;&amp; importType === curImportType) {</span>
+<span class="cstat-no" title="statement not covered" >                insertBefore = true;</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                insertBefore = false;</span>
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            prevImportType = curImportType;</span>
+<span class="cstat-no" title="statement not covered" >            insertionImport = curImport;</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (insertionImport) {</span>
+<span class="cstat-no" title="statement not covered" >            if (insertBefore) {</span>
+<span class="cstat-no" title="statement not covered" >                newImportStatement = newImportStatement + parseResults.tokenizerOutput.predominantEndOfLineSequence;</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                newImportStatement = parseResults.tokenizerOutput.predominantEndOfLineSequence + newImportStatement;</span>
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            insertionPosition = convertOffsetToPosition(</span>
+                insertBefore ? insertionImport.node.start : TextRange.getEnd(insertionImport.node),
+                parseResults.tokenizerOutput.lines
+            );
+        } else {
+<span class="cstat-no" title="statement not covered" >            insertionPosition = { line: 0, character: 0 };</span>
+        }
+    } else {
+        // Insert at or near the top of the file. See if there's a doc string and
+        // copyright notice, etc. at the top. If so, move past those.
+<span class="cstat-no" title="statement not covered" >        insertionPosition = { line: 0, character: 0 };</span>
+        let addNewLineBefore = <span class="cstat-no" title="statement not covered" >false;</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        for (const statement of parseResults.parseTree.statements) {</span>
+            let stopHere = <span class="cstat-no" title="statement not covered" >true;</span>
+<span class="cstat-no" title="statement not covered" >            if (statement.nodeType === ParseNodeType.StatementList &amp;&amp; statement.statements.length === 1) {</span>
+                const simpleStatement = <span class="cstat-no" title="statement not covered" >statement.statements[0];</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                if (simpleStatement.nodeType === ParseNodeType.StringList) {</span>
+                    // Assume that it's a file header doc string.
+<span class="cstat-no" title="statement not covered" >                    stopHere = false;</span>
+                } else <span class="cstat-no" title="statement not covered" >if (simpleStatement.nodeType === ParseNodeType.Assignment) {</span>
+<span class="cstat-no" title="statement not covered" >                    if (simpleStatement.leftExpression.nodeType === ParseNodeType.Name) {</span>
+<span class="cstat-no" title="statement not covered" >                        if (SymbolNameUtils.isDunderName(simpleStatement.leftExpression.value)) {</span>
+                            // Assume that it's an assignment of __copyright__, __author__, etc.
+<span class="cstat-no" title="statement not covered" >                            stopHere = false;</span>
+                        }
+                    }
+                }
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            if (stopHere) {</span>
+<span class="cstat-no" title="statement not covered" >                insertionPosition = convertOffsetToPosition(statement.start, parseResults.tokenizerOutput.lines);</span>
+<span class="cstat-no" title="statement not covered" >                addNewLineBefore = false;</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                insertionPosition = convertOffsetToPosition(</span>
+                    statement.start + statement.length,
+                    parseResults.tokenizerOutput.lines
+                );
+<span class="cstat-no" title="statement not covered" >                addNewLineBefore = true;</span>
+            }
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        newImportStatement +=</span>
+            parseResults.tokenizerOutput.predominantEndOfLineSequence +
+            parseResults.tokenizerOutput.predominantEndOfLineSequence;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        if (addNewLineBefore) {</span>
+<span class="cstat-no" title="statement not covered" >            newImportStatement = parseResults.tokenizerOutput.predominantEndOfLineSequence + newImportStatement;</span>
+        } else {
+<span class="cstat-no" title="statement not covered" >            newImportStatement += parseResults.tokenizerOutput.predominantEndOfLineSequence;</span>
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    textEditList.push({</span>
+        range: { start: insertionPosition, end: insertionPosition },
+        replacementText: newImportStatement
+    });
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return textEditList;</span>
+}
+&nbsp;
+function _processImportNode(node: ImportNode, localImports: ImportStatements, followsNonImportStatement: boolean) {
+    node.list.forEach(importAsNode =&gt; {
+        const importResult = AnalyzerNodeInfo.getImportInfo(importAsNode.module);
+        let resolvedPath: string | undefined;
+&nbsp;
+        if (importResult &amp;&amp; importResult.isImportFound) {
+            resolvedPath = importResult.resolvedPaths[importResult.resolvedPaths.length - 1];
+        }
+&nbsp;
+        const localImport: ImportStatement = {
+            node,
+            subnode: importAsNode,
+            importResult,
+            resolvedPath,
+            moduleName: _formatModuleName(importAsNode.module),
+            followsNonImportStatement
+        };
+&nbsp;
+        localImports.orderedImports.push(localImport);
+&nbsp;
+        // Add it to the map.
+        if (resolvedPath) {
+            // Don't overwrite existing import or import from statements
+            // because we always want to prefer 'import from' over 'import'
+            // in the map.
+            if (!localImports.mapByFilePath.has(resolvedPath)) {
+                localImports.mapByFilePath.set(resolvedPath, localImport);
+            }
+        }
+    });
+}
+&nbsp;
+function _processImportFromNode(
+    node: ImportFromNode,
+    localImports: ImportStatements,
+    followsNonImportStatement: boolean
+) {
+    const importResult = AnalyzerNodeInfo.getImportInfo(node.module);
+    let resolvedPath: string | undefined;
+&nbsp;
+    if (importResult &amp;&amp; importResult.isImportFound) {
+        resolvedPath = importResult.resolvedPaths[importResult.resolvedPaths.length - 1];
+    }
+&nbsp;
+    const localImport: ImportStatement = {
+        node,
+        importResult,
+        resolvedPath,
+        moduleName: _formatModuleName(node.module),
+        followsNonImportStatement
+    };
+&nbsp;
+    localImports.orderedImports.push(localImport);
+&nbsp;
+    // Add it to the map.
+    if (resolvedPath) {
+        const prevEntry = localImports.mapByFilePath.get(resolvedPath);
+        // Overwrite existing import statements because we always want to prefer
+        // 'import from' over 'import'. Also, overwrite existing 'import from' if
+        // the module name is shorter.
+        if (
+            !prevEntry ||
+            prevEntry.node.nodeType === ParseNodeType.Import ||
+            prevEntry.moduleName.length &gt; localImport.moduleName.length
+        ) {
+            localImports.mapByFilePath.set(resolvedPath, localImport);
+        }
+    }
+}
+&nbsp;
+function _formatModuleName(node: ModuleNameNode): string {
+    let moduleName = '';
+    for (let i = 0; i &lt; node.leadingDots; i++) {
+        moduleName = moduleName + '.';
+    }
+&nbsp;
+    moduleName += node.nameParts.map(part =&gt; part.value).join('.');
+&nbsp;
+    return moduleName;
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

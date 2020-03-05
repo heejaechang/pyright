@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\common\debug.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\common\debug.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">66.67% <small>(38 / 57)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">53.85% <small>(28 / 52)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">100% <small>(9 / 9)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">66.07% <small>(37 / 56)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/common/</a> &#187; debug.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3821824</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">103</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">101</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * debug.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ *
+ * Various debug helper methods to show user friendly debugging info
+ */
+&nbsp;
+import { stableSort } from './collectionUtils';
+import { AnyFunction, compareValues, hasProperty } from './core';
+&nbsp;
+export function assert(
+    expression: boolean,
+    message?: string,
+    verboseDebugInfo?: string | (() =&gt; string),
+    stackCrawlMark?: AnyFunction
+): void {
+    if (!expression) {
+        if (verboseDebugInfo) {
+            message +=
+                '\r\nVerbose Debug Information: ' +
+                (typeof verboseDebugInfo === 'string' ? <span class="branch-0 cbranch-no" title="branch not covered" >verboseDebugInfo </span>: verboseDebugInfo());
+        }
+        fail(message ? 'False expression: ' + message : <span class="branch-1 cbranch-no" title="branch not covered" >'False expression.',</span> stackCrawlMark || assert);
+    }
+}
+&nbsp;
+export function fail(message?: string, stackCrawlMark?: AnyFunction): never {
+    // debugger;
+    const e = new Error(message ? `Debug Failure. ${message}` : 'Debug Failure.');
+    <span class="missing-if-branch" title="else path not taken" >E</span>if ((Error as any).captureStackTrace) {
+        (Error as any).captureStackTrace(e, stackCrawlMark || fail);
+    }
+    throw e;
+}
+&nbsp;
+export function assertDefined&lt;T&gt;(value: T | null | undefined, message?: string): T {
+    if (value === undefined || value === null) {
+        return fail(message);
+    }
+    return value;
+}
+&nbsp;
+export function assertEachDefined&lt;T, A extends readonly T[]&gt;(value: A, message?: string): A {
+    for (const v of value) {
+        assertDefined(v, message);
+    }
+    return value;
+}
+&nbsp;
+export function assertNever(member: never, message = 'Illegal value:', stackCrawlMark?: AnyFunction): never {
+    const detail = JSON.stringify(member);
+    return fail(`${message} ${detail}`, stackCrawlMark || assertNever);
+}
+&nbsp;
+export function getFunctionName(func: AnyFunction) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof func !== 'function') {
+<span class="cstat-no" title="statement not covered" >        return '';</span>
+    } else <span class="missing-if-branch" title="else path not taken" >E</span>if (hasProperty(func, 'name')) {
+        return (func as any).name;
+    } else {
+        const text = <span class="cstat-no" title="statement not covered" >Function.prototype.toString.call(func);</span>
+        const match = <span class="cstat-no" title="statement not covered" >/^function\s+([\w$]+)\s*\(/.exec(text);</span>
+<span class="cstat-no" title="statement not covered" >        return match ? match[1] : '';</span>
+    }
+}
+&nbsp;
+/**
+ * Formats an enum value as a string for debugging and debug assertions.
+ */
+export function formatEnum(value = 0, enumObject: any, isFlags?: boolean) {
+    const members = getEnumMembers(enumObject);
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (value === 0) {
+        return members.length &gt; 0 &amp;&amp; members[0][0] === 0 ? members[0][1] : <span class="branch-1 cbranch-no" title="branch not covered" >'0';</span>
+    }
+<span class="cstat-no" title="statement not covered" >    if (isFlags) {</span>
+        let result = <span class="cstat-no" title="statement not covered" >'';</span>
+        let remainingFlags = <span class="cstat-no" title="statement not covered" >value;</span>
+<span class="cstat-no" title="statement not covered" >        for (const [enumValue, enumName] of members) {</span>
+<span class="cstat-no" title="statement not covered" >            if (enumValue &gt; value) {</span>
+<span class="cstat-no" title="statement not covered" >                break;</span>
+            }
+<span class="cstat-no" title="statement not covered" >            if (enumValue !== 0 &amp;&amp; enumValue &amp; value) {</span>
+<span class="cstat-no" title="statement not covered" >                result = `${result}${result ? '|' : ''}${enumName}`;</span>
+<span class="cstat-no" title="statement not covered" >                remainingFlags &amp;= ~enumValue;</span>
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        if (remainingFlags === 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return result;</span>
+        }
+    } else {
+<span class="cstat-no" title="statement not covered" >        for (const [enumValue, enumName] of members) {</span>
+<span class="cstat-no" title="statement not covered" >            if (enumValue === value) {</span>
+<span class="cstat-no" title="statement not covered" >                return enumName;</span>
+            }
+        }
+    }
+<span class="cstat-no" title="statement not covered" >    return value.toString();</span>
+}
+&nbsp;
+function getEnumMembers(enumObject: any) {
+    const result: [number, string][] = [];
+    for (const name of Object.keys(enumObject)) {
+        const value = enumObject[name];
+        if (typeof value === 'number') {
+            result.push([value, name]);
+        }
+    }
+&nbsp;
+    return stableSort&lt;[number, string]&gt;(result, (x, y) =&gt; compareValues(x[0], y[0]));
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

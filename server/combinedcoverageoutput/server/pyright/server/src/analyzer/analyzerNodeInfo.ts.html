@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\analyzerNodeInfo.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header high">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\analyzerNodeInfo.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">89.66% <small>(52 / 58)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">100% <small>(2 / 2)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">93.75% <small>(15 / 16)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">89.66% <small>(52 / 58)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; analyzerNodeInfo.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">5299</span>
+<span class="cline-any cline-yes">5299</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">2776</span>
+<span class="cline-any cline-yes">2776</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">210312</span>
+<span class="cline-any cline-yes">210312</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">192269</span>
+<span class="cline-any cline-yes">192269</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">5493</span>
+<span class="cline-any cline-yes">5493</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">509609</span>
+<span class="cline-any cline-yes">509609</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">44510</span>
+<span class="cline-any cline-yes">44510</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">1741558</span>
+<span class="cline-any cline-yes">1741558</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">878</span>
+<span class="cline-any cline-yes">878</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">329958</span>
+<span class="cline-any cline-yes">329958</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">44713</span>
+<span class="cline-any cline-yes">44713</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">697</span>
+<span class="cline-any cline-yes">697</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">7432</span>
+<span class="cline-any cline-yes">7432</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">165706</span>
+<span class="cline-any cline-yes">165706</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">17713</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17713</span>
+<span class="cline-any cline-yes">37847</span>
+<span class="cline-any cline-yes">37847</span>
+<span class="cline-any cline-yes">17711</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">20136</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * analyzerNodeInfo.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Defines objects that hang off the parse nodes in the parse tree.
+ * It contains information collected during the binder phase that
+ * can be used for later analysis steps or for language services
+ * (e.g. hover information).
+ */
+&nbsp;
+import {
+    ClassNode,
+    ExecutionScopeNode,
+    FunctionNode,
+    LambdaNode,
+    ListComprehensionNode,
+    ModuleNode,
+    ParseNode
+} from '../parser/parseNodes';
+import { AnalyzerFileInfo } from './analyzerFileInfo';
+import { FlowFlags, FlowNode } from './codeFlow';
+import { Declaration } from './declaration';
+import { ImportResult } from './importResult';
+import { Scope } from './scope';
+&nbsp;
+interface AnalyzerNodeInfo {
+    //---------------------------------------------------------------
+    // Set as part of import resolution
+&nbsp;
+    // Information about an import; used for import nodes only.
+    importInfo?: ImportResult;
+&nbsp;
+    //---------------------------------------------------------------
+    // Set by Binder
+&nbsp;
+    // Scope for nodes that introduce scopes: modules, functions,
+    // classes, lambdas, and list comprehensions. A scope is used
+    // to store symbol names and their associated types and declarations.
+    scope?: Scope;
+&nbsp;
+    // Declaration (for functions and classes only).
+    declaration?: Declaration;
+&nbsp;
+    // Control flow information for this node.
+    flowNode?: FlowNode;
+&nbsp;
+    // Control flow information at the end of this node.
+    afterFlowNode?: FlowNode;
+&nbsp;
+    // Info about the source file, used only on module nodes.
+    fileInfo?: AnalyzerFileInfo;
+&nbsp;
+    // Map of expressions used within an execution scope (module,
+    // function or lambda) that requires code flow analysis.
+    codeFlowExpressions?: Map&lt;string, string&gt;;
+}
+&nbsp;
+export type ScopedNode = ModuleNode | ClassNode | FunctionNode | LambdaNode | ListComprehensionNode;
+&nbsp;
+// Cleans out all fields that are added by the analyzer phases
+// (after the post-parse walker).
+export function cleanNodeAnalysisInfo(node: ParseNode<span class="fstat-no" title="function not covered" >) {</span>
+    const analyzerNode = <span class="cstat-no" title="statement not covered" >node as AnalyzerNodeInfo;</span>
+<span class="cstat-no" title="statement not covered" >    delete analyzerNode.scope;</span>
+<span class="cstat-no" title="statement not covered" >    delete analyzerNode.declaration;</span>
+<span class="cstat-no" title="statement not covered" >    delete analyzerNode.flowNode;</span>
+<span class="cstat-no" title="statement not covered" >    delete analyzerNode.afterFlowNode;</span>
+<span class="cstat-no" title="statement not covered" >    delete analyzerNode.fileInfo;</span>
+}
+&nbsp;
+export function getImportInfo(node: ParseNode): ImportResult | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.importInfo;
+}
+&nbsp;
+export function setImportInfo(node: ParseNode, importInfo: ImportResult) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.importInfo = importInfo;
+}
+&nbsp;
+export function getScope(node: ParseNode): Scope | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.scope;
+}
+&nbsp;
+export function setScope(node: ParseNode, scope: Scope) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.scope = scope;
+}
+&nbsp;
+export function getDeclaration(node: ParseNode): Declaration | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.declaration;
+}
+&nbsp;
+export function setDeclaration(node: ParseNode, decl: Declaration) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.declaration = decl;
+}
+&nbsp;
+export function getFlowNode(node: ParseNode): FlowNode | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.flowNode;
+}
+&nbsp;
+export function setFlowNode(node: ParseNode, flowNode: FlowNode) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.flowNode = flowNode;
+}
+&nbsp;
+export function getAfterFlowNode(node: ParseNode): FlowNode | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.afterFlowNode;
+}
+&nbsp;
+export function setAfterFlowNode(node: ParseNode, flowNode: FlowNode) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.afterFlowNode = flowNode;
+}
+&nbsp;
+export function getFileInfo(node: ModuleNode): AnalyzerFileInfo | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.fileInfo;
+}
+&nbsp;
+export function setFileInfo(node: ModuleNode, fileInfo: AnalyzerFileInfo) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.fileInfo = fileInfo;
+}
+&nbsp;
+export function getCodeFlowExpressions(node: ExecutionScopeNode): Map&lt;string, string&gt; | undefined {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    return analyzerNode.codeFlowExpressions;
+}
+&nbsp;
+export function setCodeFlowExpressions(node: ExecutionScopeNode, map: Map&lt;string, string&gt;) {
+    const analyzerNode = node as AnalyzerNodeInfo;
+    analyzerNode.codeFlowExpressions = map;
+}
+&nbsp;
+export function isCodeUnreachable(node: ParseNode): boolean {
+    let curNode: ParseNode | undefined = node;
+&nbsp;
+    // Walk up the parse tree until we find a node with
+    // an associated flow node.
+    while (curNode) {
+        const flowNode = getFlowNode(curNode);
+        if (flowNode) {
+            return !!(flowNode.flags &amp; FlowFlags.Unreachable);
+        }
+        curNode = curNode.parent;
+    }
+&nbsp;
+    return false;
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

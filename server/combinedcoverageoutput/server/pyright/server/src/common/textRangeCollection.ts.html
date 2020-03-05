@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\common\textRangeCollection.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header low">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\common\textRangeCollection.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">48.98% <small>(24 / 49)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">41.03% <small>(16 / 39)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">77.78% <small>(7 / 9)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">48.98% <small>(24 / 49)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/common/</a> &#187; textRangeCollection.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1654</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2221709</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4443444</span>
+<span class="cline-any cline-yes">4443444</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110855</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">57541861</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47074536</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47074536</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-yes">10435887</span>
+<span class="cline-any cline-yes">10435887</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10435887</span>
+<span class="cline-any cline-yes">1110854</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9325033</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9325033</span>
+<span class="cline-any cline-yes">4477154</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4847879</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * textRangeCollection.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Based on code from vscode-python repository:
+ *  https://github.com/Microsoft/vscode-python
+ *
+ * Class that maintains an ordered list of text ranges and allows
+ * for indexing and fast lookups within this list.
+ */
+&nbsp;
+import { TextRange } from './textRange';
+&nbsp;
+export class TextRangeCollection&lt;T extends TextRange&gt; {
+    private _items: T[];
+&nbsp;
+    constructor(items: T[]) {
+        this._items = items;
+    }
+&nbsp;
+    get start(): number {
+        return this._items.length &gt; 0 ? this._items[0].start : <span class="branch-1 cbranch-no" title="branch not covered" >0;</span>
+    }
+&nbsp;
+    get end(): number {
+        const lastItem = this._items[this._items.length - 1];
+        return this._items.length &gt; 0 ? lastItem.start + lastItem.length : <span class="branch-1 cbranch-no" title="branch not covered" >0;</span>
+    }
+&nbsp;
+    get length(): number {
+        return this.end - this.start;
+    }
+&nbsp;
+    get count(): number {
+        return this._items.length;
+    }
+&nbsp;
+    contains(position: number<span class="fstat-no" title="function not covered" >) {</span>
+<span class="cstat-no" title="statement not covered" >        return position &gt;= this.start &amp;&amp; position &lt; this.end;</span>
+    }
+&nbsp;
+    getItemAt(index: number): T {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (index &lt; 0 || index &gt;= this._items.length) {
+<span class="cstat-no" title="statement not covered" >            throw new Error('index is out of range');</span>
+        }
+        return this._items[index];
+    }
+&nbsp;
+    // Returns the nearest item prior to the position.
+    // The position may not be contained within the item.
+    getItemAtPosition(position: number<span class="fstat-no" title="function not covered" >): number {</span>
+<span class="cstat-no" title="statement not covered" >        if (this.count === 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+<span class="cstat-no" title="statement not covered" >        if (position &lt; this.start) {</span>
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+<span class="cstat-no" title="statement not covered" >        if (position &gt; this.end) {</span>
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+&nbsp;
+        let min = <span class="cstat-no" title="statement not covered" >0;</span>
+        let max = <span class="cstat-no" title="statement not covered" >this.count - 1;</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        while (min &lt; max) {</span>
+            const mid = <span class="cstat-no" title="statement not covered" >Math.floor(min + (max - min) / 2);</span>
+            const item = <span class="cstat-no" title="statement not covered" >this._items[mid];</span>
+&nbsp;
+            // Is the position past the start of this item but before
+            // the start of the next item? If so, we found our item.
+<span class="cstat-no" title="statement not covered" >            if (position &gt;= item.start) {</span>
+<span class="cstat-no" title="statement not covered" >                if (mid &gt;= this.count - 1 || position &lt; this._items[mid + 1].start) {</span>
+<span class="cstat-no" title="statement not covered" >                    return mid;</span>
+                }
+            }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            if (position &lt; item.start) {</span>
+<span class="cstat-no" title="statement not covered" >                max = mid - 1;</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                min = mid + 1;</span>
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        return min;</span>
+    }
+&nbsp;
+    getItemContaining(position: number): number {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (this.count === 0) {
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (position &lt; this.start) {
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (position &gt; this.end) {
+<span class="cstat-no" title="statement not covered" >            return -1;</span>
+        }
+&nbsp;
+        let min = 0;
+        let max = this.count - 1;
+&nbsp;
+        while (min &lt;= max) {
+            const mid = Math.floor(min + (max - min) / 2);
+            const item = this._items[mid];
+&nbsp;
+            if (TextRange.contains(item, position)) {
+                return mid;
+            }
+&nbsp;
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (mid &lt; this.count - 1 &amp;&amp; TextRange.getEnd(item) &lt;= position &amp;&amp; position &lt; this._items[mid + 1].start) {
+<span class="cstat-no" title="statement not covered" >                return -1;</span>
+            }
+&nbsp;
+            if (position &lt; item.start) {
+                max = mid - 1;
+            } else {
+                min = mid + 1;
+            }
+        }
+<span class="cstat-no" title="statement not covered" >        return -1;</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

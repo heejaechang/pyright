@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\common\stringUtils.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\common\stringUtils.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">52.78% <small>(19 / 36)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">50% <small>(8 / 16)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">85.71% <small>(6 / 7)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">51.43% <small>(18 / 35)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/common/</a> &#187; stringUtils.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">698</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">698</span>
+<span class="cline-any cline-yes">18888199</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">698</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">60308</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">45398</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">67</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-yes">6</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * stringUtils.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Utility methods for manipulating and comparing strings.
+ */
+&nbsp;
+import leven from 'leven';
+&nbsp;
+import { compareComparableValues, Comparison } from './core';
+&nbsp;
+// Determines how closely a typed string matches a symbol
+// name. An exact match returns 1. A match that differs
+// only in case returns a slightly lower number. A match
+// that involves a few missing or added characters returns
+// an even lower number.
+export function computeCompletionSimilarity(typedValue: string, symbolName: string<span class="fstat-no" title="function not covered" >): number {</span>
+<span class="cstat-no" title="statement not covered" >    if (symbolName.startsWith(typedValue)) {</span>
+<span class="cstat-no" title="statement not covered" >        return 1;</span>
+    }
+&nbsp;
+    const symbolLower = <span class="cstat-no" title="statement not covered" >symbolName.toLocaleLowerCase();</span>
+    const typedLower = <span class="cstat-no" title="statement not covered" >typedValue.toLocaleLowerCase();</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    if (symbolLower.startsWith(typedLower)) {</span>
+<span class="cstat-no" title="statement not covered" >        return 0.75;</span>
+    }
+&nbsp;
+    // How far apart are the two strings? Find the smallest edit
+    // distance for each of the substrings taken from the start of
+    // symbolName.
+    let symbolSubstrLength = <span class="cstat-no" title="statement not covered" >symbolLower.length;</span>
+    let smallestEditDistance = <span class="cstat-no" title="statement not covered" >Number.MAX_VALUE;</span>
+<span class="cstat-no" title="statement not covered" >    while (symbolSubstrLength &gt; 0) {</span>
+        const editDistance = <span class="cstat-no" title="statement not covered" >leven(symbolLower.substr(0, symbolSubstrLength), typedLower);</span>
+<span class="cstat-no" title="statement not covered" >        if (editDistance &lt; smallestEditDistance) {</span>
+<span class="cstat-no" title="statement not covered" >            smallestEditDistance = editDistance;</span>
+        }
+<span class="cstat-no" title="statement not covered" >        symbolSubstrLength--;</span>
+    }
+&nbsp;
+    // We'll take into account the length of the typed value. If the user
+    // has typed more characters, and they largely match the symbol name,
+    // it is considered more similar. If the the edit distance is similar
+    // to the number of characters the user has typed, then there's almost
+    // no similarity.
+<span class="cstat-no" title="statement not covered" >    if (smallestEditDistance &gt;= typedValue.length) {</span>
+<span class="cstat-no" title="statement not covered" >        return 0;</span>
+    }
+&nbsp;
+    const similarity = <span class="cstat-no" title="statement not covered" >(typedValue.length - smallestEditDistance) / typedValue.length;</span>
+<span class="cstat-no" title="statement not covered" >    return 0.5 * similarity;</span>
+}
+&nbsp;
+// This is a simple, non-cryptographic hash function for text.
+export function hashString(contents: string) {
+    let hash = 0;
+&nbsp;
+    for (let i = 0; i &lt; contents.length; i++) {
+        hash = ((hash &lt;&lt; 5) - hash + contents.charCodeAt(i)) | 0;
+    }
+    return hash;
+}
+&nbsp;
+/**
+ * Compare two strings using a case-insensitive ordinal comparison.
+ *
+ * Ordinal comparisons are based on the difference between the unicode code points of both
+ * strings. Characters with multiple unicode representations are considered unequal. Ordinal
+ * comparisons provide predictable ordering, but place "a" after "B".
+ *
+ * Case-insensitive comparisons compare both strings one code-point at a time using the integer
+ * value of each code-point after applying `toUpperCase` to each string. We always map both
+ * strings to their upper-case form as some unicode characters do not properly round-trip to
+ * lowercase (such as `áºž` (German sharp capital s)).
+ */
+export function compareStringsCaseInsensitive(a: string | undefined, b: string | undefined): Comparison {
+    return a === b
+        ? Comparison.EqualTo
+        : a === undefined
+        ? Comparison.LessThan
+        : b === undefined
+        ? Comparison.GreaterThan
+        : compareComparableValues(a.toUpperCase(), b.toUpperCase());
+}
+&nbsp;
+/**
+ * Compare two strings using a case-sensitive ordinal comparison.
+ *
+ * Ordinal comparisons are based on the difference between the unicode code points of both
+ * strings. Characters with multiple unicode representations are considered unequal. Ordinal
+ * comparisons provide predictable ordering, but place "a" after "B".
+ *
+ * Case-sensitive comparisons compare both strings one code-point at a time using the integer
+ * value of each code-point.
+ */
+export function compareStringsCaseSensitive(a: string | undefined, b: string | undefined): Comparison {
+    return compareComparableValues(a, b);
+}
+&nbsp;
+export function getStringComparer(ignoreCase?: boolean) {
+    return ignoreCase ? compareStringsCaseInsensitive : compareStringsCaseSensitive;
+}
+&nbsp;
+/**
+ * Compare the equality of two strings using a case-insensitive ordinal comparison.
+ *
+ * Case-insensitive comparisons compare both strings one code-point at a time using the integer
+ * value of each code-point after applying `toUpperCase` to each string. We always map both
+ * strings to their upper-case form as some unicode characters do not properly round-trip to
+ * lowercase (such as `ẞ` (German sharp capital s)).
+ */
+export function equateStringsCaseInsensitive(a: string, b: string) {
+    return compareStringsCaseInsensitive(a, b) === Comparison.EqualTo;
+}
+&nbsp;
+/**
+ * Compare the equality of two strings using a case-sensitive ordinal comparison.
+ *
+ * Case-sensitive comparisons compare both strings one code-point at a time using the
+ * integer value of each code-point.
+ */
+export function equateStringsCaseSensitive(a: string, b: string) {
+    return compareStringsCaseSensitive(a, b) === Comparison.EqualTo;
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

@@ -1,0 +1,2973 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\common\configOptions.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\common\configOptions.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">73.03% <small>(130 / 178)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">59.5% <small>(72 / 121)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">95% <small>(19 / 20)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">73.03% <small>(130 / 178)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/common/</a> &#187; configOptions.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+862
+863
+864
+865
+866
+867
+868
+869
+870
+871
+872
+873
+874
+875
+876
+877
+878
+879
+880
+881
+882
+883
+884
+885
+886
+887
+888
+889
+890
+891
+892
+893
+894
+895
+896
+897
+898
+899
+900
+901
+902
+903
+904
+905
+906
+907
+908
+909
+910
+911
+912
+913
+914
+915
+916
+917
+918
+919
+920
+921
+922
+923
+924
+925
+926
+927
+928
+929
+930
+931
+932
+933
+934
+935
+936
+937
+938
+939
+940
+941
+942
+943
+944
+945
+946
+947
+948
+949
+950
+951
+952
+953
+954
+955
+956
+957
+958
+959
+960
+961
+962
+963
+964
+965
+966
+967
+968
+969
+970
+971
+972
+973
+974
+975
+976
+977</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1416</span>
+<span class="cline-any cline-yes">1416</span>
+<span class="cline-any cline-yes">1416</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1416</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">701</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">2135</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2135</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">233</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1405</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1405</span>
+<span class="cline-any cline-yes">1403</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1405</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">16</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">64</span>
+<span class="cline-any cline-yes">64</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">544</span>
+<span class="cline-any cline-yes">537</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * configOptions.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Class that holds the configuration options for the analyzer.
+ */
+&nbsp;
+import { isAbsolute } from 'path';
+&nbsp;
+import * as pathConsts from '../common/pathConsts';
+import { ConsoleInterface } from './console';
+import { DiagnosticRule } from './diagnosticRules';
+import { combinePaths, ensureTrailingDirectorySeparator, FileSpec, getFileSpec, normalizePath } from './pathUtils';
+import { latestStablePythonVersion, PythonVersion, versionFromString } from './pythonVersion';
+import { VirtualFileSystem } from './vfs';
+&nbsp;
+export class ExecutionEnvironment {
+    // Default to "." which indicates every file in the project.
+    constructor(root: string, defaultPythonVersion?: PythonVersion, defaultPythonPlatform?: string) {
+        this.root = root;
+        this.pythonVersion = defaultPythonVersion || latestStablePythonVersion;
+        this.pythonPlatform = defaultPythonPlatform;
+    }
+&nbsp;
+    // Root directory for execution - absolute or relative to the
+    // project root.
+    root: string;
+&nbsp;
+    // Always default to the latest stable version of the language.
+    pythonVersion: PythonVersion;
+&nbsp;
+    // Default to no platform.
+    pythonPlatform?: string;
+&nbsp;
+    // Default to no extra paths.
+    extraPaths: string[] = [];
+&nbsp;
+    // Name of virtual environment to use.
+    venv?: string;
+}
+&nbsp;
+export type DiagnosticLevel = 'none' | 'warning' | 'error';
+&nbsp;
+export interface DiagnosticSettings {
+    // Use strict inference rules for list expressions?
+    strictListInference: boolean;
+&nbsp;
+    // Use strict inference rules for dictionary expressions?
+    strictDictionaryInference: boolean;
+&nbsp;
+    // Use strict type rules for parameters assigned default of None?
+    strictParameterNoneValue: boolean;
+&nbsp;
+    // Enable support for type: ignore comments?
+    enableTypeIgnoreComments: boolean;
+&nbsp;
+    // Report diagnostics in typeshed files?
+    reportTypeshedErrors: DiagnosticLevel;
+&nbsp;
+    // Report missing imports?
+    reportMissingImports: DiagnosticLevel;
+&nbsp;
+    // Report missing type stub files?
+    reportMissingTypeStubs: DiagnosticLevel;
+&nbsp;
+    // Report cycles in import graph?
+    reportImportCycles: DiagnosticLevel;
+&nbsp;
+    // Report imported symbol that is not accessed?
+    reportUnusedImport: DiagnosticLevel;
+&nbsp;
+    // Report private class that is not accessed?
+    reportUnusedClass: DiagnosticLevel;
+&nbsp;
+    // Report private function or method that is not accessed?
+    reportUnusedFunction: DiagnosticLevel;
+&nbsp;
+    // Report variable that is not accessed?
+    reportUnusedVariable: DiagnosticLevel;
+&nbsp;
+    // Report symbol or module that is imported more than once?
+    reportDuplicateImport: DiagnosticLevel;
+&nbsp;
+    // Report attempts to subscript (index) an Optional type?
+    reportOptionalSubscript: DiagnosticLevel;
+&nbsp;
+    // Report attempts to access members on a Optional type?
+    reportOptionalMemberAccess: DiagnosticLevel;
+&nbsp;
+    // Report attempts to call a Optional type?
+    reportOptionalCall: DiagnosticLevel;
+&nbsp;
+    // Report attempts to use an Optional type as an iterable?
+    reportOptionalIterable: DiagnosticLevel;
+&nbsp;
+    // Report attempts to use an Optional type in a "with" statement?
+    reportOptionalContextManager: DiagnosticLevel;
+&nbsp;
+    // Report attempts to use an Optional type in a binary or unary operation.
+    reportOptionalOperand: DiagnosticLevel;
+&nbsp;
+    // Report untyped function decorators that obscure the function type?
+    reportUntypedFunctionDecorator: DiagnosticLevel;
+&nbsp;
+    // Report untyped class decorators that obscure the class type?
+    reportUntypedClassDecorator: DiagnosticLevel;
+&nbsp;
+    // Report untyped base class that obscure the class type?
+    reportUntypedBaseClass: DiagnosticLevel;
+&nbsp;
+    // Report use of untyped namedtuple factory method?
+    reportUntypedNamedTuple: DiagnosticLevel;
+&nbsp;
+    // Report usage of private variables and functions outside of
+    // the owning class or module?
+    reportPrivateUsage: DiagnosticLevel;
+&nbsp;
+    // Report attempts to redefine variables that are in all-caps.
+    reportConstantRedefinition: DiagnosticLevel;
+&nbsp;
+    // Report usage of method override that is incompatible with
+    // the base class method of the same name?
+    reportIncompatibleMethodOverride: DiagnosticLevel;
+&nbsp;
+    // Report usage of invalid escape sequences in string literals?
+    reportInvalidStringEscapeSequence: DiagnosticLevel;
+&nbsp;
+    // Report usage of unknown input or return parameters for functions?
+    reportUnknownParameterType: DiagnosticLevel;
+&nbsp;
+    // Report usage of unknown arguments for function calls?
+    reportUnknownArgumentType: DiagnosticLevel;
+&nbsp;
+    // Report usage of unknown input or return parameters for lambdas?
+    reportUnknownLambdaType: DiagnosticLevel;
+&nbsp;
+    // Report usage of unknown input or return parameters?
+    reportUnknownVariableType: DiagnosticLevel;
+&nbsp;
+    // Report usage of unknown input or return parameters?
+    reportUnknownMemberType: DiagnosticLevel;
+&nbsp;
+    // Report usage of function call within default value
+    // initialization expression?
+    reportCallInDefaultInitializer: DiagnosticLevel;
+&nbsp;
+    // Report calls to isinstance or issubclass that are statically determined
+    // to always be true or false.
+    reportUnnecessaryIsInstance: DiagnosticLevel;
+&nbsp;
+    // Report calls to cast that are statically determined
+    // to always unnecessary.
+    reportUnnecessaryCast: DiagnosticLevel;
+&nbsp;
+    // Report assert expressions that will always evaluate to true.
+    reportAssertAlwaysTrue: DiagnosticLevel;
+&nbsp;
+    // Report when "self" or "cls" parameter is missing or is misnamed.
+    reportSelfClsParameterName: DiagnosticLevel;
+&nbsp;
+    // Report implicit concatenation of string literals.
+    reportImplicitStringConcatenation: DiagnosticLevel;
+}
+&nbsp;
+export function cloneDiagnosticSettings(diagSettings: DiagnosticSettings): DiagnosticSettings {
+    // Create a shallow copy of the existing object.
+    return Object.assign({}, diagSettings);
+}
+&nbsp;
+export function getBooleanDiagnosticSettings() {
+    return [
+        DiagnosticRule.strictListInference,
+        DiagnosticRule.strictDictionaryInference,
+        DiagnosticRule.strictParameterNoneValue
+&nbsp;
+        // Do not include this this one because we don't
+        // want to override it in strict mode or support
+        // it within pyright comments.
+        // DiagnosticRule.enableTypeIgnoreComments
+    ];
+}
+&nbsp;
+export function getDiagLevelSettings() {
+    return [
+        DiagnosticRule.reportTypeshedErrors,
+        DiagnosticRule.reportMissingImports,
+        DiagnosticRule.reportMissingTypeStubs,
+        DiagnosticRule.reportImportCycles,
+        DiagnosticRule.reportUnusedImport,
+        DiagnosticRule.reportUnusedClass,
+        DiagnosticRule.reportUnusedFunction,
+        DiagnosticRule.reportUnusedVariable,
+        DiagnosticRule.reportDuplicateImport,
+        DiagnosticRule.reportOptionalSubscript,
+        DiagnosticRule.reportOptionalMemberAccess,
+        DiagnosticRule.reportOptionalCall,
+        DiagnosticRule.reportOptionalIterable,
+        DiagnosticRule.reportOptionalContextManager,
+        DiagnosticRule.reportOptionalOperand,
+        DiagnosticRule.reportUntypedFunctionDecorator,
+        DiagnosticRule.reportUntypedClassDecorator,
+        DiagnosticRule.reportUntypedBaseClass,
+        DiagnosticRule.reportUntypedNamedTuple,
+        DiagnosticRule.reportPrivateUsage,
+        DiagnosticRule.reportConstantRedefinition,
+        DiagnosticRule.reportIncompatibleMethodOverride,
+        DiagnosticRule.reportInvalidStringEscapeSequence,
+        DiagnosticRule.reportUnknownParameterType,
+        DiagnosticRule.reportUnknownArgumentType,
+        DiagnosticRule.reportUnknownLambdaType,
+        DiagnosticRule.reportUnknownVariableType,
+        DiagnosticRule.reportUnknownMemberType,
+        DiagnosticRule.reportCallInDefaultInitializer,
+        DiagnosticRule.reportUnnecessaryIsInstance,
+        DiagnosticRule.reportUnnecessaryCast,
+        DiagnosticRule.reportAssertAlwaysTrue,
+        DiagnosticRule.reportSelfClsParameterName,
+        DiagnosticRule.reportImplicitStringConcatenation
+    ];
+}
+&nbsp;
+export function getStrictDiagnosticSettings(): DiagnosticSettings {
+    const diagSettings: DiagnosticSettings = {
+        strictListInference: true,
+        strictDictionaryInference: true,
+        strictParameterNoneValue: true,
+        enableTypeIgnoreComments: true, // Not overridden by strict mode
+        reportTypeshedErrors: 'error',
+        reportMissingImports: 'error',
+        reportMissingTypeStubs: 'error',
+        reportImportCycles: 'error',
+        reportUnusedImport: 'error',
+        reportUnusedClass: 'error',
+        reportUnusedFunction: 'error',
+        reportUnusedVariable: 'error',
+        reportDuplicateImport: 'error',
+        reportOptionalSubscript: 'error',
+        reportOptionalMemberAccess: 'error',
+        reportOptionalCall: 'error',
+        reportOptionalIterable: 'error',
+        reportOptionalContextManager: 'error',
+        reportOptionalOperand: 'error',
+        reportUntypedFunctionDecorator: 'error',
+        reportUntypedClassDecorator: 'error',
+        reportUntypedBaseClass: 'error',
+        reportUntypedNamedTuple: 'error',
+        reportPrivateUsage: 'error',
+        reportConstantRedefinition: 'error',
+        reportIncompatibleMethodOverride: 'error',
+        reportInvalidStringEscapeSequence: 'error',
+        reportUnknownParameterType: 'error',
+        reportUnknownArgumentType: 'error',
+        reportUnknownLambdaType: 'error',
+        reportUnknownVariableType: 'error',
+        reportUnknownMemberType: 'error',
+        reportCallInDefaultInitializer: 'none',
+        reportUnnecessaryIsInstance: 'error',
+        reportUnnecessaryCast: 'error',
+        reportAssertAlwaysTrue: 'error',
+        reportSelfClsParameterName: 'error',
+        reportImplicitStringConcatenation: 'none'
+    };
+&nbsp;
+    return diagSettings;
+}
+&nbsp;
+export function getDefaultDiagnosticSettings(): DiagnosticSettings {
+    const diagSettings: DiagnosticSettings = {
+        strictListInference: false,
+        strictDictionaryInference: false,
+        strictParameterNoneValue: false,
+        enableTypeIgnoreComments: true,
+        reportTypeshedErrors: 'none',
+        reportMissingImports: 'error',
+        reportMissingTypeStubs: 'none',
+        reportImportCycles: 'none',
+        reportUnusedImport: 'none',
+        reportUnusedClass: 'none',
+        reportUnusedFunction: 'none',
+        reportUnusedVariable: 'none',
+        reportDuplicateImport: 'none',
+        reportOptionalSubscript: 'none',
+        reportOptionalMemberAccess: 'none',
+        reportOptionalCall: 'none',
+        reportOptionalIterable: 'none',
+        reportOptionalContextManager: 'none',
+        reportOptionalOperand: 'none',
+        reportUntypedFunctionDecorator: 'none',
+        reportUntypedClassDecorator: 'none',
+        reportUntypedBaseClass: 'none',
+        reportUntypedNamedTuple: 'none',
+        reportPrivateUsage: 'none',
+        reportConstantRedefinition: 'none',
+        reportIncompatibleMethodOverride: 'none',
+        reportInvalidStringEscapeSequence: 'warning',
+        reportUnknownParameterType: 'none',
+        reportUnknownArgumentType: 'none',
+        reportUnknownLambdaType: 'none',
+        reportUnknownVariableType: 'none',
+        reportUnknownMemberType: 'none',
+        reportCallInDefaultInitializer: 'none',
+        reportUnnecessaryIsInstance: 'none',
+        reportUnnecessaryCast: 'none',
+        reportAssertAlwaysTrue: 'warning',
+        reportSelfClsParameterName: 'warning',
+        reportImplicitStringConcatenation: 'none'
+    };
+&nbsp;
+    return diagSettings;
+}
+&nbsp;
+// Internal configuration options. These are derived from a combination
+// of the command line and from a JSON-based config file.
+export class ConfigOptions {
+    constructor(projectRoot: string) {
+        this.projectRoot = projectRoot;
+        this.diagnosticSettings = getDefaultDiagnosticSettings();
+    }
+&nbsp;
+    // Absolute directory of project. All relative paths in the config
+    // are based on this path.
+    projectRoot: string;
+&nbsp;
+    // Path to python interpreter.
+    pythonPath?: string;
+&nbsp;
+    // Path to use for typeshed definitions.
+    typeshedPath?: string;
+&nbsp;
+    // Path to custom typings (stub) modules.
+    typingsPath?: string;
+&nbsp;
+    // A list of file specs to include in the analysis. Can contain
+    // directories, in which case all "*.py" files within those directories
+    // are included.
+    include: FileSpec[] = [];
+&nbsp;
+    // A list of file specs to exclude from the analysis (overriding include
+    // if necessary). Can contain directories, in which case all "*.py" files
+    // within those directories are included.
+    exclude: FileSpec[] = [];
+&nbsp;
+    // A list of file specs whose errors and warnings should be ignored even
+    // if they are included in the transitive closure of included files.
+    ignore: FileSpec[] = [];
+&nbsp;
+    // A list of file specs that should be analyzed using "strict" mode.
+    strict: FileSpec[] = [];
+&nbsp;
+    // Emit verbose information to console?
+    verboseOutput: boolean;
+&nbsp;
+    // Perform type checking and report diagnostics only for open files?
+    checkOnlyOpenFiles: boolean;
+&nbsp;
+    // In the absence of type stubs, use library implementations to extract
+    // type information?
+    useLibraryCodeForTypes: boolean;
+&nbsp;
+    //---------------------------------------------------------------
+    // Diagnostics Settings
+&nbsp;
+    diagnosticSettings: DiagnosticSettings;
+&nbsp;
+    //---------------------------------------------------------------
+    // Parsing and Import Resolution Settings
+&nbsp;
+    // Parameters that specify the execution environment for
+    // the files being analyzed.
+    executionEnvironments: ExecutionEnvironment[] = [];
+&nbsp;
+    // Path to a directory containing one or more virtual environment
+    // directories. This is used in conjunction with the "venv" name in
+    // the config file to identify the python environment used for resolving
+    // third-party modules.
+    venvPath?: string;
+&nbsp;
+    // Default venv environment. Can be overridden by executionEnvironment.
+    defaultVenv?: string;
+&nbsp;
+    // Default pythonVersion. Can be overridden by executionEnvironment.
+    defaultPythonVersion?: PythonVersion;
+&nbsp;
+    // Default pythonPlatform. Can be overridden by executionEnvironment.
+    defaultPythonPlatform?: string;
+&nbsp;
+    //---------------------------------------------------------------
+    // Internal-only switches
+&nbsp;
+    // Run additional analysis as part of test cases?
+    internalTestMode?: boolean;
+&nbsp;
+    // Finds the best execution environment for a given file path. The
+    // specified file path should be absolute.
+    // If no matching execution environment can be found, a default
+    // execution environment is used.
+    findExecEnvironment(filePath: string): ExecutionEnvironment {
+        let execEnv = this.executionEnvironments.find(env =&gt; {
+            const envRoot = ensureTrailingDirectorySeparator(normalizePath(combinePaths(this.projectRoot, env.root)));
+            return filePath.startsWith(envRoot);
+        });
+&nbsp;
+        if (!execEnv) {
+            execEnv = new ExecutionEnvironment(this.projectRoot, this.defaultPythonVersion, this.defaultPythonPlatform);
+        }
+&nbsp;
+        return execEnv;
+    }
+&nbsp;
+    addExecEnvironmentForAutoSearchPaths(fs: VirtualFileSystem) {
+        // Auto-detect the common scenario where the sources are under the src folder
+        const srcPath = combinePaths(this.projectRoot, pathConsts.src);
+        if (fs.existsSync(srcPath) &amp;&amp; !fs.existsSync(combinePaths(srcPath, '__init__.py'))) {
+            const execEnv = new ExecutionEnvironment(
+                this.projectRoot,
+                this.defaultPythonVersion,
+                this.defaultPythonPlatform
+            );
+&nbsp;
+            execEnv.extraPaths.push(srcPath);
+&nbsp;
+            this.executionEnvironments.push(execEnv);
+        }
+    }
+&nbsp;
+    // Initialize the structure from a JSON object.
+    initializeFromJson(configObj: any, console: ConsoleInterface) {
+        // Read the "include" entry.
+        this.include = [];
+        if (configObj.include !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(configObj.include)) {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "include" entry must must contain an array.`);</span>
+            } else {
+                const filesList = configObj.include as string[];
+                filesList.forEach((fileSpec, index) =&gt; {
+                    <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof fileSpec !== 'string') {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Index ${index} of "include" array should be a string.`);</span>
+                    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (isAbsolute(fileSpec)) {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Ignoring path "${fileSpec}" in "include" array because it is not relative.`);</span>
+                    } else {
+                        this.include.push(getFileSpec(this.projectRoot, fileSpec));
+                    }
+                });
+            }
+        }
+&nbsp;
+        // Read the "exclude" entry.
+        this.exclude = [];
+        if (configObj.exclude !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(configObj.exclude)) {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "exclude" entry must contain an array.`);</span>
+            } else {
+                const filesList = configObj.exclude as string[];
+                filesList.forEach((fileSpec, index) =&gt; {
+                    <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof fileSpec !== 'string') {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Index ${index} of "exclude" array should be a string.`);</span>
+                    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (isAbsolute(fileSpec)) {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Ignoring path "${fileSpec}" in "exclude" array because it is not relative.`);</span>
+                    } else {
+                        this.exclude.push(getFileSpec(this.projectRoot, fileSpec));
+                    }
+                });
+            }
+        }
+&nbsp;
+        // Read the "ignore" entry.
+        this.ignore = [];
+        if (configObj.ignore !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(configObj.ignore)) {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "ignore" entry must contain an array.`);</span>
+            } else {
+                const filesList = configObj.ignore as string[];
+                filesList.forEach((fileSpec, index) =&gt; {
+                    <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof fileSpec !== 'string') {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Index ${index} of "ignore" array should be a string.`);</span>
+                    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (isAbsolute(fileSpec)) {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Ignoring path "${fileSpec}" in "ignore" array because it is not relative.`);</span>
+                    } else {
+                        this.ignore.push(getFileSpec(this.projectRoot, fileSpec));
+                    }
+                });
+            }
+        }
+&nbsp;
+        // Read the "strict" entry.
+        this.strict = [];
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (configObj.strict !== undefined) {
+<span class="cstat-no" title="statement not covered" >            if (!Array.isArray(configObj.strict)) {</span>
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "strict" entry must contain an array.`);</span>
+            } else {
+                const filesList = <span class="cstat-no" title="statement not covered" >configObj.strict as string[];</span>
+<span class="cstat-no" title="statement not covered" >                filesList.forEach((fileSpec, index) =&gt;<span class="fstat-no" title="function not covered" > {</span></span>
+<span class="cstat-no" title="statement not covered" >                    if (typeof fileSpec !== 'string') {</span>
+<span class="cstat-no" title="statement not covered" >                        console.log(`Index ${index} of "strict" array should be a string.`);</span>
+                    } else <span class="cstat-no" title="statement not covered" >if (isAbsolute(fileSpec)) {</span>
+<span class="cstat-no" title="statement not covered" >                        console.log(`Ignoring path "${fileSpec}" in "strict" array because it is not relative.`);</span>
+                    } else {
+<span class="cstat-no" title="statement not covered" >                        this.strict.push(getFileSpec(this.projectRoot, fileSpec));</span>
+                    }
+                });
+            }
+        }
+&nbsp;
+        const defaultSettings = getDefaultDiagnosticSettings();
+&nbsp;
+        this.diagnosticSettings = {
+            // Use strict inference rules for list expressions?
+            strictListInference: this._convertBoolean(
+                configObj.strictListInference,
+                DiagnosticRule.strictListInference,
+                defaultSettings.strictListInference
+            ),
+&nbsp;
+            // Use strict inference rules for dictionary expressions?
+            strictDictionaryInference: this._convertBoolean(
+                configObj.strictDictionaryInference,
+                DiagnosticRule.strictDictionaryInference,
+                defaultSettings.strictDictionaryInference
+            ),
+&nbsp;
+            // Should a None default value imply that the parameter type
+            // is Optional?
+            strictParameterNoneValue: this._convertBoolean(
+                configObj.strictParameterNoneValue,
+                DiagnosticRule.strictParameterNoneValue,
+                defaultSettings.strictParameterNoneValue
+            ),
+&nbsp;
+            // Should "# type: ignore" be honored?
+            enableTypeIgnoreComments: this._convertBoolean(
+                configObj.enableTypeIgnoreComments,
+                DiagnosticRule.enableTypeIgnoreComments,
+                defaultSettings.enableTypeIgnoreComments
+            ),
+&nbsp;
+            // Read the "reportTypeshedErrors" entry.
+            reportTypeshedErrors: this._convertDiagnosticLevel(
+                configObj.reportTypeshedErrors,
+                DiagnosticRule.reportTypeshedErrors,
+                defaultSettings.reportTypeshedErrors
+            ),
+&nbsp;
+            // Read the "reportMissingImports" entry.
+            reportMissingImports: this._convertDiagnosticLevel(
+                configObj.reportMissingImports,
+                DiagnosticRule.reportMissingImports,
+                defaultSettings.reportMissingImports
+            ),
+&nbsp;
+            // Read the "reportUnusedImport" entry.
+            reportUnusedImport: this._convertDiagnosticLevel(
+                configObj.reportUnusedImport,
+                DiagnosticRule.reportUnusedImport,
+                defaultSettings.reportUnusedImport
+            ),
+&nbsp;
+            // Read the "reportUnusedClass" entry.
+            reportUnusedClass: this._convertDiagnosticLevel(
+                configObj.reportUnusedClass,
+                DiagnosticRule.reportUnusedClass,
+                defaultSettings.reportUnusedClass
+            ),
+&nbsp;
+            // Read the "reportUnusedFunction" entry.
+            reportUnusedFunction: this._convertDiagnosticLevel(
+                configObj.reportUnusedFunction,
+                DiagnosticRule.reportUnusedFunction,
+                defaultSettings.reportUnusedFunction
+            ),
+&nbsp;
+            // Read the "reportUnusedVariable" entry.
+            reportUnusedVariable: this._convertDiagnosticLevel(
+                configObj.reportUnusedVariable,
+                DiagnosticRule.reportUnusedVariable,
+                defaultSettings.reportUnusedVariable
+            ),
+&nbsp;
+            // Read the "reportDuplicateImport" entry.
+            reportDuplicateImport: this._convertDiagnosticLevel(
+                configObj.reportDuplicateImport,
+                DiagnosticRule.reportDuplicateImport,
+                defaultSettings.reportDuplicateImport
+            ),
+&nbsp;
+            // Read the "reportMissingTypeStubs" entry.
+            reportMissingTypeStubs: this._convertDiagnosticLevel(
+                configObj.reportMissingTypeStubs,
+                DiagnosticRule.reportMissingTypeStubs,
+                defaultSettings.reportMissingTypeStubs
+            ),
+&nbsp;
+            // Read the "reportImportCycles" entry.
+            reportImportCycles: this._convertDiagnosticLevel(
+                configObj.reportImportCycles,
+                DiagnosticRule.reportImportCycles,
+                defaultSettings.reportImportCycles
+            ),
+&nbsp;
+            // Read the "reportOptionalSubscript" entry.
+            reportOptionalSubscript: this._convertDiagnosticLevel(
+                configObj.reportOptionalSubscript,
+                DiagnosticRule.reportOptionalSubscript,
+                defaultSettings.reportOptionalSubscript
+            ),
+&nbsp;
+            // Read the "reportOptionalMemberAccess" entry.
+            reportOptionalMemberAccess: this._convertDiagnosticLevel(
+                configObj.reportOptionalMemberAccess,
+                DiagnosticRule.reportOptionalMemberAccess,
+                defaultSettings.reportOptionalMemberAccess
+            ),
+&nbsp;
+            // Read the "reportOptionalCall" entry.
+            reportOptionalCall: this._convertDiagnosticLevel(
+                configObj.reportOptionalCall,
+                DiagnosticRule.reportOptionalCall,
+                defaultSettings.reportOptionalCall
+            ),
+&nbsp;
+            // Read the "reportOptionalIterable" entry.
+            reportOptionalIterable: this._convertDiagnosticLevel(
+                configObj.reportOptionalIterable,
+                DiagnosticRule.reportOptionalIterable,
+                defaultSettings.reportOptionalIterable
+            ),
+&nbsp;
+            // Read the "reportOptionalContextManager" entry.
+            reportOptionalContextManager: this._convertDiagnosticLevel(
+                configObj.reportOptionalContextManager,
+                DiagnosticRule.reportOptionalContextManager,
+                defaultSettings.reportOptionalContextManager
+            ),
+&nbsp;
+            // Read the "reportOptionalOperand" entry.
+            reportOptionalOperand: this._convertDiagnosticLevel(
+                configObj.reportOptionalOperand,
+                DiagnosticRule.reportOptionalOperand,
+                defaultSettings.reportOptionalOperand
+            ),
+&nbsp;
+            // Read the "reportUntypedFunctionDecorator" entry.
+            reportUntypedFunctionDecorator: this._convertDiagnosticLevel(
+                configObj.reportUntypedFunctionDecorator,
+                DiagnosticRule.reportUntypedFunctionDecorator,
+                defaultSettings.reportUntypedFunctionDecorator
+            ),
+&nbsp;
+            // Read the "reportUntypedClassDecorator" entry.
+            reportUntypedClassDecorator: this._convertDiagnosticLevel(
+                configObj.reportUntypedClassDecorator,
+                DiagnosticRule.reportUntypedClassDecorator,
+                defaultSettings.reportUntypedClassDecorator
+            ),
+&nbsp;
+            // Read the "reportUntypedBaseClass" entry.
+            reportUntypedBaseClass: this._convertDiagnosticLevel(
+                configObj.reportUntypedBaseClass,
+                DiagnosticRule.reportUntypedBaseClass,
+                defaultSettings.reportUntypedBaseClass
+            ),
+&nbsp;
+            // Read the "reportUntypedNamedTuple" entry.
+            reportUntypedNamedTuple: this._convertDiagnosticLevel(
+                configObj.reportUntypedNamedTuple,
+                DiagnosticRule.reportUntypedNamedTuple,
+                defaultSettings.reportUntypedNamedTuple
+            ),
+&nbsp;
+            // Read the "reportPrivateUsage" entry.
+            reportPrivateUsage: this._convertDiagnosticLevel(
+                configObj.reportPrivateUsage,
+                DiagnosticRule.reportPrivateUsage,
+                defaultSettings.reportPrivateUsage
+            ),
+&nbsp;
+            // Read the "reportConstantRedefinition" entry.
+            reportConstantRedefinition: this._convertDiagnosticLevel(
+                configObj.reportConstantRedefinition,
+                DiagnosticRule.reportConstantRedefinition,
+                defaultSettings.reportConstantRedefinition
+            ),
+&nbsp;
+            // Read the "reportIncompatibleMethodOverride" entry.
+            reportIncompatibleMethodOverride: this._convertDiagnosticLevel(
+                configObj.reportIncompatibleMethodOverride,
+                DiagnosticRule.reportIncompatibleMethodOverride,
+                defaultSettings.reportIncompatibleMethodOverride
+            ),
+&nbsp;
+            // Read the "reportInvalidStringEscapeSequence" entry.
+            reportInvalidStringEscapeSequence: this._convertDiagnosticLevel(
+                configObj.reportInvalidStringEscapeSequence,
+                DiagnosticRule.reportInvalidStringEscapeSequence,
+                defaultSettings.reportInvalidStringEscapeSequence
+            ),
+&nbsp;
+            // Read the "reportUnknownParameterType" entry.
+            reportUnknownParameterType: this._convertDiagnosticLevel(
+                configObj.reportUnknownParameterType,
+                DiagnosticRule.reportUnknownParameterType,
+                defaultSettings.reportUnknownParameterType
+            ),
+&nbsp;
+            // Read the "reportUnknownArgumentType" entry.
+            reportUnknownArgumentType: this._convertDiagnosticLevel(
+                configObj.reportUnknownArgumentType,
+                DiagnosticRule.reportUnknownArgumentType,
+                defaultSettings.reportUnknownArgumentType
+            ),
+&nbsp;
+            // Read the "reportUnknownLambdaType" entry.
+            reportUnknownLambdaType: this._convertDiagnosticLevel(
+                configObj.reportUnknownLambdaType,
+                DiagnosticRule.reportUnknownLambdaType,
+                defaultSettings.reportUnknownLambdaType
+            ),
+&nbsp;
+            // Read the "reportUnknownVariableType" entry.
+            reportUnknownVariableType: this._convertDiagnosticLevel(
+                configObj.reportUnknownVariableType,
+                DiagnosticRule.reportUnknownVariableType,
+                defaultSettings.reportUnknownVariableType
+            ),
+&nbsp;
+            // Read the "reportUnknownMemberType" entry.
+            reportUnknownMemberType: this._convertDiagnosticLevel(
+                configObj.reportUnknownMemberType,
+                DiagnosticRule.reportUnknownMemberType,
+                defaultSettings.reportUnknownMemberType
+            ),
+&nbsp;
+            // Read the "reportCallInDefaultInitializer" entry.
+            reportCallInDefaultInitializer: this._convertDiagnosticLevel(
+                configObj.reportCallInDefaultInitializer,
+                DiagnosticRule.reportCallInDefaultInitializer,
+                defaultSettings.reportCallInDefaultInitializer
+            ),
+&nbsp;
+            // Read the "reportUnnecessaryIsInstance" entry.
+            reportUnnecessaryIsInstance: this._convertDiagnosticLevel(
+                configObj.reportUnnecessaryIsInstance,
+                DiagnosticRule.reportUnnecessaryIsInstance,
+                defaultSettings.reportUnnecessaryIsInstance
+            ),
+&nbsp;
+            // Read the "reportUnnecessaryCast" entry.
+            reportUnnecessaryCast: this._convertDiagnosticLevel(
+                configObj.reportUnnecessaryCast,
+                DiagnosticRule.reportUnnecessaryCast,
+                defaultSettings.reportUnnecessaryCast
+            ),
+&nbsp;
+            // Read the "reportAssertAlwaysTrue" entry.
+            reportAssertAlwaysTrue: this._convertDiagnosticLevel(
+                configObj.reportAssertAlwaysTrue,
+                DiagnosticRule.reportAssertAlwaysTrue,
+                defaultSettings.reportAssertAlwaysTrue
+            ),
+&nbsp;
+            // Read the "reportSelfClsParameterName" entry.
+            reportSelfClsParameterName: this._convertDiagnosticLevel(
+                configObj.reportSelfClsParameterName,
+                DiagnosticRule.reportSelfClsParameterName,
+                defaultSettings.reportSelfClsParameterName
+            ),
+&nbsp;
+            // Read the "reportImplicitStringConcatenation" entry.
+            reportImplicitStringConcatenation: this._convertDiagnosticLevel(
+                configObj.reportImplicitStringConcatenation,
+                DiagnosticRule.reportImplicitStringConcatenation,
+                defaultSettings.reportImplicitStringConcatenation
+            )
+        };
+&nbsp;
+        // Read the "venvPath".
+        this.venvPath = undefined;
+        if (configObj.venvPath !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof configObj.venvPath !== 'string') {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "venvPath" field must contain a string.`);</span>
+            } else {
+                this.venvPath = normalizePath(combinePaths(this.projectRoot, configObj.venvPath));
+            }
+        }
+&nbsp;
+        // Read the default "venv".
+        this.defaultVenv = undefined;
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (configObj.venv !== undefined) {
+<span class="cstat-no" title="statement not covered" >            if (typeof configObj.venv !== 'string') {</span>
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "venv" field must contain a string.`);</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                this.defaultVenv = configObj.venv;</span>
+            }
+        }
+&nbsp;
+        // Read the default "pythonVersion".
+        this.defaultPythonVersion = undefined;
+        if (configObj.pythonVersion !== undefined) {
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof configObj.pythonVersion === 'string') {
+                const version = versionFromString(configObj.pythonVersion);
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (version) {
+                    this.defaultPythonVersion = version;
+                } else {
+<span class="cstat-no" title="statement not covered" >                    console.log(`Config "pythonVersion" field contains unsupported version.`);</span>
+                }
+            } else {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "pythonVersion" field must contain a string.`);</span>
+            }
+        }
+&nbsp;
+        // Read the default "pythonPlatform".
+        this.defaultPythonPlatform = undefined;
+        if (configObj.pythonPlatform !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof configObj.pythonPlatform !== 'string') {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "pythonPlatform" field must contain a string.`);</span>
+            } else {
+                this.defaultPythonPlatform = configObj.pythonPlatform;
+            }
+        }
+&nbsp;
+        // Read the "typeshedPath" setting.
+        this.typeshedPath = undefined;
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (configObj.typeshedPath !== undefined) {
+<span class="cstat-no" title="statement not covered" >            if (typeof configObj.typeshedPath !== 'string') {</span>
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "typeshedPath" field must contain a string.`);</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                this.typeshedPath = configObj.typeshedPath</span>
+                    ? normalizePath(combinePaths(this.projectRoot, configObj.typeshedPath))
+                    : '';
+            }
+        }
+&nbsp;
+        // Read the "typingsPath" setting.
+        this.typingsPath = undefined;
+        if (configObj.typingsPath !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof configObj.typingsPath !== 'string') {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "typingsPath" field must contain a string.`);</span>
+            } else {
+                this.typingsPath = normalizePath(combinePaths(this.projectRoot, configObj.typingsPath));
+            }
+        }
+&nbsp;
+        // Read the "verboseOutput" setting.
+        // Don't initialize to a default value because we want the command-line "verbose"
+        // switch to apply if this setting isn't specified in the config file.
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (configObj.verboseOutput !== undefined) {
+<span class="cstat-no" title="statement not covered" >            if (typeof configObj.verboseOutput !== 'boolean') {</span>
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "verboseOutput" field must be true or false.`);</span>
+            } else {
+<span class="cstat-no" title="statement not covered" >                this.verboseOutput = configObj.verboseOutput;</span>
+            }
+        }
+&nbsp;
+        // Read the "executionEnvironments" array. This should be done at the end
+        // after we've established default values.
+        this.executionEnvironments = [];
+        if (configObj.executionEnvironments !== undefined) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(configObj.executionEnvironments)) {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config "executionEnvironments" field must contain an array.`);</span>
+            } else {
+                const execEnvironments = configObj.executionEnvironments as ExecutionEnvironment[];
+                execEnvironments.forEach((env, index) =&gt; {
+                    const execEnv = this._initExecutionEnvironmentFromJson(env, index, console);
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (execEnv) {
+                        this.executionEnvironments.push(execEnv);
+                    }
+                });
+            }
+        }
+    }
+&nbsp;
+    private _convertBoolean(value: any, fieldName: string, defaultValue: boolean): boolean {
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (value === undefined) {
+            return defaultValue;
+        } else <span class="cstat-no" title="statement not covered" >if (typeof value === 'boolean') {</span>
+<span class="cstat-no" title="statement not covered" >            return value ? true : false;</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        console.log(`Config "${fieldName}" entry must be true or false.`);</span>
+<span class="cstat-no" title="statement not covered" >        return defaultValue;</span>
+    }
+&nbsp;
+    private _convertDiagnosticLevel(value: any, fieldName: string, defaultValue: DiagnosticLevel): DiagnosticLevel {
+        if (value === undefined) {
+            return defaultValue;
+        } else if (typeof value === 'boolean') {
+            return value ? 'error' : 'none';
+        } else <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof value === 'string') {
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (value === 'error' || value === 'warning' || <span class="branch-2 cbranch-no" title="branch not covered" >value === 'none')</span> {
+                return value;
+            }
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        console.log(`Config "${fieldName}" entry must be true, false, "error", "warning" or "none".`);</span>
+<span class="cstat-no" title="statement not covered" >        return defaultValue;</span>
+    }
+&nbsp;
+    private _initExecutionEnvironmentFromJson(
+        envObj: any,
+        index: number,
+        console: ConsoleInterface
+    ): ExecutionEnvironment | undefined {
+        try {
+            const newExecEnv = new ExecutionEnvironment(
+                this.projectRoot,
+                this.defaultPythonVersion,
+                this.defaultPythonPlatform
+            );
+&nbsp;
+            // Validate the root.
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (envObj.root &amp;&amp; typeof envObj.root === 'string') {
+                newExecEnv.root = normalizePath(combinePaths(this.projectRoot, envObj.root));
+            } else {
+<span class="cstat-no" title="statement not covered" >                console.log(`Config executionEnvironments index ${index}: missing root value.`);</span>
+            }
+&nbsp;
+            // Validate the extraPaths.
+            if (envObj.extraPaths) {
+                <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(envObj.extraPaths)) {
+<span class="cstat-no" title="statement not covered" >                    console.log(`Config executionEnvironments index ${index}: extraPaths field must contain an array.`);</span>
+                } else {
+                    const pathList = envObj.extraPaths as string[];
+                    pathList.forEach((path, pathIndex) =&gt; {
+                        <span class="missing-if-branch" title="if path not taken" >I</span>if (typeof path !== 'string') {
+<span class="cstat-no" title="statement not covered" >                            console.log(</span>
+                                `Config executionEnvironments index ${index}:` +
+                                    ` extraPaths field ${pathIndex} must be a string.`
+                            );
+                        } else {
+                            newExecEnv.extraPaths.push(normalizePath(combinePaths(this.projectRoot, path)));
+                        }
+                    });
+                }
+            }
+&nbsp;
+            // Validate the pythonVersion.
+            if (envObj.pythonVersion) {
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof envObj.pythonVersion === 'string') {
+                    const version = versionFromString(envObj.pythonVersion);
+                    <span class="missing-if-branch" title="else path not taken" >E</span>if (version) {
+                        newExecEnv.pythonVersion = version;
+                    } else {
+<span class="cstat-no" title="statement not covered" >                        console.log(`Config executionEnvironments index ${index} contains unsupported pythonVersion.`);</span>
+                    }
+                } else {
+<span class="cstat-no" title="statement not covered" >                    console.log(`Config executionEnvironments index ${index} pythonVersion must be a string.`);</span>
+                }
+            }
+&nbsp;
+            // Validate the pythonPlatform.
+            if (envObj.pythonPlatform) {
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof envObj.pythonPlatform === 'string') {
+                    newExecEnv.pythonPlatform = envObj.pythonPlatform;
+                } else {
+<span class="cstat-no" title="statement not covered" >                    console.log(`Config executionEnvironments index ${index} pythonPlatform must be a string.`);</span>
+                }
+            }
+&nbsp;
+            // Validate the venv.
+            if (envObj.venv) {
+                <span class="missing-if-branch" title="else path not taken" >E</span>if (typeof envObj.venv === 'string') {
+                    newExecEnv.venv = envObj.venv;
+                } else {
+<span class="cstat-no" title="statement not covered" >                    console.log(`Config executionEnvironments index ${index} venv must be a string.`);</span>
+                }
+            }
+&nbsp;
+            return newExecEnv;
+        } catch {
+<span class="cstat-no" title="statement not covered" >            console.log(`Config executionEnvironments index ${index} is not accessible.`);</span>
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return undefined;</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

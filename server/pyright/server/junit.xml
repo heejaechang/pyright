@@ -1,0 +1,869 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="418" failures="0" time="48.058">
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:16" time="30.81" tests="164">
+    <testcase classname=" Builtins1" name=" Builtins1" time="0.643">
+    </testcase>
+    <testcase classname=" BadToken1" name=" BadToken1" time="0.34">
+    </testcase>
+    <testcase classname=" Complex1" name=" Complex1" time="0.221">
+    </testcase>
+    <testcase classname=" TypeConstraint1" name=" TypeConstraint1" time="0.183">
+    </testcase>
+    <testcase classname=" TypeConstraint2" name=" TypeConstraint2" time="0.39">
+    </testcase>
+    <testcase classname=" TypeConstraint3" name=" TypeConstraint3" time="0.312">
+    </testcase>
+    <testcase classname=" TypeConstraint4" name=" TypeConstraint4" time="0.331">
+    </testcase>
+    <testcase classname=" TypeConstraint5" name=" TypeConstraint5" time="0.215">
+    </testcase>
+    <testcase classname=" TypeConstraint6" name=" TypeConstraint6" time="0.263">
+    </testcase>
+    <testcase classname=" TypeConstraint7" name=" TypeConstraint7" time="0.185">
+    </testcase>
+    <testcase classname=" TypeConstraint8" name=" TypeConstraint8" time="0.266">
+    </testcase>
+    <testcase classname=" TypeConstraint9" name=" TypeConstraint9" time="0.239">
+    </testcase>
+    <testcase classname=" CircularBaseClass" name=" CircularBaseClass" time="0.099">
+    </testcase>
+    <testcase classname=" ReturnTypes1" name=" ReturnTypes1" time="0.189">
+    </testcase>
+    <testcase classname=" Specialization1" name=" Specialization1" time="0.118">
+    </testcase>
+    <testcase classname=" Specialization2" name=" Specialization2" time="0.154">
+    </testcase>
+    <testcase classname=" Expressions1" name=" Expressions1" time="0.149">
+    </testcase>
+    <testcase classname=" Expressions2" name=" Expressions2" time="0.104">
+    </testcase>
+    <testcase classname=" Expressions3" name=" Expressions3" time="0.097">
+    </testcase>
+    <testcase classname=" Unpack1" name=" Unpack1" time="0.236">
+    </testcase>
+    <testcase classname=" Unpack2" name=" Unpack2" time="0.195">
+    </testcase>
+    <testcase classname=" Lambda1" name=" Lambda1" time="0.191">
+    </testcase>
+    <testcase classname=" Function1" name=" Function1" time="0.147">
+    </testcase>
+    <testcase classname=" Function2" name=" Function2" time="0.184">
+    </testcase>
+    <testcase classname=" Function3" name=" Function3" time="0.233">
+    </testcase>
+    <testcase classname=" Function4" name=" Function4" time="0.131">
+    </testcase>
+    <testcase classname=" Function5" name=" Function5" time="0.107">
+    </testcase>
+    <testcase classname=" Annotations1" name=" Annotations1" time="0.166">
+    </testcase>
+    <testcase classname=" Annotations2" name=" Annotations2" time="0.186">
+    </testcase>
+    <testcase classname=" Annotations3" name=" Annotations3" time="0.192">
+    </testcase>
+    <testcase classname=" Annotations4" name=" Annotations4" time="0.16">
+    </testcase>
+    <testcase classname=" AnnotatedVar1" name=" AnnotatedVar1" time="0.19">
+    </testcase>
+    <testcase classname=" AnnotatedVar2" name=" AnnotatedVar2" time="0.149">
+    </testcase>
+    <testcase classname=" AnnotatedVar3" name=" AnnotatedVar3" time="0.221">
+    </testcase>
+    <testcase classname=" AnnotatedVar4" name=" AnnotatedVar4" time="0.131">
+    </testcase>
+    <testcase classname=" AnnotatedVar5" name=" AnnotatedVar5" time="0.131">
+    </testcase>
+    <testcase classname=" Execution1" name=" Execution1" time="0.159">
+    </testcase>
+    <testcase classname=" Properties1" name=" Properties1" time="0.158">
+    </testcase>
+    <testcase classname=" Properties2" name=" Properties2" time="0.198">
+    </testcase>
+    <testcase classname=" Properties3" name=" Properties3" time="0.152">
+    </testcase>
+    <testcase classname=" Properties4" name=" Properties4" time="0.135">
+    </testcase>
+    <testcase classname=" Operators1" name=" Operators1" time="0.145">
+    </testcase>
+    <testcase classname=" Operators2" name=" Operators2" time="0.127">
+    </testcase>
+    <testcase classname=" Optional1" name=" Optional1" time="0.444">
+    </testcase>
+    <testcase classname=" Private1" name=" Private1" time="0.205">
+    </testcase>
+    <testcase classname=" Constant1" name=" Constant1" time="0.429">
+    </testcase>
+    <testcase classname=" Tuples1" name=" Tuples1" time="0.256">
+    </testcase>
+    <testcase classname=" Tuples2" name=" Tuples2" time="0.126">
+    </testcase>
+    <testcase classname=" Tuples3" name=" Tuples3" time="0.111">
+    </testcase>
+    <testcase classname=" Tuples4" name=" Tuples4" time="0.127">
+    </testcase>
+    <testcase classname=" NamedTuples1" name=" NamedTuples1" time="0.153">
+    </testcase>
+    <testcase classname=" AbstractClass1" name=" AbstractClass1" time="0.114">
+    </testcase>
+    <testcase classname=" AbstractClass2" name=" AbstractClass2" time="0.125">
+    </testcase>
+    <testcase classname=" AbstractClass3" name=" AbstractClass3" time="0.1">
+    </testcase>
+    <testcase classname=" AbstractClass4" name=" AbstractClass4" time="0.102">
+    </testcase>
+    <testcase classname=" Module1" name=" Module1" time="0.218">
+    </testcase>
+    <testcase classname=" Module2" name=" Module2" time="0.177">
+    </testcase>
+    <testcase classname=" Ellipsis1" name=" Ellipsis1" time="0.12">
+    </testcase>
+    <testcase classname=" Generators1" name=" Generators1" time="0.174">
+    </testcase>
+    <testcase classname=" Generators2" name=" Generators2" time="0.155">
+    </testcase>
+    <testcase classname=" Generators3" name=" Generators3" time="0.247">
+    </testcase>
+    <testcase classname=" Generators4" name=" Generators4" time="0.171">
+    </testcase>
+    <testcase classname=" Generators5" name=" Generators5" time="0.144">
+    </testcase>
+    <testcase classname=" Generators6" name=" Generators6" time="0.138">
+    </testcase>
+    <testcase classname=" Coroutines1" name=" Coroutines1" time="0.22">
+    </testcase>
+    <testcase classname=" Loops1" name=" Loops1" time="0.176">
+    </testcase>
+    <testcase classname=" Constants1" name=" Constants1" time="0.157">
+    </testcase>
+    <testcase classname=" NoReturn1" name=" NoReturn1" time="0.132">
+    </testcase>
+    <testcase classname=" With1" name=" With1" time="0.108">
+    </testcase>
+    <testcase classname=" ForLoops1" name=" ForLoops1" time="0.164">
+    </testcase>
+    <testcase classname=" ListComprehension1" name=" ListComprehension1" time="0.167">
+    </testcase>
+    <testcase classname=" ListComprehension2" name=" ListComprehension2" time="0.143">
+    </testcase>
+    <testcase classname=" ListComprehension3" name=" ListComprehension3" time="0.162">
+    </testcase>
+    <testcase classname=" ListComprehension4" name=" ListComprehension4" time="0.113">
+    </testcase>
+    <testcase classname=" SetComprehension1" name=" SetComprehension1" time="0.146">
+    </testcase>
+    <testcase classname=" Literals1" name=" Literals1" time="0.205">
+    </testcase>
+    <testcase classname=" Literals2" name=" Literals2" time="0.158">
+    </testcase>
+    <testcase classname=" TypeAlias1" name=" TypeAlias1" time="0.135">
+    </testcase>
+    <testcase classname=" TypeAlias2" name=" TypeAlias2" time="0.111">
+    </testcase>
+    <testcase classname=" Dictionary1" name=" Dictionary1" time="0.125">
+    </testcase>
+    <testcase classname=" Classes1" name=" Classes1" time="0.076">
+    </testcase>
+    <testcase classname=" Classes2" name=" Classes2" time="0.192">
+    </testcase>
+    <testcase classname=" Mro1" name=" Mro1" time="0.081">
+    </testcase>
+    <testcase classname=" Enums1" name=" Enums1" time="0.156">
+    </testcase>
+    <testcase classname=" Enums2" name=" Enums2" time="0.126">
+    </testcase>
+    <testcase classname=" CallbackPrototype1" name=" CallbackPrototype1" time="0.156">
+    </testcase>
+    <testcase classname=" Assignment1" name=" Assignment1" time="0.207">
+    </testcase>
+    <testcase classname=" Assignment2" name=" Assignment2" time="0.141">
+    </testcase>
+    <testcase classname=" Assignment3" name=" Assignment3" time="0.139">
+    </testcase>
+    <testcase classname=" Assignment4" name=" Assignment4" time="0.128">
+    </testcase>
+    <testcase classname=" Assignment5" name=" Assignment5" time="0.137">
+    </testcase>
+    <testcase classname=" AugmentedAssignment1" name=" AugmentedAssignment1" time="0.244">
+    </testcase>
+    <testcase classname=" DefaultInitializer1" name=" DefaultInitializer1" time="0.286">
+    </testcase>
+    <testcase classname=" Super1" name=" Super1" time="0.109">
+    </testcase>
+    <testcase classname=" NewType1" name=" NewType1" time="0.102">
+    </testcase>
+    <testcase classname=" UnnecessaryIsInstance1" name=" UnnecessaryIsInstance1" time="0.414">
+    </testcase>
+    <testcase classname=" UnnecessaryIsSubclass1" name=" UnnecessaryIsSubclass1" time="0.283">
+    </testcase>
+    <testcase classname=" Unbound1" name=" Unbound1" time="0.085">
+    </testcase>
+    <testcase classname=" UnnecessaryCast" name=" UnnecessaryCast" time="0.207">
+    </testcase>
+    <testcase classname=" AssertAlwaysTrue" name=" AssertAlwaysTrue" time="0.356">
+    </testcase>
+    <testcase classname=" RevealedType1" name=" RevealedType1" time="0.145">
+    </testcase>
+    <testcase classname=" NameBindings1" name=" NameBindings1" time="0.135">
+    </testcase>
+    <testcase classname=" GenericTypes1" name=" GenericTypes1" time="0.161">
+    </testcase>
+    <testcase classname=" GenericTypes2" name=" GenericTypes2" time="0.259">
+    </testcase>
+    <testcase classname=" GenericTypes3" name=" GenericTypes3" time="0.141">
+    </testcase>
+    <testcase classname=" GenericTypes4" name=" GenericTypes4" time="0.134">
+    </testcase>
+    <testcase classname=" GenericTypes5" name=" GenericTypes5" time="0.115">
+    </testcase>
+    <testcase classname=" GenericTypes6" name=" GenericTypes6" time="0.115">
+    </testcase>
+    <testcase classname=" GenericTypes7" name=" GenericTypes7" time="0.102">
+    </testcase>
+    <testcase classname=" GenericTypes8" name=" GenericTypes8" time="0.104">
+    </testcase>
+    <testcase classname=" GenericTypes9" name=" GenericTypes9" time="0.164">
+    </testcase>
+    <testcase classname=" GenericTypes10" name=" GenericTypes10" time="0.226">
+    </testcase>
+    <testcase classname=" GenericTypes11" name=" GenericTypes11" time="0.217">
+    </testcase>
+    <testcase classname=" GenericTypes12" name=" GenericTypes12" time="0.135">
+    </testcase>
+    <testcase classname=" GenericTypes13" name=" GenericTypes13" time="0.12">
+    </testcase>
+    <testcase classname=" GenericTypes14" name=" GenericTypes14" time="0.185">
+    </testcase>
+    <testcase classname=" GenericTypes15" name=" GenericTypes15" time="0.127">
+    </testcase>
+    <testcase classname=" GenericTypes16" name=" GenericTypes16" time="0.179">
+    </testcase>
+    <testcase classname=" GenericTypes17" name=" GenericTypes17" time="0.13">
+    </testcase>
+    <testcase classname=" GenericTypes18" name=" GenericTypes18" time="0.162">
+    </testcase>
+    <testcase classname=" Protocol1" name=" Protocol1" time="0.136">
+    </testcase>
+    <testcase classname=" Protocol2" name=" Protocol2" time="0.206">
+    </testcase>
+    <testcase classname=" Protocol3" name=" Protocol3" time="0.131">
+    </testcase>
+    <testcase classname=" Protocol4" name=" Protocol4" time="0.116">
+    </testcase>
+    <testcase classname=" Protocol5" name=" Protocol5" time="0.114">
+    </testcase>
+    <testcase classname=" Protocol6" name=" Protocol6" time="0.116">
+    </testcase>
+    <testcase classname=" TypedDict1" name=" TypedDict1" time="0.108">
+    </testcase>
+    <testcase classname=" TypedDict2" name=" TypedDict2" time="0.11">
+    </testcase>
+    <testcase classname=" TypedDict3" name=" TypedDict3" time="0.107">
+    </testcase>
+    <testcase classname=" TypedDict4" name=" TypedDict4" time="0.128">
+    </testcase>
+    <testcase classname=" TypedDict5" name=" TypedDict5" time="0.129">
+    </testcase>
+    <testcase classname=" TypedDict6" name=" TypedDict6" time="0.113">
+    </testcase>
+    <testcase classname=" TypedDict7" name=" TypedDict7" time="0.247">
+    </testcase>
+    <testcase classname=" TypedDict8" name=" TypedDict8" time="0.169">
+    </testcase>
+    <testcase classname=" TypeIgnore1" name=" TypeIgnore1" time="0.284">
+    </testcase>
+    <testcase classname=" TypeIgnore2" name=" TypeIgnore2" time="0.304">
+    </testcase>
+    <testcase classname=" Metaclass1" name=" Metaclass1" time="0.156">
+    </testcase>
+    <testcase classname=" AssignmentExpr1" name=" AssignmentExpr1" time="0.203">
+    </testcase>
+    <testcase classname=" AssignmentExpr2" name=" AssignmentExpr2" time="0.225">
+    </testcase>
+    <testcase classname=" AssignmentExpr3" name=" AssignmentExpr3" time="0.262">
+    </testcase>
+    <testcase classname=" AssignmentExpr4" name=" AssignmentExpr4" time="0.254">
+    </testcase>
+    <testcase classname=" AssignmentExpr5" name=" AssignmentExpr5" time="0.153">
+    </testcase>
+    <testcase classname=" Import1" name=" Import1" time="0.114">
+    </testcase>
+    <testcase classname=" Import2" name=" Import2" time="0.113">
+    </testcase>
+    <testcase classname=" Import4" name=" Import4" time="0.14">
+    </testcase>
+    <testcase classname=" Import6" name=" Import6" time="0.093">
+    </testcase>
+    <testcase classname=" Import7" name=" Import7" time="0.12">
+    </testcase>
+    <testcase classname=" Import9" name=" Import9" time="0.095">
+    </testcase>
+    <testcase classname=" Overload1" name=" Overload1" time="0.149">
+    </testcase>
+    <testcase classname=" Overload2" name=" Overload2" time="0.163">
+    </testcase>
+    <testcase classname=" Final1" name=" Final1" time="0.173">
+    </testcase>
+    <testcase classname=" Final2" name=" Final2" time="0.177">
+    </testcase>
+    <testcase classname=" Final3" name=" Final3" time="0.124">
+    </testcase>
+    <testcase classname=" InferredTypes1" name=" InferredTypes1" time="0.12">
+    </testcase>
+    <testcase classname=" CallSite2" name=" CallSite2" time="0.118">
+    </testcase>
+    <testcase classname=" DuplicateImports1" name=" DuplicateImports1" time="0.21">
+    </testcase>
+    <testcase classname=" FString2" name=" FString2" time="0.13">
+    </testcase>
+    <testcase classname=" FString3" name=" FString3" time="0.211">
+    </testcase>
+    <testcase classname=" MemberAccess1" name=" MemberAccess1" time="0.151">
+    </testcase>
+    <testcase classname=" MemberAccess2" name=" MemberAccess2" time="0.152">
+    </testcase>
+    <testcase classname=" ParamName1" name=" ParamName1" time="0.453">
+    </testcase>
+    <testcase classname=" DataClass8" name=" DataClass8" time="0.114">
+    </testcase>
+    <testcase classname=" Python2" name=" Python2" time="0.125">
+    </testcase>
+    <testcase classname=" InconsistentSpaceTab" name=" InconsistentSpaceTab" time="0.176">
+    </testcase>
+  </testsuite>
+  <testsuite name="fourslash tests" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:47" time="5.787" tests="13">
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass1.fourslash.ts fourslash test dataclass1.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass1.fourslash.ts fourslash test dataclass1.fourslash.ts runs correctly" time="0.788">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass3.fourslash.ts fourslash test dataclass3.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass3.fourslash.ts fourslash test dataclass3.fourslash.ts runs correctly" time="0.272">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass4.fourslash.ts fourslash test dataclass4.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass4.fourslash.ts fourslash test dataclass4.fourslash.ts runs correctly" time="0.262">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass5.fourslash.ts fourslash test dataclass5.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass5.fourslash.ts fourslash test dataclass5.fourslash.ts runs correctly" time="0.221">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass6.fourslash.ts fourslash test dataclass6.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass6.fourslash.ts fourslash test dataclass6.fourslash.ts runs correctly" time="0.221">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass7.fourslash.ts fourslash test dataclass7.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\dataclass7.fourslash.ts fourslash test dataclass7.fourslash.ts runs correctly" time="0.141">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\hover.fourslash.ts fourslash test hover.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\hover.fourslash.ts fourslash test hover.fourslash.ts runs correctly" time="0.183">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\importnotresolved.fourslash.ts fourslash test importnotresolved.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\importnotresolved.fourslash.ts fourslash test importnotresolved.fourslash.ts runs correctly" time="0.112">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.codeAction.fourslash.ts fourslash test missingTypeStub.codeAction.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.codeAction.fourslash.ts fourslash test missingTypeStub.codeAction.fourslash.ts runs correctly" time="0.151">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.command.fourslash.ts fourslash test missingTypeStub.command.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.command.fourslash.ts fourslash test missingTypeStub.command.fourslash.ts runs correctly" time="1.366">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.fourslash.ts fourslash test missingTypeStub.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.fourslash.ts fourslash test missingTypeStub.fourslash.ts runs correctly" time="0.117">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.invokeCodeAction.fourslash.ts fourslash test missingTypeStub.invokeCodeAction.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\missingTypeStub.invokeCodeAction.fourslash.ts fourslash test missingTypeStub.invokeCodeAction.fourslash.ts runs correctly" time="1.208">
+    </testcase>
+    <testcase classname="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\noerrors.fourslash.ts fourslash test noerrors.fourslash.ts runs correctly" name="fourslash tests C:\Projects\pyrx\server\pyright\server\src\tests\fourslash\noerrors.fourslash.ts fourslash test noerrors.fourslash.ts runs correctly" time="0.095">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:54" time="1.918" tests="21">
+    <testcase classname=" Create" name=" Create" time="0.006">
+    </testcase>
+    <testcase classname=" Multiple files" name=" Multiple files" time="0.004">
+    </testcase>
+    <testcase classname=" Configuration" name=" Configuration" time="0.008">
+    </testcase>
+    <testcase classname=" ProjectRoot" name=" ProjectRoot" time="0.002">
+    </testcase>
+    <testcase classname=" CustomTypeshedFolder" name=" CustomTypeshedFolder" time="0.027">
+    </testcase>
+    <testcase classname=" IgnoreCase" name=" IgnoreCase" time="0.002">
+    </testcase>
+    <testcase classname=" GoToMarker" name=" GoToMarker" time="0.001">
+    </testcase>
+    <testcase classname=" GoToEachMarker" name=" GoToEachMarker" time="0.002">
+    </testcase>
+    <testcase classname=" Markers" name=" Markers" time="0.002">
+    </testcase>
+    <testcase classname=" GoToPosition" name=" GoToPosition" time="0.001">
+    </testcase>
+    <testcase classname=" select" name=" select" time="0.002">
+    </testcase>
+    <testcase classname=" selectAllInFile" name=" selectAllInFile" time="0.001">
+    </testcase>
+    <testcase classname=" selectRange" name=" selectRange" time="0.001">
+    </testcase>
+    <testcase classname=" selectLine" name=" selectLine" time="0.198">
+    </testcase>
+    <testcase classname=" goToEachRange" name=" goToEachRange" time="0.003">
+    </testcase>
+    <testcase classname=" getRangesInFile" name=" getRangesInFile" time="0.002">
+    </testcase>
+    <testcase classname=" rangesByText" name=" rangesByText" time="0.001">
+    </testcase>
+    <testcase classname=" moveCaretRight" name=" moveCaretRight" time="0.002">
+    </testcase>
+    <testcase classname=" runFourSlashTestContent" name=" runFourSlashTestContent" time="0.006">
+    </testcase>
+    <testcase classname=" VerifyDiagnosticsTest1" name=" VerifyDiagnosticsTest1" time="0.891">
+    </testcase>
+    <testcase classname=" VerifyDiagnosticsTest2" name=" VerifyDiagnosticsTest2" time="0.426">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:56" time="0.479" tests="66">
+    <testcase classname=" Empty" name=" Empty" time="0.001">
+    </testcase>
+    <testcase classname=" NewLines" name=" NewLines" time="0.001">
+    </testcase>
+    <testcase classname=" ParenNewLines" name=" ParenNewLines" time="0.001">
+    </testcase>
+    <testcase classname=" BraceNewLines" name=" BraceNewLines" time="0">
+    </testcase>
+    <testcase classname=" BracketNewLines" name=" BracketNewLines" time="0.001">
+    </testcase>
+    <testcase classname=" NewLinesWithWhiteSpace" name=" NewLinesWithWhiteSpace" time="0.001">
+    </testcase>
+    <testcase classname=" NewLineEliding" name=" NewLineEliding" time="0">
+    </testcase>
+    <testcase classname=" LineContinuation" name=" LineContinuation" time="0.001">
+    </testcase>
+    <testcase classname=" Dots" name=" Dots" time="0">
+    </testcase>
+    <testcase classname=" PunctuationTokens" name=" PunctuationTokens" time="0.001">
+    </testcase>
+    <testcase classname=" IndentDedent" name=" IndentDedent" time="0.001">
+    </testcase>
+    <testcase classname=" IndentDedentParen" name=" IndentDedentParen" time="0">
+    </testcase>
+    <testcase classname=" Strings: simple" name=" Strings: simple" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: unclosed" name=" Strings: unclosed" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: escaped across multiple lines" name=" Strings: escaped across multiple lines" time="0">
+    </testcase>
+    <testcase classname=" Strings: block next to regular, double-quoted" name=" Strings: block next to regular, double-quoted" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: block next to block, double-quoted" name=" Strings: block next to block, double-quoted" time="0">
+    </testcase>
+    <testcase classname=" Strings: unclosed sequence of quotes" name=" Strings: unclosed sequence of quotes" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: single quote escape" name=" Strings: single quote escape" time="0">
+    </testcase>
+    <testcase classname=" Strings: double quote escape" name=" Strings: double quote escape" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: triplicate double quote escape" name=" Strings: triplicate double quote escape" time="0">
+    </testcase>
+    <testcase classname=" Strings: single quoted f-string" name=" Strings: single quoted f-string" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: double quoted f-string" name=" Strings: double quoted f-string" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: single quoted multiline f-string" name=" Strings: single quoted multiline f-string" time="0">
+    </testcase>
+    <testcase classname=" Strings: double quoted multiline f-string" name=" Strings: double quoted multiline f-string" time="0">
+    </testcase>
+    <testcase classname=" Strings: f-string with single right brace" name=" Strings: f-string with single right brace" time="0">
+    </testcase>
+    <testcase classname=" Strings: f-string with escape in expression" name=" Strings: f-string with escape in expression" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: f-string with unterminated expression" name=" Strings: f-string with unterminated expression" time="0">
+    </testcase>
+    <testcase classname=" Strings: escape at the end of single quoted string" name=" Strings: escape at the end of single quoted string" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: escape at the end of double quoted string" name=" Strings: escape at the end of double quoted string" time="0">
+    </testcase>
+    <testcase classname=" Strings: b/u/r-string" name=" Strings: b/u/r-string" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: bytes string with non-ASCII" name=" Strings: bytes string with non-ASCII" time="0">
+    </testcase>
+    <testcase classname=" Strings: raw strings with escapes" name=" Strings: raw strings with escapes" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: escape at the end of double quoted string" name=" Strings: escape at the end of double quoted string" time="0">
+    </testcase>
+    <testcase classname=" Strings: special escape characters" name=" Strings: special escape characters" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: invalid escape characters" name=" Strings: invalid escape characters" time="0">
+    </testcase>
+    <testcase classname=" Strings: good hex escapes" name=" Strings: good hex escapes" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: bad hex escapes" name=" Strings: bad hex escapes" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: good name escapes" name=" Strings: good name escapes" time="0.001">
+    </testcase>
+    <testcase classname=" Strings: bad name escapes" name=" Strings: bad name escapes" time="0">
+    </testcase>
+    <testcase classname=" Comments" name=" Comments" time="0.001">
+    </testcase>
+    <testcase classname=" Period to operator token" name=" Period to operator token" time="0">
+    </testcase>
+    <testcase classname=" @ to operator token" name=" @ to operator token" time="0.001">
+    </testcase>
+    <testcase classname=" Unknown token" name=" Unknown token" time="0">
+    </testcase>
+    <testcase classname=" Hex number" name=" Hex number" time="0.001">
+    </testcase>
+    <testcase classname=" Binary number" name=" Binary number" time="0">
+    </testcase>
+    <testcase classname=" Octal number" name=" Octal number" time="0.002">
+    </testcase>
+    <testcase classname=" Decimal number" name=" Decimal number" time="0">
+    </testcase>
+    <testcase classname=" Decimal number operator" name=" Decimal number operator" time="0.001">
+    </testcase>
+    <testcase classname=" Floating point number" name=" Floating point number" time="0.001">
+    </testcase>
+    <testcase classname=" Floating point numbers with parens" name=" Floating point numbers with parens" time="0">
+    </testcase>
+    <testcase classname=" Floating point numbers with operators" name=" Floating point numbers with operators" time="0.001">
+    </testcase>
+    <testcase classname=" Imaginary numbers" name=" Imaginary numbers" time="0">
+    </testcase>
+    <testcase classname=" Underscore numbers" name=" Underscore numbers" time="0">
+    </testcase>
+    <testcase classname=" Simple expression, leading minus" name=" Simple expression, leading minus" time="0.001">
+    </testcase>
+    <testcase classname=" Operators" name=" Operators" time="0.001">
+    </testcase>
+    <testcase classname=" Identifiers" name=" Identifiers" time="0">
+    </testcase>
+    <testcase classname=" Lines1" name=" Lines1" time="0.002">
+    </testcase>
+    <testcase classname=" Comments1" name=" Comments1" time="0.001">
+    </testcase>
+    <testcase classname=" Identifiers1" name=" Identifiers1" time="0.08">
+    </testcase>
+    <testcase classname=" TypeIgnoreAll1" name=" TypeIgnoreAll1" time="0.001">
+    </testcase>
+    <testcase classname=" TypeIgnoreAll2" name=" TypeIgnoreAll2" time="0">
+    </testcase>
+    <testcase classname=" TypeIgnoreAll3" name=" TypeIgnoreAll3" time="0.001">
+    </testcase>
+    <testcase classname=" TypeIgnoreAll3" name=" TypeIgnoreAll3" time="0">
+    </testcase>
+    <testcase classname=" TypeIgnoreLine1" name=" TypeIgnoreLine1" time="0.001">
+    </testcase>
+    <testcase classname=" TypeIgnoreLine2" name=" TypeIgnoreLine2" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:57" time="0.186" tests="2">
+    <testcase classname=" TryExcept1" name=" TryExcept1" time="0.015">
+    </testcase>
+    <testcase classname=" FString1" name=" FString1" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:58" time="0.444" tests="11">
+    <testcase classname=" FindFilesWithConfigFile" name=" FindFilesWithConfigFile" time="0.134">
+    </testcase>
+    <testcase classname=" FileSpecNotAnArray" name=" FileSpecNotAnArray" time="0.004">
+    </testcase>
+    <testcase classname=" FileSpecNotAString" name=" FileSpecNotAString" time="0.005">
+    </testcase>
+    <testcase classname=" SomeFileSpecsAreInvalid" name=" SomeFileSpecsAreInvalid" time="0.005">
+    </testcase>
+    <testcase classname=" ConfigBadJson" name=" ConfigBadJson" time="0.023">
+    </testcase>
+    <testcase classname=" FindExecEnv1" name=" FindExecEnv1" time="0">
+    </testcase>
+    <testcase classname=" PythonPlatform" name=" PythonPlatform" time="0.001">
+    </testcase>
+    <testcase classname=" AutoSearchPathsOn" name=" AutoSearchPathsOn" time="0.006">
+    </testcase>
+    <testcase classname=" AutoSearchPathsOff" name=" AutoSearchPathsOff" time="0.004">
+    </testcase>
+    <testcase classname=" AutoSearchPathsOnSrcIsPkg" name=" AutoSearchPathsOnSrcIsPkg" time="0.006">
+    </testcase>
+    <testcase classname=" AutoSearchPathsOnWithConfigExecEnv" name=" AutoSearchPathsOnWithConfigExecEnv" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:24:59" time="0.29" tests="3">
+    <testcase classname=" Empty" name=" Empty" time="0.001">
+    </testcase>
+    <testcase classname=" Sample1" name=" Sample1" time="0.003">
+    </testcase>
+    <testcase classname=" TypeSyntax1" name=" TypeSyntax1" time="0.013">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:00" time="0.261" tests="1">
+    <testcase classname=" Empty" name=" Empty" time="0.094">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:00" time="0.14" tests="52">
+    <testcase classname=" getPathComponents1" name=" getPathComponents1" time="0">
+    </testcase>
+    <testcase classname=" getPathComponents2" name=" getPathComponents2" time="0.001">
+    </testcase>
+    <testcase classname=" getPathComponents3" name=" getPathComponents3" time="0">
+    </testcase>
+    <testcase classname=" getPathComponents4" name=" getPathComponents4" time="0">
+    </testcase>
+    <testcase classname=" getPathComponents5" name=" getPathComponents5" time="0.001">
+    </testcase>
+    <testcase classname=" combinePaths1" name=" combinePaths1" time="0">
+    </testcase>
+    <testcase classname=" ensureTrailingDirectorySeparator1" name=" ensureTrailingDirectorySeparator1" time="0">
+    </testcase>
+    <testcase classname=" hasTrailingDirectorySeparator1" name=" hasTrailingDirectorySeparator1" time="0.001">
+    </testcase>
+    <testcase classname=" stripTrailingDirectorySeparator1" name=" stripTrailingDirectorySeparator1" time="0">
+    </testcase>
+    <testcase classname=" getFileExtension1" name=" getFileExtension1" time="0">
+    </testcase>
+    <testcase classname=" getFileName1" name=" getFileName1" time="0.001">
+    </testcase>
+    <testcase classname=" stripFileExtension" name=" stripFileExtension" time="0">
+    </testcase>
+    <testcase classname=" getWildcardRegexPattern1" name=" getWildcardRegexPattern1" time="0.001">
+    </testcase>
+    <testcase classname=" getWildcardRegexPattern2" name=" getWildcardRegexPattern2" time="0">
+    </testcase>
+    <testcase classname=" getWildcardRoot1" name=" getWildcardRoot1" time="0.001">
+    </testcase>
+    <testcase classname=" getWildcardRoot2" name=" getWildcardRoot2" time="0.001">
+    </testcase>
+    <testcase classname=" reducePathComponentsEmpty" name=" reducePathComponentsEmpty" time="0">
+    </testcase>
+    <testcase classname=" reducePathComponents" name=" reducePathComponents" time="0">
+    </testcase>
+    <testcase classname=" combinePathComponentsEmpty" name=" combinePathComponentsEmpty" time="0.001">
+    </testcase>
+    <testcase classname=" combinePathComponentsAbsolute" name=" combinePathComponentsAbsolute" time="0">
+    </testcase>
+    <testcase classname=" combinePathComponents" name=" combinePathComponents" time="0">
+    </testcase>
+    <testcase classname=" resolvePath1" name=" resolvePath1" time="0.001">
+    </testcase>
+    <testcase classname=" resolvePath2" name=" resolvePath2" time="0">
+    </testcase>
+    <testcase classname=" comparePaths1" name=" comparePaths1" time="0.001">
+    </testcase>
+    <testcase classname=" comparePaths2" name=" comparePaths2" time="0">
+    </testcase>
+    <testcase classname=" comparePaths3" name=" comparePaths3" time="0">
+    </testcase>
+    <testcase classname=" comparePaths4" name=" comparePaths4" time="0">
+    </testcase>
+    <testcase classname=" comparePaths5" name=" comparePaths5" time="0.001">
+    </testcase>
+    <testcase classname=" containsPath1" name=" containsPath1" time="0">
+    </testcase>
+    <testcase classname=" containsPath2" name=" containsPath2" time="0.001">
+    </testcase>
+    <testcase classname=" containsPath3" name=" containsPath3" time="0">
+    </testcase>
+    <testcase classname=" changeAnyExtension1" name=" changeAnyExtension1" time="0.001">
+    </testcase>
+    <testcase classname=" changeAnyExtension2" name=" changeAnyExtension2" time="0.012">
+    </testcase>
+    <testcase classname=" changeAnyExtension3" name=" changeAnyExtension3" time="0">
+    </testcase>
+    <testcase classname=" changeAnyExtension1" name=" changeAnyExtension1" time="0.001">
+    </testcase>
+    <testcase classname=" changeAnyExtension2" name=" changeAnyExtension2" time="0">
+    </testcase>
+    <testcase classname=" changeAnyExtension3" name=" changeAnyExtension3" time="0">
+    </testcase>
+    <testcase classname=" getBaseFileName1" name=" getBaseFileName1" time="0">
+    </testcase>
+    <testcase classname=" getBaseFileName2" name=" getBaseFileName2" time="0.001">
+    </testcase>
+    <testcase classname=" getBaseFileName3" name=" getBaseFileName3" time="0">
+    </testcase>
+    <testcase classname=" getBaseFileName4" name=" getBaseFileName4" time="0">
+    </testcase>
+    <testcase classname=" getRelativePathFromDirectory1" name=" getRelativePathFromDirectory1" time="0.001">
+    </testcase>
+    <testcase classname=" getRelativePathFromDirectory2" name=" getRelativePathFromDirectory2" time="0.001">
+    </testcase>
+    <testcase classname=" comparePathsCaseSensitive" name=" comparePathsCaseSensitive" time="0">
+    </testcase>
+    <testcase classname=" comparePathsCaseInsensitive" name=" comparePathsCaseInsensitive" time="0">
+    </testcase>
+    <testcase classname=" isRootedDiskPath1" name=" isRootedDiskPath1" time="0.001">
+    </testcase>
+    <testcase classname=" isRootedDiskPath2" name=" isRootedDiskPath2" time="0">
+    </testcase>
+    <testcase classname=" isRootedDiskPath3" name=" isRootedDiskPath3" time="0">
+    </testcase>
+    <testcase classname=" isDiskPathRoot1" name=" isDiskPathRoot1" time="0.001">
+    </testcase>
+    <testcase classname=" isDiskPathRoot2" name=" isDiskPathRoot2" time="0">
+    </testcase>
+    <testcase classname=" isDiskPathRoot3" name=" isDiskPathRoot3" time="0">
+    </testcase>
+    <testcase classname=" getRelativePath" name=" getRelativePath" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:01" time="0.146" tests="10">
+    <testcase classname=" CreateVFS" name=" CreateVFS" time="0.002">
+    </testcase>
+    <testcase classname=" Folders" name=" Folders" time="0.004">
+    </testcase>
+    <testcase classname=" Files" name=" Files" time="0.003">
+    </testcase>
+    <testcase classname=" CreateRich" name=" CreateRich" time="0.008">
+    </testcase>
+    <testcase classname=" Shadow" name=" Shadow" time="0.001">
+    </testcase>
+    <testcase classname=" Diffing" name=" Diffing" time="0.005">
+    </testcase>
+    <testcase classname=" createFromFileSystem1" name=" createFromFileSystem1" time="0.008">
+    </testcase>
+    <testcase classname=" createFromFileSystem2" name=" createFromFileSystem2" time="0.001">
+    </testcase>
+    <testcase classname=" createFromFileSystemWithCustomTypeshedPath" name=" createFromFileSystemWithCustomTypeshedPath" time="0.002">
+    </testcase>
+    <testcase classname=" createFromFileSystemWithMetadata" name=" createFromFileSystemWithMetadata" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:01" time="0.177" tests="14">
+    <testcase classname=" GlobalOptions" name=" GlobalOptions" time="0.002">
+    </testcase>
+    <testcase classname=" Filename" name=" Filename" time="0.001">
+    </testcase>
+    <testcase classname=" Extra file options" name=" Extra file options" time="0">
+    </testcase>
+    <testcase classname=" Library options" name=" Library options" time="0.001">
+    </testcase>
+    <testcase classname=" Range" name=" Range" time="0.001">
+    </testcase>
+    <testcase classname=" Marker" name=" Marker" time="0">
+    </testcase>
+    <testcase classname=" MarkerWithData" name=" MarkerWithData" time="0.001">
+    </testcase>
+    <testcase classname=" MarkerWithDataAndName" name=" MarkerWithDataAndName" time="0">
+    </testcase>
+    <testcase classname=" RangeWithMarker" name=" RangeWithMarker" time="0.001">
+    </testcase>
+    <testcase classname=" RangeWithMarkerAndJsonData" name=" RangeWithMarkerAndJsonData" time="0">
+    </testcase>
+    <testcase classname=" Multiple Files" name=" Multiple Files" time="0">
+    </testcase>
+    <testcase classname=" Multiple Files with default name" name=" Multiple Files with default name" time="0.001">
+    </testcase>
+    <testcase classname=" Multiple Files with markers" name=" Multiple Files with markers" time="0.001">
+    </testcase>
+    <testcase classname=" fourSlashWithFileSystem" name=" fourSlashWithFileSystem" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:01" time="0.153" tests="23">
+    <testcase classname=" PlaintextIndention" name=" PlaintextIndention" time="0.003">
+    </testcase>
+    <testcase classname=" NormalText" name=" NormalText" time="0.001">
+    </testcase>
+    <testcase classname=" InlineLitereals" name=" InlineLitereals" time="0">
+    </testcase>
+    <testcase classname=" Headings" name=" Headings" time="0.001">
+    </testcase>
+    <testcase classname=" AsterisksAtStartOfArgs" name=" AsterisksAtStartOfArgs" time="0.001">
+    </testcase>
+    <testcase classname=" CopyrightAndLicense" name=" CopyrightAndLicense" time="0">
+    </testcase>
+    <testcase classname=" CommonRestFieldLists" name=" CommonRestFieldLists" time="0.001">
+    </testcase>
+    <testcase classname=" Doctest" name=" Doctest" time="0.001">
+    </testcase>
+    <testcase classname=" DoctestIndented" name=" DoctestIndented" time="0.001">
+    </testcase>
+    <testcase classname=" DoctestTextAfter" name=" DoctestTextAfter" time="0.001">
+    </testcase>
+    <testcase classname=" DoctestIndentedTextAfter" name=" DoctestIndentedTextAfter" time="0">
+    </testcase>
+    <testcase classname=" MarkdownStyleBacktickBlock" name=" MarkdownStyleBacktickBlock" time="0.004">
+    </testcase>
+    <testcase classname=" RestLiteralBlock" name=" RestLiteralBlock" time="0.001">
+    </testcase>
+    <testcase classname=" RestLiteralBlockEmptyDoubleColonLine" name=" RestLiteralBlockEmptyDoubleColonLine" time="0.001">
+    </testcase>
+    <testcase classname=" RestLiteralBlockExtraSpace" name=" RestLiteralBlockExtraSpace" time="0.001">
+    </testcase>
+    <testcase classname=" RestLiteralBlockNoIndentOneLiner" name=" RestLiteralBlockNoIndentOneLiner" time="0">
+    </testcase>
+    <testcase classname=" DirectiveRemoval" name=" DirectiveRemoval" time="0.001">
+    </testcase>
+    <testcase classname=" ClassDirective" name=" ClassDirective" time="0.001">
+    </testcase>
+    <testcase classname=" UnfinishedBacktickBlock" name=" UnfinishedBacktickBlock" time="0">
+    </testcase>
+    <testcase classname=" UnfinishedInlineLiteral" name=" UnfinishedInlineLiteral" time="0">
+    </testcase>
+    <testcase classname=" DashList" name=" DashList" time="0">
+    </testcase>
+    <testcase classname=" AsteriskList" name=" AsteriskList" time="0.001">
+    </testcase>
+    <testcase classname=" SquareBrackets" name=" SquareBrackets" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:01" time="0.143" tests="22">
+    <testcase classname=" UtilsContainsDefault" name=" UtilsContainsDefault" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsContainsComparer" name=" UtilsContainsComparer" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsAppend" name=" UtilsAppend" time="0">
+    </testcase>
+    <testcase classname=" UtilsAppendUndefined" name=" UtilsAppendUndefined" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsAppendUndefinedValue" name=" UtilsAppendUndefinedValue" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsFindEmpty" name=" UtilsFindEmpty" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsFindNoMatch" name=" UtilsFindNoMatch" time="0.002">
+    </testcase>
+    <testcase classname=" UtilsFindMatchSimple" name=" UtilsFindMatchSimple" time="0">
+    </testcase>
+    <testcase classname=" UtilsFindMatch" name=" UtilsFindMatch" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsFindMatchCovariant" name=" UtilsFindMatchCovariant" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsStableSort" name=" UtilsStableSort" time="0">
+    </testcase>
+    <testcase classname=" UtilsBinarySearch" name=" UtilsBinarySearch" time="0.001">
+    </testcase>
+    <testcase classname=" UtilsBinarySearchMiss" name=" UtilsBinarySearchMiss" time="0">
+    </testcase>
+    <testcase classname=" isArray1" name=" isArray1" time="0.001">
+    </testcase>
+    <testcase classname=" isArray2" name=" isArray2" time="0">
+    </testcase>
+    <testcase classname=" addRange1" name=" addRange1" time="0.001">
+    </testcase>
+    <testcase classname=" addRange2" name=" addRange2" time="0.001">
+    </testcase>
+    <testcase classname=" insertAt1" name=" insertAt1" time="0">
+    </testcase>
+    <testcase classname=" insertAt2" name=" insertAt2" time="0">
+    </testcase>
+    <testcase classname=" insertAt3" name=" insertAt3" time="0.001">
+    </testcase>
+    <testcase classname=" cloneAndSort" name=" cloneAndSort" time="0">
+    </testcase>
+    <testcase classname=" flatten" name=" flatten" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:01" time="0.095" tests="11">
+    <testcase classname=" DebugAssertTrue" name=" DebugAssertTrue" time="0.001">
+    </testcase>
+    <testcase classname=" DebugAssertFalse" name=" DebugAssertFalse" time="0.001">
+    </testcase>
+    <testcase classname=" DebugAssertDetailInfo" name=" DebugAssertDetailInfo" time="0.001">
+    </testcase>
+    <testcase classname=" DebugAssertStackTrace" name=" DebugAssertStackTrace" time="0">
+    </testcase>
+    <testcase classname=" DebugAssertUndefined" name=" DebugAssertUndefined" time="0.001">
+    </testcase>
+    <testcase classname=" DebugAssertDefined" name=" DebugAssertDefined" time="0">
+    </testcase>
+    <testcase classname=" DebugAssertEachUndefined" name=" DebugAssertEachUndefined" time="0.001">
+    </testcase>
+    <testcase classname=" DebugAssertEachDefined" name=" DebugAssertEachDefined" time="0">
+    </testcase>
+    <testcase classname=" DebugAssertNever" name=" DebugAssertNever" time="0.001">
+    </testcase>
+    <testcase classname=" DebugGetFunctionName" name=" DebugGetFunctionName" time="0">
+    </testcase>
+    <testcase classname=" DebugFormatEnum" name=" DebugFormatEnum" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2020-03-05T00:25:02" time="0.096" tests="5">
+    <testcase classname=" CoreCompareStringsCaseInsensitive1" name=" CoreCompareStringsCaseInsensitive1" time="0.002">
+    </testcase>
+    <testcase classname=" CoreCompareStringsCaseInsensitive2" name=" CoreCompareStringsCaseInsensitive2" time="0.001">
+    </testcase>
+    <testcase classname=" CoreCompareStringsCaseInsensitive3" name=" CoreCompareStringsCaseInsensitive3" time="0.001">
+    </testcase>
+    <testcase classname=" CoreCompareStringsCaseInsensitive4" name=" CoreCompareStringsCaseInsensitive4" time="0">
+    </testcase>
+    <testcase classname=" CoreCompareStringsCaseSensitive" name=" CoreCompareStringsCaseSensitive" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

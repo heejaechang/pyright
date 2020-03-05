@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\docStringUtils.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\docStringUtils.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">51.28% <small>(20 / 39)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">50% <small>(13 / 26)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">75% <small>(3 / 4)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">51.28% <small>(20 / 39)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; docStringUtils.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">8</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">1</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * docStringUtils.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Static methods that format and parse doc strings based on
+ * the rules specified in PEP 257
+ * (https://www.python.org/dev/peps/pep-0257/).
+ */
+&nbsp;
+export function decodeDocString(rawString: string): string {
+    // Remove carriage returns and replace tabs.
+    const unescaped = rawString.replace(/\r/g, '').replace(/\t/g, '        ');
+&nbsp;
+    // Split into lines.
+    const lines = unescaped.split('\n');
+&nbsp;
+    // Determine the max indent amount.
+    let maxIndent = Number.MAX_VALUE;
+    lines.forEach((line, index) =&gt; {
+        // First line is special.
+        if (lines.length &lt;= 1 || index &gt; 0) {
+            const trimmed = line.trimLeft();
+            if (trimmed) {
+                maxIndent = Math.min(maxIndent, line.length - trimmed.length);
+            }
+        }
+    });
+&nbsp;
+    // Trim the lines.
+    const trimmedLines: string[] = [];
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (maxIndent &lt; Number.MAX_VALUE) {
+        lines.forEach((line, index) =&gt; {
+            if (index === 0) {
+                trimmedLines.push(line.trimRight());
+            } else {
+                trimmedLines.push(line.substr(maxIndent).trimRight());
+            }
+        });
+    }
+&nbsp;
+    // Strip off leading and trailing blank lines.
+    while (trimmedLines.length &gt; 0 &amp;&amp; trimmedLines[0].length === 0) {
+<span class="cstat-no" title="statement not covered" >        trimmedLines.shift();</span>
+    }
+&nbsp;
+    while (trimmedLines.length &gt; 0 &amp;&amp; trimmedLines[trimmedLines.length - 1].length === 0) {
+        trimmedLines.pop();
+    }
+&nbsp;
+    return trimmedLines.join('\n');
+}
+&nbsp;
+export function extractParameterDocumentation(functionDocString: string, paramName: string<span class="fstat-no" title="function not covered" >): string | undefined {</span>
+<span class="cstat-no" title="statement not covered" >    if (!functionDocString || !paramName) {</span>
+<span class="cstat-no" title="statement not covered" >        return undefined;</span>
+    }
+&nbsp;
+    // Python doesn't have a single standard for param documentation. There are three
+    // popular styles.
+    //
+    // 1. Epytext:
+    //      @param param1: description
+    // 2. reST:
+    //      :param param1: description
+    // 3. Google (variant 1):
+    //      Args:
+    //          param1: description
+    // 4. Google (variant 2):
+    //      Args:
+    //          param1 (type): description
+&nbsp;
+    const docStringLines = <span class="cstat-no" title="statement not covered" >functionDocString.split('\n');</span>
+<span class="cstat-no" title="statement not covered" >    for (const line of docStringLines) {</span>
+        const trimmedLine = <span class="cstat-no" title="statement not covered" >line.trim();</span>
+&nbsp;
+        // Check for Epytext
+        let paramOffset = <span class="cstat-no" title="statement not covered" >trimmedLine.indexOf('@param ' + paramName);</span>
+<span class="cstat-no" title="statement not covered" >        if (paramOffset &gt;= 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return trimmedLine.substr(paramOffset + 7);</span>
+        }
+&nbsp;
+        // Check for reST format
+<span class="cstat-no" title="statement not covered" >        paramOffset = trimmedLine.indexOf(':param ' + paramName);</span>
+<span class="cstat-no" title="statement not covered" >        if (paramOffset &gt;= 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return trimmedLine.substr(paramOffset + 7);</span>
+        }
+&nbsp;
+        // Check for Google (variant 1) format
+<span class="cstat-no" title="statement not covered" >        paramOffset = trimmedLine.indexOf(paramName + ': ');</span>
+<span class="cstat-no" title="statement not covered" >        if (paramOffset &gt;= 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return trimmedLine.substr(paramOffset);</span>
+        }
+&nbsp;
+        // Check for Google (variant 1) format
+<span class="cstat-no" title="statement not covered" >        paramOffset = trimmedLine.indexOf(paramName + ' (');</span>
+<span class="cstat-no" title="statement not covered" >        if (paramOffset &gt;= 0) {</span>
+<span class="cstat-no" title="statement not covered" >            return trimmedLine.substr(paramOffset);</span>
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return undefined;</span>
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

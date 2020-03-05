@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\analyzer\staticExpressions.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\analyzer\staticExpressions.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">68.63% <small>(70 / 102)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">63.97% <small>(87 / 136)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">83.33% <small>(10 / 12)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">69% <small>(69 / 100)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/analyzer/</a> &#187; staticExpressions.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-yes">75038</span>
+<span class="cline-any cline-yes">15</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75023</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72723</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7</span>
+<span class="cline-any cline-yes">5</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72716</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-yes">280</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">280</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-yes">85</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2300</span>
+<span class="cline-any cline-yes">80</span>
+<span class="cline-any cline-yes">42</span>
+<span class="cline-any cline-yes">38</span>
+<span class="cline-any cline-yes">12</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2220</span>
+<span class="cline-any cline-yes">464</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1756</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2346</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72943</span>
+<span class="cline-any cline-yes">29</span>
+<span class="cline-any cline-yes">3</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72940</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-yes">20610</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">20610</span>
+<span class="cline-any cline-yes">20610</span>
+<span class="cline-any cline-yes">20610</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">51826</span>
+<span class="cline-any cline-yes">51826</span>
+<span class="cline-any cline-yes">51826</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-yes">12600</span>
+<span class="cline-any cline-yes">59836</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">59836</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">59836</span>
+<span class="cline-any cline-yes">59836</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-yes">75</span>
+<span class="cline-any cline-yes">120</span>
+<span class="cline-any cline-yes">120</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72716</span>
+<span class="cline-any cline-yes">72631</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">72436</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">280</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">280</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">85</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">85</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">85</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">195</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * staticExpressions.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Collection of static methods that operate on expressions
+ * (parse node trees).
+ */
+&nbsp;
+import { ExecutionEnvironment } from '../common/configOptions';
+import { ExpressionNode, NumberNode, ParseNodeType, TupleNode } from '../parser/parseNodes';
+import { KeywordType, OperatorType } from '../parser/tokenizerTypes';
+&nbsp;
+// Returns undefined if the expression cannot be evaluated
+// statically as a bool value or true/false if it can.
+export function evaluateStaticBoolExpression(node: ExpressionNode, execEnv: ExecutionEnvironment): boolean | undefined {
+    if (node.nodeType === ParseNodeType.UnaryOperation) {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (node.operator === OperatorType.Or || node.operator === OperatorType.And) {
+            const value = <span class="cstat-no" title="statement not covered" >evaluateStaticBoolLikeExpression(node.expression, execEnv);</span>
+<span class="cstat-no" title="statement not covered" >            if (value !== undefined) {</span>
+<span class="cstat-no" title="statement not covered" >                return !value;</span>
+            }
+        }
+    } else if (node.nodeType === ParseNodeType.BinaryOperation) {
+        // Is it an OR or AND expression?
+        if (node.operator === OperatorType.Or || node.operator === OperatorType.And) {
+            const leftValue = evaluateStaticBoolExpression(node.leftExpression, execEnv);
+            const rightValue = evaluateStaticBoolExpression(node.rightExpression, execEnv);
+&nbsp;
+            if (leftValue === undefined || rightValue === undefined) {
+                return undefined;
+            }
+&nbsp;
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (node.operator === OperatorType.Or) {
+<span class="cstat-no" title="statement not covered" >                return leftValue || rightValue;</span>
+            } else {
+                return leftValue &amp;&amp; rightValue;
+            }
+        }
+&nbsp;
+        if (_isSysVersionInfoExpression(node.leftExpression) &amp;&amp; node.rightExpression.nodeType === ParseNodeType.Tuple) {
+            // Handle the special case of "sys.version_info &gt;= (3, x)"
+            const comparisonVersion = _convertTupleToVersion(node.rightExpression);
+            return _evaluateNumericBinaryOperation(node.operator, execEnv.pythonVersion, comparisonVersion);
+        } else <span class="missing-if-branch" title="if path not taken" >I</span>if (
+            node.leftExpression.nodeType === ParseNodeType.Index &amp;&amp;
+<span class="branch-1 cbranch-no" title="branch not covered" >            _isSysVersionInfoExpression(node.leftExpression.baseExpression) </span>&amp;&amp;
+<span class="branch-2 cbranch-no" title="branch not covered" >            node.leftExpression.items.items.length === 1 </span>&amp;&amp;
+<span class="branch-3 cbranch-no" title="branch not covered" >            node.leftExpression.items.items[0].nodeType === ParseNodeType.Number </span>&amp;&amp;
+<span class="branch-4 cbranch-no" title="branch not covered" >            !node.leftExpression.items.items[0].isImaginary </span>&amp;&amp;
+<span class="branch-5 cbranch-no" title="branch not covered" >            node.leftExpression.items.items[0].value === 0 </span>&amp;&amp;
+<span class="branch-6 cbranch-no" title="branch not covered" >            node.rightExpression.nodeType === ParseNodeType.Number</span>
+        ) {
+            // Handle the special case of "sys.version_info[0] &gt;= X"
+<span class="cstat-no" title="statement not covered" >            return _evaluateNumericBinaryOperation(</span>
+                node.operator,
+                Math.floor(execEnv.pythonVersion / 256),
+                node.rightExpression.value
+            );
+        } else if (
+            _isSysPlatformInfoExpression(node.leftExpression) &amp;&amp;
+            node.rightExpression.nodeType === ParseNodeType.StringList
+        ) {
+            // Handle the special case of "sys.platform != 'X'"
+            const comparisonPlatform = node.rightExpression.strings.map(s =&gt; s.value).join('');
+            const expectedPlatformName = _getExpectedPlatformNameFromPlatform(execEnv);
+            return _evaluateStringBinaryOperation(node.operator, expectedPlatformName || '', comparisonPlatform);
+        } else <span class="missing-if-branch" title="if path not taken" >I</span>if (
+            _isOsNameInfoExpression(node.leftExpression) &amp;&amp;
+<span class="branch-1 cbranch-no" title="branch not covered" >            node.rightExpression.nodeType === ParseNodeType.StringList</span>
+        ) {
+            // Handle the special case of "os.name == 'X'"
+            const comparisonOsName = <span class="cstat-no" title="statement not covered" >node.rightExpression.strings.map(s =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >s.value)</span></span>.join('');</span>
+            const expectedOsName = <span class="cstat-no" title="statement not covered" >_getExpectedOsNameFromPlatform(execEnv);</span>
+<span class="cstat-no" title="statement not covered" >            if (expectedOsName !== undefined) {</span>
+<span class="cstat-no" title="statement not covered" >                return _evaluateStringBinaryOperation(node.operator, expectedOsName, comparisonOsName);</span>
+            }
+        }
+    } else if (node.nodeType === ParseNodeType.Constant) {
+        if (node.constType === KeywordType.True) {
+            return true;
+        } else if (node.constType === KeywordType.False) {
+            return false;
+        }
+    } else if (node.nodeType === ParseNodeType.Name) {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (node.value === 'TYPE_CHECKING') {
+<span class="cstat-no" title="statement not covered" >            return true;</span>
+        }
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (
+        node.nodeType === ParseNodeType.MemberAccess &amp;&amp;
+        node.memberName.value === 'TYPE_CHECKING' &amp;&amp;
+<span class="branch-2 cbranch-no" title="branch not covered" >        node.leftExpression.nodeType === ParseNodeType.Name </span>&amp;&amp;
+<span class="branch-3 cbranch-no" title="branch not covered" >        node.leftExpression.value === 'typing'</span>
+    ) {
+<span class="cstat-no" title="statement not covered" >        return true;</span>
+    }
+&nbsp;
+    return undefined;
+}
+&nbsp;
+// Similar to evaluateStaticBoolExpression except that it handles
+// other non-bool values that are statically falsy or truthy
+// (like "None").
+export function evaluateStaticBoolLikeExpression(
+    node: ExpressionNode,
+    execEnv: ExecutionEnvironment
+): boolean | undefined {
+    if (node.nodeType === ParseNodeType.Constant) {
+        if (node.constType === KeywordType.None) {
+            return false;
+        }
+    }
+&nbsp;
+    return evaluateStaticBoolExpression(node, execEnv);
+}
+&nbsp;
+function _convertTupleToVersion(node: TupleNode): number | undefined {
+    let comparisonVersion: number | undefined;
+    if (node.expressions.length === 2) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (
+            node.expressions[0].nodeType === ParseNodeType.Number &amp;&amp;
+            !node.expressions[0].isImaginary &amp;&amp;
+            node.expressions[1].nodeType === ParseNodeType.Number &amp;&amp;
+            !node.expressions[1].isImaginary
+        ) {
+            const majorVersion = node.expressions[0];
+            const minorVersion = node.expressions[1];
+            comparisonVersion = majorVersion.value * 256 + minorVersion.value;
+        }
+    } else <span class="missing-if-branch" title="else path not taken" >E</span>if (node.expressions.length === 1) {
+        const majorVersion = node.expressions[0] as NumberNode;
+        comparisonVersion = majorVersion.value * 256;
+    }
+&nbsp;
+    return comparisonVersion;
+}
+&nbsp;
+function _evaluateNumericBinaryOperation(
+    operatorType: OperatorType,
+    leftValue: number | undefined,
+    rightValue: number | undefined
+): any | undefined {
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (leftValue !== undefined &amp;&amp; rightValue !== undefined) {
+        if (operatorType === OperatorType.LessThan) {
+            return leftValue &lt; rightValue;
+        } else <span class="missing-if-branch" title="if path not taken" >I</span>if (operatorType === OperatorType.LessThanOrEqual) {
+<span class="cstat-no" title="statement not covered" >            return leftValue &lt;= rightValue;</span>
+        } else <span class="missing-if-branch" title="if path not taken" >I</span>if (operatorType === OperatorType.GreaterThan) {
+<span class="cstat-no" title="statement not covered" >            return leftValue &gt; rightValue;</span>
+        } else <span class="missing-if-branch" title="else path not taken" >E</span>if (operatorType === OperatorType.GreaterThanOrEqual) {
+            return leftValue &gt;= rightValue;
+        } else <span class="cstat-no" title="statement not covered" >if (operatorType === OperatorType.Equals) {</span>
+<span class="cstat-no" title="statement not covered" >            return leftValue === rightValue;</span>
+        } else <span class="cstat-no" title="statement not covered" >if (operatorType === OperatorType.NotEquals) {</span>
+<span class="cstat-no" title="statement not covered" >            return leftValue !== rightValue;</span>
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return undefined;</span>
+}
+&nbsp;
+function _evaluateStringBinaryOperation(
+    operatorType: OperatorType,
+    leftValue: string | undefined,
+    rightValue: string | undefined
+): any | undefined {
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (leftValue !== undefined &amp;&amp; rightValue !== undefined) {
+        if (operatorType === OperatorType.Equals) {
+            return leftValue === rightValue;
+        } else <span class="missing-if-branch" title="else path not taken" >E</span>if (operatorType === OperatorType.NotEquals) {
+            return leftValue !== rightValue;
+        }
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return undefined;</span>
+}
+&nbsp;
+function _isSysVersionInfoExpression(node: ExpressionNode): boolean {
+    if (node.nodeType === ParseNodeType.MemberAccess) {
+        if (
+            node.leftExpression.nodeType === ParseNodeType.Name &amp;&amp;
+            node.leftExpression.value === 'sys' &amp;&amp;
+            node.memberName.value === 'version_info'
+        ) {
+            return true;
+        }
+    }
+&nbsp;
+    return false;
+}
+&nbsp;
+function _isSysPlatformInfoExpression(node: ExpressionNode): boolean {
+    if (node.nodeType === ParseNodeType.MemberAccess) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (
+            node.leftExpression.nodeType === ParseNodeType.Name &amp;&amp;
+            node.leftExpression.value === 'sys' &amp;&amp;
+            node.memberName.value === 'platform'
+        ) {
+            return true;
+        }
+    }
+&nbsp;
+    return false;
+}
+&nbsp;
+function _isOsNameInfoExpression(node: ExpressionNode): boolean {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (node.nodeType === ParseNodeType.MemberAccess) {
+<span class="cstat-no" title="statement not covered" >        if (</span>
+            node.leftExpression.nodeType === ParseNodeType.Name &amp;&amp;
+            node.leftExpression.value === 'os' &amp;&amp;
+            node.memberName.value === 'name'
+        ) {
+<span class="cstat-no" title="statement not covered" >            return true;</span>
+        }
+    }
+&nbsp;
+    return false;
+}
+&nbsp;
+function _getExpectedPlatformNameFromPlatform(execEnv: ExecutionEnvironment): string | undefined {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (execEnv.pythonPlatform === 'Darwin') {
+<span class="cstat-no" title="statement not covered" >        return 'darwin';</span>
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (execEnv.pythonPlatform === 'Windows') {
+<span class="cstat-no" title="statement not covered" >        return 'win32';</span>
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (execEnv.pythonPlatform === 'Linux') {
+<span class="cstat-no" title="statement not covered" >        return 'linux';</span>
+    }
+&nbsp;
+    return undefined;
+}
+&nbsp;
+function _getExpectedOsNameFromPlatform(execEnv: ExecutionEnvironment<span class="fstat-no" title="function not covered" >): string | undefined {</span>
+<span class="cstat-no" title="statement not covered" >    if (execEnv.pythonPlatform === 'Darwin') {</span>
+<span class="cstat-no" title="statement not covered" >        return 'posix';</span>
+    } else <span class="cstat-no" title="statement not covered" >if (execEnv.pythonPlatform === 'Windows') {</span>
+<span class="cstat-no" title="statement not covered" >        return 'nt';</span>
+    } else <span class="cstat-no" title="statement not covered" >if (execEnv.pythonPlatform === 'Linux') {</span>
+<span class="cstat-no" title="statement not covered" >        return 'posix';</span>
+    }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >    return undefined;</span>
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>

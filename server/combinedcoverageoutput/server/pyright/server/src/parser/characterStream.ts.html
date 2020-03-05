@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for server\pyright\server\src\parser\characterStream.ts</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../../../../../prettify.css">
+    <link rel="stylesheet" href="../../../../../base.css">
+    <style type='text/css'>
+        div.coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class="header medium">
+    <h1>Code coverage report for <span class="entity">server\pyright\server\src\parser\characterStream.ts</span></h1>
+    <h2>
+        Statements: <span class="metric">78.26% <small>(36 / 46)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Branches: <span class="metric">70% <small>(21 / 30)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Functions: <span class="metric">80.95% <small>(17 / 21)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Lines: <span class="metric">78.26% <small>(36 / 46)</small></span> &nbsp;&nbsp;&nbsp;&nbsp;
+        Ignored: <span class="metric"><span class="ignore-none">none</span></span> &nbsp;&nbsp;&nbsp;&nbsp;
+    </h2>
+    <div class="path"><a href="../../../../../index.html">All files</a> &#187; <a href="index.html">server/pyright/server/src/parser/</a> &#187; characterStream.ts</div>
+</div>
+<div class="body">
+<pre><table class="coverage">
+<tr><td class="line-count">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146</td><td class="line-coverage"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1653</span>
+<span class="cline-any cline-yes">1653</span>
+<span class="cline-any cline-yes">1653</span>
+<span class="cline-any cline-yes">1653</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1960748</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">42856915</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">52214867</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">137</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11974644</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">20081135</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10243098</span>
+<span class="cline-any cline-yes">10243098</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1143749</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16464688</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16464547</span>
+<span class="cline-any cline-yes">16464547</span>
+<span class="cline-any cline-yes">16464547</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">141</span>
+<span class="cline-any cline-yes">141</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6675396</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">954968</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4976921</span>
+<span class="cline-any cline-yes">1698469</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22306</span>
+<span class="cline-any cline-yes">932666</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4</span>
+<span class="cline-any cline-yes">13</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-yes">830</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1782285</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/*
+ * characterStream.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Based on code from vscode-python repository:
+ *  https://github.com/Microsoft/vscode-python
+ *
+ * Class that represents a stream of characters.
+ */
+&nbsp;
+import Char from 'typescript-char';
+&nbsp;
+import { isLineBreak, isWhiteSpace } from './characters';
+&nbsp;
+export class CharacterStream {
+    private _text: string;
+    private _position: number;
+    private _currentChar: number;
+    private _isEndOfStream: boolean;
+&nbsp;
+    constructor(text: string) {
+        this._text = text;
+        this._position = 0;
+        this._currentChar = text.length &gt; 0 ? text.charCodeAt(0) : 0;
+        this._isEndOfStream = text.length === 0;
+    }
+&nbsp;
+    getText(): string {
+        return this._text;
+    }
+&nbsp;
+    get position(): number {
+        return this._position;
+    }
+&nbsp;
+    set position(value: number) {
+        this._position = value;
+        this._checkBounds();
+    }
+&nbsp;
+    get currentChar(): number {
+        return this._currentChar;
+    }
+&nbsp;
+    // We also expose a (non-property) method that is
+    // the equivalent of currentChar above. This allows
+    // us to work around assumptions in the TypeScript
+    // compiler that method calls (e.g. moveNext()) don't
+    // modify properties.
+    getCurrentChar(): number {
+        return this._currentChar;
+    }
+&nbsp;
+    get nextChar(): number {
+        return this.position + 1 &lt; this._text.length ? this._text.charCodeAt(this.position + 1) : 0;
+    }
+&nbsp;
+    get prevChar<span class="fstat-no" title="function not covered" >(): number {</span>
+<span class="cstat-no" title="statement not covered" >        return this.position - 1 &gt;= 0 ? this._text.charCodeAt(this.position - 1) : 0;</span>
+    }
+&nbsp;
+    isEndOfStream(): boolean {
+        return this._isEndOfStream;
+    }
+&nbsp;
+    lookAhead(offset: number): number {
+        const pos = this._position + offset;
+        return pos &lt; 0 || pos &gt;= this._text.length ? 0 : this._text.charCodeAt(pos);
+    }
+&nbsp;
+    advance(offset: number) {
+        this.position += offset;
+    }
+&nbsp;
+    moveNext(): boolean {
+        if (this._position &lt; this._text.length - 1) {
+            // Most common case, no need to check bounds extensively
+            this._position += 1;
+            this._currentChar = this._text.charCodeAt(this._position);
+            return true;
+        }
+        this.advance(1);
+        return !this.isEndOfStream();
+    }
+&nbsp;
+    isAtWhiteSpace(): boolean {
+        return isWhiteSpace(this.currentChar);
+    }
+&nbsp;
+    isAtLineBreak(): boolean {
+        return isLineBreak(this.currentChar);
+    }
+&nbsp;
+    skipLineBreak<span class="fstat-no" title="function not covered" >(): void {</span>
+<span class="cstat-no" title="statement not covered" >        if (this._currentChar === Char.CarriageReturn) {</span>
+<span class="cstat-no" title="statement not covered" >            this.moveNext();</span>
+<span class="cstat-no" title="statement not covered" >            if (this.currentChar === Char.LineFeed) {</span>
+<span class="cstat-no" title="statement not covered" >                this.moveNext();</span>
+            }
+        } else <span class="cstat-no" title="statement not covered" >if (this._currentChar === Char.LineFeed) {</span>
+<span class="cstat-no" title="statement not covered" >            this.moveNext();</span>
+        }
+    }
+&nbsp;
+    skipWhitespace(): void {
+        while (!this.isEndOfStream() &amp;&amp; this.isAtWhiteSpace()) {
+            this.moveNext();
+        }
+    }
+&nbsp;
+    skipToEol(): void {
+        while (!this.isEndOfStream() &amp;&amp; !this.isAtLineBreak()) {
+            this.moveNext();
+        }
+    }
+&nbsp;
+    skipToWhitespace(): void {
+        while (!this.isEndOfStream() &amp;&amp; !this.isAtWhiteSpace()) {
+            this.moveNext();
+        }
+    }
+&nbsp;
+    charCodeAt(index: number<span class="fstat-no" title="function not covered" >): number {</span>
+<span class="cstat-no" title="statement not covered" >        return this._text.charCodeAt(index);</span>
+    }
+&nbsp;
+    get length<span class="fstat-no" title="function not covered" >(): number {</span>
+<span class="cstat-no" title="statement not covered" >        return this._text.length;</span>
+    }
+&nbsp;
+    private _checkBounds(): void {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (this._position &lt; 0) {
+<span class="cstat-no" title="statement not covered" >            this._position = 0;</span>
+        }
+&nbsp;
+        this._isEndOfStream = this._position &gt;= this._text.length;
+        if (this._isEndOfStream) {
+            this._position = this._text.length;
+        }
+&nbsp;
+        this._currentChar = this._isEndOfStream ? 0 : this._text.charCodeAt(this._position);
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+
+</div>
+<div class="footer">
+    <div class="meta">Generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Mar 04 2020 16:25:10 GMT-0800 (Pacific Standard Time)</div>
+</div>
+<script src="../../../../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../../../../sorter.js"></script>
+</body>
+</html>
