@@ -30,7 +30,6 @@
     },
     "devDependencies": {
         "jest-junit": "^10.0.0",
-        
         "@types/chalk": "^2.2.0",
         "@types/chokidar": "^2.1.3",
         "@types/command-line-args": "^5.0.0",
