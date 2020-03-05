@@ -27,7 +27,7 @@
         "test:all": "npm run test && cd pyright/server && npm run test",
         "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json",
         "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd../.. && npm run test:combine:codecoverage",
-        "test:combine:codecoverage":"istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/cobertura-coverage.xml"
+        "test:combine:codecoverage" : "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/coverage-final.json"
     },
     "dependencies": {
         "assert": "^2.0.0",
