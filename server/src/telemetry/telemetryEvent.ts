@@ -4,7 +4,7 @@
  * Licensed under the MIT license.
  */
 
-const TelemetryPrefix = 'mplsv2/';
+const TelemetryPrefix = 'mpls_node/';
 
 // Note: These names must match the expected values in the VSCode Python Extension
 // https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
