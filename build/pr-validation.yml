@@ -1,0 +1,57 @@
+trigger: none
+
+pr:
+  autoCancel: true
+  branches:
+    include: ['master']
+
+strategy:
+  matrix:
+    linux:
+      imageName: 'ubuntu-latest'
+    mac:
+      imageName: 'macOS-latest'
+    windows:
+      imageName: 'windows-latest'
+
+pool:
+  vmImage: $(imageName)
+
+steps:
+  - task: NodeTool@0
+    displayName: Use Node 12.x
+    inputs:
+      versionSpec: '12.x'
+
+  - task: Npm@1
+    displayName: npm run package
+    inputs:
+      command: 'custom'
+      customCommand: 'run package'
+
+  - task: Npm@1
+    displayName: npm run test:all:pipeline
+    inputs:
+      command: 'custom'
+      customCommand: 'run test:all:pipeline'
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish Istanbul report as artifact
+    inputs:
+      targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
+      artifact: '$(imageName)-server-coverage-merged'
+      publishLocation: 'pipeline'
+
+  - task: PublishTestResults@2
+    displayName: Publish test results
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/junit.xml'
+      testRunTitle: 'Test results for JavaScript'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: Publish coverage results
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
+      failIfCoverageEmpty: true

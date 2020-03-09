@@ -26,8 +26,10 @@
         "test": "jest --detectOpenHandles --forceExit",
         "test:all": "npm run test && cd pyright/server && npm run test",
         "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json",
-        "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd ../.. && npm run test:combine:codecoverage",
-        "test:combine:codecoverage": "istanbul-combine -d combinedcoverageoutput -r html -r cobertura **/coverage-final.json"
+        "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd ../..",
+        "posttest:all:pipeline": "npm run combine:coverage",
+        "precombine:coverage": "shx mkdir -p reports .nyc_output && shx cp coverage/coverage-final.json reports/coverage-pyrx.json && shx cp pyright/server/coverage/coverage-final.json reports/coverage-pyright.json",
+        "combine:coverage": "nyc merge reports .nyc_output/out.json && nyc report --reporter html --reporter cobertura  --exclude-after-remap=false --report-dir coverage-merged"
     },
     "dependencies": {
         "assert": "^2.0.0",
@@ -50,11 +52,12 @@
         "@typescript-eslint/parser": "^2.21.0",
         "eslint": "^6.8.0",
         "fs-extra": "^8.1.0",
-        "istanbul-combine": "^0.3.0",
         "jest": "^24.9.0",
         "jest-junit": "^10.0.0",
         "node-loader": "^0.6.0",
-        "ts-jest": "^24.2.0",
+        "nyc": "^15.0.0",
+        "shx": "^0.3.2",
+        "ts-jest": "^24.3.0",
         "ts-loader": "^6.2.1",
         "tslint": "^5.20.1",
         "tslint-microsoft-contrib": "^6.2.0",

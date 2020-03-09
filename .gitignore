@@ -18,4 +18,4 @@ client/typeshed-fallback/
 
 junit.xml
 coverage/
-combinedcoverageoutput/
+coverage-merged/
