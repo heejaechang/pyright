@@ -8,14 +8,17 @@ pr:
 strategy:
   matrix:
     linux:
-      imageName: 'ubuntu-latest'
+      imageName: 'ubuntu-18.04'
     mac:
-      imageName: 'macOS-latest'
-    windows:
-      imageName: 'windows-latest'
+      imageName: 'macOS-10.15'
+    windows-microbuild: # Internal only but faster; do not use for public PRs.
+      poolName: 'VSEng-MicroBuildVS2019'
+    # windows:
+    #   imageName: 'vs2017-win2016'
 
 pool:
-  vmImage: $(imageName)
+  name: $[variables.poolName]
+  vmImage: $[variables.imageName]
 
 steps:
   - task: NodeTool@0
