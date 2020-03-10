@@ -6,7 +6,11 @@
  */
 
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
-import { ImportResolver, ImportedModuleDescriptor } from './pyright/server/src/analyzer/importResolver';
+import {
+    ImportResolver,
+    ImportedModuleDescriptor,
+    TypeStubUsageInfo
+} from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import {
@@ -25,7 +29,15 @@ function getBundledTypeStubsPath(moduleDirectory?: string) {
     return undefined;
 }
 
+export type StubUsageCallback = (results: TypeStubUsageInfo) => void;
+
 export class PyrxImportResolver extends ImportResolver {
+    private _onStubUsageCallback: StubUsageCallback | undefined;
+
+    setStubUsageCallback(callback: StubUsageCallback | undefined): void {
+        this._onStubUsageCallback = callback;
+    }
+
     protected resolveImportEx(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
@@ -45,8 +57,16 @@ export class PyrxImportResolver extends ImportResolver {
         }
         return undefined;
     }
+
+    //override parents version to send stubStats for clearing the cache
+    invalidateCache() {
+        if (this._onStubUsageCallback) {
+            this._onStubUsageCallback(this._thirdPartyStubInfo);
+        }
+        super.invalidateCache();
+    }
 }
 
-export function createPyrxImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
+export function createPyrxImportResolver(fs: VirtualFileSystem, options: ConfigOptions): PyrxImportResolver {
     return new PyrxImportResolver(fs, options);
 }

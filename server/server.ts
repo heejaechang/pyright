@@ -19,6 +19,7 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/telemetry/analysisTracker';
+import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
@@ -86,7 +87,18 @@ class Server extends LanguageServerBase {
     }
 
     protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
-        return createPyrxImportResolver(fs, options);
+        const resolver = createPyrxImportResolver(fs, options);
+
+        resolver.setStubUsageCallback(stubInfo => {
+            if (stubInfo.stubsFound > 0 || stubInfo.stubsNotFound > 0) {
+                const te = createTelemetryEvent('stub_usage');
+                te.Measurements['ImportStubCount'] = stubInfo.stubsFound;
+                te.Measurements['ImportNoStubCount'] = stubInfo.stubsNotFound;
+                this._connection.telemetry.logEvent(te);
+            }
+        });
+
+        return resolver;
     }
 
     protected async executeCodeAction(
@@ -104,6 +116,15 @@ class Server extends LanguageServerBase {
 
         const te = this._analysisTracker.updateTelemetry(results);
         if (te) {
+            te.Measurements['ImportStubCount'] = 0;
+            te.Measurements['ImportNoStubCount'] = 0;
+
+            this._workspaceMap.forEach(workspace => {
+                const stubInfo = workspace.serviceInstance.getLibraryTypeStubInfo();
+                te.Measurements['ImportStubCount'] += stubInfo.stubsFound;
+                te.Measurements['ImportNoStubCount'] += stubInfo.stubsNotFound;
+            });
+
             this._connection.telemetry.logEvent(te);
         }
     }
