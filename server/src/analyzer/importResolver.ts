@@ -40,6 +40,11 @@ export interface ModuleNameAndType {
     importType: ImportType;
 }
 
+export interface TypeStubUsageInfo {
+    stubsFound: number;
+    stubsNotFound: number;
+}
+
 type CachedImportResults = Map<string, ImportResult>;
 
 export class ImportResolver {
@@ -48,6 +53,7 @@ export class ImportResolver {
     private _cachedImportResults = new Map<string, CachedImportResults>();
     private _cachedTypeshedStdLibPath: string | undefined;
     private _cachedTypeshedThirdPartyPath: string | undefined;
+    protected _thirdPartyStubInfo: TypeStubUsageInfo = { stubsFound: 0, stubsNotFound: 0 };
 
     readonly fileSystem: VirtualFileSystem;
 
@@ -59,6 +65,7 @@ export class ImportResolver {
     invalidateCache() {
         this._cachedPythonSearchPaths = new Map<string, string[]>();
         this._cachedImportResults = new Map<string, CachedImportResults>();
+        this._thirdPartyStubInfo = { stubsFound: 0, stubsNotFound: 0 };
     }
 
     // Resolves the import and returns the path if it exists, otherwise
@@ -170,6 +177,7 @@ export class ImportResolver {
             );
             if (typeshedImport) {
                 typeshedImport.isTypeshedFile = true;
+                this._addResultsToThridPartyStubStats(typeshedImport);
                 return this._addResultsToCache(execEnv, importName, typeshedImport, moduleDescriptor.importedSymbols);
             }
 
@@ -193,6 +201,7 @@ export class ImportResolver {
                         thirdPartyImport.importType = ImportType.ThirdParty;
 
                         if (thirdPartyImport.isImportFound && thirdPartyImport.isStubFile) {
+                            this._addResultsToThridPartyStubStats(thirdPartyImport);
                             return this._addResultsToCache(
                                 execEnv,
                                 importName,
@@ -224,12 +233,14 @@ export class ImportResolver {
                 importFailureInfo
             );
             if (extraResults !== undefined) {
+                this._addResultsToThridPartyStubStats(extraResults);
                 return this._addResultsToCache(execEnv, importName, extraResults, moduleDescriptor.importedSymbols);
             }
 
             // We weren't able to find an exact match, so return the best
             // partial match.
             if (bestResultSoFar) {
+                this._addResultsToThridPartyStubStats(bestResultSoFar);
                 return this._addResultsToCache(execEnv, importName, bestResultSoFar, moduleDescriptor.importedSymbols);
             }
         }
@@ -247,6 +258,12 @@ export class ImportResolver {
         };
 
         return this._addResultsToCache(execEnv, importName, notFoundResult, undefined);
+    }
+
+    getAndResetLibraryTypeStubInfo(): TypeStubUsageInfo {
+        const usage = this._thirdPartyStubInfo;
+        this._thirdPartyStubInfo = { stubsFound: 0, stubsNotFound: 0 };
+        return usage;
     }
 
     // Intended to be overridden by subclasses to provide additional stub
@@ -1015,6 +1032,16 @@ export class ImportResolver {
         }
 
         return name + moduleDescriptor.nameParts.map(part => part).join('.');
+    }
+
+    private _addResultsToThridPartyStubStats(importResult: ImportResult) {
+        if (importResult !== undefined && importResult.importType === ImportType.ThirdParty) {
+            if (importResult.isStubFile) {
+                this._thirdPartyStubInfo.stubsFound += 1;
+            } else {
+                this._thirdPartyStubInfo.stubsNotFound += 1;
+            }
+        }
     }
 }
 
