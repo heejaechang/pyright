@@ -177,7 +177,7 @@ export class ImportResolver {
             );
             if (typeshedImport) {
                 typeshedImport.isTypeshedFile = true;
-                this._addResultsToThridPartyStubStats(typeshedImport);
+                this._addResultsToThirdPartyStubStats(typeshedImport);
                 return this._addResultsToCache(execEnv, importName, typeshedImport, moduleDescriptor.importedSymbols);
             }
 
@@ -201,7 +201,7 @@ export class ImportResolver {
                         thirdPartyImport.importType = ImportType.ThirdParty;
 
                         if (thirdPartyImport.isImportFound && thirdPartyImport.isStubFile) {
-                            this._addResultsToThridPartyStubStats(thirdPartyImport);
+                            this._addResultsToThirdPartyStubStats(thirdPartyImport);
                             return this._addResultsToCache(
                                 execEnv,
                                 importName,
@@ -233,14 +233,14 @@ export class ImportResolver {
                 importFailureInfo
             );
             if (extraResults !== undefined) {
-                this._addResultsToThridPartyStubStats(extraResults);
+                this._addResultsToThirdPartyStubStats(extraResults);
                 return this._addResultsToCache(execEnv, importName, extraResults, moduleDescriptor.importedSymbols);
             }
 
             // We weren't able to find an exact match, so return the best
             // partial match.
             if (bestResultSoFar) {
-                this._addResultsToThridPartyStubStats(bestResultSoFar);
+                this._addResultsToThirdPartyStubStats(bestResultSoFar);
                 return this._addResultsToCache(execEnv, importName, bestResultSoFar, moduleDescriptor.importedSymbols);
             }
         }
@@ -1034,7 +1034,7 @@ export class ImportResolver {
         return name + moduleDescriptor.nameParts.map(part => part).join('.');
     }
 
-    private _addResultsToThridPartyStubStats(importResult: ImportResult) {
+    private _addResultsToThirdPartyStubStats(importResult: ImportResult) {
         if (importResult !== undefined && importResult.importType === ImportType.ThirdParty) {
             if (importResult.isStubFile) {
                 this._thirdPartyStubInfo.stubsFound += 1;
