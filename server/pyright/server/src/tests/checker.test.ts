@@ -765,6 +765,12 @@ test('Mro1', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Mro2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -848,12 +854,12 @@ test('UnnecessaryIsInstance1', () => {
     const configOptions = new ConfigOptions('.');
 
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 0);
+    validateResults(analysisResults, 1);
 
     // Turn on errors.
     configOptions.diagnosticSettings.reportUnnecessaryIsInstance = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 4);
 });
 
 test('UnnecessaryIsSubclass1', () => {
