@@ -6,11 +6,7 @@
  */
 
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
-import {
-    ImportResolver,
-    ImportedModuleDescriptor,
-    TypeStubUsageInfo
-} from './pyright/server/src/analyzer/importResolver';
+import { ImportResolver, ImportedModuleDescriptor } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import {
@@ -29,13 +25,36 @@ function getBundledTypeStubsPath(moduleDirectory?: string) {
     return undefined;
 }
 
-export type StubUsageCallback = (results: TypeStubUsageInfo) => void;
+export class ImportMetrics {
+    missingImports = 0;
+    thirdPartyImportsTotal = 0;
+    thirdPartyImportStubs = 0;
+    localImportsTotal = 0;
+    localImportStubs = 0;
+    builtinImportsTotal = 0;
+    builtinImportStubs = 0;
+
+    isEmpty(): boolean {
+        return (
+            this.missingImports === 0 &&
+            this.thirdPartyImportsTotal === 0 &&
+            this.thirdPartyImportStubs === 0 &&
+            this.localImportsTotal === 0 &&
+            this.localImportStubs === 0 &&
+            this.builtinImportsTotal === 0 &&
+            this.builtinImportStubs === 0
+        );
+    }
+}
+
+export type ImportMetricsCallback = (results: ImportMetrics) => void;
 
 export class PyrxImportResolver extends ImportResolver {
-    private _onStubUsageCallback: StubUsageCallback | undefined;
+    protected _importMetrics = new ImportMetrics();
+    private _onImportMetricsCallback: ImportMetricsCallback | undefined;
 
-    setStubUsageCallback(callback: StubUsageCallback | undefined): void {
-        this._onStubUsageCallback = callback;
+    setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
+        this._onImportMetricsCallback = callback;
     }
 
     protected resolveImportEx(
@@ -60,10 +79,59 @@ export class PyrxImportResolver extends ImportResolver {
 
     //override parents version to send stubStats for clearing the cache
     invalidateCache() {
-        if (this._onStubUsageCallback) {
-            this._onStubUsageCallback(this._thirdPartyStubInfo);
+        if (this._onImportMetricsCallback) {
+            this._onImportMetricsCallback(this._importMetrics);
         }
+        this._importMetrics = new ImportMetrics();
         super.invalidateCache();
+    }
+
+    getAndResetImportMetrics(): ImportMetrics {
+        const usage = this._importMetrics;
+        this._importMetrics = new ImportMetrics();
+        return usage;
+    }
+
+    protected _addResultsToCache(
+        execEnv: ExecutionEnvironment,
+        importName: string,
+        importResult: ImportResult,
+        importedSymbols: string[] | undefined
+    ) {
+        this._addResultToImportMetrics(importResult);
+        return super._addResultsToCache(execEnv, importName, importResult, importedSymbols);
+    }
+
+    private _addResultToImportMetrics(importResult: ImportResult) {
+        if (importResult === undefined) {
+            return;
+        }
+
+        if (!importResult.isImportFound) {
+            this._importMetrics.missingImports += 1;
+            return;
+        }
+
+        switch (importResult.importType) {
+            case ImportType.ThirdParty: {
+                this._importMetrics.thirdPartyImportsTotal += 1;
+                this._importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            case ImportType.Local: {
+                this._importMetrics.localImportsTotal += 1;
+                this._importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            case ImportType.BuiltIn: {
+                this._importMetrics.builtinImportsTotal += 1;
+                this._importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
     }
 }
 
