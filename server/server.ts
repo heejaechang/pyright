@@ -92,7 +92,7 @@ class Server extends LanguageServerBase {
         resolver.setStubUsageCallback(importMetrics => {
             if (!importMetrics.isEmpty()) {
                 const te = createTelemetryEvent('import_metrics');
-                this.addObjectPropertiesToTelemetry(te, importMetrics);
+                this.addImportMetricsToTelemetry(te, importMetrics);
                 this._connection.telemetry.logEvent(te);
             }
         });
@@ -118,7 +118,7 @@ class Server extends LanguageServerBase {
             this._workspaceMap.forEach(workspace => {
                 const importMetrics = (workspace.serviceInstance.getImportResolver() as PyrxImportResolver)?.getAndResetImportMetrics();
                 if (importMetrics !== undefined) {
-                    this.addObjectPropertiesToTelemetry(te, importMetrics);
+                    this.addImportMetricsToTelemetry(te, importMetrics);
                 }
             });
 
@@ -126,12 +126,14 @@ class Server extends LanguageServerBase {
         }
     }
 
-    private addObjectPropertiesToTelemetry(te: TelemetryEvent, importMetrics: ImportMetrics) {
+    private addImportMetricsToTelemetry(te: TelemetryEvent, importMetrics: ImportMetrics) {
         for (const [key, value] of Object.entries(importMetrics)) {
-            if (te.Measurements[key] === undefined) {
-                te.Measurements[key] = value;
-            } else {
-                te.Measurements[key] += value;
+            if (typeof value == 'number') {
+                if (te.Measurements[key] === undefined) {
+                    te.Measurements[key] = value;
+                } else {
+                    te.Measurements[key] += value;
+                }
             }
         }
     }
