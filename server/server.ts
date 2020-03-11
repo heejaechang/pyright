@@ -118,14 +118,19 @@ class Server extends LanguageServerBase {
             this._connection.telemetry.logEvent(te);
 
             //send import metrics
+            let shouldSend = false;
             const importEvent = createTelemetryEvent('import_metrics');
             this._workspaceMap.forEach(workspace => {
                 const importMetrics = (workspace.serviceInstance.getImportResolver() as PyrxImportResolver)?.getAndResetImportMetrics();
-                if (importMetrics !== undefined) {
+                if (importMetrics !== undefined && !importMetrics.isEmpty()) {
                     this.addImportMetricsToTelemetry(importEvent, importMetrics);
+                    shouldSend = true;
                 }
             });
-            this._connection.telemetry.logEvent(importEvent);
+
+            if (shouldSend) {
+                this._connection.telemetry.logEvent(importEvent);
+            }
         }
     }
 
