@@ -34,7 +34,7 @@ import { Duration, timingStats } from '../common/timing';
 import { FileWatcher, VirtualFileSystem } from '../common/vfs';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
-import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory, TypeStubUsageInfo } from './importResolver';
+import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory } from './importResolver';
 import { MaxAnalysisTime, Program } from './program';
 import { findPythonSearchPaths, getPythonPathFromPythonInterpreter } from './pythonPathUtils';
 
@@ -213,8 +213,8 @@ export class AnalyzerService {
         return this._program.getDiagnosticsForRange(filePath, this._configOptions, range);
     }
 
-    getLibraryTypeStubInfo(): TypeStubUsageInfo {
-        return this._importResolver.getAndResetLibraryTypeStubInfo();
+    getImportResolver(): ImportResolver {
+        return this._importResolver;
     }
 
     recordUserInteractionTime() {
