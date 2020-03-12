@@ -1,8 +1,4 @@
-/*
- * telemetry.ts
- * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT license.
- */
+import { EventName } from './telemetryProtocol';
 
 const TelemetryPrefix = 'mpls_node/';
 
@@ -20,7 +16,7 @@ export interface TelemetryEvent {
     };
 }
 
-export function createTelemetryEvent(eventName: string): TelemetryEvent {
+export function createTelemetryEvent(eventName: EventName): TelemetryEvent {
     return {
         EventName: TelemetryPrefix + eventName,
         Properties: {
