@@ -48,7 +48,7 @@ export class ImportMetrics {
 export type ImportMetricsCallback = (results: ImportMetrics) => void;
 
 export class PyrxImportResolver extends ImportResolver {
-    protected _importMetrics = new ImportMetrics();
+    private _importMetrics = new ImportMetrics();
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
 
     setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
