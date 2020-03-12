@@ -17,9 +17,10 @@ import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
-import { createPyrxImportResolver, ImportMetrics, PyrxImportResolver } from './pyrxImportResolver';
+import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/telemetry/analysisTracker';
-import { createTelemetryEvent, TelemetryEvent } from './src/telemetry/telemetryEvent';
+import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
+import { ImportMetricsEventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
@@ -91,8 +92,8 @@ class Server extends LanguageServerBase {
 
         resolver.setStubUsageCallback(importMetrics => {
             if (!importMetrics.isEmpty()) {
-                const te = createTelemetryEvent('import_metrics');
-                this.addImportMetricsToTelemetry(te, importMetrics);
+                const te = createTelemetryEvent(ImportMetricsEventName);
+                addNumericsToTelemetry(te, importMetrics);
                 this._connection.telemetry.logEvent(te);
             }
         });
@@ -119,29 +120,17 @@ class Server extends LanguageServerBase {
 
             //send import metrics
             let shouldSend = false;
-            const importEvent = createTelemetryEvent('import_metrics');
+            const importEvent = createTelemetryEvent(ImportMetricsEventName);
             this._workspaceMap.forEach(workspace => {
                 const importMetrics = (workspace.serviceInstance.getImportResolver() as PyrxImportResolver)?.getAndResetImportMetrics();
                 if (importMetrics !== undefined && !importMetrics.isEmpty()) {
-                    this.addImportMetricsToTelemetry(importEvent, importMetrics);
+                    addNumericsToTelemetry(importEvent, importMetrics);
                     shouldSend = true;
                 }
             });
 
             if (shouldSend) {
                 this._connection.telemetry.logEvent(importEvent);
-            }
-        }
-    }
-
-    private addImportMetricsToTelemetry(te: TelemetryEvent, importMetrics: ImportMetrics) {
-        for (const [key, value] of Object.entries(importMetrics)) {
-            if (typeof value == 'number') {
-                if (te.Measurements[key] === undefined) {
-                    te.Measurements[key] = value;
-                } else {
-                    te.Measurements[key] += value;
-                }
             }
         }
     }
