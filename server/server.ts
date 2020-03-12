@@ -20,7 +20,7 @@ import { CodeActionProvider } from './pyright/server/src/languageService/codeAct
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/telemetry/analysisTracker';
 import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
-import { ImportMetricsEventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
+import { EventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
@@ -92,7 +92,7 @@ class Server extends LanguageServerBase {
 
         resolver.setStubUsageCallback(importMetrics => {
             if (!importMetrics.isEmpty()) {
-                const te = createTelemetryEvent(ImportMetricsEventName);
+                const te = createTelemetryEvent(EventName.IMPORT_METRICS);
                 addNumericsToTelemetry(te, importMetrics);
                 this._connection.telemetry.logEvent(te);
             }
@@ -120,7 +120,7 @@ class Server extends LanguageServerBase {
 
             //send import metrics
             let shouldSend = false;
-            const importEvent = createTelemetryEvent(ImportMetricsEventName);
+            const importEvent = createTelemetryEvent(EventName.IMPORT_METRICS);
             this._workspaceMap.forEach(workspace => {
                 const importMetrics = (workspace.serviceInstance.getImportResolver() as PyrxImportResolver)?.getAndResetImportMetrics();
                 if (importMetrics !== undefined && !importMetrics.isEmpty()) {

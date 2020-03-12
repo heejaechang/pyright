@@ -6,9 +6,10 @@
 
 import { TelemetryEvent } from './telemetryEvent';
 
-//Events
-export const ImportMetricsEventName = 'import_metrics';
-export const AnalysisCompletedEventName = 'analysis_complete';
+export enum EventName {
+    IMPORT_METRICS = 'import_metrics',
+    ANALYSIS_COMPLETE = 'analysis_complete'
+}
 
 //Helpers
 export function addNumericsToTelemetry(te: TelemetryEvent, importMetrics: Object) {
