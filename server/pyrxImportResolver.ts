@@ -26,7 +26,6 @@ function getBundledTypeStubsPath(moduleDirectory?: string) {
 }
 
 export class ImportMetrics {
-    missingImportTotal = 0;
     thirdPartyImportTotal = 0;
     thirdPartyImportStubs = 0;
     localImportTotal = 0;
@@ -36,7 +35,6 @@ export class ImportMetrics {
 
     isEmpty(): boolean {
         return (
-            this.missingImportTotal === 0 &&
             this.thirdPartyImportTotal === 0 &&
             this.thirdPartyImportStubs === 0 &&
             this.localImportTotal === 0 &&
@@ -103,12 +101,7 @@ export class PyrxImportResolver extends ImportResolver {
     }
 
     private _addResultToImportMetrics(importResult: ImportResult) {
-        if (importResult === undefined) {
-            return;
-        }
-
-        if (!importResult.isImportFound) {
-            this._importMetrics.missingImportTotal += 1;
+        if (importResult === undefined || !importResult.isImportFound) {
             return;
         }
 
