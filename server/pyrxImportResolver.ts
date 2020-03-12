@@ -26,22 +26,22 @@ function getBundledTypeStubsPath(moduleDirectory?: string) {
 }
 
 export class ImportMetrics {
-    missingImports = 0;
-    thirdPartyImportsTotal = 0;
+    missingImportTotal = 0;
+    thirdPartyImportTotal = 0;
     thirdPartyImportStubs = 0;
-    localImportsTotal = 0;
+    localImportTotal = 0;
     localImportStubs = 0;
-    builtinImportsTotal = 0;
+    builtinImportTotal = 0;
     builtinImportStubs = 0;
 
     isEmpty(): boolean {
         return (
-            this.missingImports === 0 &&
-            this.thirdPartyImportsTotal === 0 &&
+            this.missingImportTotal === 0 &&
+            this.thirdPartyImportTotal === 0 &&
             this.thirdPartyImportStubs === 0 &&
-            this.localImportsTotal === 0 &&
+            this.localImportTotal === 0 &&
             this.localImportStubs === 0 &&
-            this.builtinImportsTotal === 0 &&
+            this.builtinImportTotal === 0 &&
             this.builtinImportStubs === 0
         );
     }
@@ -108,23 +108,23 @@ export class PyrxImportResolver extends ImportResolver {
         }
 
         if (!importResult.isImportFound) {
-            this._importMetrics.missingImports += 1;
+            this._importMetrics.missingImportTotal += 1;
             return;
         }
 
         switch (importResult.importType) {
             case ImportType.ThirdParty: {
-                this._importMetrics.thirdPartyImportsTotal += 1;
+                this._importMetrics.thirdPartyImportTotal += 1;
                 this._importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.Local: {
-                this._importMetrics.localImportsTotal += 1;
+                this._importMetrics.localImportTotal += 1;
                 this._importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.BuiltIn: {
-                this._importMetrics.builtinImportsTotal += 1;
+                this._importMetrics.builtinImportTotal += 1;
                 this._importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
