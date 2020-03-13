@@ -25,7 +25,36 @@ function getBundledTypeStubsPath(moduleDirectory?: string) {
     return undefined;
 }
 
+export class ImportMetrics {
+    thirdPartyImportTotal = 0;
+    thirdPartyImportStubs = 0;
+    localImportTotal = 0;
+    localImportStubs = 0;
+    builtinImportTotal = 0;
+    builtinImportStubs = 0;
+
+    isEmpty(): boolean {
+        return (
+            this.thirdPartyImportTotal === 0 &&
+            this.thirdPartyImportStubs === 0 &&
+            this.localImportTotal === 0 &&
+            this.localImportStubs === 0 &&
+            this.builtinImportTotal === 0 &&
+            this.builtinImportStubs === 0
+        );
+    }
+}
+
+export type ImportMetricsCallback = (results: ImportMetrics) => void;
+
 export class PyrxImportResolver extends ImportResolver {
+    private _importMetrics = new ImportMetrics();
+    private _onImportMetricsCallback: ImportMetricsCallback | undefined;
+
+    setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
+        this._onImportMetricsCallback = callback;
+    }
+
     protected resolveImportEx(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
@@ -45,8 +74,60 @@ export class PyrxImportResolver extends ImportResolver {
         }
         return undefined;
     }
+
+    //override parents version to send stubStats for clearing the cache
+    invalidateCache() {
+        if (this._onImportMetricsCallback) {
+            this._onImportMetricsCallback(this._importMetrics);
+        }
+        this._importMetrics = new ImportMetrics();
+        super.invalidateCache();
+    }
+
+    getAndResetImportMetrics(): ImportMetrics {
+        const usage = this._importMetrics;
+        this._importMetrics = new ImportMetrics();
+        return usage;
+    }
+
+    protected _addResultsToCache(
+        execEnv: ExecutionEnvironment,
+        importName: string,
+        importResult: ImportResult,
+        importedSymbols: string[] | undefined
+    ) {
+        this._addResultToImportMetrics(importResult);
+        return super._addResultsToCache(execEnv, importName, importResult, importedSymbols);
+    }
+
+    private _addResultToImportMetrics(importResult: ImportResult) {
+        if (importResult === undefined || !importResult.isImportFound) {
+            return;
+        }
+
+        switch (importResult.importType) {
+            case ImportType.ThirdParty: {
+                this._importMetrics.thirdPartyImportTotal += 1;
+                this._importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            case ImportType.Local: {
+                this._importMetrics.localImportTotal += 1;
+                this._importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            case ImportType.BuiltIn: {
+                this._importMetrics.builtinImportTotal += 1;
+                this._importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
 }
 
-export function createPyrxImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
+export function createPyrxImportResolver(fs: VirtualFileSystem, options: ConfigOptions): PyrxImportResolver {
     return new PyrxImportResolver(fs, options);
 }

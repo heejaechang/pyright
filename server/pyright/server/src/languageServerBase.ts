@@ -84,7 +84,7 @@ export interface LanguageServerInterface {
 export abstract class LanguageServerBase implements LanguageServerInterface {
     // Create a connection for the server. The connection type can be changed by the process's arguments
     protected _connection: IConnection = createConnection();
-    private _workspaceMap: WorkspaceMap;
+    protected _workspaceMap: WorkspaceMap;
 
     // Create a simple text document manager. The text document manager
     // supports full document sync only.

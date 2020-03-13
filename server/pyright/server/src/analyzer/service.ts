@@ -213,6 +213,10 @@ export class AnalyzerService {
         return this._program.getDiagnosticsForRange(filePath, this._configOptions, range);
     }
 
+    getImportResolver(): ImportResolver {
+        return this._importResolver;
+    }
+
     recordUserInteractionTime() {
         this._lastUserInteractionTime = Date.now();
 

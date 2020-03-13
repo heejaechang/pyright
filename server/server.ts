@@ -17,8 +17,10 @@ import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
-import { createPyrxImportResolver } from './pyrxImportResolver';
+import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/telemetry/analysisTracker';
+import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
+import { EventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
@@ -86,7 +88,17 @@ class Server extends LanguageServerBase {
     }
 
     protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
-        return createPyrxImportResolver(fs, options);
+        const resolver = createPyrxImportResolver(fs, options);
+
+        resolver.setStubUsageCallback(importMetrics => {
+            if (!importMetrics.isEmpty()) {
+                const te = createTelemetryEvent(EventName.IMPORT_METRICS);
+                addNumericsToTelemetry(te, importMetrics);
+                this._connection.telemetry.logEvent(te);
+            }
+        });
+
+        return resolver;
     }
 
     protected async executeCodeAction(
@@ -105,6 +117,24 @@ class Server extends LanguageServerBase {
         const te = this._analysisTracker.updateTelemetry(results);
         if (te) {
             this._connection.telemetry.logEvent(te);
+
+            //send import metrics
+            let shouldSend = false;
+            const importEvent = createTelemetryEvent(EventName.IMPORT_METRICS);
+            this._workspaceMap.forEach(workspace => {
+                const resolver = workspace.serviceInstance.getImportResolver();
+                if (resolver instanceof PyrxImportResolver) {
+                    const importMetrics = resolver.getAndResetImportMetrics();
+                    if (!importMetrics.isEmpty()) {
+                        addNumericsToTelemetry(importEvent, importMetrics);
+                        shouldSend = true;
+                    }
+                }
+            });
+
+            if (shouldSend) {
+                this._connection.telemetry.logEvent(importEvent);
+            }
         }
     }
 }

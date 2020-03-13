@@ -7,6 +7,7 @@
 import { AnalysisResults } from '../../pyright/server/src/analyzer/service';
 import { Duration } from '../../pyright/server/src/common/timing';
 import { createTelemetryEvent, TelemetryEvent } from './telemetryEvent';
+import { EventName } from './telemetryProtocol';
 
 const TelemetryWaitTimeSeconds = 60;
 
@@ -48,7 +49,7 @@ export class AnalysisTracker {
 
             try {
                 const usage = process.memoryUsage();
-                const te = createTelemetryEvent('analysis_complete');
+                const te = createTelemetryEvent(EventName.ANALYSIS_COMPLETE);
 
                 te.Measurements['peakRssMB'] = Math.max(usage.rss, this._peakRssMB) / 1024 / 1024;
                 te.Measurements['rssMB'] = usage.rss / 1024 / 1024;
