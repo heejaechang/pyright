@@ -819,6 +819,12 @@ test('Assignment5', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Assignment6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment6.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -1112,6 +1118,12 @@ test('TypedDict8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict8.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('TypedDict9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict9.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('TypeIgnore1', () => {
