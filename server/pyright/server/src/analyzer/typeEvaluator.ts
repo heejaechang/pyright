@@ -1444,7 +1444,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         // entries added by this class.
         const localDataClassEntries: DataClassEntry[] = [];
         const fullDataClassEntries: DataClassEntry[] = [];
-        addInheritedDataClassEntriesRecursive(classType, fullDataClassEntries);
+        addInheritedDataClassEntries(classType, fullDataClassEntries);
 
         // Maintain a list of "type evaluators".
         type TypeEvaluator = () => Type;
@@ -2279,17 +2279,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     // Builds a sorted list of dataclass entries that are inherited by
     // the specified class. These entries must be unique and in reverse-MRO
     // order.
-    function addInheritedDataClassEntriesRecursive(classType: ClassType, entries: DataClassEntry[]) {
-        // Recursively call for reverse-MRO ordering.
-        classType.details.baseClasses.forEach(baseClass => {
-            if (baseClass.category === TypeCategory.Class) {
-                addInheritedDataClassEntriesRecursive(baseClass, entries);
-            }
-        });
+    function addInheritedDataClassEntries(classType: ClassType, entries: DataClassEntry[]) {
+        for (let i = classType.details.mro.length - 1; i >= 0; i--) {
+            const mroClass = classType.details.mro[i];
 
-        classType.details.baseClasses.forEach(baseClass => {
-            if (baseClass.category === TypeCategory.Class) {
-                const dataClassEntries = ClassType.getDataClassEntries(baseClass);
+            if (mroClass.category === TypeCategory.Class) {
+                const dataClassEntries = ClassType.getDataClassEntries(mroClass);
 
                 // Add the entries to the end of the list, replacing same-named
                 // entries if found.
@@ -2302,7 +2297,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     }
                 });
             }
-        });
+        }
     }
 
     function getReturnTypeFromGenerator(type: Type): Type | undefined {
@@ -6410,6 +6405,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             ) {
                                 addError(`Use of 'Protocol' requires Python 3.7 or newer`, arg.valueExpression);
                             }
+                            classType.details.flags |= ClassTypeFlags.ProtocolClass;
                         }
 
                         if (ClassType.isBuiltIn(argType, 'property')) {
@@ -6421,12 +6417,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V36) {
                             if (ClassType.isBuiltIn(argType, 'NamedTuple')) {
                                 classType.details.flags |= ClassTypeFlags.DataClass;
-                            }
-                        }
-
-                        if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V38) {
-                            if (ClassType.isBuiltIn(argType, 'Protocol')) {
-                                classType.details.flags |= ClassTypeFlags.ProtocolClass;
                             }
                         }
 
@@ -6877,7 +6867,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     function inferFirstParamType(flags: FunctionTypeFlags, containingClassType: ClassType): Type | undefined {
         if ((flags & FunctionTypeFlags.StaticMethod) === 0) {
             if (containingClassType) {
-                if (ClassType.isProtocol(containingClassType)) {
+                if (ClassType.isProtocolClass(containingClassType)) {
                     // Don't specialize the "self" for protocol classes because type
                     // comparisons will fail during structural typing analysis. We'll
                     // use an "Any" type here to avoid triggering errors about Unknown
@@ -8703,12 +8693,23 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             const filteredTypes: ClassType[] = [];
 
             let foundSuperclass = false;
+            let isClassRelationshipIndeterminate = false;
+
             for (const filterType of classTypeList) {
                 const filterIsSuperclass = ClassType.isDerivedFrom(varType, filterType);
                 const filterIsSubclass = ClassType.isDerivedFrom(filterType, varType);
 
                 if (filterIsSuperclass) {
                     foundSuperclass = true;
+                }
+
+                // Normally, a type should never be both a subclass or a superclass.
+                // This can happen if either of the class types derives from a
+                // class whose type is unknown (e.g. an import failed). We'll
+                // note this case specially so we don't do any narrowing, which
+                // will generate false positives.
+                if (filterIsSubclass && filterIsSuperclass && !ClassType.isSameGenericClass(varType, filterType)) {
+                    isClassRelationshipIndeterminate = true;
                 }
 
                 if (isPositiveTest) {
@@ -8730,8 +8731,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             // a superclass of the type), then there's nothing left after
             // the filter is applied. If we didn't find any superclass
             // match, then the original variable type survives the filter.
-            if (!isPositiveTest && !foundSuperclass) {
-                filteredTypes.push(varType);
+            if (!isPositiveTest) {
+                if (!foundSuperclass || isClassRelationshipIndeterminate) {
+                    filteredTypes.push(varType);
+                }
             }
 
             if (!isInstanceCheck) {
@@ -9816,7 +9819,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     ): boolean {
         // Is it a structural type (i.e. a protocol)? If so, we need to
         // perform a member-by-member check.
-        if (ClassType.isProtocol(destType)) {
+        if (ClassType.isProtocolClass(destType)) {
             return canAssignClassToProtocol(destType, srcType, diag, typeVarMap, recursionCount);
         }
 
@@ -10643,7 +10646,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getCallbackProtocolType(objType: ObjectType): FunctionType | undefined {
-        if (!ClassType.isProtocol(objType.classType)) {
+        if (!ClassType.isProtocolClass(objType.classType)) {
             return undefined;
         }
 
