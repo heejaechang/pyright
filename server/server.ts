@@ -124,7 +124,7 @@ class Server extends LanguageServerBase {
             this._workspaceMap.forEach(workspace => {
                 const resolver = workspace.serviceInstance.getImportResolver();
                 if (resolver instanceof PyrxImportResolver) {
-                    const importMetrics = (resolver as PyrxImportResolver).getAndResetImportMetrics();
+                    const importMetrics = resolver.getAndResetImportMetrics();
                     if (!importMetrics.isEmpty()) {
                         addNumericsToTelemetry(importEvent, importMetrics);
                         shouldSend = true;
