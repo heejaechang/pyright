@@ -61,8 +61,8 @@ export abstract class LanguageServerBase {
     private _rootPath = '';
     // Tracks whether we're currently displaying progress.
     private _isDisplayingProgress = false;
-
-    constructor(private _productName: string, rootDirectory?: string) {
+    
+    constructor(private _productName: string, rootDirectory?: string, private _extension?: any) {
         this.connection.console.log(`${ _productName } language server starting`);
         // virtual file system to be used. initialized to real file system by default. but can't be overritten
         this.fs = createFromRealFileSystem(this.connection.console);
@@ -101,7 +101,7 @@ export abstract class LanguageServerBase {
     // program within a workspace.
     createAnalyzerService(name: string): AnalyzerService {
         this.connection.console.log(`Starting service instance "${ name }"`);
-        const service = new AnalyzerService(name, this.fs, this.connection.console);
+        const service = new AnalyzerService(name, this.fs, this.connection.console, undefined, this._extension);
 
         // Don't allow the analysis engine to go too long without
         // reporting results. This will keep it responsive.
@@ -419,8 +419,7 @@ export abstract class LanguageServerBase {
                 return;
             }
 
-            const completions = workspace.serviceInstance.getCompletionsForPosition(
-                filePath, position, workspace.rootPath);
+            const completions = workspace.serviceInstance.getCompletionsForPosition(filePath, position, workspace.rootPath);
 
             // Always mark as incomplete so we get called back when the
             // user continues typing. Without this, the editor will assume

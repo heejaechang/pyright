@@ -68,12 +68,13 @@ export class AnalyzerService {
     private _requireTrackedFileUpdate = true;
     private _lastUserInteractionTime = Date.now();
 
-    constructor(instanceName: string, fs: VirtualFileSystem, console?: ConsoleInterface, configOptions?: ConfigOptions) {
+    constructor(instanceName: string, fs: VirtualFileSystem, console?: ConsoleInterface,
+        configOptions?: ConfigOptions, extension?: any) {
         this._instanceName = instanceName;
         this._console = console || new StandardConsole();
         this._configOptions = configOptions ?? new ConfigOptions(process.cwd());
         this._importResolver = new ImportResolver(fs, this._configOptions);
-        this._program = new Program(this._importResolver, this._configOptions, this._console);
+        this._program = new Program(this._importResolver, this._configOptions, this._console, extension);
         this._executionRootPath = '';
         this._typeStubTargetImportName = undefined;
     }

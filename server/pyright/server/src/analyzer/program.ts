@@ -16,10 +16,12 @@ import { ConsoleInterface, StandardConsole } from '../common/console';
 import { Diagnostic } from '../common/diagnostic';
 import { FileDiagnostics } from '../common/diagnosticSink';
 import { FileEditAction, TextEditAction } from '../common/editAction';
+import { CompletionListExtension } from '../common/extensibility';
 import {
     combinePaths, getDirectoryPath, getRelativePath, makeDirectories,
     normalizePath, stripFileExtension
 } from '../common/pathUtils';
+import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
 import { ModuleSymbolMap } from '../languageService/completionProvider';
 import { HoverResults } from '../languageService/hoverProvider';
@@ -34,7 +36,6 @@ import { SourceFile } from './sourceFile';
 import { SymbolTable } from './symbol';
 import { createTypeEvaluator, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
-import { Position, Range, DocumentRange, doRangesOverlap } from '../common/textRange';
 
 const _maxImportDepth = 256;
 
@@ -81,13 +82,15 @@ export class Program {
     private _evaluator: TypeEvaluator;
     private _configOptions: ConfigOptions;
     private _importResolver: ImportResolver;
+    private _completionListExtension: CompletionListExtension | undefined;
 
     constructor(initialImportResolver: ImportResolver, initialConfigOptions: ConfigOptions,
-        console?: ConsoleInterface) {
+        console?: ConsoleInterface, extension?: any) {
         this._console = console || new StandardConsole();
         this._evaluator = createTypeEvaluator(this._lookUpImport);
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
+        this._completionListExtension = extension as CompletionListExtension;
     }
 
     setConfigOptions(configOptions: ConfigOptions) {
@@ -797,10 +800,19 @@ export class Program {
 
         this._bindFile(sourceFileInfo);
 
-        return sourceFileInfo.sourceFile.getCompletionsForPosition(
+        let completionList = sourceFileInfo.sourceFile.getCompletionsForPosition(
             position, workspacePath, this._configOptions,
             this._importResolver, this._lookUpImport, this._evaluator,
             () => this._buildModuleSymbolsMap(sourceFileInfo));
+
+        if (completionList && this._completionListExtension) {
+            const tree = sourceFileInfo.sourceFile.getParseResults()?.parseTree;
+            if (tree) {
+                completionList = this._completionListExtension.handleCompletions(completionList, tree, position, this._configOptions);
+            }
+        }
+        
+        return completionList;
     }
 
     resolveCompletionItem(filePath: string, completionItem: CompletionItem) {
