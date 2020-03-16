@@ -6,7 +6,7 @@
 
 import * as path from 'path';
 import { isArray } from 'util';
-import { CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
+import { CodeAction, CodeActionParams, Command, ExecuteCommandParams, CancellationToken } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { AnalysisResults } from './pyright/server/src/analyzer/service';
@@ -83,8 +83,8 @@ class Server extends LanguageServerBase {
         return serverSettings;
     }
 
-    protected executeCommand(cmdParams: ExecuteCommandParams): Promise<any> {
-        return this._controller.execute(cmdParams);
+    protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
+        return this._controller.execute(params, token);
     }
 
     protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
@@ -102,13 +102,14 @@ class Server extends LanguageServerBase {
     }
 
     protected async executeCodeAction(
-        cmdParams: CodeActionParams
+        params: CodeActionParams,
+        token: CancellationToken
     ): Promise<(Command | CodeAction)[] | undefined | null> {
         this.recordUserInteractionTime();
 
-        const filePath = convertUriToPath(cmdParams.textDocument.uri);
+        const filePath = convertUriToPath(params.textDocument.uri);
         const workspace = this.getWorkspaceForFile(filePath);
-        return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, cmdParams.range);
+        return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, params.range, token);
     }
 
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
