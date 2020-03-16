@@ -13,13 +13,14 @@ import { ExecuteCommandParams } from 'vscode-languageserver';
 import { CommandController } from './commands/commandController';
 import { normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
+import { IntelliCodeExtension } from './intelliCode/extension';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
 
     constructor() {
         assert(fs.existsSync(path.join(__dirname, 'typeshed-fallback')), 'Unable to locate typeshed fallback folder.');
-        super('PyRx', __dirname);
+        super('PyRx', __dirname, new IntelliCodeExtension());
         this.console.log(`PyRx server root directory: ${__dirname}`);
         this._controller = new CommandController(this);
     }
