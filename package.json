@@ -24,7 +24,9 @@
         "clean:all": "npm run clean && npm run clean:pyright",
         "package": "npm run install:all && npm run clean:pyright && cd server && npm run build && npx webpack && cd ..",
         "test:all": "cd server && npm run test:all && cd ..",
-        "test:all:pipeline": "cd server && npm run test:all:pipeline && cd .."
+        "test:all:pipeline": "cd server && npm run test:all:pipeline && cd ..",
+        "syncpack:list": "syncpack list --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
+        "syncpack:fix": "syncpack fix-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\" --indent \"    \""
     },
     "devDependencies": {
         "@types/node": "^13.9.1",
@@ -36,6 +38,7 @@
         "eslint-plugin-simple-import-sort": "^5.0.2",
         "fs-extra": "^8.1.0",
         "prettier": "1.19.1",
+        "syncpack": "^5.0.1",
         "typescript": "^3.8.3"
     },
     "main": "index.js",
