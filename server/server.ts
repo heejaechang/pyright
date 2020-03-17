@@ -27,11 +27,14 @@ import {
     TelemetryEvent
 } from './src/common/telemetry';
 import { TelemetryServiceImplementation } from './src/services/telemetry';
+import { LogService, LogLevel } from './src/common/logger';
+import { LogServiceImplementation } from './src/services/logger';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
     private _telemetry: TelemetryService;
+    private _logger: LogService;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -55,6 +58,7 @@ class Server extends LanguageServerBase {
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryServiceImplementation(this._connection);
+        this._logger = new LogServiceImplementation();
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -81,6 +85,8 @@ class Server extends LanguageServerBase {
                 serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? true;
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes ?? true;
                 serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths ?? true;
+
+                this.setLogLevel(pythonAnalysisSection.logLevel);
             } else {
                 serverSettings.openFilesOnly = true;
                 serverSettings.useLibraryCodeForTypes = true;
@@ -143,6 +149,26 @@ class Server extends LanguageServerBase {
             if (shouldSend) {
                 this._telemetry.sendTelemetry(importEvent);
             }
+        }
+    }
+
+    private setLogLevel(value: string): void {
+        switch (value) {
+            case 'Error':
+                this._logger.setLogLevel(LogLevel.Error);
+                break;
+            case 'Warning':
+                this._logger.setLogLevel(LogLevel.Warning);
+                break;
+            case 'Info':
+                this._logger.setLogLevel(LogLevel.Info);
+                break;
+            case 'Trace':
+                this._logger.setLogLevel(LogLevel.Trace);
+                break;
+            default:
+                this._logger.setLogLevel(LogLevel.Info);
+                break;
         }
     }
 }

@@ -7,7 +7,7 @@
 import { RemoteConsole } from 'vscode-languageserver';
 import { LogService, LogLevel } from '../common/logger';
 
-export class LogServiceImpl implements LogService {
+export class LogServiceImplementation implements LogService {
     private _minLevel: LogLevel = LogLevel.Info;
 
     constructor(private _console?: RemoteConsole) {}
