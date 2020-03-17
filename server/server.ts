@@ -19,7 +19,13 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/services/analysisTracker';
-import { TelemetryService, sendMeasurementsTelemetry, TelemetryEventName } from './src/common/telemetry';
+import {
+    TelemetryService,
+    sendMeasurementsTelemetry,
+    TelemetryEventName,
+    addMeasurementsToEvent,
+    TelemetryEvent
+} from './src/common/telemetry';
 import { TelemetryServiceImplementation } from './src/services/telemetry';
 
 class Server extends LanguageServerBase {
@@ -122,29 +128,20 @@ class Server extends LanguageServerBase {
 
             //send import metrics
             let shouldSend = false;
-            const measurements = new Map<string, number>();
+            const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
             this._workspaceMap.forEach(workspace => {
                 const resolver = workspace.serviceInstance.getImportResolver();
                 if (resolver instanceof PyrxImportResolver) {
                     const importMetrics = resolver.getAndResetImportMetrics();
                     if (!importMetrics.isEmpty()) {
-                        for (const [key, value] of Object.entries(importMetrics)) {
-                            if (typeof value == 'number') {
-                                const current = measurements.get(key);
-                                if (!current) {
-                                    measurements.set(key, value);
-                                } else {
-                                    measurements.set(key, current + value);
-                                }
-                            }
-                        }
+                        addMeasurementsToEvent(importEvent, importMetrics);
                         shouldSend = true;
                     }
                 }
             });
 
             if (shouldSend) {
-                sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, measurements);
+                this._telemetry.sendTelemetry(importEvent);
             }
         }
     }

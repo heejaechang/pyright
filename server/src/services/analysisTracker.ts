@@ -47,24 +47,22 @@ export class AnalysisTracker {
             this._telemetryLimiter = new Duration();
 
             try {
+                const te = new TelemetryEvent(TelemetryEventName.ANALYSIS_COMPLETE);
                 const usage = process.memoryUsage();
-                const measurements = new Map<string, number>();
 
-                measurements.set('peakRssMB', Math.max(usage.rss, this._peakRssMB) / 1024 / 1024);
-                measurements.set('rssMB', usage.rss / 1024 / 1024);
-                measurements.set('heapTotalMB', usage.heapTotal / 1024 / 1024);
-                measurements.set('heapUsedMB', usage.heapUsed / 1024 / 1024);
-                measurements.set('externalMB', usage.external / 1024 / 1024);
-                measurements.set(
-                    'elapsedMs',
-                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds / 1000
-                );
-                measurements.set('numFilesAnalyzed', this._numFilesAnalyzed);
-                measurements.set('numFilesInProgram', results.filesInProgram);
-                measurements.set('fatalErrorOccurred', results.fatalErrorOccurred ? 1 : 0);
-                measurements.set('isFirstRun', this._isFirstRun ? 1 : 0);
+                te.Measurements['peakRssMB'] = Math.max(usage.rss, this._peakRssMB) / 1024 / 1024;
+                te.Measurements['rssMB'] = usage.rss / 1024 / 1024;
+                te.Measurements['heapTotalMB'] = usage.heapTotal / 1024 / 1024;
+                te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
+                te.Measurements['externalMB'] = usage.external / 1024 / 1024;
+                te.Measurements['elapsedMs'] =
+                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds / 1000;
+                te.Measurements['numFilesAnalyzed'] = this._numFilesAnalyzed;
+                te.Measurements['numFilesInProgram'] = results.filesInProgram;
+                te.Measurements['fatalErrorOccurred'] = results.fatalErrorOccurred ? 1 : 0;
+                te.Measurements['isFirstRun'] = this._isFirstRun ? 1 : 0;
 
-                return new TelemetryEvent(TelemetryEventName.ANALYSIS_COMPLETE, undefined, measurements);
+                return te;
             } finally {
                 this._peakRssMB = 0;
                 this._isFirstRun = false;

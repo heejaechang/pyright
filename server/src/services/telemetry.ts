@@ -4,8 +4,8 @@
  * Telemetry service implemtation.
  */
 
-import { IConnection } from 'vscode-languageserver';
 import { TelemetryService, TelemetryEvent } from '../common/telemetry';
+import { IConnection } from 'vscode-languageserver';
 
 export class TelemetryServiceImplementation implements TelemetryService {
     constructor(private _connection?: IConnection) {}
