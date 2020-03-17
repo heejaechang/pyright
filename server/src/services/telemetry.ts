@@ -6,9 +6,16 @@
 
 import { TelemetryService, TelemetryEvent } from '../common/telemetry';
 import { IConnection } from 'vscode-languageserver';
+import { assert } from 'console';
 
 export class TelemetryServiceImplementation implements TelemetryService {
-    constructor(private _connection?: IConnection) {}
+    private _connection: IConnection;
+
+    constructor(connection: any) {
+        assert(connection);
+        this._connection = <IConnection>connection;
+        assert(this._connection);
+    }
 
     sendTelemetry(event: TelemetryEvent): void {
         this._connection?.telemetry.logEvent(event);

@@ -57,7 +57,7 @@ class Server extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
-        this._telemetry = new TelemetryServiceImplementation(this._connection);
+        this._telemetry = new TelemetryServiceImplementation(this._connection as any);
         this._logger = new LogServiceImplementation();
     }
 
