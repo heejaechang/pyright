@@ -1,13 +1,13 @@
 /*
-* commandLineOptions.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Class that holds the command-line options (those that can be
-* passed into the main entry point of the command-line version
-* of the analyzer).
-*/
+ * commandLineOptions.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Class that holds the command-line options (those that can be
+ * passed into the main entry point of the command-line version
+ * of the analyzer).
+ */
 
 // Some options can be specified by command line.
 export class CommandLineOptions {
@@ -52,6 +52,11 @@ export class CommandLineOptions {
     // In the absence of type stubs, use library implementations
     // to extract type information?
     useLibraryCodeForTypes?: boolean;
+
+    // Look for a common root folders such as 'src' and automatically
+    // add them as extra paths if the user has not explicitly defined
+    // execution environments.
+    autoSearchPaths?: boolean;
 
     // Indicates that the settings came from VS Code rather than
     // from the command-line. Useful for providing clearer error

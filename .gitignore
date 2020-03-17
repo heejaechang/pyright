@@ -15,3 +15,7 @@ server/out/
 client/out/
 client/server/
 client/typeshed-fallback/
+
+junit.xml
+coverage/
+coverage-merged/

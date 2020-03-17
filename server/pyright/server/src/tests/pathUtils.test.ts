@@ -12,14 +12,21 @@ import * as path from 'path';
 
 import { Comparison } from '../common/core';
 import {
-    changeAnyExtension, combinePathComponents, combinePaths,
-    comparePaths, comparePathsCaseInsensitive,
-    comparePathsCaseSensitive, containsPath, ensureTrailingDirectorySeparator, getAnyExtensionFromPath,
+    changeAnyExtension,
+    combinePathComponents,
+    combinePaths,
+    comparePaths,
+    comparePathsCaseInsensitive,
+    comparePathsCaseSensitive,
+    containsPath,
+    ensureTrailingDirectorySeparator,
+    getAnyExtensionFromPath,
     getBaseFileName,
     getFileExtension,
     getFileName,
     getPathComponents,
     getRegexEscapedSeparator,
+    getRelativePath,
     getRelativePathFromDirectory,
     getWildcardRegexPattern,
     getWildcardRoot,
@@ -184,7 +191,7 @@ test('comparePaths4', () => {
 });
 
 test('comparePaths5', () => {
-    assert.equal(comparePaths('/a/b/c/', '/a/b/c'), Comparison.GreaterThan);
+    assert.equal(comparePaths('/a/b/c/', '/a/b/c'), Comparison.EqualTo);
 });
 
 test('containsPath1', () => {
@@ -277,4 +284,11 @@ test('isDiskPathRoot2', () => {
 
 test('isDiskPathRoot3', () => {
     assert(!isRootedDiskPath(normalizeSlashes('c:')));
+});
+
+test('getRelativePath', () => {
+    assert.equal(
+        getRelativePath(normalizeSlashes('/a/b/c/d/e/f'), normalizeSlashes('/a/b/c')),
+        normalizeSlashes('./d/e/f')
+    );
 });

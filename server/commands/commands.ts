@@ -1,8 +1,8 @@
 /*
-* commands.ts
-*
-* Command identifier strings.
-*/
+ * commands.ts
+ *
+ * Command identifier strings.
+ */
 
 export enum Commands {
     createTypeStub = 'python.createTypeStub',

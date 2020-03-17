@@ -1,17 +1,17 @@
 /*
-* progress.ts
-*
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-*
-* Provides a way for the pyright language server to report progress
-* back to the client and display it in the editor.
-*/
+ * progress.ts
+ *
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ *
+ * Provides a way for the pyright language server to report progress
+ * back to the client and display it in the editor.
+ */
 
 import { Progress, ProgressLocation, window } from 'vscode';
 import { Disposable, LanguageClient } from 'vscode-languageclient';
 
-const AnalysisTimeoutInMs: number = 60000;
+const AnalysisTimeoutInMs = 60000;
 
 export class ProgressReporting implements Disposable {
     private _progress: Progress<{ message?: string; increment?: number }> | undefined;
@@ -21,17 +21,20 @@ export class ProgressReporting implements Disposable {
     constructor(languageClient: LanguageClient) {
         languageClient.onReady().then(() => {
             languageClient.onNotification('pyright/beginProgress', async () => {
-                let progressPromise = new Promise<void>(resolve => {
+                const progressPromise = new Promise<void>(resolve => {
                     this._resolveProgress = resolve;
                 });
 
-                window.withProgress({
-                    location: ProgressLocation.Window,
-                    title: ''
-                }, progress => {
-                    this._progress = progress;
-                    return progressPromise;
-                });
+                window.withProgress(
+                    {
+                        location: ProgressLocation.Window,
+                        title: ''
+                    },
+                    progress => {
+                        this._progress = progress;
+                        return progressPromise;
+                    }
+                );
 
                 this._primeTimeoutTimer();
             });

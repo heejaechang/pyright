@@ -1,20 +1,23 @@
 /*
-* signatureHelpProvider.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Logic that maps a position within a Python call node into info
-* that can be presented to the developer to help fill in the remaining
-* arguments for the call.
-*/
+ * signatureHelpProvider.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Logic that maps a position within a Python call node into info
+ * that can be presented to the developer to help fill in the remaining
+ * arguments for the call.
+ */
+
+import { CancellationToken } from 'vscode-languageserver';
 
 import { extractParameterDocumentation } from '../analyzer/docStringUtils';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { FunctionType } from '../analyzer/types';
-import { Position } from '../common/textRange';
+import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { convertPositionToOffset } from '../common/positionUtils';
+import { Position } from '../common/textRange';
 import { ParseResults } from '../parser/parser';
 
 export interface ParamInfo {
@@ -36,9 +39,13 @@ export interface SignatureHelpResults {
 }
 
 export class SignatureHelpProvider {
-    static getSignatureHelpForPosition(parseResults: ParseResults, position: Position,
-        evaluator: TypeEvaluator):
-        SignatureHelpResults | undefined {
+    static getSignatureHelpForPosition(
+        parseResults: ParseResults,
+        position: Position,
+        evaluator: TypeEvaluator,
+        token: CancellationToken
+    ): SignatureHelpResults | undefined {
+        throwIfCancellationRequested(token);
 
         const offset = convertPositionToOffset(position, parseResults.tokenizerOutput.lines);
         if (offset === undefined) {

@@ -6,11 +6,13 @@
  * Entry point that will read all *.fourslash.ts files and
  * register jest tests for them and run
  */
+
 import * as path from 'path';
+
 import { normalizeSlashes } from '../common/pathUtils';
 import { runFourSlashTest } from './harness/fourslash/runner';
 import * as host from './harness/host';
-import { srcFolder } from './harness/vfs/factory';
+import { MODULE_PATH } from './harness/vfs/filesystem';
 
 describe('fourslash tests', () => {
     const testFiles: string[] = [];
@@ -25,8 +27,9 @@ describe('fourslash tests', () => {
             const fn = normalizeSlashes(file);
             const justName = fn.replace(/^.*[\\/]/, '');
 
-            it('fourslash test ' + justName + ' runs correctly', () => {
-                runFourSlashTest(srcFolder, fn);
+            // TODO: make these to use promise/async rather than callback token
+            it('fourslash test ' + justName + ' runs correctly', cb => {
+                runFourSlashTest(MODULE_PATH, fn, cb);
             });
         });
     });

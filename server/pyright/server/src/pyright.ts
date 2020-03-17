@@ -1,18 +1,20 @@
 /*
-* pyright.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Command-line entry point for pyright type checker.
-*/
+ * pyright.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Command-line entry point for pyright type checker.
+ */
 
 // Add the start timer at the very top of the file, before we import other modules.
-import { timingStats } from './common/timing';
 
-import chalk from 'chalk';
+/* eslint-disable */
+import { timingStats } from './common/timing';
+/* eslint-enable */
+
+import * as chalk from 'chalk';
 import * as commandLineArgs from 'command-line-args';
-// tslint:disable-next-line
 import { CommandLineOptions, OptionDefinition } from 'command-line-args';
 import * as process from 'process';
 
@@ -61,6 +63,17 @@ interface DiagnosticResult {
     diagnosticCount: number;
 }
 
+const cancellationNone = Object.freeze({
+    isCancellationRequested: false,
+    onCancellationRequested: function() {
+        return {
+            dispose() {
+                /* empty */
+            }
+        };
+    }
+});
+
 function processArgs() {
     const optionDefinitions: OptionDefinition[] = [
         { name: 'createstub', type: String },
@@ -85,11 +98,11 @@ function processArgs() {
     } catch (err) {
         const argErr: { name: string; optionName: string } = err;
         if (argErr && argErr.optionName) {
-            console.error(`Unexpected option ${ argErr.optionName }.\n${ toolName } --help for usage`);
+            console.error(`Unexpected option ${argErr.optionName}.\n${toolName} --help for usage`);
             return;
         }
 
-        console.error(`Unexpected error\n${ toolName } --help for usage`);
+        console.error(`Unexpected error\n${toolName} --help for usage`);
         return;
     }
 
@@ -107,7 +120,7 @@ function processArgs() {
         const incompatibleArgs = ['watch', 'stats', 'verbose', 'createstub', 'dependencies'];
         for (const arg of incompatibleArgs) {
             if (args[arg] !== undefined) {
-                console.error(`'outputjson' option cannot be used with '${ arg }' option`);
+                console.error(`'outputjson' option cannot be used with '${arg}' option`);
                 return;
             }
         }
@@ -166,8 +179,11 @@ function processArgs() {
         let errorCount = 0;
         if (results.diagnostics.length > 0 && !args.createstub) {
             if (args.outputjson) {
-                const report = reportDiagnosticsAsJson(results.diagnostics,
-                    results.filesInProgram, results.elapsedTime);
+                const report = reportDiagnosticsAsJson(
+                    results.diagnostics,
+                    results.filesInProgram,
+                    results.elapsedTime
+                );
                 errorCount += report.errorCount;
             } else {
                 const report = reportDiagnosticsAsText(results.diagnostics);
@@ -177,9 +193,9 @@ function processArgs() {
 
         if (args.createstub && results.filesRequiringAnalysis === 0) {
             try {
-                service.writeTypeStub();
+                service.writeTypeStub(cancellationNone);
                 service.dispose();
-                console.log(`Type stub was created for '${ args.createstub }'`);
+                console.log(`Type stub was created for '${args.createstub}'`);
             } catch (err) {
                 let errMessage = '';
                 if (err instanceof Error) {
@@ -207,10 +223,7 @@ function processArgs() {
         }
 
         if (!watch) {
-            process.exit(
-                errorCount > 0 ?
-                    ExitStatus.ErrorsReported :
-                    ExitStatus.NoErrors);
+            process.exit(errorCount > 0 ? ExitStatus.ErrorsReported : ExitStatus.NoErrors);
         } else {
             console.log('Watching for file changes...');
         }
@@ -228,20 +241,22 @@ function processArgs() {
 
 function printUsage() {
     console.log(
-        'Usage: ' + toolName + ' [options] files...\n' +
-        '  Options:\n' +
-        '  --createstub IMPORT              Create type stub file(s) for import\n' +
-        '  --dependencies                   Emit import dependency information\n' +
-        '  -h,--help                        Show this help message\n' +
-        '  --lib                            Use library code to infer types when stubs are missing\n' +
-        '  --outputjson                     Output results in JSON format\n' +
-        '  -p,--project FILE OR DIRECTORY   Use the configuration file at this location\n' +
-        '  --stats                          Print detailed performance stats\n' +
-        '  -t,--typeshed-path DIRECTORY     Use typeshed type stubs at this location\n' +
-        '  -v,--venv-path DIRECTORY         Directory that contains virtual environments\n' +
-        '  --verbose                        Emit verbose diagnostics\n' +
-        '  --version                        Print Pyright version\n' +
-        '  -w,--watch                       Continue to run and watch for changes\n'
+        'Usage: ' +
+            toolName +
+            ' [options] files...\n' +
+            '  Options:\n' +
+            '  --createstub IMPORT              Create type stub file(s) for import\n' +
+            '  --dependencies                   Emit import dependency information\n' +
+            '  -h,--help                        Show this help message\n' +
+            '  --lib                            Use library code to infer types when stubs are missing\n' +
+            '  --outputjson                     Output results in JSON format\n' +
+            '  -p,--project FILE OR DIRECTORY   Use the configuration file at this location\n' +
+            '  --stats                          Print detailed performance stats\n' +
+            '  -t,--typeshed-path DIRECTORY     Use typeshed type stubs at this location\n' +
+            '  -v,--venv-path DIRECTORY         Directory that contains virtual environments\n' +
+            '  --verbose                        Emit verbose diagnostics\n' +
+            '  --version                        Print Pyright version\n' +
+            '  -w,--watch                       Continue to run and watch for changes\n'
     );
 }
 
@@ -251,12 +266,14 @@ function getVersionString() {
 }
 
 function printVersion() {
-    console.log(`${ toolName } ${ getVersionString() }`);
+    console.log(`${toolName} ${getVersionString()}`);
 }
 
-function reportDiagnosticsAsJson(fileDiagnostics: FileDiagnostics[], filesInProgram: number,
-    timeInSec: number): DiagnosticResult {
-
+function reportDiagnosticsAsJson(
+    fileDiagnostics: FileDiagnostics[],
+    filesInProgram: number,
+    timeInSec: number
+): DiagnosticResult {
     const report: PyrightJsonResults = {
         version: getVersionString(),
         time: Date.now().toString(),
@@ -310,24 +327,27 @@ function reportDiagnosticsAsText(fileDiagnostics: FileDiagnostics[]): Diagnostic
     fileDiagnostics.forEach(fileDiagnostics => {
         // Don't report unused code diagnostics.
         const fileErrorsAndWarnings = fileDiagnostics.diagnostics.filter(
-            diag => diag.category !== DiagnosticCategory.UnusedCode);
+            diag => diag.category !== DiagnosticCategory.UnusedCode
+        );
 
         if (fileErrorsAndWarnings.length > 0) {
-            console.log(`${ fileDiagnostics.filePath }`);
+            console.log(`${fileDiagnostics.filePath}`);
             fileErrorsAndWarnings.forEach(diag => {
                 let message = '  ';
                 if (diag.range) {
-                    message += chalk.yellow(`${ diag.range.start.line + 1 }`) + ':' +
-                        chalk.yellow(`${ diag.range.start.character + 1 }`) + ' - ';
+                    message +=
+                        chalk.yellow(`${diag.range.start.line + 1}`) +
+                        ':' +
+                        chalk.yellow(`${diag.range.start.character + 1}`) +
+                        ' - ';
                 }
 
-                message += diag.category === DiagnosticCategory.Error ?
-                    chalk.red('error') : chalk.green('warning');
-                message += `: ${ diag.message }`;
+                message += diag.category === DiagnosticCategory.Error ? chalk.red('error') : chalk.green('warning');
+                message += `: ${diag.message}`;
 
                 const rule = diag.getRule();
                 if (rule) {
-                    message += chalk.gray(` (${ rule })`);
+                    message += chalk.gray(` (${rule})`);
                 }
 
                 console.log(message);
@@ -342,8 +362,9 @@ function reportDiagnosticsAsText(fileDiagnostics: FileDiagnostics[]): Diagnostic
     });
 
     console.log(
-        `${ errorCount.toString() } ${ errorCount === 1 ? 'error' : 'errors' }, ` +
-        `${ warningCount.toString() } ${ warningCount === 1 ? 'warning' : 'warnings' } `);
+        `${errorCount.toString()} ${errorCount === 1 ? 'error' : 'errors'}, ` +
+            `${warningCount.toString()} ${warningCount === 1 ? 'warning' : 'warnings'} `
+    );
 
     return {
         errorCount,

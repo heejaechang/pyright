@@ -8,7 +8,8 @@
  */
 
 import * as assert from 'assert';
-import { getBaseFileName, normalizeSlashes } from '../common/pathUtils';
+
+import { combinePaths, getBaseFileName, normalizeSlashes } from '../common/pathUtils';
 import { compareStringsCaseSensitive } from '../common/stringUtils';
 import { parseTestData } from './harness/fourslash/fourSlashParser';
 import { CompilerSettings } from './harness/fourslash/fourSlashTypes';
@@ -29,7 +30,10 @@ test('GlobalOptions', () => {
     pass`;
 
     const data = parseTestData('.', code, 'test.py');
-    assertOptions(data.globalOptions, [['libpath', '../dist/lib'], ['pythonversion', '3.7']]);
+    assertOptions(data.globalOptions, [
+        ['libpath', '../dist/lib'],
+        ['pythonversion', '3.7']
+    ]);
 
     assert.equal(data.files.length, 1);
     assert.equal(data.files[0].fileName, 'test.py');
@@ -55,18 +59,37 @@ test('Filename', () => {
 });
 
 test('Extra file options', () => {
-    // filename must be last file options
+    // filename must be the first file options
     const code = `
-// @reserved: not used
 // @filename: file1.py
+// @library: false
 ////class A:
 ////    pass
     `;
 
     const data = parseTestData('.', code, 'test.py');
-    assertOptions(data.globalOptions, []);
 
-    assertOptions(data.files[0].fileOptions, [['filename', 'file1.py'], ['reserved', 'not used']]);
+    assert.equal(data.files[0].fileName, normalizeSlashes('./file1.py'));
+
+    assertOptions(data.globalOptions, []);
+    assertOptions(data.files[0].fileOptions, [
+        ['filename', 'file1.py'],
+        ['library', 'false']
+    ]);
+});
+
+test('Library options', () => {
+    // filename must be the first file options
+    const code = `
+// @filename: file1.py
+// @library: true
+////class A:
+////    pass
+    `;
+
+    const data = parseTestData('.', code, 'test.py');
+
+    assert.equal(data.files[0].fileName, normalizeSlashes(combinePaths(factory.libFolder, 'file1.py')));
 });
 
 test('Range', () => {
@@ -180,10 +203,12 @@ test('Multiple Files', () => {
     // range can have 1 marker in it
     const code = `
 // @filename: src/A.py
+// @library: false
 ////class A:
 ////    pass
 
 // @filename: src/B.py
+// @library: true
 ////class B:
 ////    pass
 
@@ -196,7 +221,10 @@ test('Multiple Files', () => {
     assert.equal(data.files.length, 3);
 
     assert.equal(data.files.filter(f => f.fileName === normalizeSlashes('./src/A.py'))[0].content, getContent('A'));
-    assert.equal(data.files.filter(f => f.fileName === normalizeSlashes('./src/B.py'))[0].content, getContent('B'));
+    assert.equal(
+        data.files.filter(f => f.fileName === normalizeSlashes(combinePaths(factory.libFolder, 'src/B.py')))[0].content,
+        getContent('B')
+    );
     assert.equal(data.files.filter(f => f.fileName === normalizeSlashes('./src/C.py'))[0].content, getContent('C'));
 });
 
@@ -270,10 +298,14 @@ test('fourSlashWithFileSystem', () => {
     `;
 
     const data = parseTestData('.', code, 'unused');
-    const documents = data.files.map(f => new factory.TextDocument(f.fileName, f.content,
-        new Map<string, string>(Object.entries(f.fileOptions))));
+    const documents = data.files.map(
+        f => new factory.TextDocument(f.fileName, f.content, new Map<string, string>(Object.entries(f.fileOptions)))
+    );
 
-    const fs = factory.createFromFileSystem(host.HOST, /* ignoreCase */ false, { documents, cwd: normalizeSlashes('/') });
+    const fs = factory.createFromFileSystem(host.HOST, /* ignoreCase */ false, {
+        documents,
+        cwd: normalizeSlashes('/')
+    });
 
     for (const file of data.files) {
         assert.equal(fs.readFileSync(file.fileName, 'utf8'), getContent(getBaseFileName(file.fileName, '.py', false)));
@@ -289,5 +321,6 @@ function assertOptions(actual: CompilerSettings, expected: [string, string][], m
     assert.deepEqual(
         Object.entries(actual).sort((x, y) => compareStringsCaseSensitive(x[0], y[0])),
         expected,
-        message);
+        message
+    );
 }

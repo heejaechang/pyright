@@ -1,16 +1,15 @@
 /*
-* scope.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Represents an evaluation scope and its defined symbols.
-* It also contains a link to a parent scope (except for the
-* top-most built-in scope).
-*/
+ * scope.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Represents an evaluation scope and its defined symbols.
+ * It also contains a link to a parent scope (except for the
+ * top-most built-in scope).
+ */
 
-import * as assert from 'assert';
-
+import { fail } from '../common/debug';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
 
 export const enum ScopeType {
@@ -79,7 +78,7 @@ export class Scope {
             curScope = curScope.parent;
         }
 
-        assert.fail('failed to find scope');
+        fail('failed to find scope');
         return this;
     }
 
@@ -104,9 +103,11 @@ export class Scope {
         return symbol;
     }
 
-    private _lookUpSymbolRecursiveInternal(name: string, isOutsideCallerModule: boolean,
-            isBeyondExecutionScope: boolean): SymbolWithScope | undefined {
-
+    private _lookUpSymbolRecursiveInternal(
+        name: string,
+        isOutsideCallerModule: boolean,
+        isBeyondExecutionScope: boolean
+    ): SymbolWithScope | undefined {
         const symbol = this.symbolTable.get(name);
 
         if (symbol) {
@@ -128,9 +129,11 @@ export class Scope {
             // If our recursion is about to take us outside the scope of the current
             // module (i.e. into a built-in scope), indicate as such with the second
             // parameter.
-            return this.parent._lookUpSymbolRecursiveInternal(name,
+            return this.parent._lookUpSymbolRecursiveInternal(
+                name,
                 isOutsideCallerModule || this.type === ScopeType.Module,
-                isBeyondExecutionScope || this.isIndependentlyExecutable());
+                isBeyondExecutionScope || this.isIndependentlyExecutable()
+            );
         }
 
         return undefined;

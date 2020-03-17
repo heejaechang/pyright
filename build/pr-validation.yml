@@ -1,0 +1,60 @@
+trigger: none
+
+pr:
+  autoCancel: true
+  branches:
+    include: ['master']
+
+strategy:
+  matrix:
+    linux:
+      imageName: 'ubuntu-18.04'
+    mac:
+      imageName: 'macOS-10.15'
+    windows-microbuild: # Internal only but faster; do not use for public PRs.
+      poolName: 'VSEng-MicroBuildVS2019'
+    # windows:
+    #   imageName: 'vs2017-win2016'
+
+pool:
+  name: $[variables.poolName]
+  vmImage: $[variables.imageName]
+
+steps:
+  - task: NodeTool@0
+    displayName: Use Node 12.x
+    inputs:
+      versionSpec: '12.x'
+
+  - task: Npm@1
+    displayName: npm run package
+    inputs:
+      command: 'custom'
+      customCommand: 'run package'
+
+  - task: Npm@1
+    displayName: npm run test:all:pipeline
+    inputs:
+      command: 'custom'
+      customCommand: 'run test:all:pipeline'
+
+  - task: PublishPipelineArtifact@1
+    displayName: Publish Istanbul report as artifact
+    inputs:
+      targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
+      artifact: '$(imageName)-server-coverage-merged'
+      publishLocation: 'pipeline'
+
+  - task: PublishTestResults@2
+    displayName: Publish test results
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/junit.xml'
+      testRunTitle: 'Test results for JavaScript'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: Publish coverage results
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
+      failIfCoverageEmpty: true

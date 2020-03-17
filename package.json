@@ -15,19 +15,28 @@
     },
     "scripts": {
         "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ..",
-        "build": "npm run build:client && npm run build:server",
+        "build": "npm run clean:pyright && npm run build:client && npm run build:server",
         "build:client": "cd client && npm run build && cd ..",
         "build:server": "cd server && npm run build && cd ..",
-        "package": "npm run install:all && cd server && npm run build && npx webpack && cd .."
+        "build:pyrightDebug": "cd server/pyright && npm run build:clientServerDebug && cd ../..",
+        "clean": "del-cli \"./client/server\" && del-cli \"./client/out\" && del-cli \"./dist\"",
+        "clean:pyright": "cd server/pyright && npm run clean && cd ../..",
+        "clean:all": "npm run clean && npm run clean:pyright",
+        "package": "npm run install:all && npm run clean:pyright && cd server && npm run build && npx webpack && cd ..",
+        "test:all": "cd server && npm run test:all && cd ..",
+        "test:all:pipeline": "cd server && npm run test:all:pipeline && cd .."
     },
     "devDependencies": {
-        "@types/node": "^12.12.21",
-        "@types/mocha": "^5.2.7",
-        "@typescript-eslint/eslint-plugin": "^2.12.0",
-        "@typescript-eslint/parser": "^2.12.0",
+        "@types/node": "^13.9.1",
+        "@typescript-eslint/eslint-plugin": "^2.23.0",
+        "@typescript-eslint/parser": "^2.23.0",
+        "del-cli": "^3.0.0",
         "eslint": "^6.8.0",
-        "typescript": "^3.7.3",
-        "fs-extra": "^8.1.0"
+        "eslint-config-prettier": "^6.10.0",
+        "eslint-plugin-simple-import-sort": "^5.0.2",
+        "fs-extra": "^8.1.0",
+        "prettier": "1.19.1",
+        "typescript": "^3.8.3"
     },
     "main": "index.js",
     "bin": {

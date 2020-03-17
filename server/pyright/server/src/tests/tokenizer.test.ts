@@ -14,9 +14,19 @@ import * as assert from 'assert';
 
 import * as StringTokenUtils from '../parser/stringTokenUtils';
 import { Tokenizer } from '../parser/tokenizer';
-import { DedentToken, IdentifierToken, IndentToken, NewLineToken, NewLineType,
-    NumberToken, OperatorToken, OperatorType, StringToken,
-    StringTokenFlags, TokenType } from '../parser/tokenizerTypes';
+import {
+    DedentToken,
+    IdentifierToken,
+    IndentToken,
+    NewLineToken,
+    NewLineType,
+    NumberToken,
+    OperatorToken,
+    OperatorType,
+    StringToken,
+    StringTokenFlags,
+    TokenType
+} from '../parser/tokenizerTypes';
 import * as TestUtils from './testUtils';
 
 const _implicitTokenCount = 2;
@@ -29,6 +39,15 @@ test('Empty', () => {
     assert.equal(results.tokens.length, 0);
     assert.equal(results.tokens.getItemAt(0).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(1).type, TokenType.EndOfStream);
+
+    assert.equal(results.tokens.getItemAtPosition(-1), -1);
+    assert.equal(results.tokens.getItemAtPosition(2), -1);
+
+    assert.throws(() => results.tokens.getItemAt(-1), Error);
+    assert.throws(() => results.tokens.getItemAt(10), Error);
+
+    assert.equal(results.tokens.contains(-1), false);
+    assert.equal(results.tokens.contains(2), false);
 });
 
 test('NewLines', () => {
@@ -43,6 +62,17 @@ test('NewLines', () => {
     assert.equal(results.tokens.getItemAt(4).type, TokenType.NewLine);
     assert.equal((results.tokens.getItemAt(4) as NewLineToken).newLineType, NewLineType.CarriageReturn);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.EndOfStream);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 1);
+    assert.equal(results.tokens.getItemAtPosition(2), 2);
+    assert.equal(results.tokens.getItemAtPosition(3), 2);
+    assert.equal(results.tokens.getItemAtPosition(4), 3);
+    assert.equal(results.tokens.getItemAtPosition(5), 4);
+    assert.equal(results.tokens.getItemAtPosition(6), 5);
+
+    assert.equal(results.tokens.contains(5), true);
+    assert.equal(results.tokens.contains(6), false);
 });
 
 test('ParenNewLines', () => {
@@ -57,6 +87,22 @@ test('ParenNewLines', () => {
     assert.equal(results.tokens.getItemAt(4).type, TokenType.CloseParenthesis);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(6).type, TokenType.CloseParenthesis);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 1);
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(3), 2);
+    assert.equal(results.tokens.getItemAtPosition(4), 2);
+    assert.equal(results.tokens.getItemAtPosition(5), 3);
+    assert.equal(results.tokens.getItemAtPosition(6), 3);
+    assert.equal(results.tokens.getItemAtPosition(7), 4);
+    assert.equal(results.tokens.getItemAtPosition(8), 5);
+    assert.equal(results.tokens.getItemAtPosition(9), 6);
+    assert.equal(results.tokens.getItemAtPosition(10), 7);
+    assert.equal(results.tokens.getItemAtPosition(11), 8);
+
+    assert.equal(results.tokens.contains(10), true);
+    assert.equal(results.tokens.contains(11), false);
 });
 
 test('BraceNewLines', () => {
@@ -71,6 +117,22 @@ test('BraceNewLines', () => {
     assert.equal(results.tokens.getItemAt(4).type, TokenType.CloseCurlyBrace);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(6).type, TokenType.CloseCurlyBrace);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 1);
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(3), 2);
+    assert.equal(results.tokens.getItemAtPosition(4), 2);
+    assert.equal(results.tokens.getItemAtPosition(5), 3);
+    assert.equal(results.tokens.getItemAtPosition(6), 3);
+    assert.equal(results.tokens.getItemAtPosition(7), 4);
+    assert.equal(results.tokens.getItemAtPosition(8), 5);
+    assert.equal(results.tokens.getItemAtPosition(9), 6);
+    assert.equal(results.tokens.getItemAtPosition(10), 7);
+    assert.equal(results.tokens.getItemAtPosition(11), 8);
+
+    assert.equal(results.tokens.contains(10), true);
+    assert.equal(results.tokens.contains(11), false);
 });
 
 test('BracketNewLines', () => {
@@ -85,6 +147,22 @@ test('BracketNewLines', () => {
     assert.equal(results.tokens.getItemAt(4).type, TokenType.CloseBracket);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(6).type, TokenType.CloseBracket);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 1);
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(3), 2);
+    assert.equal(results.tokens.getItemAtPosition(4), 2);
+    assert.equal(results.tokens.getItemAtPosition(5), 3);
+    assert.equal(results.tokens.getItemAtPosition(6), 3);
+    assert.equal(results.tokens.getItemAtPosition(7), 4);
+    assert.equal(results.tokens.getItemAtPosition(8), 5);
+    assert.equal(results.tokens.getItemAtPosition(9), 6);
+    assert.equal(results.tokens.getItemAtPosition(10), 7);
+    assert.equal(results.tokens.getItemAtPosition(11), 8);
+
+    assert.equal(results.tokens.contains(10), true);
+    assert.equal(results.tokens.contains(11), false);
 });
 
 test('NewLinesWithWhiteSpace', () => {
@@ -107,6 +185,22 @@ test('NewLinesWithWhiteSpace', () => {
     assert.equal(results.tokens.getItemAt(6).type, TokenType.NewLine);
     assert.equal((results.tokens.getItemAt(6) as NewLineToken).newLineType, NewLineType.Implied);
     assert.equal(results.tokens.getItemAt(6).length, 0);
+
+    assert.equal(results.tokens.getItemAtPosition(0), -1);
+    assert.equal(results.tokens.getItemAtPosition(1), -1);
+    assert.equal(results.tokens.getItemAtPosition(2), 0);
+    assert.equal(results.tokens.getItemAtPosition(3), 1);
+    assert.equal(results.tokens.getItemAtPosition(6), 1);
+    assert.equal(results.tokens.getItemAtPosition(7), 2);
+    assert.equal(results.tokens.getItemAtPosition(8), 2);
+    assert.equal(results.tokens.getItemAtPosition(9), 3);
+    assert.equal(results.tokens.getItemAtPosition(11), 3);
+    assert.equal(results.tokens.getItemAtPosition(12), 4);
+    assert.equal(results.tokens.getItemAtPosition(13), 5);
+    assert.equal(results.tokens.getItemAtPosition(14), 7);
+
+    assert.equal(results.tokens.contains(13), true);
+    assert.equal(results.tokens.contains(14), false);
 });
 
 test('NewLineEliding', () => {
@@ -117,6 +211,13 @@ test('NewLineEliding', () => {
     assert.equal(results.tokens.getItemAt(0).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(0).length, 1);
     assert.equal((results.tokens.getItemAt(0) as NewLineToken).newLineType, NewLineType.LineFeed);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(3), 0);
+    assert.equal(results.tokens.getItemAtPosition(4), 1);
+
+    assert.equal(results.tokens.contains(3), true);
+    assert.equal(results.tokens.contains(4), false);
 });
 
 test('LineContinuation', () => {
@@ -130,6 +231,23 @@ test('LineContinuation', () => {
     assert.equal(results.tokens.getItemAt(3).type, TokenType.Identifier);
     assert.equal(results.tokens.getItemAt(4).type, TokenType.Invalid);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.NewLine);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(6), 0);
+    assert.equal(results.tokens.getItemAtPosition(7), 1);
+    assert.equal(results.tokens.getItemAtPosition(13), 1);
+    assert.equal(results.tokens.getItemAtPosition(14), 2);
+    assert.equal(results.tokens.getItemAtPosition(18), 2);
+    assert.equal(results.tokens.getItemAtPosition(19), 3);
+    assert.equal(results.tokens.getItemAtPosition(21), 3);
+    assert.equal(results.tokens.getItemAtPosition(22), 4);
+    assert.equal(results.tokens.getItemAtPosition(23), 4);
+    assert.equal(results.tokens.getItemAtPosition(24), 5);
+    assert.equal(results.tokens.getItemAtPosition(37), 5);
+    assert.equal(results.tokens.getItemAtPosition(38), 6);
+
+    assert.equal(results.tokens.contains(37), true);
+    assert.equal(results.tokens.contains(38), false);
 });
 
 test('Dots', () => {
@@ -142,6 +260,25 @@ test('Dots', () => {
     assert.equal(results.tokens.getItemAt(3).type, TokenType.Ellipsis);
     assert.equal(results.tokens.getItemAt(4).type, TokenType.Ellipsis);
     assert.equal(results.tokens.getItemAt(5).type, TokenType.Dot);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 0);
+
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(3), 2);
+    assert.equal(results.tokens.getItemAtPosition(4), 2);
+
+    assert.equal(results.tokens.getItemAtPosition(5), 3);
+    assert.equal(results.tokens.getItemAtPosition(8), 3);
+
+    assert.equal(results.tokens.getItemAtPosition(9), 4);
+    assert.equal(results.tokens.getItemAtPosition(11), 4);
+
+    assert.equal(results.tokens.getItemAtPosition(12), 5);
+    assert.equal(results.tokens.getItemAtPosition(13), 7);
+
+    assert.equal(results.tokens.contains(12), true);
+    assert.equal(results.tokens.contains(13), false);
 });
 
 test('PunctuationTokens', () => {
@@ -162,14 +299,7 @@ test('PunctuationTokens', () => {
 
 test('IndentDedent', () => {
     const t = new Tokenizer();
-    const results = t.tokenize(
-        'test\n' +
-        '  i1\n' +
-        '  i2  # \n' +
-        '       # \n' +
-        '  \ti3\n' +
-        '\ti4\n' +
-        ' i1');
+    const results = t.tokenize('test\n' + '  i1\n' + '  i2  # \n' + '       # \n' + '  \ti3\n' + '\ti4\n' + ' i1');
     assert.equal(results.tokens.count, 15 + _implicitTokenCount);
 
     assert.equal(results.tokens.getItemAt(0).type, TokenType.Identifier);
@@ -233,7 +363,11 @@ test('Strings: unclosed', () => {
     const results = t.tokenize(' "string" """line1\n#line2"""\t\'un#closed');
     assert.equal(results.tokens.count, 3 + _implicitTokenCount);
 
-    const ranges = [[1, 8], [10, 18], [29, 10]];
+    const ranges = [
+        [1, 8],
+        [10, 18],
+        [29, 10]
+    ];
     for (let i = 0; i < ranges.length; i += 1) {
         assert.equal(results.tokens.getItemAt(i).start, ranges[i][0]);
         assert.equal(results.tokens.getItemAt(i).length, ranges[i][1]);
@@ -246,7 +380,10 @@ test('Strings: escaped across multiple lines', () => {
     const results = t.tokenize(' "a\\\nb" \'c\\\r\nb\'');
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
-    const ranges = [[1, 6], [8, 7]];
+    const ranges = [
+        [1, 6],
+        [8, 7]
+    ];
     for (let i = 0; i < ranges.length; i += 1) {
         assert.equal(results.tokens.getItemAt(i).start, ranges[i][0]);
         assert.equal(results.tokens.getItemAt(i).length, ranges[i][1]);
@@ -259,7 +396,10 @@ test('Strings: block next to regular, double-quoted', () => {
     const results = t.tokenize('"string""""s2"""');
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
-    const ranges = [[0, 8], [8, 8]];
+    const ranges = [
+        [0, 8],
+        [8, 8]
+    ];
     for (let i = 0; i < ranges.length; i += 1) {
         assert.equal(results.tokens.getItemAt(i).start, ranges[i][0]);
         assert.equal(results.tokens.getItemAt(i).length, ranges[i][1]);
@@ -272,7 +412,10 @@ test('Strings: block next to block, double-quoted', () => {
     const results = t.tokenize('""""""""');
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
-    const ranges = [[0, 6], [6, 2]];
+    const ranges = [
+        [0, 6],
+        [6, 2]
+    ];
     for (let i = 0; i < ranges.length; i += 1) {
         assert.equal(results.tokens.getItemAt(i).start, ranges[i][0]);
         assert.equal(results.tokens.getItemAt(i).length, ranges[i][1]);
@@ -295,7 +438,6 @@ test('Strings: unclosed sequence of quotes', () => {
 
 test('Strings: single quote escape', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("'\\'quoted\\''");
     assert.equal(results.tokens.count, 1 + _implicitTokenCount);
 
@@ -304,7 +446,7 @@ test('Strings: single quote escape', () => {
     assert.equal(stringToken.flags, StringTokenFlags.SingleQuote);
     assert.equal(stringToken.length, 12);
     assert.equal(stringToken.prefixLength, 0);
-    assert.equal(stringToken.escapedValue, '\\\'quoted\\\'');
+    assert.equal(stringToken.escapedValue, "\\'quoted\\'");
 });
 
 test('Strings: double quote escape', () => {
@@ -326,15 +468,13 @@ test('Strings: triplicate double quote escape', () => {
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Triplicate);
+    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Triplicate);
     assert.equal(stringToken.length, 16);
     assert.equal(stringToken.escapedValue, '\\"quoted\\"');
 });
 
 test('Strings: single quoted f-string', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("a+f'quoted'");
     assert.equal(results.tokens.count, 3 + _implicitTokenCount);
     assert.equal(results.tokens.getItemAt(0).type, TokenType.Identifier);
@@ -366,14 +506,15 @@ test('Strings: double quoted f-string', () => {
 
 test('Strings: single quoted multiline f-string', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("f'''quoted'''");
     assert.equal(results.tokens.count, 1 + _implicitTokenCount);
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags,
-        StringTokenFlags.SingleQuote | StringTokenFlags.Triplicate | StringTokenFlags.Format);
+    assert.equal(
+        stringToken.flags,
+        StringTokenFlags.SingleQuote | StringTokenFlags.Triplicate | StringTokenFlags.Format
+    );
     assert.equal(stringToken.length, 13);
     assert.equal(stringToken.escapedValue, 'quoted');
 });
@@ -385,15 +526,16 @@ test('Strings: double quoted multiline f-string', () => {
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags,
-        StringTokenFlags.DoubleQuote | StringTokenFlags.Triplicate | StringTokenFlags.Format);
+    assert.equal(
+        stringToken.flags,
+        StringTokenFlags.DoubleQuote | StringTokenFlags.Triplicate | StringTokenFlags.Format
+    );
     assert.equal(stringToken.length, 14);
     assert.equal(stringToken.escapedValue, 'quoted ');
 });
 
 test('Strings: f-string with single right brace', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("f'hello}'");
     assert.equal(results.tokens.count, 1 + _implicitTokenCount);
 
@@ -405,13 +547,14 @@ test('Strings: f-string with single right brace', () => {
     assert.equal(unescapedValue.unescapeErrors.length, 1);
     assert.equal(unescapedValue.unescapeErrors[0].offset, 5);
     assert.equal(unescapedValue.unescapeErrors[0].length, 1);
-    assert.equal(unescapedValue.unescapeErrors[0].errorType,
-        StringTokenUtils.UnescapeErrorType.SingleCloseBraceWithinFormatLiteral);
+    assert.equal(
+        unescapedValue.unescapeErrors[0].errorType,
+        StringTokenUtils.UnescapeErrorType.SingleCloseBraceWithinFormatLiteral
+    );
 });
 
 test('Strings: f-string with escape in expression', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("f'hello { \\t }'");
     assert.equal(results.tokens.count, 1 + _implicitTokenCount);
 
@@ -423,13 +566,14 @@ test('Strings: f-string with escape in expression', () => {
     assert.equal(unescapedValue.unescapeErrors.length, 1);
     assert.equal(unescapedValue.unescapeErrors[0].offset, 8);
     assert.equal(unescapedValue.unescapeErrors[0].length, 1);
-    assert.equal(unescapedValue.unescapeErrors[0].errorType,
-        StringTokenUtils.UnescapeErrorType.EscapeWithinFormatExpression);
+    assert.equal(
+        unescapedValue.unescapeErrors[0].errorType,
+        StringTokenUtils.UnescapeErrorType.EscapeWithinFormatExpression
+    );
 });
 
 test('Strings: f-string with unterminated expression', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("f'hello { a + b'");
     assert.equal(results.tokens.count, 1 + _implicitTokenCount);
 
@@ -440,25 +584,34 @@ test('Strings: f-string with unterminated expression', () => {
     assert.equal(unescapedValue.formatStringSegments.length, 2);
     assert.equal(unescapedValue.unescapeErrors.length, 1);
     assert.equal(unescapedValue.unescapeErrors[0].offset, 7);
-    assert.equal(unescapedValue.unescapeErrors[0].errorType,
-        StringTokenUtils.UnescapeErrorType.UnterminatedFormatExpression);
+    assert.equal(
+        unescapedValue.unescapeErrors[0].errorType,
+        StringTokenUtils.UnescapeErrorType.UnterminatedFormatExpression
+    );
 });
 
 test('Strings: escape at the end of single quoted string', () => {
     const t = new Tokenizer();
-    // tslint:disable-next-line:quotemark
     const results = t.tokenize("'quoted\\'\nx");
     assert.equal(results.tokens.count, 3 + _implicitTokenCount);
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags,
-        StringTokenFlags.SingleQuote | StringTokenFlags.Unterminated);
+    assert.equal(stringToken.flags, StringTokenFlags.SingleQuote | StringTokenFlags.Unterminated);
     assert.equal(stringToken.length, 9);
-    assert.equal(stringToken.escapedValue, 'quoted\\\'');
+    assert.equal(stringToken.escapedValue, "quoted\\'");
 
     assert.equal(results.tokens.getItemAt(1).type, TokenType.NewLine);
     assert.equal(results.tokens.getItemAt(2).type, TokenType.Identifier);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(8), 0);
+    assert.equal(results.tokens.getItemAtPosition(9), 1);
+    assert.equal(results.tokens.getItemAtPosition(10), 2);
+    assert.equal(results.tokens.getItemAtPosition(11), 4);
+
+    assert.equal(results.tokens.contains(10), true);
+    assert.equal(results.tokens.contains(11), false);
 });
 
 test('Strings: escape at the end of double quoted string', () => {
@@ -468,8 +621,7 @@ test('Strings: escape at the end of double quoted string', () => {
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Unterminated);
+    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Unterminated);
     assert.equal(stringToken.length, 9);
     assert.equal(stringToken.escapedValue, 'quoted\\"');
 
@@ -484,57 +636,66 @@ test('Strings: b/u/r-string', () => {
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken0.type, TokenType.String);
-    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Bytes);
+    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Bytes);
     assert.equal(stringToken0.length, 4);
     assert.equal(stringToken0.escapedValue, 'b');
     assert.equal(stringToken0.prefixLength, 1);
 
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
     assert.equal(stringToken1.type, TokenType.String);
-    assert.equal(stringToken1.flags,
-        StringTokenFlags.SingleQuote | StringTokenFlags.Unicode);
+    assert.equal(stringToken1.flags, StringTokenFlags.SingleQuote | StringTokenFlags.Unicode);
     assert.equal(stringToken1.length, 4);
     assert.equal(stringToken1.escapedValue, 'u');
     assert.equal(stringToken1.prefixLength, 1);
 
     const stringToken2 = results.tokens.getItemAt(2) as StringToken;
     assert.equal(stringToken2.type, TokenType.String);
-    assert.equal(stringToken2.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Bytes | StringTokenFlags.Raw);
+    assert.equal(stringToken2.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Bytes | StringTokenFlags.Raw);
     assert.equal(stringToken2.length, 6);
     assert.equal(stringToken2.escapedValue, 'br');
     assert.equal(stringToken2.prefixLength, 2);
 
     const stringToken3 = results.tokens.getItemAt(3) as StringToken;
     assert.equal(stringToken3.type, TokenType.String);
-    assert.equal(stringToken3.flags, StringTokenFlags.SingleQuote |
-        StringTokenFlags.Unicode | StringTokenFlags.Raw);
+    assert.equal(stringToken3.flags, StringTokenFlags.SingleQuote | StringTokenFlags.Unicode | StringTokenFlags.Raw);
     assert.equal(stringToken3.length, 6);
     assert.equal(stringToken3.escapedValue, 'ur');
     assert.equal(stringToken3.prefixLength, 2);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(4), 0);
+    assert.equal(results.tokens.getItemAtPosition(5), 1);
+    assert.equal(results.tokens.getItemAtPosition(9), 1);
+    assert.equal(results.tokens.getItemAtPosition(10), 2);
+    assert.equal(results.tokens.getItemAtPosition(16), 2);
+    assert.equal(results.tokens.getItemAtPosition(17), 3);
+    assert.equal(results.tokens.getItemAtPosition(21), 3);
+    assert.equal(results.tokens.getItemAtPosition(22), 3);
+    assert.equal(results.tokens.getItemAtPosition(23), 5);
+
+    assert.equal(results.tokens.contains(22), true);
+    assert.equal(results.tokens.contains(23), false);
 });
 
 test('Strings: bytes string with non-ASCII', () => {
     const t = new Tokenizer();
-    const results = t.tokenize('B"Teßt" b\'\'\'Teñt\'\'\'');
+    const results = t.tokenize("B\"Teßt\" b'''Teñt'''");
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
-    const unescapedValue0 = StringTokenUtils.getUnescapedString(
-        stringToken0);
+    const unescapedValue0 = StringTokenUtils.getUnescapedString(stringToken0);
     assert.equal(stringToken0.type, TokenType.String);
-    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Bytes);
+    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Bytes);
     assert.equal(unescapedValue0.nonAsciiInBytes, true);
     assert.equal(stringToken0.length, 7);
 
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
-    const unescapedValue1 = StringTokenUtils.getUnescapedString(
-        stringToken1);
+    const unescapedValue1 = StringTokenUtils.getUnescapedString(stringToken1);
     assert.equal(stringToken1.type, TokenType.String);
-    assert.equal(stringToken1.flags, StringTokenFlags.SingleQuote |
-        StringTokenFlags.Bytes | StringTokenFlags.Triplicate);
+    assert.equal(
+        stringToken1.flags,
+        StringTokenFlags.SingleQuote | StringTokenFlags.Bytes | StringTokenFlags.Triplicate
+    );
     assert.equal(unescapedValue1.nonAsciiInBytes, true);
     assert.equal(stringToken1.length, 11);
 });
@@ -547,8 +708,7 @@ test('Strings: raw strings with escapes', () => {
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
     const unescapedValue0 = StringTokenUtils.getUnescapedString(stringToken0);
     assert.equal(stringToken0.type, TokenType.String);
-    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Raw);
+    assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Raw);
     assert.equal(stringToken0.length, 5);
     assert.equal(stringToken0.escapedValue, '\\"');
     assert.equal(unescapedValue0.value, '\\"');
@@ -556,8 +716,7 @@ test('Strings: raw strings with escapes', () => {
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
     const unescapedValue1 = StringTokenUtils.getUnescapedString(stringToken1);
     assert.equal(stringToken1.type, TokenType.String);
-    assert.equal(stringToken1.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Raw);
+    assert.equal(stringToken1.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Raw);
     assert.equal(stringToken1.length, 10);
     assert.equal(stringToken1.escapedValue, '\\\r\n\\\n\\a');
     assert.equal(unescapedValue1.value, '\\\r\n\\\n\\a');
@@ -570,8 +729,7 @@ test('Strings: escape at the end of double quoted string', () => {
 
     const stringToken = results.tokens.getItemAt(0) as StringToken;
     assert.equal(stringToken.type, TokenType.String);
-    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote |
-        StringTokenFlags.Unterminated);
+    assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote | StringTokenFlags.Unterminated);
     assert.equal(stringToken.length, 9);
     assert.equal(stringToken.escapedValue, 'quoted\\"');
 
@@ -590,6 +748,13 @@ test('Strings: special escape characters', () => {
     assert.equal(stringToken.flags, StringTokenFlags.DoubleQuote);
     assert.equal(stringToken.length, 18);
     assert.equal(unescapedValue.value, '\r\n\u0007\v\t\b\f\\');
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(17), 0);
+    assert.equal(results.tokens.getItemAtPosition(18), 2);
+
+    assert.equal(results.tokens.contains(17), true);
+    assert.equal(results.tokens.contains(18), false);
 });
 
 test('Strings: invalid escape characters', () => {
@@ -606,12 +771,10 @@ test('Strings: invalid escape characters', () => {
     assert.equal(unescapedValue.unescapeErrors.length, 2);
     assert.equal(unescapedValue.unescapeErrors[0].offset, 0);
     assert.equal(unescapedValue.unescapeErrors[0].length, 2);
-    assert.equal(unescapedValue.unescapeErrors[0].errorType,
-        StringTokenUtils.UnescapeErrorType.InvalidEscapeSequence);
+    assert.equal(unescapedValue.unescapeErrors[0].errorType, StringTokenUtils.UnescapeErrorType.InvalidEscapeSequence);
     assert.equal(unescapedValue.unescapeErrors[1].offset, 4);
     assert.equal(unescapedValue.unescapeErrors[1].length, 2);
-    assert.equal(unescapedValue.unescapeErrors[1].errorType,
-        StringTokenUtils.UnescapeErrorType.InvalidEscapeSequence);
+    assert.equal(unescapedValue.unescapeErrors[1].errorType, StringTokenUtils.UnescapeErrorType.InvalidEscapeSequence);
 });
 
 test('Strings: good hex escapes', () => {
@@ -650,8 +813,7 @@ test('Strings: bad hex escapes', () => {
     assert.equal(results.tokens.count, 3 + _implicitTokenCount);
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
-    const unescapedValue0 = StringTokenUtils.getUnescapedString(
-        stringToken0);
+    const unescapedValue0 = StringTokenUtils.getUnescapedString(stringToken0);
     assert.equal(stringToken0.type, TokenType.String);
     assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote);
     assert.equal(unescapedValue0.unescapeErrors.length, 1);
@@ -659,8 +821,7 @@ test('Strings: bad hex escapes', () => {
     assert.equal(unescapedValue0.value, '\\x4g');
 
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
-    const unescapedValue1 = StringTokenUtils.getUnescapedString(
-        stringToken1);
+    const unescapedValue1 = StringTokenUtils.getUnescapedString(stringToken1);
     assert.equal(stringToken1.type, TokenType.String);
     assert.equal(stringToken1.flags, StringTokenFlags.DoubleQuote);
     assert.equal(unescapedValue1.unescapeErrors.length, 1);
@@ -668,8 +829,7 @@ test('Strings: bad hex escapes', () => {
     assert.equal(unescapedValue1.value, '\\u006');
 
     const stringToken2 = results.tokens.getItemAt(2) as StringToken;
-    const unescapedValue2 = StringTokenUtils.getUnescapedString(
-        stringToken2);
+    const unescapedValue2 = StringTokenUtils.getUnescapedString(stringToken2);
     assert.equal(stringToken2.type, TokenType.String);
     assert.equal(stringToken2.flags, StringTokenFlags.DoubleQuote);
     assert.equal(unescapedValue2.unescapeErrors.length, 1);
@@ -683,8 +843,7 @@ test('Strings: good name escapes', () => {
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
-    const unescapedValue0 = StringTokenUtils.getUnescapedString(
-        stringToken0);
+    const unescapedValue0 = StringTokenUtils.getUnescapedString(stringToken0);
     assert.equal(stringToken0.type, TokenType.String);
     assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote);
     assert.equal(stringToken0.length, 11);
@@ -692,8 +851,7 @@ test('Strings: good name escapes', () => {
     assert.equal(unescapedValue0.value, '-');
 
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
-    const unescapedValue1 = StringTokenUtils.getUnescapedString(
-        stringToken1);
+    const unescapedValue1 = StringTokenUtils.getUnescapedString(stringToken1);
     assert.equal(stringToken1.type, TokenType.String);
     assert.equal(stringToken1.flags, StringTokenFlags.DoubleQuote);
     assert.equal(stringToken1.length, 10);
@@ -754,9 +912,10 @@ test('@ to operator token', () => {
 test('Unknown token', () => {
     const t = new Tokenizer();
     const results = t.tokenize('`$');
-    assert.equal(results.tokens.count, 1 + _implicitTokenCount);
+    assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
-    assert.equal(results.tokens.getItemAt(0).type, TokenType.Invalid);
+    assert.equal(results.tokens.getItemAt(0).type, TokenType.Backtick);
+    assert.equal(results.tokens.getItemAt(1).type, TokenType.Invalid);
 });
 
 test('Hex number', () => {
@@ -776,7 +935,7 @@ test('Hex number', () => {
 
     assert.equal(results.tokens.getItemAt(2).type, TokenType.Number);
     assert.equal(results.tokens.getItemAt(2).length, 7);
-    assert.equal((results.tokens.getItemAt(2) as NumberToken).value, 0xFEAB);
+    assert.equal((results.tokens.getItemAt(2) as NumberToken).value, 0xfeab);
     assert.equal((results.tokens.getItemAt(2) as NumberToken).isInteger, true);
 
     assert.equal(results.tokens.getItemAt(3).type, TokenType.Number);
@@ -819,6 +978,22 @@ test('Binary number', () => {
 
     assert.equal(results.tokens.getItemAt(6).type, TokenType.Identifier);
     assert.equal(results.tokens.getItemAt(6).length, 1);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 0);
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(5), 1);
+    assert.equal(results.tokens.getItemAtPosition(6), 2);
+    assert.equal(results.tokens.getItemAtPosition(11), 2);
+    assert.equal(results.tokens.getItemAtPosition(12), 3);
+    assert.equal(results.tokens.getItemAtPosition(13), 4);
+    assert.equal(results.tokens.getItemAtPosition(15), 4);
+    assert.equal(results.tokens.getItemAtPosition(16), 5);
+    assert.equal(results.tokens.getItemAtPosition(17), 6);
+    assert.equal(results.tokens.getItemAtPosition(18), 8);
+
+    assert.equal(results.tokens.contains(17), true);
+    assert.equal(results.tokens.contains(18), false);
 });
 
 test('Octal number', () => {
@@ -891,6 +1066,18 @@ test('Decimal number', () => {
     assert.equal(results.tokens.getItemAt(4).length, 10);
     assert.equal((results.tokens.getItemAt(4) as NumberToken).value, 2147483647);
     assert.equal((results.tokens.getItemAt(4) as NumberToken).isInteger, true);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 1);
+    assert.equal(results.tokens.getItemAtPosition(11), 1);
+    assert.equal(results.tokens.getItemAtPosition(12), 2);
+    assert.equal(results.tokens.getItemAtPosition(13), 3);
+    assert.equal(results.tokens.getItemAtPosition(14), 4);
+    assert.equal(results.tokens.getItemAtPosition(23), 4);
+    assert.equal(results.tokens.getItemAtPosition(24), 6);
+
+    assert.equal(results.tokens.contains(23), true);
+    assert.equal(results.tokens.contains(24), false);
 });
 
 test('Decimal number operator', () => {
@@ -987,6 +1174,23 @@ test('Floating point numbers with operators', () => {
 
     assert.equal(results.tokens.getItemAt(6).type, TokenType.Number);
     assert.equal(results.tokens.getItemAt(6).length, 3);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(3), 0);
+    assert.equal(results.tokens.getItemAtPosition(4), 1);
+    assert.equal(results.tokens.getItemAtPosition(5), 2);
+    assert.equal(results.tokens.getItemAtPosition(9), 2);
+    assert.equal(results.tokens.getItemAtPosition(10), 3);
+    assert.equal(results.tokens.getItemAtPosition(11), 4);
+    assert.equal(results.tokens.getItemAtPosition(13), 4);
+    assert.equal(results.tokens.getItemAtPosition(14), 5);
+    assert.equal(results.tokens.getItemAtPosition(15), 6);
+    assert.equal(results.tokens.getItemAtPosition(17), 6);
+    assert.equal(results.tokens.getItemAtPosition(18), 7);
+    assert.equal(results.tokens.getItemAtPosition(19), 9);
+
+    assert.equal(results.tokens.contains(18), true);
+    assert.equal(results.tokens.contains(19), false);
 });
 
 test('Imaginary numbers', () => {
@@ -1048,7 +1252,8 @@ test('Simple expression, leading minus', () => {
 });
 
 test('Operators', () => {
-    const text = '< << <<= ' +
+    const text =
+        '< << <<= ' +
         '== != > >> >>= >= <=' +
         '+ - ~ %' +
         '* ** / // /= //=' +
@@ -1056,14 +1261,7 @@ test('Operators', () => {
         '& &= | |= ^ ^= ' +
         ':=';
     const results = new Tokenizer().tokenize(text);
-    const lengths = [
-        1, 2, 3,
-        2, 2, 1, 2, 3, 2, 2,
-        1, 1, 1, 1,
-        1, 2, 1, 2, 2, 3,
-        2, 2, 2, 2, 3,
-        1, 2, 1, 2, 1, 2,
-        2];
+    const lengths = [1, 2, 3, 2, 2, 1, 2, 3, 2, 2, 1, 1, 1, 1, 1, 2, 1, 2, 2, 3, 2, 2, 2, 2, 3, 1, 2, 1, 2, 1, 2, 2];
     const operatorTypes = [
         OperatorType.LessThan,
         OperatorType.LeftShift,
@@ -1096,15 +1294,19 @@ test('Operators', () => {
         OperatorType.BitwiseOrEqual,
         OperatorType.BitwiseXor,
         OperatorType.BitwiseXorEqual,
-        OperatorType.Walrus];
+        OperatorType.Walrus
+    ];
     assert.equal(results.tokens.count - _implicitTokenCount, lengths.length);
     assert.equal(results.tokens.count - _implicitTokenCount, operatorTypes.length);
     for (let i = 0; i < lengths.length; i += 1) {
         const t = results.tokens.getItemAt(i);
-        assert.equal(t.type, TokenType.Operator, `${ t.type } at ${ i } is not an operator`);
+        assert.equal(t.type, TokenType.Operator, `${t.type} at ${i} is not an operator`);
         assert.equal((t as OperatorToken).operatorType, operatorTypes[i]);
-        assert.equal(t.length, lengths[i],
-            `Length ${ t.length } at ${ i } (text ${ text.substr(t.start, t.length) }), expected ${ lengths[i] }`);
+        assert.equal(
+            t.length,
+            lengths[i],
+            `Length ${t.length} at ${i} (text ${text.substr(t.start, t.length)}), expected ${lengths[i]}`
+        );
     }
 });
 
@@ -1124,6 +1326,19 @@ test('Identifiers', () => {
 
     assert.equal(results.tokens.getItemAt(3).type, TokenType.Identifier);
     assert.equal(results.tokens.getItemAt(3).length, 5);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(3), 0);
+    assert.equal(results.tokens.getItemAtPosition(4), 1);
+    assert.equal(results.tokens.getItemAtPosition(9), 1);
+    assert.equal(results.tokens.getItemAtPosition(10), 2);
+    assert.equal(results.tokens.getItemAtPosition(17), 2);
+    assert.equal(results.tokens.getItemAtPosition(18), 3);
+    assert.equal(results.tokens.getItemAtPosition(22), 3);
+    assert.equal(results.tokens.getItemAtPosition(23), 5);
+
+    assert.equal(results.tokens.contains(22), true);
+    assert.equal(results.tokens.contains(23), false);
 });
 
 test('Lines1', () => {
@@ -1162,6 +1377,20 @@ test('Comments1', () => {
     assert.equal(token2.type, TokenType.NewLine);
     assert.equal(token2.comments!.length, 1);
     assert.equal(token2.comments![0].value, ' another');
+
+    assert.equal(results.tokens.getItemAtPosition(0), -1);
+    assert.equal(results.tokens.getItemAtPosition(7), 0);
+    assert.equal(results.tokens.getItemAtPosition(20), 0);
+    assert.equal(results.tokens.getItemAtPosition(21), 1);
+    assert.equal(results.tokens.getItemAtPosition(42), 1);
+    assert.equal(results.tokens.getItemAtPosition(43), 2);
+    assert.equal(results.tokens.getItemAtPosition(45), 2);
+    assert.equal(results.tokens.getItemAtPosition(46), 3);
+    assert.equal(results.tokens.getItemAtPosition(49), 3);
+    assert.equal(results.tokens.getItemAtPosition(50), 5);
+
+    assert.equal(results.tokens.contains(49), true);
+    assert.equal(results.tokens.contains(50), false);
 });
 
 test('Identifiers1', () => {
@@ -1190,31 +1419,31 @@ test('Identifiers1', () => {
     assert.equal(token4.type, TokenType.Identifier);
 });
 
-test ('TypeIgnoreAll1', () => {
+test('TypeIgnoreAll1', () => {
     const t = new Tokenizer();
     const results = t.tokenize('\n#type:ignore\n"test"');
     assert.equal(results.typeIgnoreAll, true);
 });
 
-test ('TypeIgnoreAll2', () => {
+test('TypeIgnoreAll2', () => {
     const t = new Tokenizer();
     const results = t.tokenize('\n#    type:     ignore ssss\n');
     assert.equal(results.typeIgnoreAll, true);
 });
 
-test ('TypeIgnoreAll3', () => {
+test('TypeIgnoreAll3', () => {
     const t = new Tokenizer();
     const results = t.tokenize('\n#    type:     ignoressss\n');
     assert.equal(results.typeIgnoreAll, false);
 });
 
-test ('TypeIgnoreAll3', () => {
+test('TypeIgnoreAll3', () => {
     const t = new Tokenizer();
     const results = t.tokenize('\n"hello"\n# type: ignore\n');
     assert.equal(results.typeIgnoreAll, false);
 });
 
-test ('TypeIgnoreLine1', () => {
+test('TypeIgnoreLine1', () => {
     const t = new Tokenizer();
     const results = t.tokenize('\na = 3 # type: ignore\n"test" # type:ignore');
     assert.equal(Object.keys(results.typeIgnoreLines).length, 2);
@@ -1222,9 +1451,23 @@ test ('TypeIgnoreLine1', () => {
     assert.equal(results.typeIgnoreLines[2], true);
 });
 
-test ('TypeIgnoreLine2', () => {
+test('TypeIgnoreLine2', () => {
     const t = new Tokenizer();
     const results = t.tokenize('a = 3 # type: ignores\n"test" # type:ignore');
     assert.equal(Object.keys(results.typeIgnoreLines).length, 1);
     assert.equal(results.typeIgnoreLines[1], true);
+
+    assert.equal(results.tokens.getItemAtPosition(0), 0);
+    assert.equal(results.tokens.getItemAtPosition(1), 0);
+    assert.equal(results.tokens.getItemAtPosition(2), 1);
+    assert.equal(results.tokens.getItemAtPosition(3), 1);
+    assert.equal(results.tokens.getItemAtPosition(4), 2);
+    assert.equal(results.tokens.getItemAtPosition(20), 2);
+    assert.equal(results.tokens.getItemAtPosition(21), 3);
+    assert.equal(results.tokens.getItemAtPosition(22), 4);
+    assert.equal(results.tokens.getItemAtPosition(41), 4);
+    assert.equal(results.tokens.getItemAtPosition(42), 6);
+
+    assert.equal(results.tokens.contains(41), true);
+    assert.equal(results.tokens.contains(42), false);
 });

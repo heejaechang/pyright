@@ -1,0 +1,9 @@
+*.json
+**/pyright/**/*.md
+**/dist/**
+**/out/**
+**/client/server/**
+**/client/server/**
+**/typeshed-fallback/**
+**/bundled-stubs/**
+**/.github/**
