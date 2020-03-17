@@ -369,6 +369,10 @@ export class AnalyzerService {
                         this._console.log(`Auto-excluding ${exclude}`);
                         configOptions.exclude.push(getFileSpec(configFileDir, exclude));
                     });
+
+                    if (configOptions.autoExcludeVenv === undefined) {
+                        configOptions.autoExcludeVenv = true;
+                    }
                 }
 
                 // If the user has defined execution environments, then we ignore
@@ -382,6 +386,8 @@ export class AnalyzerService {
             if (commandLineOptions.autoSearchPaths) {
                 configOptions.addExecEnvironmentForAutoSearchPaths(this._fs);
             }
+
+            configOptions.autoExcludeVenv = true;
         }
 
         const reportDuplicateSetting = (settingName: string) => {
@@ -755,9 +761,16 @@ export class AnalyzerService {
 
     private _matchFiles(include: FileSpec[], exclude: FileSpec[]): string[] {
         const includeFileRegex = /\.pyi?$/;
+        const envMarkers = [['bin', 'activate'], ['Scripts', 'activate'], ['pyvenv.cfg']];
         const results: string[] = [];
 
         const visitDirectory = (absolutePath: string, includeRegExp: RegExp) => {
+            if (this._configOptions.autoExcludeVenv) {
+                if (envMarkers.some(f => this._fs.existsSync(combinePaths(absolutePath, ...f)))) {
+                    return;
+                }
+            }
+
             const { files, directories } = getFileSystemEntries(this._fs, absolutePath);
 
             for (const file of files) {
