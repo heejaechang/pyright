@@ -54,6 +54,7 @@ export interface ServerSettings {
     useLibraryCodeForTypes?: boolean;
     disableLanguageServices?: boolean;
     autoSearchPaths?: boolean;
+    watchForLibraryChanges?: boolean;
 }
 
 export interface WorkspaceServiceInstance {
