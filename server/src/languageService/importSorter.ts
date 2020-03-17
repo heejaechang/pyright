@@ -1,18 +1,21 @@
 /*
-* importSorter.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Provides code that sorts and formats import statements within a
-* python source file.
-*/
+ * importSorter.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Provides code that sorts and formats import statements within a
+ * python source file.
+ */
+
+import { CancellationToken } from 'vscode-languageserver';
 
 import { ImportType } from '../analyzer/importResult';
 import * as ImportStatementUtils from '../analyzer/importStatementUtils';
-import { Range } from '../common/textRange';
+import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { TextEditAction } from '../common/editAction';
 import { convertOffsetToPosition } from '../common/positionUtils';
+import { Range } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { ImportAsNode, ImportFromAsNode, ImportFromNode, ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
@@ -29,15 +32,17 @@ export const enum ImportGroup {
 }
 
 export class ImportSorter {
-    constructor(private _parseResults: ParseResults) {}
+    constructor(private _parseResults: ParseResults, private _cancellationToken: CancellationToken) {}
 
     sort(): TextEditAction[] {
-        const actions: TextEditAction[] = [];
-        const importStatements = ImportStatementUtils.getTopLevelImports(
-            this._parseResults.parseTree);
+        throwIfCancellationRequested(this._cancellationToken);
 
-        const sortedStatements = importStatements.orderedImports.
-            map(s => s).sort((a, b) => {
+        const actions: TextEditAction[] = [];
+        const importStatements = ImportStatementUtils.getTopLevelImports(this._parseResults.parseTree);
+
+        const sortedStatements = importStatements.orderedImports
+            .map(s => s)
+            .sort((a, b) => {
                 return this._compareImportStatements(a, b);
             });
 
@@ -46,23 +51,19 @@ export class ImportSorter {
             return [];
         }
 
-        const primaryRange = this._getPrimaryReplacementRange(
-            importStatements.orderedImports);
+        const primaryRange = this._getPrimaryReplacementRange(importStatements.orderedImports);
 
         actions.push({
             range: primaryRange,
             replacementText: this._generateSortedImportText(sortedStatements)
         });
 
-        this._addSecondaryReplacementRanges(
-            importStatements.orderedImports, actions);
+        this._addSecondaryReplacementRanges(importStatements.orderedImports, actions);
 
         return actions;
     }
 
-    private _compareImportStatements(a: ImportStatementUtils.ImportStatement,
-            b: ImportStatementUtils.ImportStatement) {
-
+    private _compareImportStatements(a: ImportStatementUtils.ImportStatement, b: ImportStatementUtils.ImportStatement) {
         const aImportGroup = this._getImportGroup(a);
         const bImportGroup = this._getImportGroup(b);
 
@@ -72,16 +73,17 @@ export class ImportSorter {
             return 1;
         }
 
-        return (a.moduleName < b.moduleName) ? -1 : 1;
+        return a.moduleName < b.moduleName ? -1 : 1;
     }
 
     private _getImportGroup(statement: ImportStatementUtils.ImportStatement): ImportGroup {
         if (statement.importResult) {
             if (statement.importResult.importType === ImportType.BuiltIn) {
                 return ImportGroup.BuiltIn;
-            } else if (statement.importResult.importType === ImportType.ThirdParty ||
-                    statement.importResult.isLocalTypingsFile) {
-
+            } else if (
+                statement.importResult.importType === ImportType.ThirdParty ||
+                statement.importResult.isLocalTypingsFile
+            ) {
                 return ImportGroup.ThirdParty;
             }
 
@@ -98,9 +100,7 @@ export class ImportSorter {
     // Determines the text range for the existing primary block of import statements.
     // If there are other blocks of import statements separated by other statements,
     // we'll ignore these other blocks for now.
-    private _getPrimaryReplacementRange(statements: ImportStatementUtils.ImportStatement[]):
-            Range {
-
+    private _getPrimaryReplacementRange(statements: ImportStatementUtils.ImportStatement[]): Range {
         let statementLimit = statements.findIndex(s => s.followsNonImportStatement);
         if (statementLimit < 0) {
             statementLimit = statements.length;
@@ -108,18 +108,17 @@ export class ImportSorter {
 
         const lastStatement = statements[statementLimit - 1].node;
         return {
-            start: convertOffsetToPosition(
-                statements[0].node.start, this._parseResults.tokenizerOutput.lines),
-            end: convertOffsetToPosition(
-                TextRange.getEnd(lastStatement), this._parseResults.tokenizerOutput.lines)
+            start: convertOffsetToPosition(statements[0].node.start, this._parseResults.tokenizerOutput.lines),
+            end: convertOffsetToPosition(TextRange.getEnd(lastStatement), this._parseResults.tokenizerOutput.lines)
         };
     }
 
     // If import statements are separated by other statements, we will remove the old
     // secondary blocks.
-    private _addSecondaryReplacementRanges(statements: ImportStatementUtils.ImportStatement[],
-            actions: TextEditAction[]) {
-
+    private _addSecondaryReplacementRanges(
+        statements: ImportStatementUtils.ImportStatement[],
+        actions: TextEditAction[]
+    ) {
         let secondaryBlockStart = statements.findIndex(s => s.followsNonImportStatement);
         if (secondaryBlockStart < 0) {
             return;
@@ -127,7 +126,8 @@ export class ImportSorter {
 
         while (true) {
             let secondaryBlockLimit = statements.findIndex(
-                (s, index) => index > secondaryBlockStart && s.followsNonImportStatement);
+                (s, index) => index > secondaryBlockStart && s.followsNonImportStatement
+            );
             if (secondaryBlockLimit < 0) {
                 secondaryBlockLimit = statements.length;
             }
@@ -136,10 +136,12 @@ export class ImportSorter {
                 range: {
                     start: convertOffsetToPosition(
                         statements[secondaryBlockStart].node.start,
-                        this._parseResults.tokenizerOutput.lines),
+                        this._parseResults.tokenizerOutput.lines
+                    ),
                     end: convertOffsetToPosition(
                         TextRange.getEnd(statements[secondaryBlockLimit - 1].node),
-                        this._parseResults.tokenizerOutput.lines)
+                        this._parseResults.tokenizerOutput.lines
+                    )
                 },
                 replacementText: ''
             });
@@ -165,11 +167,9 @@ export class ImportSorter {
 
             let importLine: string;
             if (statement.node.nodeType === ParseNodeType.Import) {
-                importLine = this._formatImportNode(statement.subnode!,
-                    statement.moduleName);
+                importLine = this._formatImportNode(statement.subnode!, statement.moduleName);
             } else {
-                importLine = this._formatImportFromNode(statement.node,
-                    statement.moduleName);
+                importLine = this._formatImportFromNode(statement.node, statement.moduleName);
             }
 
             // If this isn't the last statement, add a newline.
@@ -184,27 +184,31 @@ export class ImportSorter {
     }
 
     private _formatImportNode(subnode: ImportAsNode, moduleName: string): string {
-        let importText = `import ${ moduleName }`;
+        let importText = `import ${moduleName}`;
         if (subnode.alias) {
-            importText += ` as ${ subnode.alias.value }`;
+            importText += ` as ${subnode.alias.value}`;
         }
 
         return importText;
     }
 
     private _formatImportFromNode(node: ImportFromNode, moduleName: string): string {
-        const symbols = node.imports.
-            sort((a, b) => this._compareSymbols(a, b)).
-            map(symbol => {
+        const symbols = node.imports
+            .sort((a, b) => this._compareSymbols(a, b))
+            .map(symbol => {
                 let symbolText = symbol.name.value;
                 if (symbol.alias) {
-                    symbolText += ` as ${ symbol.alias.value }`;
+                    symbolText += ` as ${symbol.alias.value}`;
                 }
 
                 return symbolText;
             });
 
-        let cumulativeText = `from ${ moduleName } import `;
+        let cumulativeText = `from ${moduleName} import `;
+        if (node.isWildcardImport) {
+            return cumulativeText + '*';
+        }
+
         const symbolText = symbols.join(', ');
         if (cumulativeText.length + symbolText.length <= _maxLineLength) {
             return cumulativeText + symbolText;

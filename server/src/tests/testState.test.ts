@@ -7,7 +7,8 @@
  */
 
 import * as assert from 'assert';
-import { combinePaths, comparePathsCaseSensitive, normalizeSlashes } from '../common/pathUtils';
+
+import { combinePaths, comparePathsCaseSensitive, getFileName, normalizeSlashes } from '../common/pathUtils';
 import { compareStringsCaseSensitive } from '../common/stringUtils';
 import { parseTestData } from './harness/fourslash/fourSlashParser';
 import { Range } from './harness/fourslash/fourSlashTypes';
@@ -49,7 +50,7 @@ test('Multiple files', () => {
 
 test('Configuration', () => {
     const code = `
-// @filename: python.json
+// @filename: mspythonconfig.json
 //// {
 ////   "include": [
 ////     "src"
@@ -118,7 +119,7 @@ test('Configuration', () => {
     assert(state.fs.existsSync(normalizeSlashes(combinePaths(factory.srcFolder, 'file1.py'))));
 
     assert.equal(state.configOptions.diagnosticSettings.reportMissingImports, 'error');
-    assert.equal(state.configOptions.typingsPath, normalizeSlashes('src/typestubs'));
+    assert.equal(state.configOptions.typingsPath, normalizeSlashes('/src/typestubs'));
 });
 
 test('ProjectRoot', () => {
@@ -137,6 +138,22 @@ test('ProjectRoot', () => {
     assert(state.fs.existsSync(normalizeSlashes('/root/file1.py')));
 
     assert.equal(state.configOptions.projectRoot, normalizeSlashes('/root'));
+});
+
+test('CustomTypeshedFolder', () => {
+    // use differnt physical folder as typeshed folder. this is different than
+    // typeshed folder settings in config json file since that points to a path
+    // in virtual file system. not physical one. this decides which physical folder
+    // those virtual folder will mount to.
+    const code = `
+// global options
+// @typeshed: ${__dirname}
+    `;
+
+    // mount the folder this file is in as typeshed folder and check whether
+    // in typeshed folder in virtual file system, this file exists.
+    const state = parseAndGetTestState(code).state;
+    assert(state.fs.existsSync(combinePaths(factory.typeshedFolder, getFileName(__filename))));
 });
 
 test('IgnoreCase', () => {
@@ -215,8 +232,13 @@ test('Markers', () => {
     const marker1 = data.markerPositions.get('marker1');
 
     assert.deepEqual(state.getMarkerName(marker1!), 'marker1');
-    assert.deepEqual(state.getMarkers().map(m => state.getMarkerName(m)).sort(
-        compareStringsCaseSensitive), state.getMarkerNames().sort(comparePathsCaseSensitive));
+    assert.deepEqual(
+        state
+            .getMarkers()
+            .map(m => state.getMarkerName(m))
+            .sort(compareStringsCaseSensitive),
+        state.getMarkerNames().sort(comparePathsCaseSensitive)
+    );
 });
 
 test('GoToPosition', () => {
@@ -354,7 +376,10 @@ test('getRangesInFile', () => {
 
     const { data, state } = parseAndGetTestState(code);
 
-    assert.deepEqual(state.getRangesInFile(data.files[0].fileName), data.ranges.filter(r => r.fileName === data.files[0].fileName));
+    assert.deepEqual(
+        state.getRangesInFile(data.files[0].fileName),
+        data.ranges.filter(r => r.fileName === data.files[0].fileName)
+    );
 });
 
 test('rangesByText', () => {

@@ -1,13 +1,13 @@
 /*
-* symbol.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Represents an association between a name and the type
-* (or multiple types) that the symbol is associated with
-* in the program.
-*/
+ * symbol.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Represents an association between a name and the type
+ * (or multiple types) that the symbol is associated with
+ * in the program.
+ */
 
 import { Declaration, DeclarationType } from './declaration';
 import { areDeclarationsSame, hasTypeForDeclaration } from './declarationUtils';
@@ -67,7 +67,7 @@ export class Symbol {
     // Symbols that are completely synthesized (i.e. have no
     // corresponding declarations in the program) can have
     // a specified type.
-    private _undeclaredType?: Type;
+    private _synthesizedType?: Type;
 
     constructor(flags = SymbolFlags.ClassMember) {
         this.id = getUniqueSymbolId();
@@ -76,7 +76,7 @@ export class Symbol {
 
     static createWithType(flags: SymbolFlags, type: Type) {
         const newSymbol = new Symbol(flags);
-        newSymbol._undeclaredType = type;
+        newSymbol._synthesizedType = type;
         return newSymbol;
     }
 
@@ -129,8 +129,7 @@ export class Symbol {
             // See if this node was already identified as a declaration. If so,
             // replace it. Otherwise, add it as a new declaration to the end of
             // the list.
-            const declIndex = this._declarations.findIndex(
-                decl => areDeclarationsSame(decl, declaration));
+            const declIndex = this._declarations.findIndex(decl => areDeclarationsSame(decl, declaration));
             if (declIndex < 0) {
                 this._declarations.push(declaration);
             } else {
@@ -139,9 +138,7 @@ export class Symbol {
                 const curDecl = this._declarations[declIndex];
                 if (hasTypeForDeclaration(declaration)) {
                     this._declarations[declIndex] = declaration;
-                    if (curDecl.type === DeclarationType.Variable &&
-                            declaration.type === DeclarationType.Variable) {
-
+                    if (curDecl.type === DeclarationType.Variable && declaration.type === DeclarationType.Variable) {
                         if (!declaration.inferredTypeSource && curDecl.inferredTypeSource) {
                             declaration.inferredTypeSource = curDecl.inferredTypeSource;
                         }
@@ -175,22 +172,20 @@ export class Symbol {
     }
 
     hasTypedDeclarations() {
-        // We'll treat an undeclared type as an implicit declaration.
-        if (this._undeclaredType) {
+        // We'll treat an synthesized type as an implicit declaration.
+        if (this._synthesizedType) {
             return true;
         }
 
-        return this.getDeclarations().some(
-            decl => hasTypeForDeclaration(decl));
+        return this.getDeclarations().some(decl => hasTypeForDeclaration(decl));
     }
 
     getTypedDeclarations() {
-        return this.getDeclarations().filter(
-            decl => hasTypeForDeclaration(decl));
+        return this.getDeclarations().filter(decl => hasTypeForDeclaration(decl));
     }
 
-    getUndeclaredType() {
-        return this._undeclaredType;
+    getSynthesizedType() {
+        return this._synthesizedType;
     }
 }
 

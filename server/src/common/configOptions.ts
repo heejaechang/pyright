@@ -1,19 +1,20 @@
 /*
-* configOptions.ts
-* Copyright (c) Microsoft Corporation.
-* Licensed under the MIT license.
-* Author: Eric Traut
-*
-* Class that holds the configuration options for the analyzer.
-*/
+ * configOptions.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
+ * Author: Eric Traut
+ *
+ * Class that holds the configuration options for the analyzer.
+ */
 
 import { isAbsolute } from 'path';
 
+import * as pathConsts from '../common/pathConsts';
 import { ConsoleInterface } from './console';
 import { DiagnosticRule } from './diagnosticRules';
-import { combinePaths, ensureTrailingDirectorySeparator, FileSpec,
-    getFileSpec, normalizePath } from './pathUtils';
+import { combinePaths, ensureTrailingDirectorySeparator, FileSpec, getFileSpec, normalizePath } from './pathUtils';
 import { latestStablePythonVersion, PythonVersion, versionFromString } from './pythonVersion';
+import { VirtualFileSystem } from './vfs';
 
 export class ExecutionEnvironment {
     // Default to "." which indicates every file in the project.
@@ -163,9 +164,7 @@ export interface DiagnosticSettings {
     reportImplicitStringConcatenation: DiagnosticLevel;
 }
 
-export function cloneDiagnosticSettings(
-        diagSettings: DiagnosticSettings): DiagnosticSettings {
-
+export function cloneDiagnosticSettings(diagSettings: DiagnosticSettings): DiagnosticSettings {
     // Create a shallow copy of the existing object.
     return Object.assign({}, diagSettings);
 }
@@ -399,17 +398,31 @@ export class ConfigOptions {
     // execution environment is used.
     findExecEnvironment(filePath: string): ExecutionEnvironment {
         let execEnv = this.executionEnvironments.find(env => {
-            const envRoot = ensureTrailingDirectorySeparator(
-                normalizePath(combinePaths(this.projectRoot, env.root)));
+            const envRoot = ensureTrailingDirectorySeparator(normalizePath(combinePaths(this.projectRoot, env.root)));
             return filePath.startsWith(envRoot);
         });
 
         if (!execEnv) {
-            execEnv = new ExecutionEnvironment(this.projectRoot,
-                this.defaultPythonVersion, this.defaultPythonPlatform);
+            execEnv = new ExecutionEnvironment(this.projectRoot, this.defaultPythonVersion, this.defaultPythonPlatform);
         }
 
         return execEnv;
+    }
+
+    addExecEnvironmentForAutoSearchPaths(fs: VirtualFileSystem) {
+        // Auto-detect the common scenario where the sources are under the src folder
+        const srcPath = combinePaths(this.projectRoot, pathConsts.src);
+        if (fs.existsSync(srcPath) && !fs.existsSync(combinePaths(srcPath, '__init__.py'))) {
+            const execEnv = new ExecutionEnvironment(
+                this.projectRoot,
+                this.defaultPythonVersion,
+                this.defaultPythonPlatform
+            );
+
+            execEnv.extraPaths.push(srcPath);
+
+            this.executionEnvironments.push(execEnv);
+        }
     }
 
     // Initialize the structure from a JSON object.
@@ -423,9 +436,9 @@ export class ConfigOptions {
                 const filesList = configObj.include as string[];
                 filesList.forEach((fileSpec, index) => {
                     if (typeof fileSpec !== 'string') {
-                        console.log(`Index ${ index } of "include" array should be a string.`);
+                        console.log(`Index ${index} of "include" array should be a string.`);
                     } else if (isAbsolute(fileSpec)) {
-                        console.log(`Ignoring path "${ fileSpec }" in "include" array because it is not relative.`);
+                        console.log(`Ignoring path "${fileSpec}" in "include" array because it is not relative.`);
                     } else {
                         this.include.push(getFileSpec(this.projectRoot, fileSpec));
                     }
@@ -442,9 +455,9 @@ export class ConfigOptions {
                 const filesList = configObj.exclude as string[];
                 filesList.forEach((fileSpec, index) => {
                     if (typeof fileSpec !== 'string') {
-                        console.log(`Index ${ index } of "exclude" array should be a string.`);
+                        console.log(`Index ${index} of "exclude" array should be a string.`);
                     } else if (isAbsolute(fileSpec)) {
-                        console.log(`Ignoring path "${ fileSpec }" in "exclude" array because it is not relative.`);
+                        console.log(`Ignoring path "${fileSpec}" in "exclude" array because it is not relative.`);
                     } else {
                         this.exclude.push(getFileSpec(this.projectRoot, fileSpec));
                     }
@@ -461,9 +474,9 @@ export class ConfigOptions {
                 const filesList = configObj.ignore as string[];
                 filesList.forEach((fileSpec, index) => {
                     if (typeof fileSpec !== 'string') {
-                        console.log(`Index ${ index } of "ignore" array should be a string.`);
+                        console.log(`Index ${index} of "ignore" array should be a string.`);
                     } else if (isAbsolute(fileSpec)) {
-                        console.log(`Ignoring path "${ fileSpec }" in "ignore" array because it is not relative.`);
+                        console.log(`Ignoring path "${fileSpec}" in "ignore" array because it is not relative.`);
                     } else {
                         this.ignore.push(getFileSpec(this.projectRoot, fileSpec));
                     }
@@ -480,9 +493,9 @@ export class ConfigOptions {
                 const filesList = configObj.strict as string[];
                 filesList.forEach((fileSpec, index) => {
                     if (typeof fileSpec !== 'string') {
-                        console.log(`Index ${ index } of "strict" array should be a string.`);
+                        console.log(`Index ${index} of "strict" array should be a string.`);
                     } else if (isAbsolute(fileSpec)) {
-                        console.log(`Ignoring path "${ fileSpec }" in "strict" array because it is not relative.`);
+                        console.log(`Ignoring path "${fileSpec}" in "strict" array because it is not relative.`);
                     } else {
                         this.strict.push(getFileSpec(this.projectRoot, fileSpec));
                     }
@@ -495,194 +508,270 @@ export class ConfigOptions {
         this.diagnosticSettings = {
             // Use strict inference rules for list expressions?
             strictListInference: this._convertBoolean(
-                configObj.strictListInference, DiagnosticRule.strictListInference,
-                defaultSettings.strictListInference),
+                configObj.strictListInference,
+                DiagnosticRule.strictListInference,
+                defaultSettings.strictListInference
+            ),
 
             // Use strict inference rules for dictionary expressions?
             strictDictionaryInference: this._convertBoolean(
-                configObj.strictDictionaryInference, DiagnosticRule.strictDictionaryInference,
-                defaultSettings.strictDictionaryInference),
+                configObj.strictDictionaryInference,
+                DiagnosticRule.strictDictionaryInference,
+                defaultSettings.strictDictionaryInference
+            ),
 
             // Should a None default value imply that the parameter type
             // is Optional?
             strictParameterNoneValue: this._convertBoolean(
-                configObj.strictParameterNoneValue, DiagnosticRule.strictParameterNoneValue,
-                defaultSettings.strictParameterNoneValue),
+                configObj.strictParameterNoneValue,
+                DiagnosticRule.strictParameterNoneValue,
+                defaultSettings.strictParameterNoneValue
+            ),
 
             // Should "# type: ignore" be honored?
             enableTypeIgnoreComments: this._convertBoolean(
-                configObj.enableTypeIgnoreComments, DiagnosticRule.enableTypeIgnoreComments,
-                defaultSettings.enableTypeIgnoreComments),
+                configObj.enableTypeIgnoreComments,
+                DiagnosticRule.enableTypeIgnoreComments,
+                defaultSettings.enableTypeIgnoreComments
+            ),
 
             // Read the "reportTypeshedErrors" entry.
             reportTypeshedErrors: this._convertDiagnosticLevel(
-                configObj.reportTypeshedErrors, DiagnosticRule.reportTypeshedErrors,
-                defaultSettings.reportTypeshedErrors),
+                configObj.reportTypeshedErrors,
+                DiagnosticRule.reportTypeshedErrors,
+                defaultSettings.reportTypeshedErrors
+            ),
 
             // Read the "reportMissingImports" entry.
             reportMissingImports: this._convertDiagnosticLevel(
-                configObj.reportMissingImports, DiagnosticRule.reportMissingImports,
-                defaultSettings.reportMissingImports),
+                configObj.reportMissingImports,
+                DiagnosticRule.reportMissingImports,
+                defaultSettings.reportMissingImports
+            ),
 
             // Read the "reportUnusedImport" entry.
             reportUnusedImport: this._convertDiagnosticLevel(
-                configObj.reportUnusedImport, DiagnosticRule.reportUnusedImport,
-                defaultSettings.reportUnusedImport),
+                configObj.reportUnusedImport,
+                DiagnosticRule.reportUnusedImport,
+                defaultSettings.reportUnusedImport
+            ),
 
             // Read the "reportUnusedClass" entry.
             reportUnusedClass: this._convertDiagnosticLevel(
-                configObj.reportUnusedClass, DiagnosticRule.reportUnusedClass,
-                defaultSettings.reportUnusedClass),
+                configObj.reportUnusedClass,
+                DiagnosticRule.reportUnusedClass,
+                defaultSettings.reportUnusedClass
+            ),
 
             // Read the "reportUnusedFunction" entry.
             reportUnusedFunction: this._convertDiagnosticLevel(
-                configObj.reportUnusedFunction, DiagnosticRule.reportUnusedFunction,
-                defaultSettings.reportUnusedFunction),
+                configObj.reportUnusedFunction,
+                DiagnosticRule.reportUnusedFunction,
+                defaultSettings.reportUnusedFunction
+            ),
 
             // Read the "reportUnusedVariable" entry.
             reportUnusedVariable: this._convertDiagnosticLevel(
-                configObj.reportUnusedVariable, DiagnosticRule.reportUnusedVariable,
-                defaultSettings.reportUnusedVariable),
+                configObj.reportUnusedVariable,
+                DiagnosticRule.reportUnusedVariable,
+                defaultSettings.reportUnusedVariable
+            ),
 
             // Read the "reportDuplicateImport" entry.
             reportDuplicateImport: this._convertDiagnosticLevel(
-                configObj.reportDuplicateImport, DiagnosticRule.reportDuplicateImport,
-                defaultSettings.reportDuplicateImport),
+                configObj.reportDuplicateImport,
+                DiagnosticRule.reportDuplicateImport,
+                defaultSettings.reportDuplicateImport
+            ),
 
             // Read the "reportMissingTypeStubs" entry.
             reportMissingTypeStubs: this._convertDiagnosticLevel(
-                configObj.reportMissingTypeStubs, DiagnosticRule.reportMissingTypeStubs,
-                defaultSettings.reportMissingTypeStubs),
+                configObj.reportMissingTypeStubs,
+                DiagnosticRule.reportMissingTypeStubs,
+                defaultSettings.reportMissingTypeStubs
+            ),
 
             // Read the "reportImportCycles" entry.
             reportImportCycles: this._convertDiagnosticLevel(
-                configObj.reportImportCycles, DiagnosticRule.reportImportCycles,
-                defaultSettings.reportImportCycles),
+                configObj.reportImportCycles,
+                DiagnosticRule.reportImportCycles,
+                defaultSettings.reportImportCycles
+            ),
 
             // Read the "reportOptionalSubscript" entry.
             reportOptionalSubscript: this._convertDiagnosticLevel(
-                configObj.reportOptionalSubscript, DiagnosticRule.reportOptionalSubscript,
-                defaultSettings.reportOptionalSubscript),
+                configObj.reportOptionalSubscript,
+                DiagnosticRule.reportOptionalSubscript,
+                defaultSettings.reportOptionalSubscript
+            ),
 
             // Read the "reportOptionalMemberAccess" entry.
             reportOptionalMemberAccess: this._convertDiagnosticLevel(
-                configObj.reportOptionalMemberAccess, DiagnosticRule.reportOptionalMemberAccess,
-                defaultSettings.reportOptionalMemberAccess),
+                configObj.reportOptionalMemberAccess,
+                DiagnosticRule.reportOptionalMemberAccess,
+                defaultSettings.reportOptionalMemberAccess
+            ),
 
             // Read the "reportOptionalCall" entry.
             reportOptionalCall: this._convertDiagnosticLevel(
-                configObj.reportOptionalCall, DiagnosticRule.reportOptionalCall,
-                defaultSettings.reportOptionalCall),
+                configObj.reportOptionalCall,
+                DiagnosticRule.reportOptionalCall,
+                defaultSettings.reportOptionalCall
+            ),
 
             // Read the "reportOptionalIterable" entry.
             reportOptionalIterable: this._convertDiagnosticLevel(
-                configObj.reportOptionalIterable, DiagnosticRule.reportOptionalIterable,
-                defaultSettings.reportOptionalIterable),
+                configObj.reportOptionalIterable,
+                DiagnosticRule.reportOptionalIterable,
+                defaultSettings.reportOptionalIterable
+            ),
 
             // Read the "reportOptionalContextManager" entry.
             reportOptionalContextManager: this._convertDiagnosticLevel(
-                configObj.reportOptionalContextManager, DiagnosticRule.reportOptionalContextManager,
-                defaultSettings.reportOptionalContextManager),
+                configObj.reportOptionalContextManager,
+                DiagnosticRule.reportOptionalContextManager,
+                defaultSettings.reportOptionalContextManager
+            ),
 
             // Read the "reportOptionalOperand" entry.
             reportOptionalOperand: this._convertDiagnosticLevel(
-                configObj.reportOptionalOperand, DiagnosticRule.reportOptionalOperand,
-                defaultSettings.reportOptionalOperand),
+                configObj.reportOptionalOperand,
+                DiagnosticRule.reportOptionalOperand,
+                defaultSettings.reportOptionalOperand
+            ),
 
             // Read the "reportUntypedFunctionDecorator" entry.
             reportUntypedFunctionDecorator: this._convertDiagnosticLevel(
-                configObj.reportUntypedFunctionDecorator, DiagnosticRule.reportUntypedFunctionDecorator,
-                defaultSettings.reportUntypedFunctionDecorator),
+                configObj.reportUntypedFunctionDecorator,
+                DiagnosticRule.reportUntypedFunctionDecorator,
+                defaultSettings.reportUntypedFunctionDecorator
+            ),
 
             // Read the "reportUntypedClassDecorator" entry.
             reportUntypedClassDecorator: this._convertDiagnosticLevel(
-                configObj.reportUntypedClassDecorator, DiagnosticRule.reportUntypedClassDecorator,
-                defaultSettings.reportUntypedClassDecorator),
+                configObj.reportUntypedClassDecorator,
+                DiagnosticRule.reportUntypedClassDecorator,
+                defaultSettings.reportUntypedClassDecorator
+            ),
 
             // Read the "reportUntypedBaseClass" entry.
             reportUntypedBaseClass: this._convertDiagnosticLevel(
-                configObj.reportUntypedBaseClass, DiagnosticRule.reportUntypedBaseClass,
-                defaultSettings.reportUntypedBaseClass),
+                configObj.reportUntypedBaseClass,
+                DiagnosticRule.reportUntypedBaseClass,
+                defaultSettings.reportUntypedBaseClass
+            ),
 
             // Read the "reportUntypedNamedTuple" entry.
             reportUntypedNamedTuple: this._convertDiagnosticLevel(
-                configObj.reportUntypedNamedTuple, DiagnosticRule.reportUntypedNamedTuple,
-                defaultSettings.reportUntypedNamedTuple),
+                configObj.reportUntypedNamedTuple,
+                DiagnosticRule.reportUntypedNamedTuple,
+                defaultSettings.reportUntypedNamedTuple
+            ),
 
             // Read the "reportPrivateUsage" entry.
             reportPrivateUsage: this._convertDiagnosticLevel(
-                configObj.reportPrivateUsage, DiagnosticRule.reportPrivateUsage,
-                defaultSettings.reportPrivateUsage),
+                configObj.reportPrivateUsage,
+                DiagnosticRule.reportPrivateUsage,
+                defaultSettings.reportPrivateUsage
+            ),
 
             // Read the "reportConstantRedefinition" entry.
             reportConstantRedefinition: this._convertDiagnosticLevel(
-                configObj.reportConstantRedefinition, DiagnosticRule.reportConstantRedefinition,
-                defaultSettings.reportConstantRedefinition),
+                configObj.reportConstantRedefinition,
+                DiagnosticRule.reportConstantRedefinition,
+                defaultSettings.reportConstantRedefinition
+            ),
 
             // Read the "reportIncompatibleMethodOverride" entry.
             reportIncompatibleMethodOverride: this._convertDiagnosticLevel(
-                configObj.reportIncompatibleMethodOverride, DiagnosticRule.reportIncompatibleMethodOverride,
-                defaultSettings.reportIncompatibleMethodOverride),
+                configObj.reportIncompatibleMethodOverride,
+                DiagnosticRule.reportIncompatibleMethodOverride,
+                defaultSettings.reportIncompatibleMethodOverride
+            ),
 
             // Read the "reportInvalidStringEscapeSequence" entry.
             reportInvalidStringEscapeSequence: this._convertDiagnosticLevel(
-                configObj.reportInvalidStringEscapeSequence, DiagnosticRule.reportInvalidStringEscapeSequence,
-                defaultSettings.reportInvalidStringEscapeSequence),
+                configObj.reportInvalidStringEscapeSequence,
+                DiagnosticRule.reportInvalidStringEscapeSequence,
+                defaultSettings.reportInvalidStringEscapeSequence
+            ),
 
             // Read the "reportUnknownParameterType" entry.
             reportUnknownParameterType: this._convertDiagnosticLevel(
-                configObj.reportUnknownParameterType, DiagnosticRule.reportUnknownParameterType,
-                defaultSettings.reportUnknownParameterType),
+                configObj.reportUnknownParameterType,
+                DiagnosticRule.reportUnknownParameterType,
+                defaultSettings.reportUnknownParameterType
+            ),
 
             // Read the "reportUnknownArgumentType" entry.
             reportUnknownArgumentType: this._convertDiagnosticLevel(
-                configObj.reportUnknownArgumentType, DiagnosticRule.reportUnknownArgumentType,
-                defaultSettings.reportUnknownArgumentType),
+                configObj.reportUnknownArgumentType,
+                DiagnosticRule.reportUnknownArgumentType,
+                defaultSettings.reportUnknownArgumentType
+            ),
 
             // Read the "reportUnknownLambdaType" entry.
             reportUnknownLambdaType: this._convertDiagnosticLevel(
-                configObj.reportUnknownLambdaType, DiagnosticRule.reportUnknownLambdaType,
-                defaultSettings.reportUnknownLambdaType),
+                configObj.reportUnknownLambdaType,
+                DiagnosticRule.reportUnknownLambdaType,
+                defaultSettings.reportUnknownLambdaType
+            ),
 
             // Read the "reportUnknownVariableType" entry.
             reportUnknownVariableType: this._convertDiagnosticLevel(
-                configObj.reportUnknownVariableType, DiagnosticRule.reportUnknownVariableType,
-                defaultSettings.reportUnknownVariableType),
+                configObj.reportUnknownVariableType,
+                DiagnosticRule.reportUnknownVariableType,
+                defaultSettings.reportUnknownVariableType
+            ),
 
             // Read the "reportUnknownMemberType" entry.
             reportUnknownMemberType: this._convertDiagnosticLevel(
-                configObj.reportUnknownMemberType, DiagnosticRule.reportUnknownMemberType,
-                defaultSettings.reportUnknownMemberType),
+                configObj.reportUnknownMemberType,
+                DiagnosticRule.reportUnknownMemberType,
+                defaultSettings.reportUnknownMemberType
+            ),
 
             // Read the "reportCallInDefaultInitializer" entry.
             reportCallInDefaultInitializer: this._convertDiagnosticLevel(
-                configObj.reportCallInDefaultInitializer, DiagnosticRule.reportCallInDefaultInitializer,
-                defaultSettings.reportCallInDefaultInitializer),
+                configObj.reportCallInDefaultInitializer,
+                DiagnosticRule.reportCallInDefaultInitializer,
+                defaultSettings.reportCallInDefaultInitializer
+            ),
 
             // Read the "reportUnnecessaryIsInstance" entry.
             reportUnnecessaryIsInstance: this._convertDiagnosticLevel(
-                configObj.reportUnnecessaryIsInstance, DiagnosticRule.reportUnnecessaryIsInstance,
-                defaultSettings.reportUnnecessaryIsInstance),
+                configObj.reportUnnecessaryIsInstance,
+                DiagnosticRule.reportUnnecessaryIsInstance,
+                defaultSettings.reportUnnecessaryIsInstance
+            ),
 
             // Read the "reportUnnecessaryCast" entry.
             reportUnnecessaryCast: this._convertDiagnosticLevel(
-                configObj.reportUnnecessaryCast, DiagnosticRule.reportUnnecessaryCast,
-                defaultSettings.reportUnnecessaryCast),
+                configObj.reportUnnecessaryCast,
+                DiagnosticRule.reportUnnecessaryCast,
+                defaultSettings.reportUnnecessaryCast
+            ),
 
             // Read the "reportAssertAlwaysTrue" entry.
             reportAssertAlwaysTrue: this._convertDiagnosticLevel(
-                configObj.reportAssertAlwaysTrue, DiagnosticRule.reportAssertAlwaysTrue,
-                defaultSettings.reportAssertAlwaysTrue),
+                configObj.reportAssertAlwaysTrue,
+                DiagnosticRule.reportAssertAlwaysTrue,
+                defaultSettings.reportAssertAlwaysTrue
+            ),
 
             // Read the "reportSelfClsParameterName" entry.
             reportSelfClsParameterName: this._convertDiagnosticLevel(
-                configObj.reportSelfClsParameterName, DiagnosticRule.reportSelfClsParameterName,
-                defaultSettings.reportSelfClsParameterName),
+                configObj.reportSelfClsParameterName,
+                DiagnosticRule.reportSelfClsParameterName,
+                defaultSettings.reportSelfClsParameterName
+            ),
 
             // Read the "reportImplicitStringConcatenation" entry.
             reportImplicitStringConcatenation: this._convertDiagnosticLevel(
-                configObj.reportImplicitStringConcatenation, DiagnosticRule.reportImplicitStringConcatenation,
-                defaultSettings.reportImplicitStringConcatenation)
+                configObj.reportImplicitStringConcatenation,
+                DiagnosticRule.reportImplicitStringConcatenation,
+                defaultSettings.reportImplicitStringConcatenation
+            )
         };
 
         // Read the "venvPath".
@@ -730,25 +819,36 @@ export class ConfigOptions {
             }
         }
 
-        // Read the "typeshedPath".
+        // Read the "typeshedPath" setting.
         this.typeshedPath = undefined;
         if (configObj.typeshedPath !== undefined) {
             if (typeof configObj.typeshedPath !== 'string') {
                 console.log(`Config "typeshedPath" field must contain a string.`);
             } else {
-                this.typeshedPath = configObj.typeshedPath ?
-                    normalizePath(combinePaths(this.projectRoot, configObj.typeshedPath)) :
-                    '';
+                this.typeshedPath = configObj.typeshedPath
+                    ? normalizePath(combinePaths(this.projectRoot, configObj.typeshedPath))
+                    : '';
             }
         }
 
-        // Read the "typingsPath".
+        // Read the "typingsPath" setting.
         this.typingsPath = undefined;
         if (configObj.typingsPath !== undefined) {
             if (typeof configObj.typingsPath !== 'string') {
                 console.log(`Config "typingsPath" field must contain a string.`);
             } else {
                 this.typingsPath = normalizePath(combinePaths(this.projectRoot, configObj.typingsPath));
+            }
+        }
+
+        // Read the "verboseOutput" setting.
+        // Don't initialize to a default value because we want the command-line "verbose"
+        // switch to apply if this setting isn't specified in the config file.
+        if (configObj.verboseOutput !== undefined) {
+            if (typeof configObj.verboseOutput !== 'boolean') {
+                console.log(`Config "verboseOutput" field must be true or false.`);
+            } else {
+                this.verboseOutput = configObj.verboseOutput;
             }
         }
 
@@ -777,13 +877,11 @@ export class ConfigOptions {
             return value ? true : false;
         }
 
-        console.log(`Config "${ fieldName }" entry must be true or false.`);
+        console.log(`Config "${fieldName}" entry must be true or false.`);
         return defaultValue;
     }
 
-    private _convertDiagnosticLevel(value: any, fieldName: string,
-            defaultValue: DiagnosticLevel): DiagnosticLevel {
-
+    private _convertDiagnosticLevel(value: any, fieldName: string, defaultValue: DiagnosticLevel): DiagnosticLevel {
         if (value === undefined) {
             return defaultValue;
         } else if (typeof value === 'boolean') {
@@ -794,33 +892,41 @@ export class ConfigOptions {
             }
         }
 
-        console.log(`Config "${ fieldName }" entry must be true, false, "error", "warning" or "none".`);
+        console.log(`Config "${fieldName}" entry must be true, false, "error", "warning" or "none".`);
         return defaultValue;
     }
 
-    private _initExecutionEnvironmentFromJson(envObj: any, index: number,
-            console: ConsoleInterface): ExecutionEnvironment | undefined {
+    private _initExecutionEnvironmentFromJson(
+        envObj: any,
+        index: number,
+        console: ConsoleInterface
+    ): ExecutionEnvironment | undefined {
         try {
-            const newExecEnv = new ExecutionEnvironment(this.projectRoot,
-                this.defaultPythonVersion, this.defaultPythonPlatform);
+            const newExecEnv = new ExecutionEnvironment(
+                this.projectRoot,
+                this.defaultPythonVersion,
+                this.defaultPythonPlatform
+            );
 
             // Validate the root.
             if (envObj.root && typeof envObj.root === 'string') {
                 newExecEnv.root = normalizePath(combinePaths(this.projectRoot, envObj.root));
             } else {
-                console.log(`Config executionEnvironments index ${ index }: missing root value.`);
+                console.log(`Config executionEnvironments index ${index}: missing root value.`);
             }
 
             // Validate the extraPaths.
             if (envObj.extraPaths) {
                 if (!Array.isArray(envObj.extraPaths)) {
-                    console.log(`Config executionEnvironments index ${ index }: extraPaths field must contain an array.`);
+                    console.log(`Config executionEnvironments index ${index}: extraPaths field must contain an array.`);
                 } else {
                     const pathList = envObj.extraPaths as string[];
                     pathList.forEach((path, pathIndex) => {
                         if (typeof path !== 'string') {
-                            console.log(`Config executionEnvironments index ${ index }:` +
-                                ` extraPaths field ${ pathIndex } must be a string.`);
+                            console.log(
+                                `Config executionEnvironments index ${index}:` +
+                                    ` extraPaths field ${pathIndex} must be a string.`
+                            );
                         } else {
                             newExecEnv.extraPaths.push(normalizePath(combinePaths(this.projectRoot, path)));
                         }
@@ -835,10 +941,10 @@ export class ConfigOptions {
                     if (version) {
                         newExecEnv.pythonVersion = version;
                     } else {
-                        console.log(`Config executionEnvironments index ${ index } contains unsupported pythonVersion.`);
+                        console.log(`Config executionEnvironments index ${index} contains unsupported pythonVersion.`);
                     }
                 } else {
-                    console.log(`Config executionEnvironments index ${ index } pythonVersion must be a string.`);
+                    console.log(`Config executionEnvironments index ${index} pythonVersion must be a string.`);
                 }
             }
 
@@ -847,7 +953,7 @@ export class ConfigOptions {
                 if (typeof envObj.pythonPlatform === 'string') {
                     newExecEnv.pythonPlatform = envObj.pythonPlatform;
                 } else {
-                    console.log(`Config executionEnvironments index ${ index } pythonPlatform must be a string.`);
+                    console.log(`Config executionEnvironments index ${index} pythonPlatform must be a string.`);
                 }
             }
 
@@ -856,13 +962,13 @@ export class ConfigOptions {
                 if (typeof envObj.venv === 'string') {
                     newExecEnv.venv = envObj.venv;
                 } else {
-                    console.log(`Config executionEnvironments index ${ index } venv must be a string.`);
+                    console.log(`Config executionEnvironments index ${index} venv must be a string.`);
                 }
             }
 
             return newExecEnv;
         } catch {
-            console.log(`Config executionEnvironments index ${ index } is not accessible.`);
+            console.log(`Config executionEnvironments index ${index} is not accessible.`);
         }
 
         return undefined;

@@ -6,10 +6,21 @@
  * Provides a factory to create virtual file system backed by a real file system with some path remapped
  */
 
+import * as pathConsts from '../../../common/pathConsts';
 import { combinePaths, getDirectoryPath, normalizeSlashes, resolvePaths } from '../../../common/pathUtils';
+import { GlobalMetadataOptionNames } from '../fourslash/fourSlashTypes';
 import { TestHost } from '../host';
 import { bufferFrom } from '../utils';
-import { FileSystem, FileSystemOptions, FileSystemResolver, MODULE_PATH, Mount, S_IFDIR, S_IFREG } from './filesystem';
+import {
+    FileSet,
+    FileSystem,
+    FileSystemOptions,
+    FileSystemResolver,
+    MODULE_PATH,
+    Mount,
+    S_IFDIR,
+    S_IFREG
+} from './filesystem';
 
 export class TextDocument {
     readonly meta: Map<string, string>;
@@ -28,13 +39,17 @@ export interface FileSystemCreateOptions extends FileSystemOptions {
     documents?: readonly TextDocument[];
 }
 
-export const typeshedFolder = combinePaths(MODULE_PATH, normalizeSlashes('typeshed-fallback'));
+export const libFolder = combinePaths(
+    MODULE_PATH,
+    normalizeSlashes(combinePaths(pathConsts.lib, pathConsts.sitePackages))
+);
+export const typeshedFolder = combinePaths(MODULE_PATH, normalizeSlashes(pathConsts.typeshedFallback));
 export const srcFolder = normalizeSlashes('/.src');
 
 /**
  * Create a virtual file system from a physical file system using the following path mappings:
  *
- *  - `/typeshed-fallback` is a directory mapped to `${workspaceRoot}/../dist/typeshed-fallback`
+ *  - `/typeshed-fallback` is a directory mapped to `${workspaceRoot}/../client/typeshed-fallback`
  *  - `/.src` is a virtual directory to be used for tests.
  *
  * @param host it provides an access to host (real) file system
@@ -47,10 +62,18 @@ export const srcFolder = normalizeSlashes('/.src');
  *
  * all `FileSystemCreateOptions` are optional
  */
-export function createFromFileSystem(host: TestHost, ignoreCase: boolean,
-    { documents, files, cwd, time, meta }: FileSystemCreateOptions = {}) {
+export function createFromFileSystem(
+    host: TestHost,
+    ignoreCase: boolean,
+    { documents, files, cwd, time, meta }: FileSystemCreateOptions = {},
+    mountPaths: Map<string, string> = new Map<string, string>()
+) {
+    const typeshedPath = meta ? meta[GlobalMetadataOptionNames.typeshed] : undefined;
+    if (typeshedPath) {
+        mountPaths.set(typeshedFolder, typeshedPath);
+    }
 
-    const fs = getBuiltLocal(host, meta ? meta[typeshedFolder] : undefined, ignoreCase).shadow();
+    const fs = getBuiltLocal(host, ignoreCase, cwd, mountPaths).shadow();
     if (meta) {
         for (const key of Object.keys(meta)) {
             fs.meta.set(key, meta[key]);
@@ -84,31 +107,46 @@ export function createFromFileSystem(host: TestHost, ignoreCase: boolean,
     return fs;
 }
 
-let cacheKey: { host: TestHost; typeshedFolderPath: string | undefined } | undefined;
+let cacheKey: { host: TestHost; mountPaths: Map<string, string> } | undefined;
 let localCIFSCache: FileSystem | undefined;
 let localCSFSCache: FileSystem | undefined;
 
-function getBuiltLocal(host: TestHost, typeshedFolderPath: string | undefined, ignoreCase: boolean): FileSystem {
-    if (cacheKey?.host !== host || cacheKey.typeshedFolderPath !== typeshedFolderPath) {
+function getBuiltLocal(
+    host: TestHost,
+    ignoreCase: boolean,
+    cwd: string | undefined,
+    mountPaths: Map<string, string>
+): FileSystem {
+    // Ensure typeshed folder
+    if (!mountPaths.has(typeshedFolder)) {
+        mountPaths.set(
+            typeshedFolder,
+            resolvePaths(host.getWorkspaceRoot(), '../client/' + pathConsts.typeshedFallback)
+        );
+    }
+
+    if (!canReuseCache(host, mountPaths)) {
         localCIFSCache = undefined;
         localCSFSCache = undefined;
-        cacheKey = { host, typeshedFolderPath };
+        cacheKey = { host, mountPaths };
     }
+
     if (!localCIFSCache) {
         const resolver = createResolver(host);
-        typeshedFolderPath = typeshedFolderPath ?? resolvePaths(host.getWorkspaceRoot(), '../client/typeshed-fallback');
+        const files: FileSet = {};
+        mountPaths.forEach((v, k) => (files[k] = new Mount(v, resolver)));
+
         localCIFSCache = new FileSystem(/*ignoreCase*/ true, {
-            files: {
-                [typeshedFolder]: new Mount(typeshedFolderPath, resolver),
-                [srcFolder]: {}
-            },
-            cwd: srcFolder,
+            files,
+            cwd,
             meta: {}
         });
         localCIFSCache.makeReadonly();
     }
 
-    if (ignoreCase) { return localCIFSCache; }
+    if (ignoreCase) {
+        return localCIFSCache;
+    }
 
     if (!localCSFSCache) {
         localCSFSCache = localCIFSCache.shadow(/*ignoreCase*/ false);
@@ -116,6 +154,26 @@ function getBuiltLocal(host: TestHost, typeshedFolderPath: string | undefined, i
     }
 
     return localCSFSCache;
+}
+
+function canReuseCache(host: TestHost, mountPaths: Map<string, string>): boolean {
+    if (cacheKey === undefined) {
+        return false;
+    }
+    if (cacheKey.host !== host) {
+        return false;
+    }
+    if (cacheKey.mountPaths.size !== mountPaths.size) {
+        return false;
+    }
+
+    for (const key of cacheKey.mountPaths.keys()) {
+        if (cacheKey.mountPaths.get(key) !== mountPaths.get(key)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function createResolver(host: TestHost): FileSystemResolver {

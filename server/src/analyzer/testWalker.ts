@@ -1,12 +1,11 @@
 /*
-* testWalker.ts
-*
-* Walks a parse tree to validate internal consistency and completeness.
-*/
-
-import * as assert from 'assert';
+ * testWalker.ts
+ *
+ * Walks a parse tree to validate internal consistency and completeness.
+ */
 
 import { ParseTreeWalker } from '../analyzer/parseTreeWalker';
+import { fail } from '../common/debug';
 import { TextRange } from '../common/textRange';
 import { ParseNode, ParseNodeArray, ParseNodeType } from '../parser/parseNodes';
 
@@ -28,8 +27,9 @@ export class TestWalker extends ParseTreeWalker {
         children.forEach(child => {
             if (child) {
                 if (child.parent !== node) {
-                    assert.fail(`Child node ${ child.nodeType } does not ` +
-                        `contain a reference to its parent ${ node.nodeType }`);
+                    fail(
+                        `Child node ${child.nodeType} does not ` + `contain a reference to its parent ${node.nodeType}`
+                    );
                 }
             }
         });
@@ -63,13 +63,12 @@ export class TestWalker extends ParseTreeWalker {
                 if (!skipCheck) {
                     // Make sure the child is contained within the parent.
                     if (child.start < node.start || TextRange.getEnd(child) > TextRange.getEnd(node)) {
-                        assert.fail(`Child node ${ child.nodeType } is not ` +
-                            `contained within its parent ${ node.nodeType }`);
+                        fail(`Child node ${child.nodeType} is not ` + `contained within its parent ${node.nodeType}`);
                     }
                     if (prevNode) {
                         // Make sure the child is after the previous child.
                         if (child.start < TextRange.getEnd(prevNode)) {
-                            assert.fail(`Child node is not after previous child node`);
+                            fail(`Child node is not after previous child node`);
                         }
                     }
 

@@ -29,37 +29,157 @@ test('Builtins1', () => {
     // `dir(builtins)`
     // Remove True, False, None, _, __build_class__, __debug__, __doc__
     const expectedBuiltinsSymbols = [
-        'ArithmeticError', 'AssertionError', 'AttributeError', 'BaseException',
-        'BlockingIOError', 'BrokenPipeError', 'BufferError', 'BytesWarning',
-        'ChildProcessError', 'ConnectionAbortedError', 'ConnectionError',
-        'ConnectionRefusedError', 'ConnectionResetError', 'DeprecationWarning',
-        'EOFError', 'Ellipsis', 'EnvironmentError', 'Exception',
-        'FileExistsError', 'FileNotFoundError', 'FloatingPointError',
-        'FutureWarning', 'GeneratorExit', 'IOError', 'ImportError',
-        'ImportWarning', 'IndentationError', 'IndexError', 'InterruptedError',
-        'IsADirectoryError', 'KeyError', 'KeyboardInterrupt', 'LookupError', 'ModuleNotFoundError',
-        'MemoryError', 'NameError', 'NotADirectoryError', 'NotImplemented',
-        'NotImplementedError', 'OSError', 'OverflowError', 'PendingDeprecationWarning',
-        'PermissionError', 'ProcessLookupError', 'RecursionError', 'ReferenceError',
-        'ResourceWarning', 'RuntimeError', 'RuntimeWarning', 'StopAsyncIteration',
-        'StopIteration', 'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit',
-        'TabError', 'TimeoutError', 'TypeError', 'UnboundLocalError',
-        'UnicodeDecodeError', 'UnicodeEncodeError', 'UnicodeError', 'UnicodeTranslateError',
-        'UnicodeWarning', 'UserWarning', 'ValueError', 'Warning', 'WindowsError',
+        'ArithmeticError',
+        'AssertionError',
+        'AttributeError',
+        'BaseException',
+        'BlockingIOError',
+        'BrokenPipeError',
+        'BufferError',
+        'BytesWarning',
+        'ChildProcessError',
+        'ConnectionAbortedError',
+        'ConnectionError',
+        'ConnectionRefusedError',
+        'ConnectionResetError',
+        'DeprecationWarning',
+        'EOFError',
+        'Ellipsis',
+        'EnvironmentError',
+        'Exception',
+        'FileExistsError',
+        'FileNotFoundError',
+        'FloatingPointError',
+        'FutureWarning',
+        'GeneratorExit',
+        'IOError',
+        'ImportError',
+        'ImportWarning',
+        'IndentationError',
+        'IndexError',
+        'InterruptedError',
+        'IsADirectoryError',
+        'KeyError',
+        'KeyboardInterrupt',
+        'LookupError',
+        'ModuleNotFoundError',
+        'MemoryError',
+        'NameError',
+        'NotADirectoryError',
+        'NotImplemented',
+        'NotImplementedError',
+        'OSError',
+        'OverflowError',
+        'PendingDeprecationWarning',
+        'PermissionError',
+        'ProcessLookupError',
+        'RecursionError',
+        'ReferenceError',
+        'ResourceWarning',
+        'RuntimeError',
+        'RuntimeWarning',
+        'StopAsyncIteration',
+        'StopIteration',
+        'SyntaxError',
+        'SyntaxWarning',
+        'SystemError',
+        'SystemExit',
+        'TabError',
+        'TimeoutError',
+        'TypeError',
+        'UnboundLocalError',
+        'UnicodeDecodeError',
+        'UnicodeEncodeError',
+        'UnicodeError',
+        'UnicodeTranslateError',
+        'UnicodeWarning',
+        'UserWarning',
+        'ValueError',
+        'Warning',
+        'WindowsError',
         'ZeroDivisionError',
-        '__import__', '__loader__', '__name__',
-        '__package__', '__spec__', 'abs', 'all', 'any', 'ascii', 'bin', 'bool', 'breakpoint',
-        'bytearray', 'bytes', 'callable', 'chr', 'classmethod', 'compile', 'complex',
-        'copyright', 'credits', 'delattr', 'dict', 'dir', 'divmod', 'enumerate', 'eval',
-        'exec', 'exit', 'filter', 'float', 'format', 'frozenset', 'getattr', 'globals',
-        'hasattr', 'hash', 'help', 'hex', 'id', 'input', 'int', 'isinstance',
-        'issubclass', 'iter', 'len', 'license', 'list', 'locals', 'map', 'max',
-        'memoryview', 'min', 'next', 'object', 'oct', 'open', 'ord', 'pow', 'print',
-        'property', 'quit', 'range', 'repr', 'reversed', 'round', 'set', 'setattr',
-        'slice', 'sorted', 'staticmethod', 'str', 'sum', 'super', 'tuple', 'type',
-        'vars', 'zip',
+        '__import__',
+        '__loader__',
+        '__name__',
+        '__package__',
+        '__spec__',
+        'abs',
+        'all',
+        'any',
+        'ascii',
+        'bin',
+        'bool',
+        'breakpoint',
+        'bytearray',
+        'bytes',
+        'callable',
+        'chr',
+        'classmethod',
+        'compile',
+        'complex',
+        'copyright',
+        'credits',
+        'delattr',
+        'dict',
+        'dir',
+        'divmod',
+        'enumerate',
+        'eval',
+        'exec',
+        'exit',
+        'filter',
+        'float',
+        'format',
+        'frozenset',
+        'getattr',
+        'globals',
+        'hasattr',
+        'hash',
+        'help',
+        'hex',
+        'id',
+        'input',
+        'int',
+        'isinstance',
+        'issubclass',
+        'iter',
+        'len',
+        'license',
+        'list',
+        'locals',
+        'map',
+        'max',
+        'memoryview',
+        'min',
+        'next',
+        'object',
+        'oct',
+        'open',
+        'ord',
+        'pow',
+        'print',
+        'property',
+        'quit',
+        'range',
+        'repr',
+        'reversed',
+        'round',
+        'set',
+        'setattr',
+        'slice',
+        'sorted',
+        'staticmethod',
+        'str',
+        'sum',
+        'super',
+        'tuple',
+        'type',
+        'vars',
+        'zip',
         // These really shouldn't be exposed but are defined by builtins.pyi currently.
-        'function', 'ellipsis'];
+        'function',
+        'ellipsis'
+    ];
 
     const moduleScope = AnalyzerNodeInfo.getScope(analysisResults[0].parseResults!.parseTree)!;
     assert.notEqual(moduleScope, undefined);
@@ -73,7 +193,7 @@ test('Builtins1', () => {
     for (const symbolName of expectedBuiltinsSymbols) {
         const symbol = moduleScope.lookUpSymbolRecursive(symbolName);
         if (symbol === undefined) {
-            assert.fail(`${ symbolName } is missing from builtins scope`);
+            assert.fail(`${symbolName} is missing from builtins scope`);
         }
     }
 
@@ -88,15 +208,13 @@ test('Builtins1', () => {
         const symbolInfo = moduleScope.lookUpSymbolRecursive(builtinName);
         if (symbolInfo && symbolInfo.isBeyondExecutionScope) {
             if (symbolMap.get(builtinName) === undefined) {
-                assert.fail(`${ builtinName } should not be in builtins scope`);
+                assert.fail(`${builtinName} should not be in builtins scope`);
             }
         }
     }
 });
 
-function validateResults(results: TestUtils.FileAnalysisResult[],
-        errorCount: number, warningCount = 0) {
-
+function validateResults(results: TestUtils.FileAnalysisResult[], errorCount: number, warningCount = 0) {
     assert.equal(results.length, 1);
     assert.equal(results[0].errors.length, errorCount);
     assert.equal(results[0].warnings.length, warningCount);
@@ -160,6 +278,12 @@ test('TypeConstraint7', () => {
 
 test('TypeConstraint8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint8.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('TypeConstraint9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint9.py']);
 
     validateResults(analysisResults, 0);
 });
@@ -430,6 +554,12 @@ test('Tuples3', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Tuples4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
@@ -445,7 +575,19 @@ test('AbstractClass1', () => {
 test('AbstractClass2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass2.py']);
 
+    validateResults(analysisResults, 1);
+});
+
+test('AbstractClass3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass3.py']);
+
     validateResults(analysisResults, 0);
+});
+
+test('AbstractClass4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass4.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Module1', () => {
@@ -617,6 +759,18 @@ test('Classes2', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Mro1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro1.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Mro2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -659,6 +813,18 @@ test('Assignment4', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Assignment5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment5.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Assignment6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment6.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -694,12 +860,12 @@ test('UnnecessaryIsInstance1', () => {
     const configOptions = new ConfigOptions('.');
 
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 0);
+    validateResults(analysisResults, 1);
 
     // Turn on errors.
     configOptions.diagnosticSettings.reportUnnecessaryIsInstance = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 4);
 });
 
 test('UnnecessaryIsSubclass1', () => {
@@ -858,6 +1024,24 @@ test('GenericTypes16', () => {
     validateResults(analysisResults, 0);
 });
 
+test('GenericTypes17', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes17.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('GenericTypes18', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes18.py']);
+
+    validateResults(analysisResults, 4);
+});
+
+test('GenericTypes19', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes19.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -868,6 +1052,30 @@ test('Protocol2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol2.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('Protocol3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Protocol4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol4.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('Protocol5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol5.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Protocol6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol6.py']);
+
+    validateResults(analysisResults, 2);
 });
 
 test('TypedDict1', () => {
@@ -910,6 +1118,18 @@ test('TypedDict7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict7.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('TypedDict8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict8.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('TypedDict9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict9.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('TypeIgnore1', () => {
@@ -1001,6 +1221,11 @@ test('Overload1', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Overload2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload2.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('Final1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final1.py']);
     validateResults(analysisResults, 1);
@@ -1072,4 +1297,22 @@ test('ParamName1', () => {
     configOptions.diagnosticSettings.reportSelfClsParameterName = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['paramNames1.py'], configOptions);
     validateResults(analysisResults, 4, 0);
+});
+
+test('DataClass8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass8.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Python2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['python2.py']);
+
+    validateResults(analysisResults, 6);
+});
+
+test('InconsistentSpaceTab', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['inconsistentSpaceTab.py']);
+
+    validateResults(analysisResults, 4);
 });
