@@ -6,8 +6,7 @@
 
 import { AnalysisResults } from '../../pyright/server/src/analyzer/service';
 import { Duration } from '../../pyright/server/src/common/timing';
-import { createTelemetryEvent, TelemetryEvent } from './telemetryEvent';
-import { EventName } from './telemetryProtocol';
+import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 
 const TelemetryWaitTimeSeconds = 60;
 
@@ -49,21 +48,23 @@ export class AnalysisTracker {
 
             try {
                 const usage = process.memoryUsage();
-                const te = createTelemetryEvent(EventName.ANALYSIS_COMPLETE);
+                const measurements = new Map<string, number>();
 
-                te.Measurements['peakRssMB'] = Math.max(usage.rss, this._peakRssMB) / 1024 / 1024;
-                te.Measurements['rssMB'] = usage.rss / 1024 / 1024;
-                te.Measurements['heapTotalMB'] = usage.heapTotal / 1024 / 1024;
-                te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
-                te.Measurements['externalMB'] = usage.external / 1024 / 1024;
-                te.Measurements['elapsedMs'] =
-                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds / 1000;
-                te.Measurements['numFilesAnalyzed'] = this._numFilesAnalyzed;
-                te.Measurements['numFilesInProgram'] = results.filesInProgram;
-                te.Measurements['fatalErrorOccurred'] = results.fatalErrorOccurred ? 1 : 0;
-                te.Measurements['isFirstRun'] = this._isFirstRun ? 1 : 0;
+                measurements.set('peakRssMB', Math.max(usage.rss, this._peakRssMB) / 1024 / 1024);
+                measurements.set('rssMB', usage.rss / 1024 / 1024);
+                measurements.set('heapTotalMB', usage.heapTotal / 1024 / 1024);
+                measurements.set('heapUsedMB', usage.heapUsed / 1024 / 1024);
+                measurements.set('externalMB', usage.external / 1024 / 1024);
+                measurements.set(
+                    'elapsedMs',
+                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds / 1000
+                );
+                measurements.set('numFilesAnalyzed', this._numFilesAnalyzed);
+                measurements.set('numFilesInProgram', results.filesInProgram);
+                measurements.set('fatalErrorOccurred', results.fatalErrorOccurred ? 1 : 0);
+                measurements.set('isFirstRun', this._isFirstRun ? 1 : 0);
 
-                return te;
+                return new TelemetryEvent(TelemetryEventName.ANALYSIS_COMPLETE, undefined, measurements);
             } finally {
                 this._peakRssMB = 0;
                 this._isFirstRun = false;

@@ -18,13 +18,14 @@ import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
-import { AnalysisTracker } from './src/telemetry/analysisTracker';
-import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
-import { EventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
+import { AnalysisTracker } from './src/services/analysisTracker';
+import { TelemetryService, sendMeasurementsTelemetry, TelemetryEventName } from './src/common/telemetry';
+import { TelemetryServiceImplementation } from './src/services/telemetry';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
+    private _telemetry: TelemetryService;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -47,6 +48,7 @@ class Server extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
+        this._telemetry = new TelemetryServiceImplementation(this._connection);
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -92,9 +94,7 @@ class Server extends LanguageServerBase {
 
         resolver.setStubUsageCallback(importMetrics => {
             if (!importMetrics.isEmpty()) {
-                const te = createTelemetryEvent(EventName.IMPORT_METRICS);
-                addNumericsToTelemetry(te, importMetrics);
-                this._connection.telemetry.logEvent(te);
+                sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, importMetrics);
             }
         });
 
@@ -121,20 +121,29 @@ class Server extends LanguageServerBase {
 
             //send import metrics
             let shouldSend = false;
-            const importEvent = createTelemetryEvent(EventName.IMPORT_METRICS);
+            const measurements = new Map<string, number>();
             this._workspaceMap.forEach(workspace => {
                 const resolver = workspace.serviceInstance.getImportResolver();
                 if (resolver instanceof PyrxImportResolver) {
                     const importMetrics = resolver.getAndResetImportMetrics();
                     if (!importMetrics.isEmpty()) {
-                        addNumericsToTelemetry(importEvent, importMetrics);
+                        for (const [key, value] of Object.entries(importMetrics)) {
+                            if (typeof value == 'number') {
+                                const current = measurements.get(key);
+                                if (!current) {
+                                    measurements.set(key, value);
+                                } else {
+                                    measurements.set(key, current + value);
+                                }
+                            }
+                        }
                         shouldSend = true;
                     }
                 }
             });
 
             if (shouldSend) {
-                this._connection.telemetry.logEvent(importEvent);
+                sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, measurements);
             }
         }
     }
