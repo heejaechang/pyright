@@ -54,6 +54,7 @@ export interface ServerSettings {
     useLibraryCodeForTypes?: boolean;
     disableLanguageServices?: boolean;
     autoSearchPaths?: boolean;
+    watchForLibraryChanges?: boolean;
 }
 
 export interface WorkspaceServiceInstance {
@@ -153,9 +154,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             name,
             this.fs,
             this._connection.console,
-            this.createImportResolver,
-            undefined,
-            this._extension
+            this.createImportResolver.bind(this, undefined, this._extension)
         );
 
         // Don't allow the analysis engine to go too long without
