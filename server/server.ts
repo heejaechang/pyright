@@ -29,7 +29,7 @@ class Server extends LanguageServerBase {
 
     constructor() {
         const rootDirectory = __dirname;
-        super('Python', rootDirectory, new IntelliCodeExtension());
+        super('Python', rootDirectory);
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -48,6 +48,7 @@ class Server extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
+        this.setExtension(new IntelliCodeExtension());
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
