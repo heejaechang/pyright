@@ -18,13 +18,23 @@ import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
-import { AnalysisTracker } from './src/telemetry/analysisTracker';
-import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
-import { EventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
+import { AnalysisTracker } from './src/services/analysisTracker';
+import {
+    TelemetryService,
+    sendMeasurementsTelemetry,
+    TelemetryEventName,
+    addMeasurementsToEvent,
+    TelemetryEvent
+} from './src/common/telemetry';
+import { TelemetryServiceImplementation } from './src/services/telemetry';
+import { LogService, LogLevel } from './src/common/logger';
+import { LogServiceImplementation } from './src/services/logger';
 
 class Server extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
+    private _telemetry: TelemetryService;
+    private _logger: LogService;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -47,6 +57,8 @@ class Server extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
+        this._telemetry = new TelemetryServiceImplementation(this._connection as any);
+        this._logger = new LogServiceImplementation();
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -73,6 +85,8 @@ class Server extends LanguageServerBase {
                 serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? true;
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes ?? true;
                 serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths ?? true;
+
+                this.setLogLevel(pythonAnalysisSection.logLevel);
             } else {
                 serverSettings.openFilesOnly = true;
                 serverSettings.useLibraryCodeForTypes = true;
@@ -93,9 +107,7 @@ class Server extends LanguageServerBase {
 
         resolver.setStubUsageCallback(importMetrics => {
             if (!importMetrics.isEmpty()) {
-                const te = createTelemetryEvent(EventName.IMPORT_METRICS);
-                addNumericsToTelemetry(te, importMetrics);
-                this._connection.telemetry.logEvent(te);
+                sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, importMetrics);
             }
         });
 
@@ -122,21 +134,41 @@ class Server extends LanguageServerBase {
 
             //send import metrics
             let shouldSend = false;
-            const importEvent = createTelemetryEvent(EventName.IMPORT_METRICS);
+            const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
             this._workspaceMap.forEach(workspace => {
                 const resolver = workspace.serviceInstance.getImportResolver();
                 if (resolver instanceof PyrxImportResolver) {
                     const importMetrics = resolver.getAndResetImportMetrics();
                     if (!importMetrics.isEmpty()) {
-                        addNumericsToTelemetry(importEvent, importMetrics);
+                        addMeasurementsToEvent(importEvent, importMetrics);
                         shouldSend = true;
                     }
                 }
             });
 
             if (shouldSend) {
-                this._connection.telemetry.logEvent(importEvent);
+                this._telemetry.sendTelemetry(importEvent);
             }
+        }
+    }
+
+    private setLogLevel(value: string): void {
+        switch (value) {
+            case 'Error':
+                this._logger.setLogLevel(LogLevel.Error);
+                break;
+            case 'Warning':
+                this._logger.setLogLevel(LogLevel.Warning);
+                break;
+            case 'Info':
+                this._logger.setLogLevel(LogLevel.Info);
+                break;
+            case 'Trace':
+                this._logger.setLogLevel(LogLevel.Trace);
+                break;
+            default:
+                this._logger.setLogLevel(LogLevel.Info);
+                break;
         }
     }
 }
