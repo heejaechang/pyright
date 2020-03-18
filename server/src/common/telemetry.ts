@@ -18,11 +18,11 @@ export class TelemetryEvent {
 
     readonly Properties: {
         [key: string]: string;
-    };
+    } = {};
 
     readonly Measurements: {
         [key: string]: number;
-    };
+    } = {};
 
     constructor(eventName: string) {
         this.EventName = `mpls_node/${eventName}`;
