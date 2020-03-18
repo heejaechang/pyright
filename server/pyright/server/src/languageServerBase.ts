@@ -150,7 +150,12 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     // program within a workspace.
     createAnalyzerService(name: string): AnalyzerService {
         this._connection.console.log(`Starting service instance "${name}"`);
-        const service = new AnalyzerService(name, this.fs, this._connection.console, this.createImportResolver);
+        const service = new AnalyzerService(
+            name,
+            this.fs,
+            this._connection.console,
+            this.createImportResolver.bind(this)
+        );
 
         // Don't allow the analysis engine to go too long without
         // reporting results. This will keep it responsive.
