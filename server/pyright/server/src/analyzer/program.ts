@@ -22,7 +22,7 @@ import { assert } from '../common/debug';
 import { Diagnostic } from '../common/diagnostic';
 import { FileDiagnostics } from '../common/diagnosticSink';
 import { FileEditAction, TextEditAction } from '../common/editAction';
-import { CompletionListExtension } from '../common/extensibility';
+import { LanguageServiceExtension } from '../common/extensibility';
 import {
     combinePaths,
     getDirectoryPath,
@@ -92,19 +92,17 @@ export class Program {
     private _evaluator: TypeEvaluator;
     private _configOptions: ConfigOptions;
     private _importResolver: ImportResolver;
-    private _completionListExtension: CompletionListExtension | undefined;
 
     constructor(
         initialImportResolver: ImportResolver,
         initialConfigOptions: ConfigOptions,
         console?: ConsoleInterface,
-        extension?: any
+        private _extension?: LanguageServiceExtension
     ) {
         this._console = console || new StandardConsole();
         this._evaluator = createTypeEvaluator(this._lookUpImport);
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
-        this._completionListExtension = extension as CompletionListExtension;
     }
 
     setConfigOptions(configOptions: ConfigOptions) {
@@ -855,10 +853,10 @@ export class Program {
             token
         );
 
-        if (completionList && this._completionListExtension) {
+        if (completionList && this._extension?.completionListExtension) {
             const tree = sourceFileInfo.sourceFile.getParseResults()?.parseTree;
             if (tree) {
-                completionList = this._completionListExtension.handleCompletions(
+                completionList = this._extension.completionListExtension.updateCompletionList(
                     completionList,
                     tree,
                     position,

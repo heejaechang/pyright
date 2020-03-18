@@ -23,13 +23,13 @@ import { AnalysisTracker } from './src/telemetry/analysisTracker';
 import { createTelemetryEvent } from './src/telemetry/telemetryEvent';
 import { EventName, addNumericsToTelemetry } from './src/telemetry/telemetryProtocol';
 
-class Server extends LanguageServerBase {
+class PyRxServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
 
     constructor() {
         const rootDirectory = __dirname;
-        super('Python', rootDirectory);
+        super('Python', rootDirectory, new IntelliCodeExtension());
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -48,7 +48,6 @@ class Server extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
-        this.setExtension(new IntelliCodeExtension());
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -143,4 +142,4 @@ class Server extends LanguageServerBase {
     }
 }
 
-export const server = new Server();
+export const server = new PyRxServer();

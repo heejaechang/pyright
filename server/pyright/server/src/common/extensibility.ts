@@ -11,6 +11,15 @@ import { CompletionList, Position } from 'vscode-languageserver';
 import { ModuleNode } from '../parser/parseNodes';
 import { ConfigOptions } from './configOptions';
 
+export interface LanguageServiceExtension {
+    completionListExtension: CompletionListExtension;
+}
+
 export interface CompletionListExtension {
-    handleCompletions(sourceList: CompletionList, ast: ModuleNode, position: Position, options: ConfigOptions): CompletionList;
+    updateCompletionList(
+        sourceList: CompletionList,
+        ast: ModuleNode,
+        position: Position,
+        options: ConfigOptions
+    ): CompletionList;
 }
