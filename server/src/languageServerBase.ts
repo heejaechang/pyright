@@ -155,7 +155,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             name,
             this.fs,
             this._connection.console,
-            this.createImportResolver.bind(this, undefined, this._extension)
+            this.createImportResolver.bind(this),
+            undefined,
+            this._extension
         );
 
         // Don't allow the analysis engine to go too long without
