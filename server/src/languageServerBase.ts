@@ -90,6 +90,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     // Tracks whether we're currently displaying progress.
     private _isDisplayingProgress = false;
+    // Language services extension.
+    private _extension: any;
 
     // Global root path - the basis for all global settings.
     rootPath = '';
@@ -97,7 +99,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     // File system abstraction.
     fs: VirtualFileSystem;
 
-    constructor(private _productName: string, rootDirectory: string, private _extension?: any) {
+    constructor(private _productName: string, rootDirectory: string) {
         this._connection.console.log(`${_productName} language server starting`);
         // virtual file system to be used. initialized to real file system by default. but can't be overwritten
         this.fs = createFromRealFileSystem(this._connection.console);
@@ -134,6 +136,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
         return new ImportResolver(fs, options);
+    }
+
+    protected setExtension(extension: any): void {
+        this._extension = extension;
     }
 
     // Provides access to logging to the client output window.
