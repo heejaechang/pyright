@@ -43,6 +43,7 @@ import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory } from './importResolver';
 import { MaxAnalysisTime, Program } from './program';
 import { findPythonSearchPaths, getPythonPathFromPythonInterpreter } from './pythonPathUtils';
+import { LanguageServiceExtension } from '../common/extensibility';
 
 export { MaxAnalysisTime } from './program';
 
@@ -92,7 +93,7 @@ export class AnalyzerService {
         console?: ConsoleInterface,
         importResolverFactory?: ImportResolverFactory,
         configOptions?: ConfigOptions,
-        extension?: any
+        extension?: LanguageServiceExtension
     ) {
         this._instanceName = instanceName;
         this._console = console || new StandardConsole();
