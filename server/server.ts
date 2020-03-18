@@ -52,7 +52,8 @@ class Server extends LanguageServerBase {
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
         const serverSettings: ServerSettings = {
-            disableLanguageServices: false
+            disableLanguageServices: false,
+            watchForLibraryChanges: true
         };
 
         try {

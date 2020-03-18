@@ -73,10 +73,13 @@ export class AnalyzerService {
     private _console: ConsoleInterface;
     private _sourceFileWatcher: FileWatcher | undefined;
     private _reloadConfigTimer: any;
+    private _libraryReanalysisTimer: any;
     private _configFilePath: string | undefined;
     private _configFileWatcher: FileWatcher | undefined;
+    private _libraryFileWatcher: FileWatcher | undefined;
     private _onCompletionCallback: AnalysisCompleteCallback | undefined;
     private _watchForSourceChanges = false;
+    private _watchForLibraryChanges = false;
     private _verboseOutput = false;
     private _maxAnalysisTime?: MaxAnalysisTime;
     private _analyzeTimer: any;
@@ -114,8 +117,10 @@ export class AnalyzerService {
     dispose() {
         this._removeSourceFileWatchers();
         this._removeConfigFileWatcher();
+        this._removeLibraryFileWatcher();
         this._clearReloadConfigTimer();
         this._clearReanalysisTimer();
+        this._clearLibraryReanalysisTimer();
     }
 
     static createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
@@ -131,7 +136,8 @@ export class AnalyzerService {
     }
 
     setOptions(commandLineOptions: CommandLineOptions): void {
-        this._watchForSourceChanges = !!commandLineOptions.watch;
+        this._watchForSourceChanges = !!commandLineOptions.watchForSourceChanges;
+        this._watchForLibraryChanges = !!commandLineOptions.watchForLibraryChanges;
         this._verboseOutput = !!commandLineOptions.verboseOutput;
         this._configOptions = this._getConfigOptions(commandLineOptions);
         this._program.setConfigOptions(this._configOptions);
@@ -382,6 +388,7 @@ export class AnalyzerService {
                 }
             }
             this._updateConfigFileWatcher();
+            this._updateLibraryFileWatcher();
         } else {
             if (commandLineOptions.autoSearchPaths) {
                 configOptions.addExecEnvironmentForAutoSearchPaths(this._fs);
@@ -477,7 +484,7 @@ export class AnalyzerService {
                 this._fs,
                 configOptions.pythonPath,
                 importFailureInfo
-            );
+            ).paths;
             if (pythonPaths.length === 0) {
                 if (configOptions.verboseOutput) {
                     this._console.log(`No search paths found for configured python interpreter.`);
@@ -868,6 +875,80 @@ export class AnalyzerService {
         }
     }
 
+    private _removeLibraryFileWatcher() {
+        if (this._libraryFileWatcher) {
+            this._libraryFileWatcher.close();
+            this._libraryFileWatcher = undefined;
+        }
+    }
+
+    private _updateLibraryFileWatcher() {
+        this._removeLibraryFileWatcher();
+
+        // Invalidate import resolver because it could have cached
+        // imports that are no longer valid because library has
+        // been installed or uninstalled.
+        this._importResolver.invalidateCache();
+
+        if (!this._watchForLibraryChanges) {
+            return;
+        }
+
+        // watch the library paths for package install/uninstall
+        const importFailureInfo: string[] = [];
+        const watchList = findPythonSearchPaths(
+            this._fs,
+            this._configOptions,
+            undefined,
+            importFailureInfo,
+            true,
+            this._executionRootPath
+        );
+
+        if (watchList && watchList.length > 0) {
+            try {
+                if (this._verboseOutput) {
+                    this._console.log(`Adding fs watcher for library directories:\n ${watchList.join('\n')}`);
+                }
+
+                // Use fs.watch instead of chokidar, to avoid issue where chokidar locks up files
+                // when the virtual environment is located under the workspace folder (which breaks pip uninstall)
+                // Not sure why that happens with chokidar, if the watch path is outside the workspace it is fine.
+                this._libraryFileWatcher = this._fs.createLowLevelFileSystemWatcher(watchList, true, (event, path) => {
+                    if (this._verboseOutput) {
+                        this._console.log(`Received fs event '${event}' for path '${path}'`);
+                    }
+
+                    this._scheduleLibraryAnalysis();
+                });
+            } catch {
+                this._console.log(`Exception caught when installing fs watcher for:\n ${watchList.join('\n')}`);
+            }
+        }
+    }
+
+    private _clearLibraryReanalysisTimer() {
+        if (this._libraryReanalysisTimer) {
+            clearTimeout(this._libraryReanalysisTimer);
+            this._libraryReanalysisTimer = undefined;
+        }
+    }
+
+    private _scheduleLibraryAnalysis() {
+        this._clearLibraryReanalysisTimer();
+
+        // Wait for a little while, since library changes
+        // tend to happen in big batches when packages
+        // are installed or uninstalled.
+        this._libraryReanalysisTimer = setTimeout(() => {
+            this._clearLibraryReanalysisTimer();
+
+            // Invalidate import resolver, mark all files dirty unconditionally and reanalyze
+            this.invalidateAndForceReanalysis();
+            this._scheduleReanalysis(false);
+        }, 100);
+    }
+
     private _removeConfigFileWatcher() {
         if (this._configFileWatcher) {
             this._configFileWatcher.close();
@@ -928,6 +1009,7 @@ export class AnalyzerService {
         this._importResolver = this._importResolverFactory(this._fs, this._configOptions);
         this._program.setImportResolver(this._importResolver);
 
+        this._updateLibraryFileWatcher();
         this._updateSourceFileWatchers();
         this._updateTrackedFileList(true);
         this._scheduleReanalysis(false);
