@@ -45,6 +45,7 @@ import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecut
 import { CompletionItemData } from './languageService/completionProvider';
 import { convertHoverResults } from './languageService/hoverProvider';
 import { WorkspaceMap } from './workspaceMap';
+import { LanguageServiceExtension } from './common/extensibility';
 
 export interface ServerSettings {
     venvPath?: string;
@@ -97,7 +98,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     // File system abstraction.
     fs: VirtualFileSystem;
 
-    constructor(private _productName: string, rootDirectory: string) {
+    constructor(private _productName: string, rootDirectory: string, private _extension?: LanguageServiceExtension) {
         this._connection.console.log(`${_productName} language server starting`);
         // virtual file system to be used. initialized to real file system by default. but can't be overwritten
         this.fs = createFromRealFileSystem(this._connection.console);
@@ -154,7 +155,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             name,
             this.fs,
             this._connection.console,
-            this.createImportResolver.bind(this)
+            this.createImportResolver.bind(this),
+            undefined,
+            this._extension
         );
 
         // Don't allow the analysis engine to go too long without

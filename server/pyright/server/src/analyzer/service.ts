@@ -43,6 +43,7 @@ import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory } from './importResolver';
 import { MaxAnalysisTime, Program } from './program';
 import { findPythonSearchPaths, getPythonPathFromPythonInterpreter } from './pythonPathUtils';
+import { LanguageServiceExtension } from '../common/extensibility';
 
 export { MaxAnalysisTime } from './program';
 
@@ -91,14 +92,15 @@ export class AnalyzerService {
         fs: VirtualFileSystem,
         console?: ConsoleInterface,
         importResolverFactory?: ImportResolverFactory,
-        configOptions?: ConfigOptions
+        configOptions?: ConfigOptions,
+        extension?: LanguageServiceExtension
     ) {
         this._instanceName = instanceName;
         this._console = console || new StandardConsole();
         this._configOptions = configOptions ?? new ConfigOptions(process.cwd());
         this._importResolverFactory = importResolverFactory || AnalyzerService.createImportResolver;
         this._importResolver = this._importResolverFactory(fs, this._configOptions);
-        this._program = new Program(this._importResolver, this._configOptions, this._console);
+        this._program = new Program(this._importResolver, this._configOptions, this._console, extension);
         this._executionRootPath = '';
         this._typeStubTargetImportName = undefined;
     }

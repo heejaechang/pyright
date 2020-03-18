@@ -16,6 +16,7 @@ import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
+import { IntelliCodeExtension } from './intelliCode/extension';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { AnalysisTracker } from './src/services/analysisTracker';
@@ -30,7 +31,7 @@ import { TelemetryServiceImplementation } from './src/services/telemetry';
 import { LogService, LogLevel } from './src/common/logger';
 import { LogServiceImplementation } from './src/services/logger';
 
-class Server extends LanguageServerBase {
+class PyRxServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
     private _telemetry: TelemetryService;
@@ -38,7 +39,7 @@ class Server extends LanguageServerBase {
 
     constructor() {
         const rootDirectory = __dirname;
-        super('Python', rootDirectory);
+        super('Python', rootDirectory, new IntelliCodeExtension());
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -173,4 +174,4 @@ class Server extends LanguageServerBase {
     }
 }
 
-export const server = new Server();
+export const server = new PyRxServer();
