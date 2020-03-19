@@ -856,6 +856,12 @@ test('NewType1', () => {
     validateResults(analysisResults, 1);
 });
 
+test('NewType2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType2.py']);
+
+    validateResults(analysisResults, 3);
+});
+
 test('UnnecessaryIsInstance1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1038,6 +1044,12 @@ test('GenericTypes18', () => {
 
 test('GenericTypes19', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes19.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('GenericTypes20', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes20.py']);
 
     validateResults(analysisResults, 0);
 });
