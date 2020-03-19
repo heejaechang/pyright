@@ -1444,7 +1444,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         // entries added by this class.
         const localDataClassEntries: DataClassEntry[] = [];
         const fullDataClassEntries: DataClassEntry[] = [];
-        addInheritedDataClassEntriesRecursive(classType, fullDataClassEntries);
+        addInheritedDataClassEntries(classType, fullDataClassEntries);
 
         // Maintain a list of "type evaluators".
         type TypeEvaluator = () => Type;
@@ -2279,17 +2279,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     // Builds a sorted list of dataclass entries that are inherited by
     // the specified class. These entries must be unique and in reverse-MRO
     // order.
-    function addInheritedDataClassEntriesRecursive(classType: ClassType, entries: DataClassEntry[]) {
-        // Recursively call for reverse-MRO ordering.
-        classType.details.baseClasses.forEach(baseClass => {
-            if (baseClass.category === TypeCategory.Class) {
-                addInheritedDataClassEntriesRecursive(baseClass, entries);
-            }
-        });
+    function addInheritedDataClassEntries(classType: ClassType, entries: DataClassEntry[]) {
+        for (let i = classType.details.mro.length - 1; i >= 0; i--) {
+            const mroClass = classType.details.mro[i];
 
-        classType.details.baseClasses.forEach(baseClass => {
-            if (baseClass.category === TypeCategory.Class) {
-                const dataClassEntries = ClassType.getDataClassEntries(baseClass);
+            if (mroClass.category === TypeCategory.Class) {
+                const dataClassEntries = ClassType.getDataClassEntries(mroClass);
 
                 // Add the entries to the end of the list, replacing same-named
                 // entries if found.
@@ -2302,7 +2297,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     }
                 });
             }
-        });
+        }
     }
 
     function getReturnTypeFromGenerator(type: Type): Type | undefined {
@@ -2997,7 +2992,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         const type = doForSubtypes(baseType, subtype => {
             if (subtype.category === TypeCategory.TypeVar) {
-                subtype = specializeType(baseType, undefined);
+                subtype = specializeType(subtype, undefined);
             }
 
             if (isAnyOrUnknown(subtype)) {
@@ -3482,11 +3477,17 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
                     if (className === 'type') {
                         // Handle the 'type' call specially.
-                        if (argList.length >= 1) {
+                        if (argList.length === 1) {
+                            // The one-parameter form of "type" returns the class
+                            // for the specified object.
                             const argType = getTypeForArgument(argList[0]);
                             if (argType.category === TypeCategory.Object) {
                                 type = argType.classType;
                             }
+                        } else if (argList.length >= 2) {
+                            // The two-parameter form of "type" returns a new class type
+                            // built from the specified base types.
+                            type = createType(errorNode, argList);
                         }
 
                         // If the parameter to type() is not statically known,
@@ -4271,6 +4272,31 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     );
                     reportedArgError = true;
                 }
+
+                // Add any implicit (default) arguments that are needed for resolving
+                // generic types. For example, if the function is defined as
+                // def foo(v1: _T = 'default')
+                // and _T is a TypeVar, we need to match the TypeVar to the default
+                // value's type if it's not provided by the caller.
+                typeParams.forEach(param => {
+                    if (param.category === ParameterCategory.Simple && param.name) {
+                        const entry = paramMap.get(param.name)!;
+                        if (entry.argsNeeded === 0 && entry.argsReceived === 0) {
+                            if (param.defaultType && requiresSpecialization(param.type)) {
+                                validateArgTypeParams.push({
+                                    paramType: param.type,
+                                    requiresTypeVarMatching: true,
+                                    argument: {
+                                        argumentCategory: ArgumentCategory.Simple,
+                                        type: param.defaultType
+                                    },
+                                    errorNode: errorNode,
+                                    paramName: param.name
+                                });
+                            }
+                        }
+                    }
+                });
             }
         }
 
@@ -4566,7 +4592,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         return classType;
     }
 
-    // Implemented the semantics of the NewType call as documented
+    // Implements the semantics of the NewType call as documented
     // in the Python specification: The static type checker will treat
     // the new type as if it were a subclass of the original type.
     function createNewType(errorNode: ExpressionNode, argList: FunctionArgument[]): ClassType | undefined {
@@ -4594,6 +4620,44 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
 
         return undefined;
+    }
+
+    // Implements the semantics of the multi-parameter variant of the "type" call.
+    function createType(errorNode: ExpressionNode, argList: FunctionArgument[]): ClassType | undefined {
+        const arg0Type = getTypeForArgument(argList[0]);
+        if (arg0Type.category !== TypeCategory.Object || !ClassType.isBuiltIn(arg0Type.classType, 'str')) {
+            addError('Expected name of type as first argument', argList[0].valueExpression || errorNode);
+            return undefined;
+        }
+        const className = (arg0Type.literalValue as string) || '_';
+
+        const arg1Type = getTypeForArgument(argList[1]);
+        if (
+            arg1Type.category !== TypeCategory.Object ||
+            !ClassType.isBuiltIn(arg1Type.classType, 'Tuple') ||
+            arg1Type.classType.typeArguments === undefined
+        ) {
+            addError('Expected tuple of base class types as second argument', argList[1].valueExpression || errorNode);
+            return undefined;
+        }
+
+        const classType = ClassType.create(className, ClassTypeFlags.None, errorNode.id);
+        arg1Type.classType.typeArguments.forEach(baseClass => {
+            if (baseClass.category === TypeCategory.Class || isAnyOrUnknown(baseClass)) {
+                classType.details.baseClasses.push(baseClass);
+            } else {
+                addError(
+                    `Expected class type but received ${printType(baseClass)}`,
+                    argList[1].valueExpression || errorNode
+                );
+            }
+        });
+
+        if (!computeMroLinearization(classType)) {
+            addError('Cannot create consistent method ordering', errorNode);
+        }
+
+        return classType;
     }
 
     // Creates a new custom TypedDict factory class.
@@ -5415,6 +5479,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         let expectedKeyType: Type | undefined;
         let expectedValueType: Type | undefined;
+        let expectedTypedDictEntries: Map<string, TypedDictEntry> | undefined;
 
         if (expectedType && expectedType.category === TypeCategory.Object) {
             const expectedClass = expectedType.classType;
@@ -5423,6 +5488,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     expectedKeyType = specializeType(expectedClass.typeArguments[0], undefined);
                     expectedValueType = specializeType(expectedClass.typeArguments[1], undefined);
                 }
+            } else if (ClassType.isTypedDictClass(expectedClass)) {
+                expectedTypedDictEntries = getTypedDictMembersForClass(expectedClass);
             }
         }
 
@@ -5431,8 +5498,26 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             let addUnknown = true;
 
             if (entryNode.nodeType === ParseNodeType.DictionaryKeyEntry) {
-                keyTypes.push(getTypeOfExpression(entryNode.keyExpression, expectedKeyType).type);
-                valueTypes.push(getTypeOfExpression(entryNode.valueExpression, expectedValueType).type);
+                const keyType = getTypeOfExpression(entryNode.keyExpression, expectedKeyType).type;
+                let valueType: Type | undefined;
+
+                if (
+                    expectedTypedDictEntries &&
+                    keyType.category === TypeCategory.Object &&
+                    ClassType.isBuiltIn(keyType.classType, 'str') &&
+                    keyType.literalValue &&
+                    expectedTypedDictEntries.has(keyType.literalValue as string)
+                ) {
+                    valueType = getTypeOfExpression(
+                        entryNode.valueExpression,
+                        expectedTypedDictEntries.get(keyType.literalValue as string)!.valueType
+                    ).type;
+                } else {
+                    valueType = getTypeOfExpression(entryNode.valueExpression, expectedValueType).type;
+                }
+
+                keyTypes.push(keyType);
+                valueTypes.push(valueType);
                 addUnknown = false;
             } else if (entryNode.nodeType === ParseNodeType.DictionaryExpandEntry) {
                 const unexpandedType = getTypeOfExpression(entryNode.expandExpression).type;
@@ -5775,8 +5860,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 assignTypeToExpression(targetExpr, itemType, comprehension.iterableExpression);
             } else {
                 assert(comprehension.nodeType === ParseNodeType.ListComprehensionIf);
-                // Evaluate the test expression
-                getTypeOfExpression(comprehension.testExpression);
+
+                // Evaluate the test expression to validate it and mark symbols
+                // as referenced. Don't bother doing this if we're in speculative
+                // mode because it doesn't affect the element type.
+                if (!isSpeculativeMode()) {
+                    getTypeOfExpression(comprehension.testExpression);
+                }
             }
         }
 
@@ -6410,6 +6500,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             ) {
                                 addError(`Use of 'Protocol' requires Python 3.7 or newer`, arg.valueExpression);
                             }
+                            classType.details.flags |= ClassTypeFlags.ProtocolClass;
                         }
 
                         if (ClassType.isBuiltIn(argType, 'property')) {
@@ -6421,12 +6512,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V36) {
                             if (ClassType.isBuiltIn(argType, 'NamedTuple')) {
                                 classType.details.flags |= ClassTypeFlags.DataClass;
-                            }
-                        }
-
-                        if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V38) {
-                            if (ClassType.isBuiltIn(argType, 'Protocol')) {
-                                classType.details.flags |= ClassTypeFlags.ProtocolClass;
                             }
                         }
 
@@ -6558,6 +6643,36 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         if (ClassType.supportsAbstractMethods(classType)) {
             if (doesClassHaveAbstractMethods(classType)) {
                 classType.details.flags |= ClassTypeFlags.HasAbstractMethods;
+            }
+        }
+
+        // Determine if the class should be a "pseudo-generic" class, characterized
+        // by having an __init__ method with parameters that lack type annotations.
+        // For such classes, we'll treat them as generic, with the type arguments provided
+        // by the callers of the constructor.
+        if (!fileInfo.isStubFile && classType.details.typeParameters.length === 0) {
+            const initMethod = classType.details.fields.get('__init__');
+            if (initMethod) {
+                const initDecls = initMethod.getTypedDeclarations();
+                if (initDecls.length === 1 && initDecls[0].type === DeclarationType.Function) {
+                    const initDeclNode = initDecls[0].node;
+                    const initParams = initDeclNode.parameters;
+                    if (initParams.length > 1 && !initParams.some(param => param.typeAnnotation)) {
+                        const genericParams = initParams.filter(
+                            (param, index) => index > 0 && param.name && param.category === ParameterCategory.Simple
+                        );
+
+                        if (genericParams.length > 0) {
+                            classType.details.flags |= ClassTypeFlags.PseudoGenericClass;
+
+                            // Create a type parameter for each simple, named parameter
+                            // in the __init__ method.
+                            classType.details.typeParameters = genericParams.map(param =>
+                                TypeVarType.create(`__type_of_${param.name!.value}`)
+                            );
+                        }
+                    }
+                }
             }
         }
 
@@ -6720,6 +6835,13 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         writeTypeCache(node, functionType);
         writeTypeCache(node.name, functionType);
 
+        // Is this an "__init__" method within a pseudo-generic class? If so,
+        // we'll add generic types to the constructor's parameters.
+        const addGenericParamTypes =
+            containingClassType &&
+            ClassType.isPseudoGenericClass(containingClassType) &&
+            node.name.value === '__init__';
+
         // If there was a defined return type, analyze that first so when we
         // walk the contents of the function, return statements can be
         // validated against this type.
@@ -6729,8 +6851,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         }
 
         const paramTypes: Type[] = [];
+        let typeParamIndex = 0;
 
-        node.parameters.forEach(param => {
+        node.parameters.forEach((param, index) => {
             let paramType: Type | undefined;
             let annotatedType: Type | undefined;
             let concreteAnnotatedType: Type | undefined;
@@ -6738,7 +6861,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
             if (param.typeAnnotation) {
                 annotatedType = getTypeOfAnnotation(param.typeAnnotation);
+            } else if (addGenericParamTypes) {
+                if (index > 0 && param.category === ParameterCategory.Simple && param.name) {
+                    annotatedType = containingClassType!.details.typeParameters[typeParamIndex];
+                    typeParamIndex++;
+                }
+            }
 
+            if (annotatedType) {
                 // PEP 484 indicates that if a parameter has a default value of 'None'
                 // the type checker should assume that the type is optional (i.e. a union
                 // of the specified type and 'None').
@@ -6764,7 +6894,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 ).type;
             }
 
-            if (param.typeAnnotation && annotatedType) {
+            if (annotatedType) {
                 // If there was both a type annotation and a default value, verify
                 // that the default value matches the annotation.
                 if (param.defaultValue && defaultValueType && concreteAnnotatedType) {
@@ -6778,7 +6908,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                             param.defaultValue
                         );
 
-                        if (isNoneWithoutOptional) {
+                        if (isNoneWithoutOptional && param.typeAnnotation) {
                             const addOptionalAction: AddMissingOptionalToParamAction = {
                                 action: Commands.addMissingOptionalToParam,
                                 offsetOfTypeNode: param.typeAnnotation.start + 1
@@ -6797,6 +6927,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 category: param.category,
                 name: param.name ? param.name.value : undefined,
                 hasDefault: !!param.defaultValue,
+                defaultType: defaultValueType,
                 type: paramType || UnknownType.create()
             };
 
@@ -6877,7 +7008,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     function inferFirstParamType(flags: FunctionTypeFlags, containingClassType: ClassType): Type | undefined {
         if ((flags & FunctionTypeFlags.StaticMethod) === 0) {
             if (containingClassType) {
-                if (ClassType.isProtocol(containingClassType)) {
+                if (ClassType.isProtocolClass(containingClassType)) {
                     // Don't specialize the "self" for protocol classes because type
                     // comparisons will fail during structural typing analysis. We'll
                     // use an "Any" type here to avoid triggering errors about Unknown
@@ -7516,6 +7647,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         const enterMethodName = isAsync ? '__aenter__' : '__enter__';
         const scopedType = doForSubtypes(exprType, subtype => {
+            if (subtype.category === TypeCategory.TypeVar) {
+                subtype = specializeType(subtype, undefined);
+            }
+
             if (isAnyOrUnknown(subtype)) {
                 return subtype;
             }
@@ -7686,8 +7821,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             );
         }
 
-        // Scan up the parse tree until we find a non-expression, looking for
-        // contextual expressions in the process.
+        // Scan up the parse tree until we find a non-expression (while
+        // looking for contextual expressions in the process).
         while (curNode && (isExpressionNode(curNode) || isContextual(curNode))) {
             if (isContextual(curNode)) {
                 lastContextualExpression = curNode as ExpressionNode;
@@ -8703,12 +8838,23 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             const filteredTypes: ClassType[] = [];
 
             let foundSuperclass = false;
+            let isClassRelationshipIndeterminate = false;
+
             for (const filterType of classTypeList) {
                 const filterIsSuperclass = ClassType.isDerivedFrom(varType, filterType);
                 const filterIsSubclass = ClassType.isDerivedFrom(filterType, varType);
 
                 if (filterIsSuperclass) {
                     foundSuperclass = true;
+                }
+
+                // Normally, a type should never be both a subclass or a superclass.
+                // This can happen if either of the class types derives from a
+                // class whose type is unknown (e.g. an import failed). We'll
+                // note this case specially so we don't do any narrowing, which
+                // will generate false positives.
+                if (filterIsSubclass && filterIsSuperclass && !ClassType.isSameGenericClass(varType, filterType)) {
+                    isClassRelationshipIndeterminate = true;
                 }
 
                 if (isPositiveTest) {
@@ -8730,8 +8876,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             // a superclass of the type), then there's nothing left after
             // the filter is applied. If we didn't find any superclass
             // match, then the original variable type survives the filter.
-            if (!isPositiveTest && !foundSuperclass) {
-                filteredTypes.push(varType);
+            if (!isPositiveTest) {
+                if (!foundSuperclass || isClassRelationshipIndeterminate) {
+                    filteredTypes.push(varType);
+                }
             }
 
             if (!isInstanceCheck) {
@@ -9614,9 +9762,11 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         paramType = getTypeOfExpression(param.defaultValue).type;
                         allArgTypesAreUnknown = false;
                     } else if (index === 0) {
+                        // If this is an instance or class method, use the implied
+                        // parameter type for the "self" or "cls" parameter.
                         if (
                             FunctionType.isInstanceMethod(functionType.functionType) ||
-                            FunctionType.isInstanceMethod(functionType.functionType)
+                            FunctionType.isClassMethod(functionType.functionType)
                         ) {
                             if (functionType.functionType.details.parameters.length > 0) {
                                 if (functionNode.parameters[0].name) {
@@ -9816,7 +9966,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     ): boolean {
         // Is it a structural type (i.e. a protocol)? If so, we need to
         // perform a member-by-member check.
-        if (ClassType.isProtocol(destType)) {
+        if (ClassType.isProtocolClass(destType)) {
             return canAssignClassToProtocol(destType, srcType, diag, typeVarMap, recursionCount);
         }
 
@@ -10643,7 +10793,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getCallbackProtocolType(objType: ObjectType): FunctionType | undefined {
-        if (!ClassType.isProtocol(objType.classType)) {
+        if (!ClassType.isProtocolClass(objType.classType)) {
             return undefined;
         }
 

@@ -13,7 +13,7 @@
 import { timingStats } from './common/timing';
 /* eslint-enable */
 
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import * as commandLineArgs from 'command-line-args';
 import { CommandLineOptions, OptionDefinition } from 'command-line-args';
 import * as process from 'process';
@@ -62,6 +62,17 @@ interface DiagnosticResult {
     warningCount: number;
     diagnosticCount: number;
 }
+
+const cancellationNone = Object.freeze({
+    isCancellationRequested: false,
+    onCancellationRequested: function() {
+        return {
+            dispose() {
+                /* empty */
+            }
+        };
+    }
+});
 
 function processArgs() {
     const optionDefinitions: OptionDefinition[] = [
@@ -182,7 +193,7 @@ function processArgs() {
 
         if (args.createstub && results.filesRequiringAnalysis === 0) {
             try {
-                service.writeTypeStub();
+                service.writeTypeStub(cancellationNone);
                 service.dispose();
                 console.log(`Type stub was created for '${args.createstub}'`);
             } catch (err) {

@@ -9,7 +9,7 @@
 
 import * as assert from 'assert';
 import Char from 'typescript-char';
-import { Command, MarkupContent } from 'vscode-languageserver';
+import { CancellationToken, Command, Diagnostic, MarkupContent } from 'vscode-languageserver';
 
 import { ImportResolver, ImportResolverFactory } from '../../../analyzer/importResolver';
 import { Program } from '../../../analyzer/program';
@@ -35,6 +35,7 @@ import { Range as PosRange } from '../../../common/textRange';
 import { WorkspaceServiceInstance } from '../../../languageServerBase';
 import { CodeActionProvider } from '../../../languageService/codeActionProvider';
 import { convertHoverResults } from '../../../languageService/hoverProvider';
+import { ParseResults } from '../../../parser/parser';
 import * as host from '../host';
 import { stringify } from '../utils';
 import { createFromFileSystem } from '../vfs/factory';
@@ -435,6 +436,11 @@ export class TestState {
         const resultPerFile = this._getDiagnosticsPerFile();
         const rangePerFile = this._createMultiMap<Range>(this.getRanges(), r => r.fileName);
 
+        if (!hasDiagnostics(resultPerFile) && rangePerFile.size === 0) {
+            // no errors and no error is expected. we are done
+            return;
+        }
+
         // expected number of files
         if (resultPerFile.size !== rangePerFile.size) {
             this._raiseError(
@@ -500,6 +506,26 @@ export class TestState {
                 }
             }
         }
+
+        function hasDiagnostics(
+            resultPerFile: Map<
+                string,
+                {
+                    filePath: string;
+                    parseResults: ParseResults | undefined;
+                    errors: Diagnostic[];
+                    warnings: Diagnostic[];
+                }
+            >
+        ) {
+            for (const entry of resultPerFile.values()) {
+                if (entry.errors.length + entry.warnings.length > 0) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     verifyCodeActions(map: {
@@ -535,7 +561,7 @@ export class TestState {
         this._analyze();
 
         const controller = new CommandController(new TestLanguageService(this.workspace, this.console, this.fs));
-        await controller.execute({ command: command.command, arguments: command.arguments });
+        await controller.execute({ command: command.command, arguments: command.arguments }, CancellationToken.None);
         await this._verifyFiles(files);
 
         this.markTestDone();
@@ -551,10 +577,13 @@ export class TestState {
             const controller = new CommandController(new TestLanguageService(this.workspace, this.console, this.fs));
 
             for (const codeAction of this._getCodeActions(range).filter(c => c.title === map[name].title)) {
-                await controller.execute({
-                    command: codeAction.command!.command,
-                    arguments: codeAction.command?.arguments
-                });
+                await controller.execute(
+                    {
+                        command: codeAction.command!.command,
+                        arguments: codeAction.command?.arguments
+                    },
+                    CancellationToken.None
+                );
             }
 
             await this._verifyFiles(map[name].files);
@@ -572,7 +601,9 @@ export class TestState {
 
             const rangePos = this._convertOffsetsToRange(range.fileName, range.pos, range.end);
 
-            const actual = convertHoverResults(this.program.getHoverForPosition(range.fileName, rangePos.start));
+            const actual = convertHoverResults(
+                this.program.getHoverForPosition(range.fileName, rangePos.start, CancellationToken.None)
+            );
             debug.assertDefined(actual);
 
             assert.deepEqual(actual!.range, rangePos);
@@ -646,7 +677,7 @@ export class TestState {
 
     private _convertGlobalOptionsToConfigOptions(globalOptions: CompilerSettings): ConfigOptions {
         const srtRoot: string = GlobalMetadataOptionNames.projectRoot;
-        const projectRoot = normalizeSlashes(globalOptions[srtRoot] ?? '.');
+        const projectRoot = normalizeSlashes(globalOptions[srtRoot] ?? vfs.MODULE_PATH);
         const configOptions = new ConfigOptions(projectRoot);
 
         // add more global options as we need them
@@ -1007,7 +1038,7 @@ export class TestState {
             end: this._convertOffsetToPosition(file, range.end)
         };
 
-        return CodeActionProvider.getCodeActionsForPosition(this.workspace, file, textRange);
+        return CodeActionProvider.getCodeActionsForPosition(this.workspace, file, textRange, CancellationToken.None);
     }
 
     private async _verifyFiles(files: { [filePath: string]: string }) {

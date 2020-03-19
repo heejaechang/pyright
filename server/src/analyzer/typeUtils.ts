@@ -82,11 +82,6 @@ export const enum CanAssignFlags {
     ReverseTypeVarMatching = 1 << 1
 }
 
-export interface SymbolWithClass {
-    class: ClassType;
-    symbol: Symbol;
-}
-
 export interface TypedDictEntry {
     valueType: Type;
     isRequired: boolean;
@@ -330,9 +325,6 @@ export function isProperty(type: Type): boolean {
 
 // Partially specializes a type within the context of a specified
 // (presumably specialized) class.
-export function partiallySpecializeType(type: ClassType, contextClassType: ClassType): ClassType;
-export function partiallySpecializeType(type: Type, contextClassType: ClassType): Type;
-
 export function partiallySpecializeType(type: Type, contextClassType: ClassType): Type {
     // If the context class is not specialized (or doesn't need specialization),
     // then there's no need to do any more work.
@@ -475,68 +467,83 @@ export function lookUpClassMember(
     const declaredTypesOnly = (flags & ClassMemberLookupFlags.DeclaredTypesOnly) !== 0;
 
     if (classType.category === TypeCategory.Class) {
-        // Should we ignore members on the 'object' base class?
-        if (flags & ClassMemberLookupFlags.SkipObjectBaseClass) {
-            if (ClassType.isBuiltIn(classType, 'object')) {
-                return undefined;
+        for (const mroClass of classType.details.mro) {
+            if (mroClass.category !== TypeCategory.Class) {
+                // The class derives from an unknown type, so all bets are off
+                // when trying to find a member. Return an unknown symbol.
+                return {
+                    symbol: Symbol.createWithType(SymbolFlags.None, UnknownType.create()),
+                    isInstanceMember: false,
+                    classType: UnknownType.create()
+                };
             }
-        }
 
-        if ((flags & ClassMemberLookupFlags.SkipOriginalClass) === 0) {
-            const memberFields = classType.details.fields;
+            // If mroClass is an ancestor of classType, partially specialize
+            // it in the context of classType.
+            const specializedMroClass = partiallySpecializeType(mroClass, classType);
+            if (specializedMroClass.category !== TypeCategory.Class) {
+                continue;
+            }
 
-            // Look in the instance members first if requested.
-            if ((flags & ClassMemberLookupFlags.SkipInstanceVariables) === 0) {
+            // Should we ignore members on the 'object' base class?
+            if (flags & ClassMemberLookupFlags.SkipObjectBaseClass) {
+                if (ClassType.isBuiltIn(specializedMroClass, 'object')) {
+                    continue;
+                }
+            }
+
+            if (
+                (flags & ClassMemberLookupFlags.SkipOriginalClass) === 0 ||
+                specializedMroClass.details !== classType.details
+            ) {
+                const memberFields = specializedMroClass.details.fields;
+
+                // Look in the instance members first if requested.
+                if ((flags & ClassMemberLookupFlags.SkipInstanceVariables) === 0) {
+                    const symbol = memberFields.get(memberName);
+                    if (symbol && symbol.isInstanceMember()) {
+                        if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
+                            return {
+                                symbol,
+                                isInstanceMember: true,
+                                classType: specializedMroClass
+                            };
+                        }
+                    }
+                }
+
+                // Next look in the class members.
                 const symbol = memberFields.get(memberName);
-                if (symbol && symbol.isInstanceMember()) {
+                if (symbol && symbol.isClassMember()) {
                     if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
+                        let isInstanceMember = false;
+
+                        // For data classes and typed dicts, variables that are declared
+                        // within the class are treated as instance variables. This distinction
+                        // is important in cases where a variable is a callable type because
+                        // we don't want to bind it to the instance like we would for a
+                        // class member.
+                        if (
+                            ClassType.isDataClass(specializedMroClass) ||
+                            ClassType.isTypedDictClass(specializedMroClass)
+                        ) {
+                            const decls = symbol.getDeclarations();
+                            if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
+                                isInstanceMember = true;
+                            }
+                        }
+
                         return {
                             symbol,
-                            isInstanceMember: true,
-                            classType
+                            isInstanceMember,
+                            classType: specializedMroClass
                         };
                     }
                 }
             }
 
-            // Next look in the class members.
-            const symbol = memberFields.get(memberName);
-            if (symbol && symbol.isClassMember()) {
-                if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
-                    let isInstanceMember = false;
-
-                    // For data classes and typed dicts, variables that are declared
-                    // within the class are treated as instance variables. This distinction
-                    // is important in cases where a variable is a callable type because
-                    // we don't want to bind it to the instance like we would for a
-                    // class member.
-                    if (ClassType.isDataClass(classType) || ClassType.isTypedDictClass(classType)) {
-                        const decls = symbol.getDeclarations();
-                        if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
-                            isInstanceMember = true;
-                        }
-                    }
-
-                    return {
-                        symbol,
-                        isInstanceMember,
-                        classType
-                    };
-                }
-            }
-        }
-
-        if ((flags & ClassMemberLookupFlags.SkipBaseClasses) === 0) {
-            for (const baseClass of classType.details.baseClasses) {
-                // Recursively perform search.
-                const methodType = lookUpClassMember(
-                    partiallySpecializeType(baseClass, classType),
-                    memberName,
-                    flags & ~ClassMemberLookupFlags.SkipOriginalClass
-                );
-                if (methodType) {
-                    return methodType;
-                }
+            if ((flags & ClassMemberLookupFlags.SkipBaseClasses) !== 0) {
+                break;
             }
         }
     } else if (isAnyOrUnknown(classType)) {
@@ -738,9 +745,16 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type, typeVar
 // types. For example, if the generic type is Dict[_T1, _T2] and the
 // specialized type is Dict[str, int], it returns a map that associates
 // _T1 with str and _T2 with int.
-export function buildTypeVarMapFromSpecializedClass(classType: ClassType): TypeVarMap {
+export function buildTypeVarMapFromSpecializedClass(classType: ClassType, makeConcrete = true): TypeVarMap {
     const typeParameters = ClassType.getTypeParameters(classType);
     let typeArguments = classType.typeArguments;
+
+    // If there are no type arguments, we can either use the type variables
+    // from the type parameters (keeping the type arguments generic) or
+    // fill in concrete types.
+    if (!typeArguments && !makeConcrete) {
+        typeArguments = typeParameters;
+    }
 
     // Handle the special case where the source is a Tuple with heterogenous
     // type arguments. In this case, we'll create a union out of the heterogeneous
@@ -854,40 +868,6 @@ export function removeTruthinessFromType(type: Type): Type {
     });
 }
 
-// Looks up the specified symbol name within the base classes
-// of a specified class.
-export function getSymbolFromBaseClasses(
-    classType: ClassType,
-    name: string,
-    recursionCount = 0
-): SymbolWithClass | undefined {
-    if (recursionCount > maxTypeRecursionCount) {
-        return undefined;
-    }
-
-    for (const baseClass of classType.details.baseClasses) {
-        if (baseClass.category === TypeCategory.Class) {
-            const memberFields = baseClass.details.fields;
-            const symbol = memberFields.get(name);
-            if (symbol && symbol.isClassMember()) {
-                return {
-                    class: baseClass,
-                    symbol
-                };
-            }
-
-            const symbolWithClass = getSymbolFromBaseClasses(baseClass, name, recursionCount + 1);
-            if (symbolWithClass) {
-                return symbolWithClass;
-            }
-        } else {
-            return undefined;
-        }
-    }
-
-    return undefined;
-}
-
 // Returns the declared yield type if provided, or undefined otherwise.
 export function getDeclaredGeneratorYieldType(functionType: FunctionType, iteratorType: Type): Type | undefined {
     const returnType = FunctionType.getSpecializedReturnType(functionType);
@@ -954,7 +934,23 @@ export function convertClassToObject(type: Type): Type {
 }
 
 export function getMembersForClass(classType: ClassType, symbolTable: SymbolTable, includeInstanceVars: boolean) {
-    _getMembersForClassRecursive(classType, symbolTable, includeInstanceVars);
+    for (let i = classType.details.mro.length - 1; i >= 0; i--) {
+        const mroClass = classType.details.mro[i];
+
+        if (mroClass.category === TypeCategory.Class) {
+            // Add any new member variables from this class.
+            const isClassTypedDict = ClassType.isTypedDictClass(mroClass);
+            mroClass.details.fields.forEach((symbol, name) => {
+                if (symbol.isClassMember() || (includeInstanceVars && symbol.isInstanceMember())) {
+                    if (!isClassTypedDict || !isTypedDictMemberAccessedThroughIndex(symbol)) {
+                        if (!symbolTable.get(name)) {
+                            symbolTable.set(name, symbol);
+                        }
+                    }
+                }
+            });
+        }
+    }
 }
 
 export function getMembersForModule(moduleType: ModuleType, symbolTable: SymbolTable) {
@@ -998,7 +994,7 @@ export function containsUnknown(type: Type, allowUnknownTypeArgsForClasses = fal
     }
 
     if (type.category === TypeCategory.Class) {
-        if (type.typeArguments && !allowUnknownTypeArgsForClasses) {
+        if (type.typeArguments && !allowUnknownTypeArgsForClasses && !ClassType.isPseudoGenericClass(type)) {
             for (const argType of type.typeArguments) {
                 if (containsUnknown(argType, allowUnknownTypeArgsForClasses, recursionCount + 1)) {
                     return true;
@@ -1031,35 +1027,6 @@ export function containsUnknown(type: Type, allowUnknownTypeArgsForClasses = fal
     }
 
     return false;
-}
-
-function _getMembersForClassRecursive(
-    classType: ClassType,
-    symbolTable: SymbolTable,
-    includeInstanceVars: boolean,
-    recursionCount = 0
-) {
-    if (recursionCount > maxTypeRecursionCount) {
-        return;
-    }
-
-    classType.details.baseClasses.forEach(baseClassType => {
-        if (baseClassType.category === TypeCategory.Class) {
-            _getMembersForClassRecursive(baseClassType, symbolTable, includeInstanceVars, recursionCount + 1);
-        }
-    });
-
-    // Add any new member variables from this class.
-    const isClassTypedDict = ClassType.isTypedDictClass(classType);
-    classType.details.fields.forEach((symbol, name) => {
-        if (symbol.isClassMember() || (includeInstanceVars && symbol.isInstanceMember())) {
-            if (!isClassTypedDict || !isTypedDictMemberAccessedThroughIndex(symbol)) {
-                if (!symbolTable.get(name)) {
-                    symbolTable.set(name, symbol);
-                }
-            }
-        }
-    });
 }
 
 function _specializeClassType(
@@ -1286,18 +1253,27 @@ export function computeMroLinearization(classType: ClassType): boolean {
 
     classType.details.baseClasses.forEach(baseClass => {
         if (baseClass.category === TypeCategory.Class) {
-            classListsToMerge.push(baseClass.details.mro.map(mroClass => partiallySpecializeType(mroClass, classType)));
+            const typeVarMap = buildTypeVarMapFromSpecializedClass(baseClass, false);
+            classListsToMerge.push(
+                baseClass.details.mro.map(mroClass => {
+                    return specializeType(mroClass, typeVarMap);
+                })
+            );
         } else {
             classListsToMerge.push([baseClass]);
         }
     });
 
     classListsToMerge.push(
-        classType.details.baseClasses.map(baseClass => partiallySpecializeType(baseClass, classType))
+        classType.details.baseClasses.map(baseClass => {
+            const typeVarMap = buildTypeVarMapFromSpecializedClass(classType, false);
+            return specializeType(baseClass, typeVarMap);
+        })
     );
 
     // The first class in the MRO is the class itself.
-    classType.details.mro.push(classType);
+    const typeVarMap = buildTypeVarMapFromSpecializedClass(classType, false);
+    classType.details.mro.push(specializeType(classType, typeVarMap));
 
     // Helper function that returns true if the specified searchClass
     // is found in the "tail" (i.e. in elements 1 through n) of any
@@ -1306,7 +1282,8 @@ export function computeMroLinearization(classType: ClassType): boolean {
         return classLists.some(classList => {
             return (
                 classList.findIndex(
-                    value => value.category === TypeCategory.Class && value.details === searchClass.details
+                    value =>
+                        value.category === TypeCategory.Class && ClassType.isSameGenericClass(value, searchClass, false)
                 ) > 0
             );
         });
@@ -1315,7 +1292,8 @@ export function computeMroLinearization(classType: ClassType): boolean {
     const filterClass = (classToFilter: ClassType, classLists: Type[][]) => {
         for (let i = 0; i < classLists.length; i++) {
             classLists[i] = classLists[i].filter(
-                value => value.category !== TypeCategory.Class || value.details !== classToFilter.details
+                value =>
+                    value.category !== TypeCategory.Class || !ClassType.isSameGenericClass(value, classToFilter, false)
             );
         }
     };

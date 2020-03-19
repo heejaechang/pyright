@@ -765,6 +765,12 @@ test('Mro1', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Mro2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -813,6 +819,12 @@ test('Assignment5', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Assignment6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment6.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -844,16 +856,22 @@ test('NewType1', () => {
     validateResults(analysisResults, 1);
 });
 
+test('NewType2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType2.py']);
+
+    validateResults(analysisResults, 3);
+});
+
 test('UnnecessaryIsInstance1', () => {
     const configOptions = new ConfigOptions('.');
 
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 0);
+    validateResults(analysisResults, 1);
 
     // Turn on errors.
     configOptions.diagnosticSettings.reportUnnecessaryIsInstance = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 4);
 });
 
 test('UnnecessaryIsSubclass1', () => {
@@ -1024,6 +1042,18 @@ test('GenericTypes18', () => {
     validateResults(analysisResults, 4);
 });
 
+test('GenericTypes19', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes19.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('GenericTypes20', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes20.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1106,6 +1136,12 @@ test('TypedDict8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict8.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('TypedDict9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict9.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('TypeIgnore1', () => {

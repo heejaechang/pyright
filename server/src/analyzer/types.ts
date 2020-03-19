@@ -203,7 +203,12 @@ export const enum ClassTypeFlags {
     Final = 1 << 10,
 
     // The class derives directly from "Protocol".
-    ProtocolClass = 1 << 11
+    ProtocolClass = 1 << 11,
+
+    // A class whose constructor (__init__ method) does not have
+    // annotated types and is treated as though each parameter
+    // is a generic type for purposes of type inference.
+    PseudoGenericClass = 1 << 12
 }
 
 interface ClassDetails {
@@ -298,20 +303,6 @@ export namespace ClassType {
         return true;
     }
 
-    export function isProtocol(classType: ClassType) {
-        // Does the class directly 'derive' from "Protocol"?
-        return (
-            classType.details.baseClasses.find(baseClass => {
-                if (baseClass.category === TypeCategory.Class) {
-                    if (isBuiltIn(baseClass, 'Protocol')) {
-                        return true;
-                    }
-                }
-                return false;
-            }) !== undefined
-        );
-    }
-
     export function hasAbstractMethods(classType: ClassType) {
         return !!(classType.details.flags & ClassTypeFlags.HasAbstractMethods) && !classType.skipAbstractClassTest;
     }
@@ -352,6 +343,10 @@ export namespace ClassType {
         return !!(classType.details.flags & ClassTypeFlags.ProtocolClass);
     }
 
+    export function isPseudoGenericClass(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.PseudoGenericClass);
+    }
+
     export function getDataClassEntries(classType: ClassType): DataClassEntry[] {
         return classType.details.dataClassEntries || [];
     }
@@ -366,7 +361,12 @@ export namespace ClassType {
     }
 
     // Same as isSame except that it doesn't compare type arguments.
-    export function isSameGenericClass(classType: ClassType, type2: ClassType, recursionCount = 0) {
+    export function isSameGenericClass(
+        classType: ClassType,
+        type2: ClassType,
+        treatAliasAsSame = true,
+        recursionCount = 0
+    ) {
         if (recursionCount > maxTypeRecursionCount) {
             return true;
         }
@@ -378,8 +378,10 @@ export namespace ClassType {
 
         // If either or both have aliases (e.g. List -> list), use the
         // aliases for comparison purposes.
-        const class1Details = classType.details.aliasClass ? classType.details.aliasClass.details : classType.details;
-        const class2Details = type2.details.aliasClass ? type2.details.aliasClass.details : type2.details;
+        const class1Details =
+            treatAliasAsSame && classType.details.aliasClass ? classType.details.aliasClass.details : classType.details;
+        const class2Details =
+            treatAliasAsSame && type2.details.aliasClass ? type2.details.aliasClass.details : type2.details;
 
         if (class1Details === class2Details) {
             return true;
@@ -545,6 +547,7 @@ export interface FunctionParameter {
     name?: string;
     isNameSynthesized?: boolean;
     hasDefault?: boolean;
+    defaultType?: Type;
     type: Type;
 }
 
@@ -949,7 +952,7 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
             const classType2 = type2 as ClassType;
 
             // If the details are not the same it's not the same class.
-            if (!ClassType.isSameGenericClass(type1, classType2, recursionCount + 1)) {
+            if (!ClassType.isSameGenericClass(type1, classType2, true, recursionCount + 1)) {
                 return false;
             }
 
