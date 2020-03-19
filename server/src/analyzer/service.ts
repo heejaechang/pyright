@@ -23,6 +23,7 @@ import { assert } from '../common/debug';
 import { Diagnostic } from '../common/diagnostic';
 import { FileDiagnostics } from '../common/diagnosticSink';
 import { FileEditAction, TextEditAction } from '../common/editAction';
+import { LanguageServiceExtension } from '../common/extensibility';
 import {
     combinePaths,
     FileSpec,
@@ -43,7 +44,6 @@ import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory } from './importResolver';
 import { MaxAnalysisTime, Program } from './program';
 import { findPythonSearchPaths, getPythonPathFromPythonInterpreter } from './pythonPathUtils';
-import { LanguageServiceExtension } from '../common/extensibility';
 
 export { MaxAnalysisTime } from './program';
 
@@ -332,7 +332,7 @@ export class AnalyzerService {
         }
 
         const configOptions = new ConfigOptions(projectRoot);
-        const defaultExcludes = ['**/node_modules', '**/__pycache__', '.venv', '.git'];
+        const defaultExcludes = ['**/node_modules', '**/__pycache__', '.git'];
 
         if (commandLineOptions.fileSpecs.length > 0) {
             commandLineOptions.fileSpecs.forEach(fileSpec => {
@@ -775,6 +775,7 @@ export class AnalyzerService {
         const visitDirectory = (absolutePath: string, includeRegExp: RegExp) => {
             if (this._configOptions.autoExcludeVenv) {
                 if (envMarkers.some(f => this._fs.existsSync(combinePaths(absolutePath, ...f)))) {
+                    this._console.log(`Auto-excluding ${absolutePath}`);
                     return;
                 }
             }
