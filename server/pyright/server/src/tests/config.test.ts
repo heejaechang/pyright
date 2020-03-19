@@ -48,7 +48,7 @@ test('FindFilesVirtualEnvAutoDetectExclude', () => {
 
     service.setOptions(commandLineOptions);
 
-    // The config file is empty
+    // The config file is empty, so no 'exclude' are specified
     // The myvenv directory is detected as a venv and will be automatically excluded
     const fileList = service.test_getFileNamesFromFileSpecs();
 
@@ -66,8 +66,7 @@ test('FindFilesVirtualEnvAutoDetectInclude', () => {
 
     service.setOptions(commandLineOptions);
 
-    // Config file defines 'exclude' folder but does not define 'autoExcludeVenv'
-    // so virtual env will be included
+    // Config file defines 'exclude' folder so virtual env will be included
     const fileList = service.test_getFileNamesFromFileSpecs();
 
     // There are 3 python files in the workspace, outside of myvenv
@@ -75,25 +74,6 @@ test('FindFilesVirtualEnvAutoDetectInclude', () => {
     // There is 1 python file in myvenv, which should be included
     const fileNames = fileList.map(p => getBaseFileName(p)).sort();
     assert.deepEqual(fileNames, ['library1.py', 'sample1.py', 'sample2.py', 'sample3.py']);
-});
-
-test('FindFilesVirtualEnvAutoDetectExcludeOverride', () => {
-    const cwd = normalizePath(combinePaths(process.cwd(), '../server'));
-    const service = new AnalyzerService('<default>', createFromRealFileSystem(), new NullConsole());
-    const commandLineOptions = new CommandLineOptions(cwd, true);
-    commandLineOptions.configFilePath = 'src/tests/samples/project_with_venv_auto_detect_exclude_override';
-
-    service.setOptions(commandLineOptions);
-
-    // Config file defines 'exclude' folder and defines 'autoExcludeVenv': true
-    // so virtual env will be excluded
-    const fileList = service.test_getFileNamesFromFileSpecs();
-
-    // There are 3 python files in the workspace, outside of myvenv
-    // There is 1 more python file in excluded folder
-    // There is 1 python file in myvenv, which should be excluded
-    const fileNames = fileList.map(p => getBaseFileName(p)).sort();
-    assert.deepEqual(fileNames, ['sample1.py', 'sample2.py', 'sample3.py']);
 });
 
 test('FileSpecNotAnArray', () => {
