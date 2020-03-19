@@ -44,6 +44,7 @@ steps:
       targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
       artifact: '$(imageName)-server-coverage-merged'
       publishLocation: 'pipeline'
+    condition: succeededOrFailed()
 
   - task: PublishTestResults@2
     displayName: Publish test results
@@ -51,6 +52,7 @@ steps:
       testResultsFormat: 'JUnit'
       testResultsFiles: '**/junit.xml'
       testRunTitle: 'Test results for JavaScript'
+    condition: succeededOrFailed()
 
   - task: PublishCodeCoverageResults@1
     displayName: Publish coverage results
@@ -58,3 +60,4 @@ steps:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
       failIfCoverageEmpty: true
+    condition: succeededOrFailed()
