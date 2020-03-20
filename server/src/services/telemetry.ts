@@ -13,7 +13,7 @@ export class TelemetryServiceImplementation implements TelemetryService {
 
     constructor(connection: any) {
         assert(connection);
-        this._connection = <IConnection>connection;
+        this._connection = connection as IConnection;
         assert(this._connection);
     }
 
