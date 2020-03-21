@@ -7,6 +7,7 @@
  * register jest tests for them and run
  */
 import * as path from 'path';
+
 import * as consts from '../../pyright/server/src/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
 import { runFourSlashTest } from '../../pyright/server/src/tests/harness/fourslash/runner';

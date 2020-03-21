@@ -26,7 +26,10 @@
         "test:all": "cd server && npm run test:all && cd ..",
         "test:all:pipeline": "cd server && npm run test:all:pipeline && cd ..",
         "syncpack:list": "syncpack list --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
-        "syncpack:fix": "syncpack fix-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\" --indent \"    \""
+        "syncpack:check": "syncpack list-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
+        "syncpack:fix": "syncpack fix-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\" --indent \"    \"",
+        "eslint": "eslint \"**/*.{ts,js}\"",
+        "prettier": "prettier -c \"**/*.{ts,js,md,yml}\""
     },
     "devDependencies": {
         "@types/node": "^13.9.2",

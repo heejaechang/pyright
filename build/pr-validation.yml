@@ -5,59 +5,106 @@ pr:
   branches:
     include: ['master']
 
-strategy:
-  matrix:
-    linux:
-      imageName: 'ubuntu-18.04'
-    mac:
-      imageName: 'macOS-10.15'
-    windows-microbuild: # Internal only but faster; do not use for public PRs.
-      poolName: 'VSEng-MicroBuildVS2019'
-    # windows:
-    #   imageName: 'vs2017-win2016'
+variables:
+  nodeVersion: '12.x'
 
-pool:
-  name: $[variables.poolName]
-  vmImage: $[variables.imageName]
+jobs:
+  - job: test
+    displayName: Build and test
+    strategy:
+      matrix:
+        linux:
+          jobName: Linux
+          imageName: 'ubuntu-18.04'
+        mac:
+          jobName: Mac
+          imageName: 'macOS-10.15'
+        windows-microbuild: # Internal only but faster; do not use for public PRs.
+          jobName: Windows
+          poolName: 'VSEng-MicroBuildVS2019'
+        # windows:
+        #   imageName: 'vs2017-win2016'
 
-steps:
-  - task: NodeTool@0
-    displayName: Use Node 12.x
-    inputs:
-      versionSpec: '12.x'
+    pool:
+      name: $[variables.poolName]
+      vmImage: $[variables.imageName]
 
-  - task: Npm@1
-    displayName: npm run package
-    inputs:
-      command: 'custom'
-      customCommand: 'run package'
+    steps:
+      - task: NodeTool@0
+        displayName: Use Node $(nodeVersion)
+        inputs:
+          versionSpec: $(nodeVersion)
 
-  - task: Npm@1
-    displayName: npm run test:all:pipeline
-    inputs:
-      command: 'custom'
-      customCommand: 'run test:all:pipeline'
+      - task: Npm@1
+        displayName: npm run package
+        inputs:
+          command: 'custom'
+          customCommand: 'run package'
 
-  - task: PublishPipelineArtifact@1
-    displayName: Publish Istanbul report as artifact
-    inputs:
-      targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
-      artifact: '$(imageName)-server-coverage-merged'
-      publishLocation: 'pipeline'
-    condition: succeededOrFailed()
+      - task: Npm@1
+        displayName: npm run test:all:pipeline
+        inputs:
+          command: 'custom'
+          customCommand: 'run test:all:pipeline'
 
-  - task: PublishTestResults@2
-    displayName: Publish test results
-    inputs:
-      testResultsFormat: 'JUnit'
-      testResultsFiles: '**/junit.xml'
-      testRunTitle: 'Test results for JavaScript'
-    condition: succeededOrFailed()
+      - task: PublishPipelineArtifact@1
+        displayName: Publish Istanbul report as artifact
+        inputs:
+          targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
+          artifact: '$(jobName)-server-coverage-merged'
+          publishLocation: 'pipeline'
+        condition: succeededOrFailed()
 
-  - task: PublishCodeCoverageResults@1
-    displayName: Publish coverage results
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
-      failIfCoverageEmpty: true
-    condition: succeededOrFailed()
+      - task: PublishTestResults@2
+        displayName: Publish test results
+        inputs:
+          testResultsFormat: 'JUnit'
+          testResultsFiles: '**/junit.xml'
+          testRunTitle: 'Test results for JavaScript'
+        condition: succeededOrFailed()
+
+      - task: PublishCodeCoverageResults@1
+        displayName: Publish coverage results
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
+          failIfCoverageEmpty: true
+        condition: succeededOrFailed()
+
+  - job: style
+    displayName: Style
+    pool:
+      vmImage: 'ubuntu-18.04'
+
+    steps:
+      - task: NodeTool@0
+        displayName: Use Node $(nodeVersion)
+        inputs:
+          versionSpec: $(nodeVersion)
+
+      - task: Npm@1
+        displayName: npm run install:all
+        inputs:
+          command: 'custom'
+          customCommand: 'run install:all'
+
+      - bash: git diff --exit-code --name-only
+        displayName: Diff after npm install
+
+      - task: Npm@1
+        displayName: npm run prettier
+        inputs:
+          command: 'custom'
+          customCommand: 'run prettier'
+
+      - task: Npm@1
+        displayName: npm run eslint
+        inputs:
+          command: 'custom'
+          customCommand: 'run eslint'
+
+      - task: Npm@1
+        displayName: npm run syncpack:check
+        inputs:
+          command: 'custom'
+          customCommand: 'run syncpack:check'

@@ -6,8 +6,10 @@
 
 import * as path from 'path';
 import { isArray } from 'util';
-import { CodeAction, CodeActionParams, Command, ExecuteCommandParams, CancellationToken } from 'vscode-languageserver';
+import { CancellationToken, CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
+
 import { CommandController } from './commands/commandController';
+import { IntelliCodeExtension } from './intelliCode/extension';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { AnalysisResults } from './pyright/server/src/analyzer/service';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
@@ -16,20 +18,19 @@ import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
-import { IntelliCodeExtension } from './intelliCode/extension';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
-import { AnalysisTracker } from './src/services/analysisTracker';
+import { LogLevel, LogService } from './src/common/logger';
 import {
-    TelemetryService,
-    sendMeasurementsTelemetry,
-    TelemetryEventName,
     addMeasurementsToEvent,
-    TelemetryEvent
+    sendMeasurementsTelemetry,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService
 } from './src/common/telemetry';
-import { TelemetryServiceImplementation } from './src/services/telemetry';
-import { LogService, LogLevel } from './src/common/logger';
+import { AnalysisTracker } from './src/services/analysisTracker';
 import { LogServiceImplementation } from './src/services/logger';
+import { TelemetryServiceImplementation } from './src/services/telemetry';
 
 class PyRxServer extends LanguageServerBase {
     private _controller: CommandController;
