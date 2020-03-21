@@ -1,7 +1,7 @@
 /*
  * telemetry.ts
  *
- * Telemetry service implemtation.
+ * Telemetry service implementation.
  */
 
 import { TelemetryService, TelemetryEvent } from '../common/telemetry';

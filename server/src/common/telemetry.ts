@@ -11,6 +11,8 @@ export enum TelemetryEventName {
     EXCEPTION_IC = 'exception_intellicode'
 }
 
+export const eventNamePrefix = 'mpls_node/';
+
 // Note: These names must match the expected values in the VSCode Python Extension
 // https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
 export class TelemetryEvent {
@@ -25,7 +27,7 @@ export class TelemetryEvent {
     } = {};
 
     constructor(eventName: string) {
-        this.EventName = `mpls_node/${eventName}`;
+        this.EventName = `${eventNamePrefix}${eventName}`;
     }
 }
 
