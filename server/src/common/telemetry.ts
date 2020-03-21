@@ -37,11 +37,11 @@ export function sendExceptionTelemetry(ts: TelemetryService, eventName: Telemetr
     if (!(e instanceof Error)) {
         return;
     }
-    const error = <Error>e;
+
     const te = new TelemetryEvent(eventName);
-    te.Properties['exception-name'] = error.name;
-    if (error.stack) {
-        te.Properties['exception-call-stack'] = error.stack;
+    te.Properties['exception-name'] = e.name;
+    if (e.stack) {
+        te.Properties['exception-call-stack'] = e.stack;
     }
     this.telemetry.sendTelemetry(te);
 }
