@@ -17,7 +17,7 @@ export class LogServiceImplementation implements LogService {
     }
 
     log(level: LogLevel, message: string): void {
-        if (level < this._minLevel) {
+        if (level > this._minLevel) {
             return;
         }
         switch (level) {
