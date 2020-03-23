@@ -88,7 +88,7 @@ on both products in VS Code.
 
 #### Interface naming
 
--   When definining interface use plain name. Do not prefix with' I' or use 'Interface' suffix. Instead, name class that implements the interface with 'Implemetation' or 'Impl' suffix. Example:
+-   When definining interface use plain name. Do not prefix with 'I' or use 'Interface' suffix. Instead, name class that implements the interface with 'Implemetation' or 'Impl' suffix. Example:
 
 ```ts
 export interface TelememetryService {}
