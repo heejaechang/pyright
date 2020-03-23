@@ -1,7 +1,7 @@
 /*
  * telemetry.ts
  *
- * Telemetry service implemtation.
+ * Telemetry service implementation.
  */
 
 import { assert } from 'console';

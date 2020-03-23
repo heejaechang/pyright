@@ -67,6 +67,14 @@ Add `--inspect-brk` to `debugOptions` in `activate(context: ExtensionContext)`, 
 const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', '--inspect-brk'] };
 ```
 
+### Tests
+
+-   [Jest](https://jestjs.io/) is the test runner.
+-   Use [ts-mockito](https://www.npmjs.com/package/ts-mockito) for mocking.
+-   To run or debug tests in current file use `PyRx jest current file` task.
+-   To run all tests from command line use `npx jest`.
+-   Useful extensions: `Jest` (from Orta)
+
 ### Code style
 
 Code style should generally match Python extension in order to simplify work
@@ -77,3 +85,12 @@ on both products in VS Code.
     -   The following file types will be automatically formatted: `*.ts`, `*.js`, `*.md`
 -   Linting: install [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
     -   TSLint is deprecated; do not use it.
+
+#### Interface naming
+
+-   When definining interface use plain name. Do not prefix with 'I' or use 'Interface' suffix. Instead, name class that implements the interface with 'Implemetation' or 'Impl' suffix. Example:
+
+```ts
+export interface TelememetryService {}
+export class TelememetryServiceImpl implements TelememetryService {}
+```

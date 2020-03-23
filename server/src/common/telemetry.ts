@@ -11,6 +11,8 @@ export enum TelemetryEventName {
     EXCEPTION_IC = 'exception_intellicode'
 }
 
+export const eventNamePrefix = 'mpls_node/';
+
 // Note: These names must match the expected values in the VSCode Python Extension
 // https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
 export class TelemetryEvent {
@@ -25,7 +27,7 @@ export class TelemetryEvent {
     } = {};
 
     constructor(eventName: string) {
-        this.EventName = `mpls_node/${eventName}`;
+        this.EventName = `${eventNamePrefix}${eventName}`;
     }
 }
 
@@ -37,13 +39,12 @@ export function sendExceptionTelemetry(ts: TelemetryService, eventName: Telemetr
     if (!(e instanceof Error)) {
         return;
     }
-
     const te = new TelemetryEvent(eventName);
     te.Properties['exception-name'] = e.name;
     if (e.stack) {
         te.Properties['exception-call-stack'] = e.stack;
     }
-    this.telemetry.sendTelemetry(te);
+    ts.sendTelemetry(te);
 }
 
 export function sendMeasurementsTelemetry(
@@ -53,7 +54,7 @@ export function sendMeasurementsTelemetry(
 ) {
     const te = new TelemetryEvent(telemetryEventName);
     addMeasurementsToEvent(te, metrics);
-    this.telemetry.sendTelemetry(te);
+    ts.sendTelemetry(te);
 }
 
 export function addMeasurementsToEvent(te: TelemetryEvent, metrics: Object) {
