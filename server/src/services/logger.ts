@@ -9,16 +9,16 @@ import { RemoteConsole } from 'vscode-languageserver';
 import { LogLevel, LogService } from '../common/logger';
 
 export class LogServiceImplementation implements LogService {
-    private _minLevel: LogLevel = LogLevel.Info;
+    private _maxLevel: LogLevel = LogLevel.Info;
 
     constructor(private _console?: RemoteConsole) {}
 
     setLogLevel(level: LogLevel): void {
-        this._minLevel = level;
+        this._maxLevel = level;
     }
 
     log(level: LogLevel, message: string): void {
-        if (level > this._minLevel) {
+        if (level > this._maxLevel) {
             return;
         }
         switch (level) {
