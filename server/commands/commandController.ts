@@ -4,7 +4,8 @@
  * Implements language server commands execution functionality.
  */
 
-import { ExecuteCommandParams, CancellationToken } from 'vscode-languageserver';
+import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
+
 import { CommandController as PyrightCommandController } from '../pyright/server/src/commands/commandController';
 import { Commands as PyrightCommands } from '../pyright/server/src/commands/commands';
 import { LanguageServerInterface } from '../pyright/server/src/languageServerBase';

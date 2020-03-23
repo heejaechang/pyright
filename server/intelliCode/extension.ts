@@ -4,11 +4,12 @@
  * Language service extension implementing IntelliCode.
  */
 
-import { CompletionListExtension, LanguageServiceExtension } from '../pyright/server/src/common/extensibility';
 import { Position } from 'vscode';
-import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
-import { ConfigOptions } from '../pyright/server/src/common/configOptions';
 import { CompletionList } from 'vscode-languageserver';
+
+import { ConfigOptions } from '../pyright/server/src/common/configOptions';
+import { CompletionListExtension, LanguageServiceExtension } from '../pyright/server/src/common/extensibility';
+import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
     completionListExtension: CompletionListExtension = new IntelliCodeCompletionListExtension();

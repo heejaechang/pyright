@@ -5,16 +5,16 @@
  * resolution of additional type stub paths.
  */
 
-import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
-import { ImportResolver, ImportedModuleDescriptor } from './pyright/server/src/analyzer/importResolver';
+import { ImportedModuleDescriptor, ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
-import { VirtualFileSystem } from './pyright/server/src/common/vfs';
+import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
 import {
-    normalizePath,
-    getDirectoryPath,
+    combinePaths,
     ensureTrailingDirectorySeparator,
-    combinePaths
+    getDirectoryPath,
+    normalizePath
 } from './pyright/server/src/common/pathUtils';
+import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 
 function getBundledTypeStubsPath(moduleDirectory?: string) {
     if (moduleDirectory) {
