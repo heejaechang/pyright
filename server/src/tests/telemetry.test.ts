@@ -5,17 +5,18 @@
  */
 
 import * as assert from 'assert';
-import { mock, when, verify, capture, instance } from 'ts-mockito';
+import { capture, instance, mock, verify, when } from 'ts-mockito';
 import { IConnection, Telemetry } from 'vscode-languageserver';
-import { TelemetryServiceImplementation } from '../services/telemetry';
+
 import {
-    sendExceptionTelemetry,
-    TelemetryEventName,
-    TelemetryEvent,
     eventNamePrefix,
-    TelemetryService,
-    sendMeasurementsTelemetry
+    sendExceptionTelemetry,
+    sendMeasurementsTelemetry,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService
 } from '../common/telemetry';
+import { TelemetryServiceImplementation } from '../services/telemetry';
 
 let ts: TelemetryService;
 let mockedTelemetry: Telemetry;

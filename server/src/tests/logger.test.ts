@@ -5,9 +5,10 @@
  */
 
 import * as assert from 'assert';
-import { mock, verify, capture, instance, anyString } from 'ts-mockito';
-import { LogService, LogLevel } from '../common/logger';
+import { anyString, capture, instance, mock, verify } from 'ts-mockito';
 import { RemoteConsole } from 'vscode-languageserver';
+
+import { LogLevel, LogService } from '../common/logger';
 import { LogServiceImplementation } from '../services/logger';
 
 let ls: LogService;
