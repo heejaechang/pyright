@@ -14,7 +14,10 @@
  * taken by the TypeScript compiler.
  */
 
+import { CancellationToken } from 'vscode-languageserver';
+
 import { Commands } from '../commands/commands';
+import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { DiagnosticLevel } from '../common/configOptions';
 import { assert, fail } from '../common/debug';
 import { AddMissingOptionalToParamAction, Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
@@ -346,6 +349,8 @@ export interface CallResult {
 }
 
 export interface TypeEvaluator {
+    runWithCancellationToken<T>(token: CancellationToken, callback: () => T): T;
+
     getType: (node: ExpressionNode) => Type | undefined;
     getTypeOfClass: (node: ClassNode) => ClassTypeResult | undefined;
     getTypeOfFunction: (node: FunctionNode) => FunctionTypeResult | undefined;
@@ -473,9 +478,25 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     const typeCache = new Map<number, CachedType>();
 
     let speculativeModeId = invalidSpeculativeModeId;
+    let cancellationToken: CancellationToken | undefined;
 
     const returnTypeInferenceContextStack: ReturnTypeInferenceContext[] = [];
     let returnTypeInferenceTypeCache: Map<number, CachedType> | undefined;
+
+    function runWithCancellationToken<T>(token: CancellationToken, callback: () => T): T {
+        try {
+            cancellationToken = token;
+            return callback();
+        } finally {
+            cancellationToken = undefined;
+        }
+    }
+
+    function checkForCancellation() {
+        if (cancellationToken) {
+            throwIfCancellationRequested(cancellationToken);
+        }
+    }
 
     function hasGrownTooLarge(): boolean {
         // We may need to discard the evaluator instance and its caches if they
@@ -632,6 +653,11 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getTypeOfExpression(node: ExpressionNode, expectedType?: Type, flags = EvaluatorFlags.None): TypeResult {
+        // This is a frequently-called routine, so it's a good place to call
+        // the cancellation check. If the operation is canceled, an exception
+        // will be thrown at this point.
+        checkForCancellation();
+
         // Is this type already cached?
         const cachedType = readTypeCache(node);
         if (cachedType) {
@@ -9653,6 +9679,11 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     function getFunctionInferredReturnType(type: FunctionType, args?: ValidateArgTypeParams[]) {
         let returnType: Type | undefined;
 
+        // Don't attempt to infer the return type for a stub file.
+        if (FunctionType.isStubDefinition(type)) {
+            return UnknownType.create();
+        }
+
         // If the return type has already been lazily evaluated,
         // don't bother computing it again.
         if (type.inferredReturnType) {
@@ -9660,9 +9691,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         } else {
             if (type.details.declaration) {
                 const functionNode = type.details.declaration.node;
-
-                // We should never get here if there is a type annotation.
-                assert(!functionNode.returnTypeAnnotation);
 
                 // Temporarily disable speculative mode while we
                 // lazily evaluate the return type.
@@ -10209,6 +10237,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                                 recursionCount + 1
                             )
                         ) {
+                            if (destTypeParam) {
+                                diag.addMessage(`Type variable '${destTypeParam.name}' is covariant`);
+                            }
                             return false;
                         }
                     } else if (destTypeParam.isContravariant) {
@@ -10222,6 +10253,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                                 recursionCount + 1
                             )
                         ) {
+                            diag.addMessage(`Type variable '${destTypeParam.name}' is contravariant`);
                             return false;
                         }
                     } else {
@@ -10235,6 +10267,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                                 recursionCount + 1
                             )
                         ) {
+                            diag.addMessage(`Type variable '${destTypeParam.name}' is invariant`);
                             return false;
                         }
                     }
@@ -10820,8 +10853,11 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     ): boolean {
         let canAssign = true;
 
-        const srcParamCount = srcType.details.parameters.length;
-        const destParamCount = destType.details.parameters.length;
+        // Count the number of parameters that have names. We'll exclude
+        // pseudo-parameters (* and /) that designate name-only and position-only
+        // separators.
+        const srcParamCount = srcType.details.parameters.filter(param => param.name).length;
+        const destParamCount = destType.details.parameters.filter(param => param.name).length;
         const minParamCount = Math.min(srcParamCount, destParamCount);
 
         // Match as many input parameters as we can.
@@ -10874,8 +10910,10 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         const srcParams = srcType.details.parameters;
         const destParams = destType.details.parameters;
 
-        const srcHasVarArgs = srcParams.find(param => param.category !== ParameterCategory.Simple) !== undefined;
-        const destHasVarArgs = destParams.find(param => param.category !== ParameterCategory.Simple) !== undefined;
+        const srcHasVarArgs =
+            srcParams.find(param => param.name && param.category !== ParameterCategory.Simple) !== undefined;
+        const destHasVarArgs =
+            destParams.find(param => param.name && param.category !== ParameterCategory.Simple) !== undefined;
 
         if (checkNamedParams) {
             // Handle matching of named (keyword) parameters.
@@ -10946,7 +10984,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         // with values. Plus, the number of source params must be enough to
         // accept all of the dest arguments.
         if (!srcHasVarArgs && !destHasVarArgs) {
-            const nonDefaultSrcParamCount = srcParams.filter(param => !param.hasDefault).length;
+            const nonDefaultSrcParamCount = srcParams.filter(param => !!param.name && !param.hasDefault).length;
 
             if (destParamCount < nonDefaultSrcParamCount) {
                 diag.addMessage(
@@ -11630,6 +11668,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     return {
+        runWithCancellationToken,
         getType,
         getTypeOfClass,
         getTypeOfFunction,
