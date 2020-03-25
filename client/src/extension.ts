@@ -13,16 +13,30 @@ import * as path from 'path';
 import { commands, ExtensionContext, Position, Range, TextEditor, TextEditorEdit } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TextEdit, TransportKind } from 'vscode-languageclient';
 
+import { FileBasedCancellationStrategy } from './cancellationUtils';
 import { ProgressReporting } from './progress';
 
+let cancellationStrategy: FileBasedCancellationStrategy | undefined;
+
 export function activate(context: ExtensionContext) {
+    cancellationStrategy = new FileBasedCancellationStrategy();
+
     const nonBundlePath = context.asAbsolutePath(path.join('server', 'server.js'));
     const debugOptions = { execArgv: ['--nolazy', '--inspect=6600'] };
 
     // If the extension is launched in debug mode, then the debug server options are used.
     const serverOptions: ServerOptions = {
-        run: { module: nonBundlePath, transport: TransportKind.ipc },
-        debug: { module: nonBundlePath, transport: TransportKind.ipc, options: debugOptions }
+        run: {
+            module: nonBundlePath,
+            transport: TransportKind.ipc,
+            args: cancellationStrategy.getCommandLineArguments()
+        },
+        debug: {
+            module: nonBundlePath,
+            transport: TransportKind.ipc,
+            args: cancellationStrategy.getCommandLineArguments(),
+            options: debugOptions
+        }
     };
 
     // Options to control the language client
@@ -37,7 +51,8 @@ export function activate(context: ExtensionContext) {
         synchronize: {
             // Synchronize the setting section to the server.
             configurationSection: ['python', 'pyright']
-        }
+        },
+        connectionOptions: { cancellationStrategy: cancellationStrategy }
     };
 
     // Create the language client and start the client.
@@ -104,6 +119,11 @@ export function activate(context: ExtensionContext) {
 }
 
 export function deactivate() {
+    if (cancellationStrategy) {
+        cancellationStrategy.dispose();
+        cancellationStrategy = undefined;
+    }
+
     // Return undefined rather than a promise to indicate
     // that deactivation is done synchronously. We don't have
     // anything to do here.
