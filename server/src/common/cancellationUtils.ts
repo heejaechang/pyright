@@ -31,7 +31,7 @@ class CancellationThrottle {
         // file system more often than this, type analysis performance
         // is affected. If we call it less often, performance doesn't
         // improve much, but responsiveness suffers.
-        const minTimeBetweenChecksInMs = 5;
+        const minTimeBetweenChecksInMs = 50;
         const curTimestamp = Date.now().valueOf();
         const timeSinceLastCheck = curTimestamp - this._lastCheckTimestamp;
 
