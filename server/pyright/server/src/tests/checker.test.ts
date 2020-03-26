@@ -243,7 +243,7 @@ test('TypeConstraint1', () => {
 test('TypeConstraint2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint2.py']);
 
-    validateResults(analysisResults, 8);
+    validateResults(analysisResults, 4);
 });
 
 test('TypeConstraint3', () => {
@@ -564,6 +564,12 @@ test('Tuples4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples4.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('Tuples5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples5.py']);
+
+    validateResults(analysisResults, 2);
 });
 
 test('NamedTuples1', () => {

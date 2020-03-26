@@ -615,16 +615,16 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getTypeOfExpression(node: ExpressionNode, expectedType?: Type, flags = EvaluatorFlags.None): TypeResult {
-        // This is a frequently-called routine, so it's a good place to call
-        // the cancellation check. If the operation is canceled, an exception
-        // will be thrown at this point.
-        checkForCancellation();
-
         // Is this type already cached?
         const cachedType = readTypeCache(node);
         if (cachedType) {
             return { type: cachedType, node };
         }
+
+        // This is a frequently-called routine, so it's a good place to call
+        // the cancellation check. If the operation is canceled, an exception
+        // will be thrown at this point.
+        checkForCancellation();
 
         let typeResult: TypeResult | undefined;
 
@@ -849,7 +849,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     if (node.child) {
                         getTypeOfExpression(node.child);
                     }
-                });
+                }, false);
                 typeResult = { type: UnknownType.create(), node };
                 break;
             }
@@ -1456,27 +1456,14 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         ) {
                             variableNameNode = statement.leftExpression.valueExpression;
                             variableTypeEvaluator = () =>
-                                convertClassToObject(
-                                    getTypeOfExpression(
-                                        (statement.leftExpression as TypeAnnotationNode).typeAnnotation,
-                                        undefined,
-                                        EvaluatorFlags.ConvertEllipsisToAny
-                                    ).type
-                                );
+                                getTypeOfAnnotation((statement.leftExpression as TypeAnnotationNode).typeAnnotation);
                         }
 
                         hasDefaultValue = true;
                     } else if (statement.nodeType === ParseNodeType.TypeAnnotation) {
                         if (statement.valueExpression.nodeType === ParseNodeType.Name) {
                             variableNameNode = statement.valueExpression;
-                            variableTypeEvaluator = () =>
-                                convertClassToObject(
-                                    getTypeOfExpression(
-                                        statement.typeAnnotation,
-                                        undefined,
-                                        EvaluatorFlags.ConvertEllipsisToAny | EvaluatorFlags.EvaluateStringLiteralAsType
-                                    ).type
-                                );
+                            variableTypeEvaluator = () => getTypeOfAnnotation(statement.typeAnnotation);
                         }
                     }
 
@@ -2197,7 +2184,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     if (target.child) {
                         getTypeOfExpression(target.child);
                     }
-                });
+                }, false);
                 break;
             }
 
@@ -2247,7 +2234,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     if (node.child) {
                         getTypeOfExpression(node.child);
                     }
-                });
+                }, false);
                 break;
             }
 
@@ -5189,7 +5176,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         let leftType: Type | undefined;
         useSpeculativeMode(() => {
             leftType = getTypeOfExpression(node.leftExpression).type;
-        });
+        }, false);
         if (leftType!.category === TypeCategory.TypeVar) {
             leftType = specializeType(leftType!, undefined);
         }
@@ -6097,15 +6084,30 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             typeArgs.forEach((typeArg, index) => {
                 if (isEllipsisType(typeArg.type)) {
                     if (!allowEllipsis) {
-                        addError(`'...' not allowed in this context`, typeArgs[index].node);
-                    } else if (typeArgs.length !== 2 || index !== 1) {
-                        addError(`'...' allowed only as the second of two arguments`, typeArgs[index].node);
+                        addError(`'...' not allowed in this context`, typeArg.node);
+                    } else if (typeArgs!.length !== 2 || index !== 1) {
+                        addError(`'...' allowed only as the second of two arguments`, typeArg.node);
                     }
                     if (typeArg.type.category === TypeCategory.Module) {
                         addError(`Module not allowed in this context`, typeArg.node);
                     }
                 }
             });
+
+            // Handle Tuple[()] as a special case, as defined in PEP 483.
+            if (ClassType.isBuiltIn(classType, 'Tuple')) {
+                if (typeArgs.length === 1) {
+                    const arg0Type = typeArgs[0].type;
+                    if (
+                        arg0Type.category === TypeCategory.Object &&
+                        ClassType.isBuiltIn(arg0Type.classType, 'Tuple') &&
+                        arg0Type.classType.typeArguments &&
+                        arg0Type.classType.typeArguments.length === 0
+                    ) {
+                        typeArgs = [];
+                    }
+                }
+            }
         }
 
         let typeArgTypes = typeArgs ? typeArgs.map(t => convertClassToObject(t.type)) : [];
@@ -9170,10 +9172,15 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     // Disables recording of errors and warnings and disables
     // any caching of types, under the assumption that we're
     // performing speculative evaluations.
-    function useSpeculativeMode(callback: () => void) {
-        speculativeTypeTracker.enterSpeculativeContext();
-        callback();
-        speculativeTypeTracker.leaveSpeculativeContext();
+    function useSpeculativeMode(callback: () => void, requiresNewContext = true) {
+        if (requiresNewContext || !speculativeTypeTracker.isSpeculative()) {
+            speculativeTypeTracker.enterSpeculativeContext();
+            callback();
+            speculativeTypeTracker.leaveSpeculativeContext();
+        } else {
+            // Use the existing speculative context.
+            callback();
+        }
     }
 
     function isSpeculativeMode() {
@@ -10123,25 +10130,27 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 // Handle built-in types that support arbitrary numbers
                 // of type parameters like Tuple.
                 if (destType.details.name === 'Tuple') {
-                    const destTypeArgs = destType.typeArguments || [];
-                    let destArgCount = destTypeArgs.length;
-                    const isDestHomogenousTuple = destArgCount === 2 && isEllipsisType(destTypeArgs[1]);
-                    if (isDestHomogenousTuple) {
-                        destArgCount = 1;
-                    }
+                    if (destType.typeArguments && curSrcType.typeArguments) {
+                        const destTypeArgs = destType.typeArguments;
+                        let destArgCount = destTypeArgs.length;
+                        const isDestHomogenousTuple = destArgCount === 2 && isEllipsisType(destTypeArgs[1]);
+                        if (isDestHomogenousTuple) {
+                            destArgCount = 1;
+                        }
 
-                    const srcTypeArgs = curSrcType.typeArguments || [];
-                    let srcArgCount = srcTypeArgs.length;
-                    const isSrcHomogeneousType = srcArgCount === 2 && isEllipsisType(srcTypeArgs[1]);
-                    if (isSrcHomogeneousType) {
-                        srcArgCount = 1;
-                    }
+                        const srcTypeArgs = curSrcType.typeArguments;
+                        let srcArgCount = srcTypeArgs.length;
+                        const isSrcHomogeneousType = srcArgCount === 2 && isEllipsisType(srcTypeArgs[1]);
+                        if (isSrcHomogeneousType) {
+                            srcArgCount = 1;
+                        }
 
-                    if (srcArgCount > 0 && destArgCount > 0) {
                         if (srcTypeArgs.length === destArgCount || isDestHomogenousTuple || isSrcHomogeneousType) {
                             for (let i = 0; i < Math.max(destArgCount, srcArgCount); i++) {
-                                const expectedDestType = isDestHomogenousTuple ? destTypeArgs[0] : destTypeArgs[i];
-                                const expectedSrcType = isSrcHomogeneousType ? srcTypeArgs[0] : srcTypeArgs[i];
+                                const expectedDestType =
+                                    (isDestHomogenousTuple ? destTypeArgs[0] : destTypeArgs[i]) || AnyType.create();
+                                const expectedSrcType =
+                                    (isSrcHomogeneousType ? srcTypeArgs[0] : srcTypeArgs[i]) || AnyType.create();
 
                                 if (
                                     !canAssignType(
