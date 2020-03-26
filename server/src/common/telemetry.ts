@@ -35,8 +35,8 @@ export interface TelemetryService {
     sendTelemetry(event: TelemetryEvent): void;
 }
 
-export function sendExceptionTelemetry(ts: TelemetryService, eventName: TelemetryEventName, e: any): void {
-    if (!(e instanceof Error)) {
+export function sendExceptionTelemetry(ts: TelemetryService | undefined, eventName: TelemetryEventName, e: any): void {
+    if (!ts || !(e instanceof Error)) {
         return;
     }
     const te = new TelemetryEvent(eventName);
@@ -48,10 +48,13 @@ export function sendExceptionTelemetry(ts: TelemetryService, eventName: Telemetr
 }
 
 export function sendMeasurementsTelemetry(
-    ts: TelemetryService,
+    ts: TelemetryService | undefined,
     telemetryEventName: TelemetryEventName,
     metrics: Object
 ) {
+    if (!ts) {
+        return;
+    }
     const te = new TelemetryEvent(telemetryEventName);
     addMeasurementsToEvent(te, metrics);
     ts.sendTelemetry(te);

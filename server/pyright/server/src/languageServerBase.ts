@@ -150,6 +150,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return new ImportResolver(fs, options);
     }
 
+    protected setExtension(extension: any): void {
+        this._extension = extension;
+    }
+
     // Provides access to logging to the client output window.
     get console(): RemoteConsole {
         return this._connection.console;

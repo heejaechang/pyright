@@ -1,7 +1,7 @@
 /*
- * telemetry.test.ts
+ * logger.test.ts
  *
- * Telemetry service tests.
+ * Logger service tests.
  */
 
 import * as assert from 'assert';
