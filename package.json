@@ -32,12 +32,12 @@
         "prettier": "prettier -c \"**/*.{ts,js,md,yml}\""
     },
     "devDependencies": {
-        "@types/node": "^13.9.2",
-        "@typescript-eslint/eslint-plugin": "^2.24.0",
-        "@typescript-eslint/parser": "^2.24.0",
+        "@types/node": "^13.9.5",
+        "@typescript-eslint/eslint-plugin": "^2.25.0",
+        "@typescript-eslint/parser": "^2.25.0",
         "del-cli": "^3.0.0",
         "eslint": "^6.8.0",
-        "eslint-config-prettier": "^6.10.0",
+        "eslint-config-prettier": "^6.10.1",
         "eslint-plugin-simple-import-sort": "^5.0.2",
         "fs-extra": "^8.1.0",
         "prettier": "1.19.1",
