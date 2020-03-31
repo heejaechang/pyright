@@ -1,0 +1,50 @@
+name: git-subrepo
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  check:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@v2-beta
+        with:
+          fetch-depth: 0
+
+      # Check that the parent commit of the most recent subrepo pull exists in the history.
+      # Without it, git-subrepo does not have a reference point to produce its diffs.
+      - name: Check pyrx parent
+        run: git merge-base --is-ancestor $(git config --file server/pyright/.gitrepo subrepo.parent) HEAD
+
+      # On PR, if the changes include .gitrepo, warn the user to not squash commits.
+      - name: Warn on .subrepo change
+        if: ${{ github.repository == 'microsoft/pyrx' && github.event_name == 'pull_request' }}
+        run: |
+          if git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep --quiet '\.subrepo'; then
+            pull_number=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+
+            # Pull current list of labels.
+            curl https://api.github.com/repos/microsoft/pyrx/issues/$pull_number | jq '[.labels[].name]' > labels.json
+
+            # If no git-subrepo label yet, add one and comment.
+            if jq -e 'contains(["git-subrepo"]) | not' < labels.json > /dev/null; then
+              jq '. += ["git-subrepo"] | {"labels": .}' < labels.json \
+                | curl --request PATCH \
+                --url https://api.github.com/repos/microsoft/pyrx/issues/$pull_number \
+                --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+                --header 'content-type: application/json' \
+                --data -
+
+              curl --request POST \
+                --url https://api.github.com/repos/microsoft/pyrx/issues/$pull_number/comments \
+                --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+                --header 'content-type: application/json' \
+                --data '{"body": "This PR appears to contain a git-subrepo change. Please ensure to submit this PR as a merge commit; do not squash."}'
+            fi
+          fi
