@@ -4,7 +4,6 @@
  * AST walker of assignments.
  */
 
-import { ParseTreeWalker } from '../pyright/server/src/analyzer/parseTreeWalker';
 import {
     AssignmentNode,
     CallNode,
@@ -23,13 +22,17 @@ import {
     ParseNodeType,
     WithNode
 } from '../pyright/server/src/parser/parseNodes';
-import { Assignment, getStandardVariableType, IntelliCodeConstants, Scope, StandardVariableType } from './nodes';
+import { BaseParseTreeWalker } from './baseParseTreeWalker';
+import { Assignment, getStandardVariableType, IntelliCodeConstants, StandardVariableType } from './nodes';
+import { resolveFunction, resolveVariable } from './resolution';
+import { getScopeQualifiedName, Scope } from './scope';
 
-export class AssignmentWalker extends ParseTreeWalker {
-    // Walk results
-    public scopes: Scope[];
-    // Current scope's function node
-    private _currentScope: Scope;
+export class AssignmentWalker extends BaseParseTreeWalker {
+    constructor(moduleNode: ModuleNode) {
+        super();
+        this.scopes = [new Scope('<module>', 0, null, moduleNode, [])];
+        this._currentScope = this.scopes[0];
+    }
 
     // Scope closure tracking
     visitNode(node: ParseNode): ParseNodeArray {
@@ -146,7 +149,7 @@ export class AssignmentWalker extends ParseTreeWalker {
                     if (!listName.value) {
                         break;
                     }
-                    let resolvedName = this.resolveVariable(this._currentScope, listName.value, listName.start);
+                    let resolvedName = resolveVariable(this._currentScope, listName.value, listName.start);
                     if (IntelliCodeConstants.UnresolvedType && !resolvedName) {
                         resolvedName = IntelliCodeConstants.UnresolvedType;
                     }
@@ -250,7 +253,7 @@ export class AssignmentWalker extends ParseTreeWalker {
             case ParseNodeType.Name:
                 {
                     // check for assignments p = q
-                    const value = this.resolveVariable(this._currentScope, right.value, right.start);
+                    const value = resolveVariable(this._currentScope, right.value, right.start);
                     if (value && value.length > 0) {
                         this._currentScope.assignments.push(new Assignment(leftVariableName, value, startIndex));
                     }
@@ -285,7 +288,7 @@ export class AssignmentWalker extends ParseTreeWalker {
     }
 
     private handleClassOrFunction(node: ClassNode | FunctionNode): boolean {
-        this._currentScope = new Scope(node.name.value, node.start, this._currentScope, node);
+        this._currentScope = new Scope(getScopeQualifiedName(node), node.start, this._currentScope, node);
         this.scopes.push(this._currentScope);
         return true;
     }
@@ -309,7 +312,7 @@ export class AssignmentWalker extends ParseTreeWalker {
                     if (targetName === 'self') {
                         return;
                     }
-                    const resolvedName = this.resolveVariable(this._currentScope, targetName, m.leftExpression.start);
+                    const resolvedName = resolveVariable(this._currentScope, targetName, m.leftExpression.start);
                     targetName =
                         resolvedName && resolvedName.length > 0
                             ? resolvedName
@@ -319,7 +322,7 @@ export class AssignmentWalker extends ParseTreeWalker {
                     const combineNamed =
                         targetName === IntelliCodeConstants.UnresolvedType
                             ? IntelliCodeConstants.UnresolvedType
-                            : `${targetName}.${this.resolveFunction(rightHandSide, functionName)}`;
+                            : `${targetName}.${resolveFunction(rightHandSide, functionName)}`;
                     this._currentScope.assignments.push(
                         new Assignment(leftVariableName, combineNamed, target.start + target.length)
                     );
@@ -329,7 +332,7 @@ export class AssignmentWalker extends ParseTreeWalker {
             case ParseNodeType.StringList:
             case ParseNodeType.String:
                 {
-                    const combineNamed = `${StandardVariableType.String}.${this.resolveFunction(
+                    const combineNamed = `${StandardVariableType.String}.${resolveFunction(
                         rightHandSide,
                         functionName
                     )}`;
@@ -341,7 +344,7 @@ export class AssignmentWalker extends ParseTreeWalker {
 
             case ParseNodeType.Number:
                 {
-                    const combineNamed = `${getStandardVariableType(target)}.${this.resolveFunction(
+                    const combineNamed = `${getStandardVariableType(target)}.${resolveFunction(
                         rightHandSide,
                         functionName
                     )}`;
@@ -359,10 +362,10 @@ export class AssignmentWalker extends ParseTreeWalker {
                             leftVariableName,
                             leftStartIndex,
                             callTarget,
-                            this.resolveFunction(rightHandSide, functionName)
+                            resolveFunction(rightHandSide, functionName)
                         );
                     } else if (callTarget.nodeType === ParseNodeType.Name) {
-                        const combineNamed = `${callTarget.value}.${this.resolveFunction(rightHandSide, functionName)}`;
+                        const combineNamed = `${callTarget.value}.${resolveFunction(rightHandSide, functionName)}`;
                         this._currentScope.assignments.push(
                             new Assignment(leftVariableName, combineNamed, target.start + target.length)
                         );
@@ -375,7 +378,7 @@ export class AssignmentWalker extends ParseTreeWalker {
                     leftVariableName,
                     leftStartIndex,
                     target,
-                    this.resolveFunction(rightHandSide, functionName)
+                    resolveFunction(rightHandSide, functionName)
                 );
                 break;
 
@@ -386,108 +389,10 @@ export class AssignmentWalker extends ParseTreeWalker {
                             leftVariableName,
                             leftStartIndex,
                             target.baseExpression,
-                            this.resolveFunction(rightHandSide, functionName)
+                            resolveFunction(rightHandSide, functionName)
                         );
                     } else if (target.baseExpression.nodeType === ParseNodeType.Name) {
                         this.handleAssignment(leftVariableName, leftStartIndex, target.baseExpression);
-                    }
-                }
-                break;
-        }
-    }
-
-    private resolveFunction(rightHandSide: string, functionName: string): string {
-        return rightHandSide && rightHandSide.length > 0 ? `${functionName}.${rightHandSide}` : functionName;
-    }
-
-    // Resolve variable from a scope upwards until reaches root
-    private resolveVariable(scope: Scope, variableName: string, beforeIndex: number): string | undefined {
-        if (!variableName || !scope || (!scope.parent && (!scope.assignments || scope.assignments.length === 0))) {
-            return variableName;
-        }
-        let currentScope = scope;
-        const assignments = currentScope.assignments;
-        let result = this.resolveAssignments(assignments, variableName, beforeIndex);
-        while (!result && currentScope.parent) {
-            currentScope = currentScope.parent;
-            result = this.resolveAssignments(assignments, variableName, beforeIndex);
-        }
-        return result;
-    }
-
-    // Evaluate previous assignments to resolve defined variable types
-    private resolveAssignments(
-        assignments: Assignment[] | undefined,
-        variableName: string,
-        beforeIndex: number
-    ): string | undefined {
-        if (!assignments) {
-            return undefined;
-        }
-        // Resolve from back to front, variable type is always the latest defined
-        let resolvedName: string | undefined;
-        for (let i = assignments.length - 1; i >= 0; i--) {
-            const prevAssignment = assignments[i];
-            if (prevAssignment.spanStart > beforeIndex) {
-                continue;
-            }
-
-            if (prevAssignment.key === variableName && !resolvedName) {
-                resolvedName = prevAssignment.value;
-            } else if (resolvedName === prevAssignment.key) {
-                resolvedName = prevAssignment.value;
-            }
-        }
-        return resolvedName;
-    }
-
-    private getEnclosingScopeForNode(node: ParseNode): ClassNode | FunctionNode | ModuleNode {
-        if (node.nodeType === ParseNodeType.Module) {
-            return node;
-        }
-
-        let curNode: ParseNode | undefined = node;
-        // For scope-defining nodes return outer scope.
-        if (node.nodeType === ParseNodeType.Function || node.nodeType === ParseNodeType.Class) {
-            curNode = node.parent;
-        }
-
-        while (curNode) {
-            switch (curNode.nodeType) {
-                case ParseNodeType.Module:
-                case ParseNodeType.Function:
-                case ParseNodeType.Class:
-                    return curNode;
-            }
-            curNode = curNode.parent;
-        }
-
-        fail('Did not find tree scope');
-        return undefined!;
-    }
-
-    private updateCurrentScope(node: ParseNode): void {
-        const enclosingTreeScope = this.getEnclosingScopeForNode(node);
-        // Check if this is first visit to the module.
-        switch (node.nodeType) {
-            case ParseNodeType.Module:
-                // Entering module, create new scope chain.
-                this._currentScope = new Scope('<module>', 0, null, enclosingTreeScope, []);
-                this.scopes = [this._currentScope];
-                break;
-            default:
-                if (
-                    (node.nodeType === ParseNodeType.Function || node.nodeType === ParseNodeType.Class) &&
-                    this._currentScope.node === node
-                ) {
-                    // Function or class define this scope so processing them would move us up unnecessarily.
-                    break;
-                }
-                // Verify that we are still in the current scope.
-                if (this._currentScope.node != enclosingTreeScope) {
-                    const index = this.scopes.findIndex(s => s.node === enclosingTreeScope);
-                    if (index >= 0) {
-                        this._currentScope = this.scopes[index];
                     }
                 }
                 break;

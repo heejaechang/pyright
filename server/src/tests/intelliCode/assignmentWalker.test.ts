@@ -6,29 +6,15 @@
 
 import 'jest-extended';
 
-import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { StandardVariableType } from '../../../intelliCode/nodes';
-import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSink';
-import { ParseOptions, Parser, ParseResults } from '../../../pyright/server/src/parser/parser';
-
-function parseCode(code: string): ParseResults {
-    const parser = new Parser();
-    return parser.parseSourceFile(code, new ParseOptions(), new DiagnosticSink());
-}
-
-function walkCode(code: string): AssignmentWalker {
-    const pr = parseCode(code);
-    const aw = new AssignmentWalker();
-    aw.walk(pr.parseTree);
-    return aw;
-}
+import { walkAssignments } from './testUtils';
 
 test('IntelliCode assignment walker: numbers', () => {
     const code = `
 i = 1
 f = 2.1
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(2);
 
@@ -47,7 +33,7 @@ s3 = '''str'''
 s4 = """str"""
 s5 = f'str'
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(5);
 
@@ -67,7 +53,7 @@ x = 1
 y = x
 z = a
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(2);
 
@@ -83,7 +69,7 @@ test('IntelliCode assignment walker: tuple', () => {
 x = (1, 2)
 y = ([1, 2], ['s', 'a'])
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(2);
 
@@ -100,7 +86,7 @@ x = {'name': 'Bob', age: 20}
 y = x
 z = {k:k+':'+v for (k,v) in x.items()}
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(3);
 
@@ -117,7 +103,7 @@ test('IntelliCode assignment walker: set', () => {
 x = {1, 2, 3}
 y = x
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(2);
 
@@ -134,7 +120,7 @@ x = [1, 2, 3]
 y = x
 z = [ letter for letter in 'abcde' ]
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(3);
 
@@ -152,7 +138,7 @@ x = 'str'
 y = x.count().bitlength()
 z = 'a'.count()
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
     expect(aw.scopes[0].assignments).toBeArrayOfSize(3);
 
@@ -189,7 +175,7 @@ class B:
 
 z = 'x'
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(7);
     let scope = aw.scopes[0];
     expect(scope.assignments).toIncludeSameMembers([
@@ -208,7 +194,7 @@ z = 'x'
     expect(scope.assignments).toIncludeSameMembers([{ key: 'b', value: StandardVariableType.Int, spanStart: 57 }]);
 
     scope = aw.scopes[3];
-    expect(scope.name).toEqual('m1');
+    expect(scope.name).toEqual('A.m1');
     expect(scope.parent!.name).toEqual('A');
     expect(scope.assignments).toIncludeSameMembers([{ key: 'c', value: StandardVariableType.String, spanStart: 85 }]);
 
@@ -218,12 +204,12 @@ z = 'x'
     expect(scope.assignments).toIncludeSameMembers([{ key: 'd', value: StandardVariableType.Int, spanStart: 124 }]);
 
     scope = aw.scopes[5];
-    expect(scope.name).toEqual('m1');
+    expect(scope.name).toEqual('B.m1');
     expect(scope.parent!.name).toEqual('B');
     expect(scope.assignments).toIncludeSameMembers([{ key: 'e', value: StandardVariableType.Int, spanStart: 152 }]);
 
     scope = aw.scopes[6];
-    expect(scope.name).toEqual('m6');
+    expect(scope.name).toEqual('B.m6');
     expect(scope.parent!.name).toEqual('B');
     expect(scope.assignments).toIncludeSameMembers([{ key: 'f', value: StandardVariableType.Int, spanStart: 197 }]);
 });
@@ -236,7 +222,7 @@ def func():
 x = func();
 y = x.bitlength()
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(2);
     expect(aw.scopes[1].assignments).toBeEmpty();
 
@@ -251,7 +237,7 @@ test('IntelliCode assignment walker: import', () => {
     const code = `
 import os.path as p, sys as s
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
 
     const assignments = aw.scopes[0].assignments;
@@ -265,7 +251,7 @@ test('IntelliCode assignment walker: from import', () => {
     const code = `
 from os import path as p
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
 
     const assignments = aw.scopes[0].assignments;
@@ -277,7 +263,7 @@ test('IntelliCode assignment walker: with', () => {
 with open('file', 'r') as f:
     f.close()
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
 
     const assignments = aw.scopes[0].assignments;
@@ -290,7 +276,7 @@ y = [1, 2, 3]
 for x in y
     print(x)
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
 
     const assignments = aw.scopes[0].assignments;
@@ -304,9 +290,59 @@ test('IntelliCode assignment walker: comprehension for', () => {
     const code = `
 chars = [ ch for ch in 'text' ]
 `;
-    const aw = walkCode(code);
+    const aw = walkAssignments(code);
     expect(aw.scopes).toBeArrayOfSize(1);
 
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([{ key: 'chars', value: StandardVariableType.List, spanStart: 1 }]);
+});
+
+test('IntelliCode assignment walker: scope variables', () => {
+    const code = `
+x = 1
+def func1():
+    y = x
+    def func2():
+        z = x
+        return z
+    return y
+
+class A:
+    def m1():
+        a = x
+        b = 's'
+        return a
+        class B:
+            def m2():
+                c = b
+                d = x
+                return b
+    `;
+    const aw = walkAssignments(code);
+    expect(aw.scopes).toBeArrayOfSize(7);
+
+    let assignments = aw.scopes[0].assignments;
+    expect(assignments).toIncludeSameMembers([{ key: 'x', value: StandardVariableType.Int, spanStart: 1 }]);
+
+    assignments = aw.scopes[1].assignments;
+    expect(assignments).toIncludeSameMembers([{ key: 'y', value: StandardVariableType.Int, spanStart: 24 }]);
+
+    assignments = aw.scopes[2].assignments;
+    expect(assignments).toIncludeSameMembers([{ key: 'z', value: StandardVariableType.Int, spanStart: 55 }]);
+
+    expect(aw.scopes[3].assignments).toBeEmpty();
+
+    assignments = aw.scopes[4].assignments;
+    expect(assignments).toIncludeSameMembers([
+        { key: 'a', value: StandardVariableType.Int, spanStart: 123 },
+        { key: 'b', value: StandardVariableType.String, spanStart: 137 }
+    ]);
+
+    expect(aw.scopes[5].assignments).toBeEmpty();
+
+    assignments = aw.scopes[6].assignments;
+    expect(assignments).toIncludeSameMembers([
+        { key: 'c', value: StandardVariableType.String, spanStart: 217 },
+        { key: 'd', value: StandardVariableType.Int, spanStart: 239 }
+    ]);
 });

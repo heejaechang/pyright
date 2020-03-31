@@ -4,9 +4,9 @@
  * Definitions of IntelliCode data based on AST nodes.
  */
 
-import { ClassNode, FunctionNode, ModuleNode, ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
+import { ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
 
-export class Assignment {
+class KeyValueWithLocation {
     readonly spanStart: number;
 
     constructor(public readonly key: string, public readonly value: string, spanStart?: number) {
@@ -14,19 +14,15 @@ export class Assignment {
     }
 }
 
-export class Scope {
-    public assignments: Assignment[];
+export class Assignment extends KeyValueWithLocation {
+    constructor(key: string, value: string, spanStart?: number) {
+        super(key, value, spanStart);
+    }
+}
 
-    constructor(
-        public readonly name: string,
-        public readonly spanStart: number,
-        public readonly parent: Scope | null,
-        // Scope defining node.
-        public readonly node: ClassNode | FunctionNode | ModuleNode,
-        // Collection of assignments
-        assignments?: Assignment[]
-    ) {
-        this.assignments = assignments || [];
+export class MethodInvokation extends KeyValueWithLocation {
+    constructor(key: string, value: string, spanStart?: number) {
+        super(key, value, spanStart);
     }
 }
 
