@@ -4,8 +4,8 @@
  * Function and variable resolution for IntelliCode.
  */
 
-import { Assignment } from './nodes';
 import { Scope } from './scope';
+import { Assignment } from './types';
 
 export function resolveFunction(rightHandSide: string, functionName: string): string {
     return rightHandSide && rightHandSide.length > 0 ? `${functionName}.${rightHandSide}` : functionName;

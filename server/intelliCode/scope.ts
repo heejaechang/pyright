@@ -5,7 +5,7 @@
  */
 
 import { ClassNode, FunctionNode, ModuleNode, ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
-import { Assignment } from './nodes';
+import { Assignment } from './types';
 
 export class Scope {
     public assignments: Assignment[];

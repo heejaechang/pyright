@@ -23,9 +23,9 @@ import {
     WithNode
 } from '../pyright/server/src/parser/parseNodes';
 import { BaseParseTreeWalker } from './baseParseTreeWalker';
-import { Assignment, getStandardVariableType, IntelliCodeConstants, StandardVariableType } from './nodes';
 import { resolveFunction, resolveVariable } from './resolution';
 import { getScopeQualifiedName, Scope } from './scope';
+import { Assignment, getStandardVariableType, IntelliCodeConstants, StandardVariableType } from './types';
 
 export class AssignmentWalker extends BaseParseTreeWalker {
     constructor(moduleNode: ModuleNode) {

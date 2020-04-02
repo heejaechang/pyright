@@ -9,7 +9,7 @@ import { ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNode
 class KeyValueWithLocation {
     readonly spanStart: number;
 
-    constructor(public readonly key: string, public readonly value: string, spanStart?: number) {
+    constructor(public readonly key: string, public readonly value: string | undefined, spanStart?: number) {
         this.spanStart = spanStart || 0;
     }
 }
@@ -21,7 +21,7 @@ export class Assignment extends KeyValueWithLocation {
 }
 
 export class MethodInvokation extends KeyValueWithLocation {
-    constructor(key: string, value: string, spanStart?: number) {
+    constructor(key: string, value: string | undefined, spanStart?: number) {
         super(key, value, spanStart);
     }
 }
@@ -52,7 +52,6 @@ export class IntelliCodeConstants {
     public static readonly NullSequence = 'N';
     public static readonly SequenceDelimiter = '~';
     public static readonly UnicodeStar = '\u2605 ';
-    public static readonly PrevSymbolOrNum = '$SYMBOL_OR_NUM$';
     public static readonly MaxRecommendation = 5;
     public static readonly PrecedingSequenceLength = 2;
     public static readonly CompletionItemCommand = 'vsintellicode.completionItemSelected';
@@ -60,4 +59,17 @@ export class IntelliCodeConstants {
     // Allow saving sequences when parent token type is unavailable (for DL models)
     public static readonly IncludeUnresolvedType = true;
     public static readonly UnresolvedType = 'unktype';
+}
+
+export enum FailureReason {
+    None,
+    NotInModel,
+    NotInIntersection
+}
+
+export enum ModelType {
+    None,
+    Frequency,
+    Sequence,
+    LSTM
 }

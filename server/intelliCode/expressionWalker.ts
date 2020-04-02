@@ -5,6 +5,8 @@
  */
 
 import {
+    ErrorExpressionCategory,
+    ErrorNode,
     ExpressionNode,
     FunctionNode,
     MemberAccessNode,
@@ -13,9 +15,9 @@ import {
     ParseNodeType
 } from '../pyright/server/src/parser/parseNodes';
 import { BaseParseTreeWalker } from './baseParseTreeWalker';
-import { getStandardVariableType, IntelliCodeConstants, MethodInvokation, StandardVariableType } from './nodes';
 import { resolveVariable } from './resolution';
 import { Scope } from './scope';
+import { getStandardVariableType, IntelliCodeConstants, MethodInvokation, StandardVariableType } from './types';
 
 export class ExpressionWalker extends BaseParseTreeWalker {
     methodInvokations: MethodInvokation[] = [];
@@ -51,9 +53,30 @@ export class ExpressionWalker extends BaseParseTreeWalker {
         return true;
     }
 
+    visitError(node: ErrorNode): boolean {
+        // Handle 'missing member name'
+        if (node.category === ErrorExpressionCategory.MissingMemberAccessName) {
+            switch (node.child?.nodeType) {
+                case ParseNodeType.Name:
+                case ParseNodeType.Call:
+                case ParseNodeType.Index:
+                case ParseNodeType.String:
+                case ParseNodeType.StringList:
+                case ParseNodeType.Number:
+                case ParseNodeType.List:
+                case ParseNodeType.Dictionary:
+                case ParseNodeType.Set:
+                case ParseNodeType.Tuple:
+                    this.handleMemberExpression(undefined, node.child);
+                    break;
+            }
+        }
+        return false;
+    }
+
     // Recursively walk through member functions to figure out the invocations
     private handleMemberExpression(
-        functionName: string,
+        functionName: string | undefined,
         callTarget: ExpressionNode,
         prevFunctionsCalled?: string
     ): void {
@@ -142,7 +165,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
         }
     }
 
-    private addMethod(key: string, functionName: string, index: number): void {
+    private addMethod(key: string, functionName: string | undefined, index: number): void {
         this.methodInvokations.push(new MethodInvokation(key, functionName, index));
     }
 }
