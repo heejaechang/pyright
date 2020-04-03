@@ -20,11 +20,18 @@ function Invoke-Call {
 }
 
 switch ($subcommand) {
+    "reclone" {
+        # Remove the temporary branch and worktree.
+        Invoke-Call { git subrepo clean -v server/pyright }
+        # Force clone the repo.
+        Invoke-Call { git subrepo clone -v --force https://github.com/microsoft/pyright.git server/pyright }
+        break
+    }
     "pull" {
         # Remove the temporary branch and worktree.
-        Invoke-Call { git subrepo clean server/pyright }
+        Invoke-Call { git subrepo clean -v server/pyright }
         # Pull changes and squash commit them.
-        Invoke-Call { git subrepo pull server/pyright }
+        Invoke-Call { git subrepo pull -v server/pyright }
         break
     }
     "branch" {
@@ -33,9 +40,9 @@ switch ($subcommand) {
         }
 
         # Remove the temporary branch and worktree.
-        Invoke-Call { git subrepo clean server/pyright }
+        Invoke-Call { git subrepo clean -v server/pyright }
         # Populate the subrepo/server/pyright branch with new changes.
-        Invoke-Call { git subrepo branch server/pyright }
+        Invoke-Call { git subrepo branch -v server/pyright }
         # Enter worktree; changes here are applied to the subrepo/server/pyright branch.
         Invoke-Call { Push-Location .git/tmp/subrepo/server/pyright }
         # Remove all commits after the last pull and restage the difference.
