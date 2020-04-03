@@ -4,6 +4,8 @@
  * Definitions of services available.
  */
 
+import { VERSION } from './constants';
+
 export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
     ANALYSIS_COMPLETE = 'analysis_complete',
@@ -20,7 +22,9 @@ export class TelemetryEvent {
 
     readonly Properties: {
         [key: string]: string;
-    } = {};
+    } = {
+        lsVersion: VERSION
+    };
 
     readonly Measurements: {
         [key: string]: number;
