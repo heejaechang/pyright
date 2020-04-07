@@ -14,9 +14,9 @@ import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { AnalysisResults } from './pyright/server/src/analyzer/service';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import * as debug from './pyright/server/src/common/debug';
+import { FileSystem } from './pyright/server/src/common/fileSystem';
 import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
-import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
@@ -106,7 +106,7 @@ class PyRxServer extends LanguageServerBase {
         return this._controller.execute(params, token);
     }
 
-    protected createImportResolver(fs: VirtualFileSystem, options: ConfigOptions): ImportResolver {
+    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
         const resolver = createPyrxImportResolver(fs, options);
 
         resolver.setStubUsageCallback(importMetrics => {
