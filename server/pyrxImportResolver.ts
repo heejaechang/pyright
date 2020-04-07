@@ -8,13 +8,13 @@
 import { ImportedModuleDescriptor, ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
+import { FileSystem } from './pyright/server/src/common/fileSystem';
 import {
     combinePaths,
     ensureTrailingDirectorySeparator,
     getDirectoryPath,
     normalizePath
 } from './pyright/server/src/common/pathUtils';
-import { VirtualFileSystem } from './pyright/server/src/common/vfs';
 
 function getBundledTypeStubsPath(moduleDirectory?: string) {
     if (moduleDirectory) {
@@ -128,6 +128,6 @@ export class PyrxImportResolver extends ImportResolver {
     }
 }
 
-export function createPyrxImportResolver(fs: VirtualFileSystem, options: ConfigOptions): PyrxImportResolver {
+export function createPyrxImportResolver(fs: FileSystem, options: ConfigOptions): PyrxImportResolver {
     return new PyrxImportResolver(fs, options);
 }
