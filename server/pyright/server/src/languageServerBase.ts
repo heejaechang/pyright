@@ -463,11 +463,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                     }
                     return SignatureInformation.create(sig.label, sig.documentation, ...paramInfo);
                 }),
-                // These values are out of bounds but are legal within the LSP (should be treated as undefined).
-                // They produce a better result in VS Code by preventing it from highlighting the first parameter
-                // when no parameter works (as the LSP client converts null into zero).
                 activeSignature:
-                    signatureHelpResults.activeSignature !== undefined ? signatureHelpResults.activeSignature : -1,
+                    signatureHelpResults.activeSignature !== undefined ? signatureHelpResults.activeSignature : null,
+                // -1 is out of bounds but is legal within the LSP (should be treated as undefined).
+                // It produces a better result in VS Code by preventing it from highlighting the first parameter
+                // when no parameter works (as the LSP client converts null into zero).
                 activeParameter:
                     signatureHelpResults.activeParameter !== undefined ? signatureHelpResults.activeParameter : -1,
             };
