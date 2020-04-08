@@ -10,7 +10,7 @@ export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
     ANALYSIS_COMPLETE = 'analysis_complete',
     EXCEPTION = 'exception',
-    EXCEPTION_IC = 'exception_intellicode'
+    EXCEPTION_IC = 'exception_intellicode',
 }
 
 export const eventNamePrefix = 'mpls_node/';
@@ -23,7 +23,7 @@ export class TelemetryEvent {
     readonly Properties: {
         [key: string]: string;
     } = {
-        lsVersion: VERSION
+        lsVersion: VERSION,
     };
 
     readonly Measurements: {

@@ -32,7 +32,7 @@ os.path.abspath()
     const mi = ew.methodInvokations;
     expect(mi).toIncludeSameMembers([
         { key: 'os.path', value: 'abspath', spanStart: 13 },
-        { key: 'os', value: 'path', spanStart: 13 }
+        { key: 'os', value: 'path', spanStart: 13 },
     ]);
 });
 
@@ -47,7 +47,7 @@ os.path.abspath()
     expect(mi).toIncludeSameMembers([
         { key: 'os', value: 'mkdir', spanStart: 13 },
         { key: 'os.path', value: 'abspath', spanStart: 24 },
-        { key: 'os', value: 'path', spanStart: 24 }
+        { key: 'os', value: 'path', spanStart: 24 },
     ]);
 });
 
@@ -64,7 +64,7 @@ test('IntelliCode expression walker: collections', () => {
         { key: StandardVariableType.List, value: 'append', spanStart: 7 },
         { key: StandardVariableType.Set, value: 'add', spanStart: 23 },
         { key: StandardVariableType.Tuple, value: 'count', spanStart: 36 },
-        { key: StandardVariableType.Dictionary, value: 'fromkeys', spanStart: 69 }
+        { key: StandardVariableType.Dictionary, value: 'fromkeys', spanStart: 69 },
     ]);
 });
 
@@ -77,7 +77,7 @@ test('IntelliCode expression walker: constants', () => {
     const mi = ew.methodInvokations;
     expect(mi).toIncludeSameMembers([
         { key: StandardVariableType.String, value: 'count', spanStart: 4 },
-        { key: StandardVariableType.Float, value: 'conjugate', spanStart: 16 }
+        { key: StandardVariableType.Float, value: 'conjugate', spanStart: 16 },
     ]);
 });
 

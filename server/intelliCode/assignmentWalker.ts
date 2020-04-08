@@ -20,7 +20,7 @@ import {
     ParseNode,
     ParseNodeArray,
     ParseNodeType,
-    WithNode
+    WithNode,
 } from '../pyright/server/src/parser/parseNodes';
 import { BaseParseTreeWalker } from './baseParseTreeWalker';
 import { resolveFunction, resolveVariable } from './resolution';
@@ -71,7 +71,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
             return false;
         }
 
-        const rootModuleName = node.module.nameParts.map(p => p.value || '').join('.');
+        const rootModuleName = node.module.nameParts.map((p) => p.value || '').join('.');
         for (const asNameNode of node.imports) {
             const name = asNameNode.name;
             const asName = asNameNode.alias;
@@ -99,7 +99,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
         for (const asNameNode of node.list) {
             const nameParts = asNameNode.module.nameParts;
             if (nameParts.length > 0) {
-                const name = nameParts.map(p => p.value || '').join('.');
+                const name = nameParts.map((p) => p.value || '').join('.');
                 const asName = asNameNode.alias;
                 if (asName?.value) {
                     this._currentScope.assignments.push(
@@ -115,7 +115,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
 
     visitWith(node: WithNode): boolean {
         for (const withItemNode of node.withItems.filter(
-            n =>
+            (n) =>
                 n.expression?.nodeType === ParseNodeType.Call &&
                 n.expression.leftExpression.nodeType === ParseNodeType.Name &&
                 n.target?.nodeType === ParseNodeType.Name

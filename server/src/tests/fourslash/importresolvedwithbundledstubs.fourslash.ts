@@ -9,5 +9,5 @@
 ////
 
 helper.verifyDiagnostics({
-    marker1: { category: 'error', message: 'Import "notexistant" could not be resolved' }
+    marker1: { category: 'error', message: 'Import "notexistant" could not be resolved' },
 });

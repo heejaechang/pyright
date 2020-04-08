@@ -64,12 +64,12 @@ export class IntelliCodeConstants {
 export enum FailureReason {
     None,
     NotInModel,
-    NotInIntersection
+    NotInIntersection,
 }
 
 export enum ModelType {
     None,
     Frequency,
     Sequence,
-    LSTM
+    LSTM,
 }

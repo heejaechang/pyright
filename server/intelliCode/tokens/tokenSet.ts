@@ -19,7 +19,7 @@ export function positionBinarySearch(array: Token[], value: number): number {
     return binarySearchKey(
         array,
         value,
-        t => t.start,
+        (t) => t.start,
         (a, b) => {
             return a < b ? Comparison.LessThan : a > b ? Comparison.GreaterThan : Comparison.EqualTo;
         }
@@ -67,7 +67,7 @@ export class TokenSet {
         if (leftParenthesisIndex >= 0) {
             return {
                 value: this.relevantNames[leftParenthesisIndex],
-                position: this.rightParenthesisSpanStarts[leftParenthesisIndex] + 1
+                position: this.rightParenthesisSpanStarts[leftParenthesisIndex] + 1,
             };
         }
         return { value: undefined, position: 0 };

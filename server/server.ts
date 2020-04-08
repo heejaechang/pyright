@@ -26,7 +26,7 @@ import {
     sendMeasurementsTelemetry,
     TelemetryEvent,
     TelemetryEventName,
-    TelemetryService
+    TelemetryService,
 } from './src/common/telemetry';
 import { AnalysisTracker } from './src/services/analysisTracker';
 import { LogServiceImplementation } from './src/services/logger';
@@ -68,7 +68,7 @@ class PyRxServer extends LanguageServerBase {
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
         const serverSettings: ServerSettings = {
             disableLanguageServices: false,
-            watchForLibraryChanges: true
+            watchForLibraryChanges: true,
         };
 
         try {
@@ -109,7 +109,7 @@ class PyRxServer extends LanguageServerBase {
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
         const resolver = createPyrxImportResolver(fs, options);
 
-        resolver.setStubUsageCallback(importMetrics => {
+        resolver.setStubUsageCallback((importMetrics) => {
             if (!importMetrics.isEmpty()) {
                 sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, importMetrics);
             }
@@ -139,7 +139,7 @@ class PyRxServer extends LanguageServerBase {
             //send import metrics
             let shouldSend = false;
             const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
-            this._workspaceMap.forEach(workspace => {
+            this._workspaceMap.forEach((workspace) => {
                 const resolver = workspace.serviceInstance.getImportResolver();
                 if (resolver instanceof PyrxImportResolver) {
                     const importMetrics = resolver.getAndResetImportMetrics();

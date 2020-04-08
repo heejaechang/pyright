@@ -21,7 +21,7 @@ f = 2.1
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'i', value: StandardVariableType.Int, spanStart: 1 },
-        { key: 'f', value: StandardVariableType.Float, spanStart: 7 }
+        { key: 'f', value: StandardVariableType.Float, spanStart: 7 },
     ]);
 });
 
@@ -43,7 +43,7 @@ s5 = f'str'
         { key: 's2', value: StandardVariableType.String, spanStart: 12 },
         { key: 's3', value: StandardVariableType.String, spanStart: 23 },
         { key: 's4', value: StandardVariableType.String, spanStart: 38 },
-        { key: 's5', value: StandardVariableType.String, spanStart: 53 }
+        { key: 's5', value: StandardVariableType.String, spanStart: 53 },
     ]);
 });
 
@@ -60,7 +60,7 @@ z = a
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.Int, spanStart: 1 },
-        { key: 'y', value: StandardVariableType.Int, spanStart: 7 }
+        { key: 'y', value: StandardVariableType.Int, spanStart: 7 },
     ]);
 });
 
@@ -76,7 +76,7 @@ y = ([1, 2], ['s', 'a'])
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.Tuple, spanStart: 1 },
-        { key: 'y', value: StandardVariableType.Tuple, spanStart: 12 }
+        { key: 'y', value: StandardVariableType.Tuple, spanStart: 12 },
     ]);
 });
 
@@ -94,7 +94,7 @@ z = {k:k+':'+v for (k,v) in x.items()}
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.Dictionary, spanStart: 1 },
         { key: 'y', value: StandardVariableType.Dictionary, spanStart: 30 },
-        { key: 'z', value: StandardVariableType.Dictionary, spanStart: 36 }
+        { key: 'z', value: StandardVariableType.Dictionary, spanStart: 36 },
     ]);
 });
 
@@ -110,7 +110,7 @@ y = x
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.Set, spanStart: 1 },
-        { key: 'y', value: StandardVariableType.Set, spanStart: 15 }
+        { key: 'y', value: StandardVariableType.Set, spanStart: 15 },
     ]);
 });
 
@@ -128,7 +128,7 @@ z = [ letter for letter in 'abcde' ]
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.List, spanStart: 1 },
         { key: 'y', value: StandardVariableType.List, spanStart: 15 },
-        { key: 'z', value: StandardVariableType.List, spanStart: 21 }
+        { key: 'z', value: StandardVariableType.List, spanStart: 21 },
     ]);
 });
 
@@ -146,7 +146,7 @@ z = 'a'.count()
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: StandardVariableType.String, spanStart: 1 },
         { key: 'y', value: 'str.count.bitlength', spanStart: 16 },
-        { key: 'z', value: 'str.count', spanStart: 44 }
+        { key: 'z', value: 'str.count', spanStart: 44 },
     ]);
 });
 
@@ -180,7 +180,7 @@ z = 'x'
     let scope = aw.scopes[0];
     expect(scope.assignments).toIncludeSameMembers([
         { key: 'v', value: StandardVariableType.Int, spanStart: 1 },
-        { key: 'z', value: StandardVariableType.String, spanStart: 221 }
+        { key: 'z', value: StandardVariableType.String, spanStart: 221 },
     ]);
 
     scope = aw.scopes[1];
@@ -229,7 +229,7 @@ y = x.bitlength()
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'x', value: 'func', spanStart: 35 },
-        { key: 'y', value: 'func.bitlength', spanStart: 44 }
+        { key: 'y', value: 'func.bitlength', spanStart: 44 },
     ]);
 });
 
@@ -243,7 +243,7 @@ import os.path as p, sys as s
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'p', value: 'os.path', spanStart: 15 },
-        { key: 's', value: 'sys', spanStart: 25 }
+        { key: 's', value: 'sys', spanStart: 25 },
     ]);
 });
 
@@ -282,7 +282,7 @@ for x in y
     const assignments = aw.scopes[0].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'y', value: StandardVariableType.List, spanStart: 1 },
-        { key: 'x', value: `${StandardVariableType.List}.element_inside`, spanStart: 20 }
+        { key: 'x', value: `${StandardVariableType.List}.element_inside`, spanStart: 20 },
     ]);
 });
 
@@ -335,7 +335,7 @@ class A:
     assignments = aw.scopes[4].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'a', value: StandardVariableType.Int, spanStart: 123 },
-        { key: 'b', value: StandardVariableType.String, spanStart: 137 }
+        { key: 'b', value: StandardVariableType.String, spanStart: 137 },
     ]);
 
     expect(aw.scopes[5].assignments).toBeEmpty();
@@ -343,6 +343,6 @@ class A:
     assignments = aw.scopes[6].assignments;
     expect(assignments).toIncludeSameMembers([
         { key: 'c', value: StandardVariableType.String, spanStart: 217 },
-        { key: 'd', value: StandardVariableType.Int, spanStart: 239 }
+        { key: 'd', value: StandardVariableType.Int, spanStart: 239 },
     ]);
 });

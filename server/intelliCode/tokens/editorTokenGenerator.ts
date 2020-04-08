@@ -97,7 +97,7 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
         return {
             spanStart: spanStart,
             lookbackTokens: tokenImages,
-            type: type
+            type: type,
         };
     }
 

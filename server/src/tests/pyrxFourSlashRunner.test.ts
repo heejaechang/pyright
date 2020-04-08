@@ -39,12 +39,12 @@ describe('pyrx fourslash tests', () => {
     mountedPaths.set(bundledStubsFolder, bundledStubsFolderPath);
     mountedPaths.set(typeshedFolder, typeshedFolderPath);
 
-    testFiles.forEach(file => {
+    testFiles.forEach((file) => {
         describe(file, () => {
             const fn = normalizeSlashes(file);
             const justName = fn.replace(/^.*[\\/]/, '');
 
-            it('fourslash test ' + justName + ' runs correctly', cb => {
+            it('fourslash test ' + justName + ' runs correctly', (cb) => {
                 runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, createPyrxImportResolver);
             });
         });

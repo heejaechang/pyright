@@ -8,7 +8,7 @@ export enum LogLevel {
     Error,
     Warning,
     Info,
-    Trace
+    Trace,
 }
 
 export interface LogService {

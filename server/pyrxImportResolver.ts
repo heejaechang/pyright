@@ -13,7 +13,7 @@ import {
     combinePaths,
     ensureTrailingDirectorySeparator,
     getDirectoryPath,
-    normalizePath
+    normalizePath,
 } from './pyright/server/src/common/pathUtils';
 
 function getBundledTypeStubsPath(moduleDirectory?: string) {

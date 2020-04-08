@@ -14,7 +14,7 @@ import {
     sendMeasurementsTelemetry,
     TelemetryEvent,
     TelemetryEventName,
-    TelemetryService
+    TelemetryService,
 } from '../common/telemetry';
 import { TelemetryServiceImplementation } from '../services/telemetry';
 

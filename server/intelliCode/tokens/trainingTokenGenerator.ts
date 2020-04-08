@@ -21,7 +21,7 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
         const references = new Map<string, Map<string, TrainingInvocations>>();
         const ts = this.extractTokens(ast, content);
 
-        for (const mi of ew.methodInvokations.filter(m => m.value)) {
+        for (const mi of ew.methodInvokations.filter((m) => m.value)) {
             let type = mi.key;
             const method = mi.value;
             if (!method) {
@@ -47,7 +47,7 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
             // put into references
             const invocations: TrainingInvocations = {
                 spanStart: [],
-                lookbackTokens: [tokenImages]
+                lookbackTokens: [tokenImages],
             };
 
             const methodsInvoked = references.get(type);

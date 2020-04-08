@@ -29,7 +29,7 @@ export class BaseParseTreeWalker extends ParseTreeWalker {
         }
         // Verify that we are still in the current scope.
         if (this._currentScope.node != enclosingTreeScope) {
-            const index = this.scopes.findIndex(s => s.node === enclosingTreeScope);
+            const index = this.scopes.findIndex((s) => s.node === enclosingTreeScope);
             if (index >= 0) {
                 this._currentScope = this.scopes[index];
             }
