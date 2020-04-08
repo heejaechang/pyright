@@ -29,7 +29,7 @@
         "syncpack:check": "syncpack list-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
         "syncpack:fix": "syncpack fix-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\" --indent \"    \"",
         "eslint": "eslint \"**/*.{ts,js}\"",
-        "prettier": "prettier -c \"**/*.{ts,js,md,yml}\""
+        "prettier": "prettier -c ."
     },
     "devDependencies": {
         "@types/node": "^13.9.5",
