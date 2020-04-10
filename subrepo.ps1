@@ -65,7 +65,7 @@ switch ($subcommand) {
         Invoke-Call { git subrepo branch server/pyright }
         
         Push-Location .git/tmp/subrepo/server/pyright
-        $noDiff = Invoke-CallOk { git diff $newCommit }
+        $noDiff = Invoke-CallOk { git diff --quiet $newCommit }
         Pop-Location
 
         if ($noDiff) {
