@@ -73,6 +73,7 @@ test('Configuration', () => {
 ////
 ////   "reportTypeshedErrors": false,
 ////   "reportMissingImports": true,
+////   "reportMissingModuleSource": true,
 ////   "reportMissingTypeStubs": false,
 ////
 ////   "pythonVersion": "3.6",
@@ -119,6 +120,7 @@ test('Configuration', () => {
     assert(state.fs.existsSync(normalizeSlashes(combinePaths(factory.srcFolder, 'file1.py'))));
 
     assert.equal(state.configOptions.diagnosticRuleSet.reportMissingImports, 'error');
+    assert.equal(state.configOptions.diagnosticRuleSet.reportMissingModuleSource, 'warning');
     assert.equal(state.configOptions.typingsPath, normalizeSlashes('/src/typestubs'));
 });
 

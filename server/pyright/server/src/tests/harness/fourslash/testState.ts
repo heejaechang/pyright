@@ -471,10 +471,14 @@ export class TestState {
 
                 if (expected.length !== actual.length) {
                     this._raiseError(
-                        `contains unexpected result - expected: ${stringify(expected)}, actual: ${actual}`
+                        `contains unexpected result - expected: ${stringify(expected)}, actual: ${stringify(actual)}`
                     );
                 }
 
+                // TODO: there is a bug here
+                // 'ranges' has every expected range in the file, for both warning AND error
+                // but 'actual' only has the range for the current category (error OR warning)
+                // so 'matches' end up being empty for the ranges from the not-current category
                 for (const range of ranges) {
                     const rangeSpan = TextRange.fromBounds(range.pos, range.end);
                     const matches = actual.filter((d) => {

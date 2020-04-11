@@ -278,6 +278,15 @@ export class Binder extends ParseTreeWalker {
                         };
                         diagnostic.addAction(createTypeStubAction);
                     }
+                } else if (importResult.nonStubImportResult) {
+                    if (!importResult.nonStubImportResult.isImportFound) {
+                        this._addDiagnostic(
+                            this._fileInfo.diagnosticRuleSet.reportMissingModuleSource,
+                            DiagnosticRule.reportMissingModuleSource,
+                            `Import "${importResult.importName}" could not be resolved from source`,
+                            node
+                        );
+                    }
                 }
             }
         }
