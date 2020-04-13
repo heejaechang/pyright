@@ -5800,7 +5800,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     }
                 }
             } else if (entryNode.nodeType === ParseNodeType.ListComprehension) {
-                const dictEntryType = getElementTypeFromListComprehension(node.entries[0] as ListComprehensionNode);
+                const dictEntryType = getElementTypeFromListComprehension(entryNode);
 
                 // The result should be a Tuple
                 if (dictEntryType.category === TypeCategory.Object) {
@@ -6150,39 +6150,20 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     }
 
     function getTypeFromSlice(node: SliceNode): TypeResult {
-        const intObject = getBuiltInObject(node, 'int');
-        const optionalIntObject = combineTypes([intObject, NoneType.create()]);
-
-        const validateIndexType = (indexExpr: ExpressionNode) => {
-            const exprType = stripLiteralValue(getTypeOfExpression(indexExpr).type);
-
-            const diag = new DiagnosticAddendum();
-            if (!canAssignType(optionalIntObject, exprType, diag)) {
-                const fileInfo = getFileInfo(node);
-                addDiagnostic(
-                    fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                    DiagnosticRule.reportGeneralTypeIssues,
-                    `Index for slice operation must be an int value or "None"` + diag.getString(),
-                    indexExpr
-                );
-            }
-        };
-
-        // Validate the index values.
+        // Evaluate the expressions to report errors and record symbol references.
         if (node.startValue) {
-            validateIndexType(node.startValue);
+            getTypeOfExpression(node.startValue);
         }
 
         if (node.endValue) {
-            validateIndexType(node.endValue);
+            getTypeOfExpression(node.endValue);
         }
 
         if (node.stepValue) {
-            validateIndexType(node.stepValue);
+            getTypeOfExpression(node.stepValue);
         }
 
-        const sliceObject = getBuiltInObject(node, 'slice');
-        return { type: sliceObject, node };
+        return { type: getBuiltInObject(node, 'slice'), node };
     }
 
     // Converts the type parameters for a Callable type. It should
@@ -9069,6 +9050,30 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         }
                     }
                 }
+
+                // Look for X == <literal> or X != <literal>
+                if (equalsOrNotEqualsOperator) {
+                    const adjIsPositiveTest =
+                        testExpression.operator === OperatorType.Equals ? isPositiveTest : !isPositiveTest;
+
+                    if (ParseTreeUtils.isMatchingExpression(reference, testExpression.leftExpression)) {
+                        const rightType = getTypeOfExpression(testExpression.rightExpression).type;
+                        if (rightType.category === TypeCategory.Object && rightType.literalValue) {
+                            return (type: Type) => {
+                                return narrowTypeForLiteralComparison(type, rightType, adjIsPositiveTest);
+                            };
+                        }
+                    }
+
+                    if (ParseTreeUtils.isMatchingExpression(reference, testExpression.rightExpression)) {
+                        const leftType = getTypeOfExpression(testExpression.leftExpression).type;
+                        if (leftType.category === TypeCategory.Object && leftType.literalValue) {
+                            return (type: Type) => {
+                                return narrowTypeForLiteralComparison(type, leftType, adjIsPositiveTest);
+                            };
+                        }
+                    }
+                }
             }
         }
 
@@ -9265,6 +9270,33 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
         // Return the original type.
         return type;
+    }
+
+    // Attempts to narrow a type (make it more constrained) based on a comparison
+    // (equal or not equal) to a literal value.
+    function narrowTypeForLiteralComparison(
+        referenceType: Type,
+        literalType: ObjectType,
+        isPositiveTest: boolean
+    ): Type {
+        let canNarrow = true;
+        const narrowedType = doForSubtypes(referenceType, (subtype) => {
+            if (
+                subtype.category === TypeCategory.Object &&
+                ClassType.isSameGenericClass(literalType.classType, subtype.classType) &&
+                subtype.literalValue
+            ) {
+                const literalValueMatches = subtype.literalValue === literalType.literalValue;
+                if ((literalValueMatches && !isPositiveTest) || (!literalValueMatches && isPositiveTest)) {
+                    return undefined;
+                }
+                return subtype;
+            }
+            canNarrow = false;
+            return subtype;
+        });
+
+        return canNarrow ? narrowedType : referenceType;
     }
 
     // Attempts to narrow a type (make it more constrained) based on a
