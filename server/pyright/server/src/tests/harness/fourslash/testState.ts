@@ -67,7 +67,7 @@ export class TestState {
     private readonly _testDoneCallback?: jest.DoneCallback;
     private _markedDone = false;
 
-    readonly fs: vfs.FileSystem;
+    readonly fs: vfs.TestFileSystem;
     readonly workspace: WorkspaceServiceInstance;
     readonly console: ConsoleInterface;
     readonly asyncTest: boolean;

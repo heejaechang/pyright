@@ -6,14 +6,24 @@
 
 import { VERSION } from './constants';
 
+function isError(o: any): o is Error {
+    return 'name' in o && 'message' in o;
+}
+
 export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
     ANALYSIS_COMPLETE = 'analysis_complete',
+    INTELLICODE = 'intellicode',
     EXCEPTION = 'exception',
     EXCEPTION_IC = 'exception_intellicode',
 }
 
-export const eventNamePrefix = 'language_server/';
+const eventNamePrefix = 'language_server/';
+
+// Exported for tests.
+export function formatEventName(eventName: string): string {
+    return `${eventNamePrefix}${eventName}`;
+}
 
 // Note: These names must match the expected values in the VSCode Python Extension
 // https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
@@ -31,7 +41,7 @@ export class TelemetryEvent {
     } = {};
 
     constructor(eventName: string) {
-        this.EventName = `${eventNamePrefix}${eventName}`;
+        this.EventName = formatEventName(eventName);
     }
 }
 
@@ -40,7 +50,7 @@ export interface TelemetryService {
 }
 
 export function sendExceptionTelemetry(ts: TelemetryService | undefined, eventName: TelemetryEventName, e: any): void {
-    if (!ts || !(e instanceof Error)) {
+    if (!ts || !isError(e)) {
         return;
     }
     const te = new TelemetryEvent(eventName);

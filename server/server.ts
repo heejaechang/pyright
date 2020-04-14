@@ -62,7 +62,7 @@ class PyRxServer extends LanguageServerBase {
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryServiceImplementation(this._connection as any);
         this._logger = new LogServiceImplementation();
-        ic.initialize(this._logger, this._telemetry);
+        ic.initialize(this._logger, this._telemetry, this.fs);
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {

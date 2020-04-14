@@ -32,6 +32,7 @@ import {
     normalizePath,
     stripFileExtension,
 } from '../common/pathUtils';
+import { convertPositionToOffset } from '../common/positionUtils';
 import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
 import { ModuleSymbolMap } from '../languageService/completionProvider';
@@ -905,14 +906,18 @@ export class Program {
             );
 
             if (completionList && this._extension?.completionListExtension) {
-                const tree = sourceFileInfo.sourceFile.getParseResults()?.parseTree;
-                if (tree) {
-                    completionList = this._extension.completionListExtension.updateCompletionList(
-                        completionList,
-                        tree,
-                        position,
-                        this._configOptions
-                    );
+                const pr = sourceFileInfo.sourceFile.getParseResults();
+                if (pr?.parseTree) {
+                    const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
+                    if (offset) {
+                        completionList = this._extension.completionListExtension.updateCompletionList(
+                            completionList,
+                            pr.parseTree,
+                            filePath,
+                            offset,
+                            this._configOptions
+                        );
+                    }
                 }
             }
 
