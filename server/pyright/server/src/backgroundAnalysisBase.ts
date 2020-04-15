@@ -30,10 +30,14 @@ import { createFromRealFileSystem, FileSystem } from './common/fileSystem';
 import { FileSpec } from './common/pathUtils';
 import { Range } from './common/textRange';
 
-export abstract class BackgroundAnalysisBase {
+export class BackgroundAnalysisBase {
     private _worker: Worker;
     private _console: ConsoleInterface;
     private _onAnalysisCompletion: AnalysisCompleteCallback = nullCallback;
+
+    protected constructor() {
+        /* don't allow instanciating this type directly */
+    }
 
     protected setup(worker: Worker, console: ConsoleInterface) {
         this._worker = worker;
@@ -179,13 +183,13 @@ export abstract class BackgroundAnalysisBase {
     }
 }
 
-export abstract class BackgroundAnalysisRunnerBase {
+export class BackgroundAnalysisRunnerBase {
     private _fs: FileSystem;
     private _configOptions: ConfigOptions;
     private _importResolver: ImportResolver;
     private _program: Program;
 
-    constructor(private _extension?: LanguageServiceExtension) {
+    protected constructor(private _extension?: LanguageServiceExtension) {
         const data = workerData as InitializationData;
         setCancellationFolderName(data.cancellationFolderName);
 
