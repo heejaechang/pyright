@@ -288,6 +288,12 @@ test('TypeConstraint9', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint10.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -652,6 +658,12 @@ test('Generators5', () => {
 
 test('Generators6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators6.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Generators7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators7.py']);
 
     validateResults(analysisResults, 0);
 });
@@ -1051,7 +1063,7 @@ test('GenericTypes17', () => {
 test('GenericTypes18', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes18.py']);
 
-    validateResults(analysisResults, 4);
+    validateResults(analysisResults, 6);
 });
 
 test('GenericTypes19', () => {

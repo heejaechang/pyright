@@ -62,14 +62,14 @@ export class IntelliCodeConstants {
 }
 
 export enum FailureReason {
-    None,
-    NotInModel,
-    NotInIntersection,
+    None = 'None',
+    NotInModel = 'NotInModel',
+    NotInIntersection = 'NotInIntersection',
 }
 
 export enum ModelType {
-    None,
-    Frequency,
-    Sequence,
-    LSTM,
+    None = 'None',
+    Frequency = 'Frequency',
+    Sequence = 'Sequence',
+    LSTM = 'LSTM',
 }

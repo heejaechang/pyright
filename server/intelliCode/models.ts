@@ -26,3 +26,16 @@ export class EditorInvocation {
     lookbackTokens: string[];
     type: string;
 }
+
+export interface PythiaModelMetaData {
+    LicenseTerm: string;
+    Version: string;
+    ModelName: string;
+}
+
+export interface PythiaModel {
+    metaData: PythiaModelMetaData;
+    tokenIdMap: Map<string, number>;
+    tokens: string[];
+    // session: InferenceSession;
+}

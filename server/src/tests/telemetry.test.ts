@@ -9,7 +9,7 @@ import { capture, instance, mock, verify, when } from 'ts-mockito';
 import { IConnection, Telemetry } from 'vscode-languageserver';
 
 import {
-    eventNamePrefix,
+    formatEventName,
     sendExceptionTelemetry,
     sendMeasurementsTelemetry,
     TelemetryEvent,
@@ -43,7 +43,7 @@ test('Telemetry: send exception', () => {
 
     verify(mockedTelemetry.logEvent(te)).once();
     assert(te instanceof TelemetryEvent);
-    assert(te.EventName === `${eventNamePrefix}${TelemetryEventName.EXCEPTION}`);
+    assert(te.EventName === formatEventName(TelemetryEventName.EXCEPTION));
     assert(te.Properties['exception-name'] === 'name');
     assert(te.Properties['exception-call-stack'] === 'stack');
 });
@@ -62,7 +62,7 @@ test('Telemetry: send measurements', () => {
 
     verify(mockedTelemetry.logEvent(te)).once();
     assert(te instanceof TelemetryEvent);
-    assert(te.EventName === `${eventNamePrefix}${TelemetryEventName.ANALYSIS_COMPLETE}`);
+    assert(te.EventName === formatEventName(TelemetryEventName.ANALYSIS_COMPLETE));
     assert(te.Measurements['m1'] === 1);
     assert(te.Measurements['m2'] === 2);
 });

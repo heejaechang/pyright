@@ -4,7 +4,7 @@
  * Licensed under the MIT license.
  */
 
-import { AnalysisResults } from '../../pyright/server/src/analyzer/service';
+import { AnalysisResults } from '../../pyright/server/src/analyzer/analysis';
 import { Duration } from '../../pyright/server/src/common/timing';
 import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 
@@ -20,6 +20,11 @@ export class AnalysisTracker {
     private _telemetryLimiter: Duration | undefined;
 
     updateTelemetry(results: AnalysisResults): TelemetryEvent | undefined {
+        // ignore first run if only a config change and no work was done.
+        if (this._isFirstRun && results.elapsedTime < 0.05) {
+            return;
+        }
+
         // track peak memory during long running analysis or during the first run analysis
         // also send telemetry if an error occurred
         if (results.filesRequiringAnalysis > 0 || this._isFirstRun || results.fatalErrorOccurred) {
@@ -56,7 +61,7 @@ export class AnalysisTracker {
                 te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
                 te.Measurements['externalMB'] = usage.external / 1024 / 1024;
                 te.Measurements['elapsedMs'] =
-                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds / 1000;
+                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds * 1000;
                 te.Measurements['numFilesAnalyzed'] = this._numFilesAnalyzed;
                 te.Measurements['numFilesInProgram'] = results.filesInProgram;
                 te.Measurements['fatalErrorOccurred'] = results.fatalErrorOccurred ? 1 : 0;

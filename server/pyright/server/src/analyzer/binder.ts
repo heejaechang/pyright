@@ -1184,6 +1184,17 @@ export class Binder extends ParseTreeWalker {
                 if (!existingDecl) {
                     symbol.addDeclaration(newDecl);
                 }
+            } else if (node.alias && symbol) {
+                // If we couldn't resolve the import but there is an alias symbol,
+                // create a dummy declaration with a bogus path so it gets an unknown
+                // type (rather than an unbound type) at analysis time.
+                const newDecl: AliasDeclaration = {
+                    type: DeclarationType.Alias,
+                    node,
+                    path: '*** unresolved ***',
+                    range: getEmptyRange(),
+                };
+                symbol.addDeclaration(newDecl);
             }
 
             this._createFlowAssignment(node.alias ? node.alias : node.module.nameParts[0]);
@@ -1723,6 +1734,23 @@ export class Binder extends ParseTreeWalker {
                             expression.leftExpression.arguments[0].valueExpression,
                             expressionList
                         );
+                    }
+
+                    // Look for X == <literal>, X != <literal> or <literal> == X, <literal> != X
+                    if (equalsOrNotEqualsOperator) {
+                        if (
+                            expression.leftExpression.nodeType === ParseNodeType.StringList ||
+                            expression.leftExpression.nodeType === ParseNodeType.Number ||
+                            expression.leftExpression.nodeType === ParseNodeType.Constant
+                        ) {
+                            return this._isNarrowingExpression(expression.rightExpression, expressionList);
+                        } else if (
+                            expression.rightExpression.nodeType === ParseNodeType.StringList ||
+                            expression.rightExpression.nodeType === ParseNodeType.Number ||
+                            expression.rightExpression.nodeType === ParseNodeType.Constant
+                        ) {
+                            return this._isNarrowingExpression(expression.leftExpression, expressionList);
+                        }
                     }
                 }
 
