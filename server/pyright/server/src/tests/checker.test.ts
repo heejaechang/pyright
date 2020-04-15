@@ -662,6 +662,12 @@ test('Generators6', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Generators7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators7.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Coroutines1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines1.py']);
 
@@ -1057,7 +1063,7 @@ test('GenericTypes17', () => {
 test('GenericTypes18', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes18.py']);
 
-    validateResults(analysisResults, 4);
+    validateResults(analysisResults, 6);
 });
 
 test('GenericTypes19', () => {

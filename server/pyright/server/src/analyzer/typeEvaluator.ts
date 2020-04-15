@@ -137,7 +137,6 @@ import {
     addDefaultFunctionParameters,
     addTypeVarsToListIfUnique,
     areTypesSame,
-    buildTypeVarMap,
     buildTypeVarMapFromSpecializedClass,
     CanAssignFlags,
     canBeFalsy,
@@ -856,7 +855,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
             case ParseNodeType.Unpack: {
                 const iterType = getTypeOfExpression(node.expression, expectedType).type;
-                const type = getTypeFromIterable(iterType, false, node, false);
+                const type = getTypeFromIterable(iterType, /* isAsync */ false, node, /* supportGetItem */ false);
                 typeResult = { type, unpackedType: iterType, node };
                 break;
             }
@@ -1189,7 +1188,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         function addOneFunctionToSignature(type: FunctionType) {
             let callResult: CallResult | undefined;
 
-            useSpeculativeMode(exprNode, () => {
+            useSpeculativeMode(callNode!, () => {
                 callResult = validateFunctionArguments(exprNode, argList, type, new TypeVarMap(), true);
             });
 
@@ -2162,7 +2161,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             } else {
                 // The assigned expression isn't a tuple, so it had better
                 // be some iterable type.
-                const iterableType = getTypeFromIterable(subtype, false, srcExpr, false);
+                const iterableType = getTypeFromIterable(
+                    subtype,
+                    /* isAsync */ false,
+                    srcExpr,
+                    /* supportGetItem */ false
+                );
                 for (let index = 0; index < target.expressions.length; index++) {
                     targetTypes[index].push(iterableType);
                 }
@@ -2283,7 +2287,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
             case ParseNodeType.List: {
                 // The assigned expression had better be some iterable type.
-                const iteratedType = getTypeFromIterable(type, false, srcExpr, false);
+                const iteratedType = getTypeFromIterable(
+                    type,
+                    /* isAsync */ false,
+                    srcExpr,
+                    /* supportGetItem */ false
+                );
 
                 target.entries.forEach((entry) => {
                     assignTypeToExpression(entry, iteratedType, srcExpr);
@@ -3115,7 +3124,26 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
 
             if (isUnionOfClasses && typeParameters.length > 0) {
                 const typeArgs = getTypeArgs(node.items, flags).map((t) => convertClassToObject(t.type));
-                const typeVarMap = buildTypeVarMap(typeParameters, typeArgs);
+                if (typeArgs.length > typeParameters.length) {
+                    addError(
+                        `Too many type arguments provided; expected ${typeParameters.length} but got ${typeArgs.length}`,
+                        node.items
+                    );
+                }
+
+                const typeVarMap = new TypeVarMap();
+                const diag = new DiagnosticAddendum();
+                // const typeVarMap = buildTypeVarMap(typeParameters, typeArgs);
+                typeParameters.forEach((param, index) => {
+                    if (index < typeArgs.length) {
+                        assignTypeToTypeVar(param, typeArgs[index], false, diag, typeVarMap);
+                    }
+                });
+
+                if (diag.getMessageCount() > 0) {
+                    addError(`Could not specialize type "${printType(baseType)}"` + diag.getString(), node.items);
+                }
+
                 const type = specializeType(baseType, typeVarMap);
                 return { type, node };
             }
@@ -4047,6 +4075,16 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
         }
 
+        // If we weren't able to validate the args, analyze the expressions
+        // here to mark symbols as referenced and report expression-level errors.
+        if (!validatedTypes) {
+            argList.forEach((arg) => {
+                if (arg.valueExpression) {
+                    getTypeOfExpression(arg.valueExpression);
+                }
+            });
+        }
+
         if (!validatedTypes && argList.length > 0) {
             const fileInfo = getFileInfo(errorNode);
             addDiagnostic(
@@ -4376,9 +4414,9 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 if (argList[argIndex].valueExpression) {
                     const listElementType = getTypeFromIterable(
                         getTypeForArgument(argList[argIndex]),
-                        false,
+                        /* isAsync */ false,
                         argList[argIndex].valueExpression!,
-                        false
+                        /* supportGetItem */ false
                     );
                     const funcArg: FunctionArgument = {
                         argumentCategory: ArgumentCategory.Simple,
@@ -6114,7 +6152,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                     iterableType,
                     !!comprehension.isAsync,
                     comprehension.iterableExpression,
-                    false
+                    /* supportGetItem */ false
                 );
 
                 const targetExpr = comprehension.targetExpression;
@@ -7750,11 +7788,22 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 const inferredYieldTypes: Type[] = [];
                 functionDecl.yieldExpressions.forEach((yieldNode) => {
                     if (isNodeReachable(yieldNode)) {
-                        if (yieldNode.expression) {
-                            const cachedType = getTypeOfExpression(yieldNode.expression).type;
-                            inferredYieldTypes.push(cachedType || UnknownType.create());
+                        if (yieldNode.nodeType == ParseNodeType.YieldFrom) {
+                            const iteratorType = getTypeOfExpression(yieldNode.expression).type;
+                            const yieldType = getTypeFromIterable(
+                                iteratorType,
+                                /* isAsync */ false,
+                                yieldNode,
+                                /* supportGetItem */ false
+                            );
+                            inferredYieldTypes.push(yieldType || UnknownType.create());
                         } else {
-                            inferredYieldTypes.push(NoneType.create());
+                            if (yieldNode.expression) {
+                                const yieldType = getTypeOfExpression(yieldNode.expression).type;
+                                inferredYieldTypes.push(yieldType || UnknownType.create());
+                            } else {
+                                inferredYieldTypes.push(NoneType.create());
+                            }
                         }
                     }
                 });
@@ -7865,7 +7914,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
 
             if (exceptionType.category === TypeCategory.Object) {
-                const iterableType = getTypeFromIterable(exceptionType, false, errorNode, false);
+                const iterableType = getTypeFromIterable(
+                    exceptionType,
+                    /* isAsync */ false,
+                    errorNode,
+                    /* supportGetItem */ false
+                );
 
                 return doForSubtypes(iterableType, (subtype) => {
                     if (isAnyOrUnknown(subtype)) {
@@ -9538,7 +9592,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     // Disables recording of errors and warnings and disables
     // any caching of types, under the assumption that we're
     // performing speculative evaluations.
-    function useSpeculativeMode(speculativeNode: ExpressionNode, callback: () => void) {
+    function useSpeculativeMode(speculativeNode: ParseNode, callback: () => void) {
         speculativeTypeTracker.enterSpeculativeContext(speculativeNode);
         callback();
         speculativeTypeTracker.leaveSpeculativeContext();
