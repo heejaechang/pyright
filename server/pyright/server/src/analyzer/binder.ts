@@ -284,8 +284,7 @@ export class Binder extends ParseTreeWalker {
                 // Type stub found, but source is missing
                 if (
                     importResult.isStubFile &&
-                    (importResult.importType === ImportType.ThirdParty ||
-                        importResult.importType === ImportType.Local) &&
+                    importResult.importType !== ImportType.BuiltIn &&
                     importResult.nonStubImportResult &&
                     !importResult.nonStubImportResult.isImportFound
                 ) {

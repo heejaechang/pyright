@@ -71,6 +71,19 @@ export class ImportResolver {
         const importName = this._formatImportName(moduleDescriptor);
         const importFailureInfo: string[] = [];
 
+        const notFoundResult: ImportResult = {
+            importName,
+            isRelative: false,
+            isImportFound: false,
+            importFailureInfo,
+            resolvedPaths: [],
+            importType: ImportType.Local,
+            isStubFile: false,
+            isPydFile: false,
+            implicitImports: [],
+            nonStubImportResult: undefined,
+        };
+
         // Is it a relative import?
         if (moduleDescriptor.leadingDots > 0) {
             const relativeImport = this._resolveRelativeImport(
@@ -93,44 +106,14 @@ export class ImportResolver {
 
             const bestImport = this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, true);
             if (bestImport) {
-                // TODO: should we check for ImportType.ThirdParty since binder only checks those to report missing modules?
-                if (bestImport.isStubFile && importName !== 'builtins') {
-                    const nonStubImportResult = this._resolveBestAbsoluteImport(
-                        sourceFilePath,
-                        execEnv,
-                        moduleDescriptor,
-                        false
-                    ) || {
-                        importName,
-                        isRelative: false,
-                        isImportFound: false,
-                        importFailureInfo,
-                        resolvedPaths: [],
-                        importType: ImportType.Local,
-                        isStubFile: false,
-                        isPydFile: false,
-                        implicitImports: [],
-                        nonStubImportResult: undefined,
-                    };
-
-                    bestImport.nonStubImportResult = nonStubImportResult;
+                if (bestImport.isStubFile && bestImport.importType !== ImportType.BuiltIn) {
+                    bestImport.nonStubImportResult =
+                        this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, false) ||
+                        notFoundResult;
                 }
                 return this._addResultsToCache(execEnv, importName, bestImport, moduleDescriptor.importedSymbols);
             }
         }
-
-        const notFoundResult: ImportResult = {
-            importName,
-            isRelative: false,
-            isImportFound: false,
-            importFailureInfo,
-            resolvedPaths: [],
-            importType: ImportType.Local,
-            isStubFile: false,
-            isPydFile: false,
-            implicitImports: [],
-            nonStubImportResult: undefined,
-        };
 
         return this._addResultsToCache(execEnv, importName, notFoundResult, undefined);
     }
