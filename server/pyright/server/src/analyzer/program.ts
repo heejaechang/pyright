@@ -135,7 +135,7 @@ export class Program {
         }
 
         // Add the new files. Only the new items will be added.
-        this.addTrackedFiles(filePaths);
+        this._addTrackedFiles(filePaths);
 
         return this._removeUnneededFiles();
     }
@@ -147,32 +147,6 @@ export class Program {
     // 'import tensorflow.optimizers', etc.
     setAllowedThirdPartyImports(importNames: string[]) {
         this._allowedThirdPartyImports = importNames;
-    }
-
-    getFileCount() {
-        return this._sourceFileList.length;
-    }
-
-    getFilesToAnalyzeCount() {
-        let sourceFileCount = 0;
-
-        this._sourceFileList.forEach((fileInfo) => {
-            if (
-                fileInfo.sourceFile.isParseRequired() ||
-                fileInfo.sourceFile.isBindingRequired() ||
-                fileInfo.sourceFile.isCheckingRequired()
-            ) {
-                if ((!this._configOptions.checkOnlyOpenFiles && fileInfo.isTracked) || fileInfo.isOpenByClient) {
-                    sourceFileCount++;
-                }
-            }
-        });
-
-        return sourceFileCount;
-    }
-
-    isCheckingOnlyOpenFiles() {
-        return this._configOptions.checkOnlyOpenFiles;
     }
 
     addTrackedFiles(filePaths: string[]) {
@@ -287,6 +261,32 @@ export class Program {
         }
     }
 
+    getFileCount() {
+        return this._sourceFileList.length;
+    }
+
+    getFilesToAnalyzeCount() {
+        let sourceFileCount = 0;
+
+        this._sourceFileList.forEach((fileInfo) => {
+            if (
+                fileInfo.sourceFile.isParseRequired() ||
+                fileInfo.sourceFile.isBindingRequired() ||
+                fileInfo.sourceFile.isCheckingRequired()
+            ) {
+                if ((!this._configOptions.checkOnlyOpenFiles && fileInfo.isTracked) || fileInfo.isOpenByClient) {
+                    sourceFileCount++;
+                }
+            }
+        });
+
+        return sourceFileCount;
+    }
+
+    isCheckingOnlyOpenFiles() {
+        return this._configOptions.checkOnlyOpenFiles;
+    }
+
     getSourceFile(filePath: string): SourceFile | undefined {
         const sourceFileInfo = this._sourceFileMap.get(filePath);
         if (!sourceFileInfo) {
@@ -301,11 +301,7 @@ export class Program {
     // whether the method needs to be called again to complete the
     // analysis. In interactive mode, the timeout is always limited
     // to the smaller value to maintain responsiveness.
-    analyze(
-        maxTime?: MaxAnalysisTime,
-        interactiveMode?: boolean,
-        token: CancellationToken = CancellationToken.None
-    ): boolean {
+    analyze(maxTime?: MaxAnalysisTime, token: CancellationToken = CancellationToken.None): boolean {
         return this._runEvaluatorWithCancellationToken(token, () => {
             const elapsedTime = new Duration();
 
@@ -336,11 +332,7 @@ export class Program {
             if (!this._configOptions.checkOnlyOpenFiles) {
                 // Do type analysis of remaining files.
                 const allFiles = this._sourceFileList;
-                const effectiveMaxTime = maxTime
-                    ? interactiveMode
-                        ? maxTime.openFilesTimeInMs
-                        : maxTime.noOpenFilesTimeInMs
-                    : Number.MAX_VALUE;
+                const effectiveMaxTime = maxTime ? maxTime.noOpenFilesTimeInMs : Number.MAX_VALUE;
 
                 // Now do type parsing and analysis of the remaining.
                 for (const sourceFileInfo of allFiles) {
@@ -458,6 +450,34 @@ export class Program {
 
     private get _fs() {
         return this._importResolver.fileSystem;
+    }
+
+    private _addTrackedFiles(filePaths: string[]) {
+        filePaths.forEach((filePath) => {
+            this._addTrackedFile(filePath);
+        });
+    }
+
+    private _addTrackedFile(filePath: string): SourceFile {
+        let sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (sourceFileInfo) {
+            sourceFileInfo.isTracked = true;
+            return sourceFileInfo.sourceFile;
+        }
+
+        const sourceFile = new SourceFile(this._fs, filePath, false, false, this._console);
+        sourceFileInfo = {
+            sourceFile,
+            isTracked: true,
+            isOpenByClient: false,
+            isTypeshedFile: false,
+            isThirdPartyImport: false,
+            diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+            imports: [],
+            importedBy: [],
+        };
+        this._addToSourceFileListAndMap(sourceFileInfo);
+        return sourceFile;
     }
 
     private _createNewEvaluator() {
@@ -740,13 +760,13 @@ export class Program {
         return fileDiagnostics;
     }
 
-    getDiagnosticsForRange(filePath: string, options: ConfigOptions, range: Range): Diagnostic[] {
+    getDiagnosticsForRange(filePath: string, range: Range): Diagnostic[] {
         const sourceFile = this.getSourceFile(filePath);
         if (!sourceFile) {
             return [];
         }
 
-        const unfilteredDiagnostics = sourceFile.getDiagnostics(options);
+        const unfilteredDiagnostics = sourceFile.getDiagnostics(this._configOptions);
         if (!unfilteredDiagnostics) {
             return [];
         }

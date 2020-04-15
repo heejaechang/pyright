@@ -4,7 +4,7 @@
  * Licensed under the MIT license.
  */
 
-import { AnalysisResults } from '../../pyright/server/src/analyzer/service';
+import { AnalysisResults } from '../../pyright/server/src/analyzer/analysis';
 import { Duration } from '../../pyright/server/src/common/timing';
 import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 

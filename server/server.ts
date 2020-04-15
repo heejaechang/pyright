@@ -7,11 +7,14 @@
 import * as path from 'path';
 import { isArray } from 'util';
 import { CancellationToken, CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
+import { isMainThread } from 'worker_threads';
 
+import { BackgroundAnalysis } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { IntelliCodeExtension } from './intelliCode/extension';
+import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
-import { AnalysisResults } from './pyright/server/src/analyzer/service';
+import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import * as debug from './pyright/server/src/common/debug';
 import { FileSystem } from './pyright/server/src/common/fileSystem';
@@ -102,6 +105,10 @@ class PyRxServer extends LanguageServerBase {
         return serverSettings;
     }
 
+    createBackgroundAnalysis(): BackgroundAnalysisBase | undefined {
+        return new BackgroundAnalysis(this.console);
+    }
+
     protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         return this._controller.execute(params, token);
     }
@@ -177,4 +184,6 @@ class PyRxServer extends LanguageServerBase {
     }
 }
 
-export const server = new PyRxServer();
+if (isMainThread) {
+    new PyRxServer();
+}

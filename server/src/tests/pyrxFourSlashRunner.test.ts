@@ -6,6 +6,7 @@
  * Entry point that will read all *.fourslash.ts files and
  * register jest tests for them and run
  */
+
 import * as path from 'path';
 
 import * as consts from '../../pyright/server/src/common/pathConsts';
