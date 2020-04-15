@@ -15,6 +15,7 @@ import { IntelliCodeExtension } from './intelliCode/extension';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
+import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import * as debug from './pyright/server/src/common/debug';
 import { FileSystem } from './pyright/server/src/common/fileSystem';
@@ -106,6 +107,11 @@ class PyRxServer extends LanguageServerBase {
     }
 
     createBackgroundAnalysis(): BackgroundAnalysisBase | undefined {
+        if (!getCancellationFolderName()) {
+            // old client. it doesn't support cancellation.
+            return undefined;
+        }
+
         return new BackgroundAnalysis(this.console);
     }
 

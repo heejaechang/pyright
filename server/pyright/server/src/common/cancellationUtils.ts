@@ -23,8 +23,6 @@ import {
     ResponseError,
 } from 'vscode-languageserver';
 
-import * as debug from '../common/debug';
-
 class CancellationThrottle {
     private static _lastCheckTimestamp = 0;
 
@@ -219,14 +217,13 @@ export function throwIfCancellationRequested(token: CancellationToken) {
     }
 }
 
-let cancellationFolderName: string;
+let cancellationFolderName: string | undefined;
 
 export function getCancellationFolderName() {
     return cancellationFolderName;
 }
 
-export function setCancellationFolderName(folderName: string) {
-    debug.assert(!!folderName);
+export function setCancellationFolderName(folderName?: string) {
     cancellationFolderName = folderName;
 }
 

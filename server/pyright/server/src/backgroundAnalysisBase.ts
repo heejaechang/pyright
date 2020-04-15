@@ -462,7 +462,7 @@ function convertDiagnsotics(diagnostics: Diagnostic[]) {
 
 export interface InitializationData {
     rootDirectory: string;
-    cancellationFolderName: string;
+    cancellationFolderName?: string;
 }
 
 interface AnalysisRequest {

@@ -11,6 +11,7 @@ import { isMainThread } from 'worker_threads';
 import { BackgroundAnalysis } from './backgroundAnalysis';
 import { BackgroundAnalysisBase } from './backgroundAnalysisBase';
 import { CommandController } from './commands/commandController';
+import { getCancellationFolderName } from './common/cancellationUtils';
 import { isDebugMode } from './common/core';
 import { convertUriToPath, getDirectoryPath, normalizeSlashes } from './common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './languageServerBase';
@@ -66,7 +67,9 @@ class PyrightServer extends LanguageServerBase {
     }
 
     createBackgroundAnalysis(): BackgroundAnalysisBase | undefined {
-        if (isDebugMode()) {
+        if (isDebugMode() || !getCancellationFolderName()) {
+            // either in debug mode or old client is used where
+            // cancellation is not supported
             return undefined;
         }
 
