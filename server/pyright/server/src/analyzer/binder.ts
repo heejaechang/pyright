@@ -262,8 +262,9 @@ export class Binder extends ParseTreeWalker {
                     `Import "${importResult.importName}" could not be resolved`,
                     node
                 );
-            } else if (importResult.importType === ImportType.ThirdParty) {
-                if (!importResult.isStubFile) {
+            } else {
+                // Source found, but type stub is missing
+                if (!importResult.isStubFile && importResult.importType === ImportType.ThirdParty) {
                     const diagnostic = this._addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportMissingTypeStubs,
                         DiagnosticRule.reportMissingTypeStubs,
@@ -278,15 +279,22 @@ export class Binder extends ParseTreeWalker {
                         };
                         diagnostic.addAction(createTypeStubAction);
                     }
-                } else if (importResult.nonStubImportResult) {
-                    if (!importResult.nonStubImportResult.isImportFound) {
-                        this._addDiagnostic(
-                            this._fileInfo.diagnosticRuleSet.reportMissingModuleSource,
-                            DiagnosticRule.reportMissingModuleSource,
-                            `Import "${importResult.importName}" could not be resolved from source`,
-                            node
-                        );
-                    }
+                }
+
+                // Type stub found, but source is missing
+                if (
+                    importResult.isStubFile &&
+                    (importResult.importType === ImportType.ThirdParty ||
+                        importResult.importType === ImportType.Local) &&
+                    importResult.nonStubImportResult &&
+                    !importResult.nonStubImportResult.isImportFound
+                ) {
+                    this._addDiagnostic(
+                        this._fileInfo.diagnosticRuleSet.reportMissingModuleSource,
+                        DiagnosticRule.reportMissingModuleSource,
+                        `Import "${importResult.importName}" could not be resolved from source`,
+                        node
+                    );
                 }
             }
         }

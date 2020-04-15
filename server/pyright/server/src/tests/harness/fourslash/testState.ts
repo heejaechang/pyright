@@ -440,15 +440,6 @@ export class TestState {
             return;
         }
 
-        // expected number of files
-        if (resultPerFile.size !== rangePerFile.size) {
-            this._raiseError(
-                `actual and expected doesn't match - expected: ${stringify(resultPerFile)}, actual: ${stringify(
-                    rangePerFile
-                )}`
-            );
-        }
-
         for (const [file, ranges] of rangePerFile.entries()) {
             const rangesPerCategory = this._createMultiMap<Range>(ranges, (r) => {
                 if (map) {
@@ -459,7 +450,17 @@ export class TestState {
                 return (r.marker!.data! as any).category as string;
             });
 
+            if (!rangesPerCategory.has('error')) {
+                rangesPerCategory.set('error', []);
+            }
+
+            if (!rangesPerCategory.has('warning')) {
+                rangesPerCategory.set('warning', []);
+            }
+
             const result = resultPerFile.get(file)!;
+            resultPerFile.delete(file);
+
             for (const [category, expected] of rangesPerCategory.entries()) {
                 const lines = result.parseResults!.tokenizerOutput.lines;
                 const actual =
@@ -475,11 +476,7 @@ export class TestState {
                     );
                 }
 
-                // TODO: there is a bug here
-                // 'ranges' has every expected range in the file, for both warning AND error
-                // but 'actual' only has the range for the current category (error OR warning)
-                // so 'matches' end up being empty for the ranges from the not-current category
-                for (const range of ranges) {
+                for (const range of expected) {
                     const rangeSpan = TextRange.fromBounds(range.pos, range.end);
                     const matches = actual.filter((d) => {
                         const diagnosticSpan = TextRange.fromBounds(
@@ -508,6 +505,10 @@ export class TestState {
                     }
                 }
             }
+        }
+
+        if (hasDiagnostics(resultPerFile)) {
+            this._raiseError(`these diagnostics were unexpected: ${stringify(resultPerFile)}`);
         }
 
         function hasDiagnostics(

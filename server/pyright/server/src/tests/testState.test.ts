@@ -73,7 +73,6 @@ test('Configuration', () => {
 ////
 ////   "reportTypeshedErrors": false,
 ////   "reportMissingImports": true,
-////   "reportMissingModuleSource": true,
 ////   "reportMissingTypeStubs": false,
 ////
 ////   "pythonVersion": "3.6",
