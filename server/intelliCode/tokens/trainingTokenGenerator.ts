@@ -6,7 +6,7 @@
 
 import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
 import { ExpressionWalker } from '../expressionWalker';
-import { TrainingInvocations } from '../models';
+import { LookbackTokenLength, TrainingInvocations } from '../models';
 import { LookBackTokenGenerator } from './lookbackTokenGenerator';
 import { integerBinarySearch, positionBinarySearch, TokenSet } from './tokenSet';
 
@@ -16,12 +16,13 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
         ast: ModuleNode,
         content: string,
         ew: ExpressionWalker,
-        lookback: number
+        lookback?: number
     ): Map<string, Map<string, TrainingInvocations>> | undefined {
         const references = new Map<string, Map<string, TrainingInvocations>>();
         const ts = this.extractTokens(ast, content);
 
-        for (const mi of ew.methodInvokations.filter((m) => m.value)) {
+        lookback = lookback || LookbackTokenLength;
+        for (const mi of ew.methodInvokations) {
             let type = mi.key;
             const method = mi.value;
             if (!method) {
@@ -46,7 +47,7 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
             }
             // put into references
             const invocations: TrainingInvocations = {
-                spanStart: [],
+                spanStart: [spanStart],
                 lookbackTokens: [tokenImages],
             };
 
@@ -71,18 +72,22 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
         spanStart: number,
         type: string,
         relevantName: string | undefined,
-        lookback: number
+        lookback?: number
     ): string[] {
+        lookback = lookback || LookbackTokenLength;
+
         let methodInvocationIndex = positionBinarySearch(ts.selectedTokens, spanStart);
         if (methodInvocationIndex < 0) {
             methodInvocationIndex = ~methodInvocationIndex + 1;
         }
+
         let start = methodInvocationIndex - lookback + 1;
         let count = lookback;
         if (lookback > methodInvocationIndex) {
             start = 0;
             count = methodInvocationIndex + 1;
         }
+
         const tokenImages = ts.selectedTokensImages.slice(start, start + count);
         // If token images is not larger than 2, there's no point on continuing, we return token_images.
         if (tokenImages.length <= 2) {
@@ -118,6 +123,6 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
             tokenImages[tokenImages.length - 3] = type;
         }
 
-        return tokenImages;
+        return this.filterTokens(tokenImages);
     }
 }

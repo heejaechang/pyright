@@ -31,8 +31,8 @@ os.path.abspath()
     const ew = walkExpressions(code);
     const mi = ew.methodInvokations;
     expect(mi).toIncludeSameMembers([
-        { key: 'os.path', value: 'abspath', spanStart: 13 },
         { key: 'os', value: 'path', spanStart: 13 },
+        { key: 'os.path', value: 'abspath', spanStart: 17 },
     ]);
 });
 
@@ -46,8 +46,8 @@ os.path.abspath()
     const mi = ew.methodInvokations;
     expect(mi).toIncludeSameMembers([
         { key: 'os', value: 'mkdir', spanStart: 13 },
-        { key: 'os.path', value: 'abspath', spanStart: 24 },
         { key: 'os', value: 'path', spanStart: 24 },
+        { key: 'os.path', value: 'abspath', spanStart: 28 },
     ]);
 });
 
@@ -107,4 +107,36 @@ test('IntelliCode expression walker: error collections', () => {
     verifySingle(`[1, 2, 3].`, StandardVariableType.List, undefined, 9);
     verifySingle(`(1, 'a').`, StandardVariableType.Tuple, undefined, 8);
     verifySingle(`{1, 'a'}.`, StandardVariableType.Set, undefined, 8);
+});
+
+test('IntelliCode expression walker: sklearn sample', () => {
+    const code = `
+import numpy as np    
+from sklearn import LinearDiscriminantAnalysis
+
+a = b = 1
+y = 1
+x = np.hstack([x, np.random.randn(a, b - 1)])
+clf1 = LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto').fit(x, y)
+`;
+    const ew = walkExpressions(code);
+    const mi = ew.methodInvokations;
+    expect(mi).toIncludeSameMembers([
+        { key: 'numpy', value: 'hstack', spanStart: 94 },
+        { key: 'numpy.random', value: 'randn', spanStart: 114 },
+        { key: 'numpy', value: 'random', spanStart: 108 },
+        { key: 'sklearn.LinearDiscriminantAnalysis', value: 'fit', spanStart: 167 },
+    ]);
+});
+
+test('IntelliCode expression walker: incomplete call chain', () => {
+    const code = `
+from a import b
+z = b(1, 2, 3).fit(x, y).`;
+    const ew = walkExpressions(code);
+    const mi = ew.methodInvokations;
+    expect(mi).toIncludeSameMembers([
+        { key: 'a.b', value: 'fit', spanStart: 22 },
+        { key: 'a.b.fit', value: undefined, spanStart: 25 },
+    ]);
 });

@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"noUnusedLocals": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"strictNullChecks": true,
+        "skipLibCheck": true,
+		"target": "es6",
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"lib": [ "es2016" ],
+		"outDir": "./dist"
+	},
+	"exclude": [
+		"node_modules"
+	],
+	"include": [
+		"./src/tests/*.ts"
+	],
+	"files":[
+        "./src/pythia.ts"
+      ]    
+}

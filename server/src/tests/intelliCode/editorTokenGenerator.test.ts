@@ -15,68 +15,60 @@ import { walkExpressions } from './testUtils';
 function getInference(code: string, position: number): EditorInvocation | undefined {
     const ew = walkExpressions(code);
     const tg = new EditorLookBackTokenGenerator();
-    return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, 100, position);
+    return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, position, 100);
 }
 
-test('IntelliCode token generator: empty', () => {
+function verifySingle(code: string, type: string, spanStart: number, position?: number) {
+    const ei = getInference(code, position || code.length - 1);
+    expect(ei).toBeDefined();
+    expect(ei!.type).toEqual(type);
+    expect(ei!.spanStart).toEqual(spanStart);
+}
+
+test('IntelliCode editor token generator: empty', () => {
     const code = ``;
     const ei = getInference(code, 0);
     expect(ei).toBeUndefined();
 });
 
-test('IntelliCode token generator: module member', () => {
+test('IntelliCode editor token generator: module member', () => {
     const code = `
 import os    
 os. `;
-    const ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
-    expect(ei!.type).toEqual('os');
-    expect(ei!.spanStart).toEqual(17);
+    verifySingle(code, 'os', 17);
 });
 
-test('IntelliCode token generator: module member return', () => {
+test('IntelliCode editor token generator: module member return 1', () => {
     const code = `
 import os    
-os.mkdir(). `;
-    const ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
-    expect(ei!.type).toEqual('os.mkdir');
-    expect(ei!.spanStart).toEqual(25);
+os.mkdir('dir'). `;
+    verifySingle(code, 'os.mkdir', 30);
 });
 
-test('IntelliCode token generator: module member return', () => {
+test('IntelliCode editor token generator: module member return 2', () => {
     const code = `
 x = [1, 2, 3]
 x[1]. `;
-    const ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
     // Type of each list/dictionary item is assigned as String by default.
     // Default recommendation list will filter out String's recommendation
     // list if actual type is not string.
-    expect(ei!.type).toEqual(StandardVariableType.String);
-    expect(ei!.spanStart).toEqual(19);
+    verifySingle(code, StandardVariableType.String, 19);
 });
 
-test('IntelliCode token generator: expression in braces', () => {
+test('IntelliCode editor token generator: expression in braces', () => {
     const code = `
 import os    
 (os). `;
-    const ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
-    expect(ei!.type).toEqual('os');
-    expect(ei!.spanStart).toEqual(19);
+    verifySingle(code, 'os', 19);
 });
 
-test('IntelliCode token generator: constant string', () => {
+test('IntelliCode editor token generator: constant string', () => {
     const code = `
 'str'. `;
-    const ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
-    expect(ei!.type).toEqual(StandardVariableType.String);
-    expect(ei!.spanStart).toEqual(6);
+    verifySingle(code, StandardVariableType.String, 6);
 });
 
-test('IntelliCode token generator: constant number', () => {
+test('IntelliCode editor token generator: constant number', () => {
     const code = `
 1.0. `;
     const ei = getInference(code, code.length - 1);
@@ -84,7 +76,7 @@ test('IntelliCode token generator: constant number', () => {
     expect(ei).toBeUndefined();
 });
 
-test('IntelliCode token generator: numerics', () => {
+test('IntelliCode editor token generator: numerics', () => {
     let code = 'languages=data[questionNames[year]]. ';
     let ei = getInference(code, code.length - 1);
     expect(ei).toBeDefined();
@@ -109,4 +101,19 @@ test('IntelliCode token generator: numerics', () => {
     code = 'W = tf.Variable([-0. ';
     ei = getInference(code, code.length - 1);
     expect(ei).toBeUndefined();
+});
+
+// TODO: see if we can fix completion type in the middle of an expression.
+// test('IntelliCode editor token generator: complete inside expression', () => {
+//     const code = `
+// from a import b
+// z = b(1, 2, 3).fit(x, y)`;
+//     verifySingle(code, 'a.b', 31, code.length - 9);
+// });
+
+test('IntelliCode editor token generator: remove arguments', () => {
+    const code = `
+from a import b
+z = b(1, 2, 3).fit(x, y). `;
+    verifySingle(code, 'a.b.fit', 41);
 });

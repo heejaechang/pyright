@@ -51,8 +51,7 @@ export class TokenSet {
 
     findMethodPosition(mi: MethodInvokation): number {
         // Find correct spanstart for current method invocation
-        const end = positionBinarySearch(this.selectedTokens, mi.spanStart) + 1;
-
+        const end = positionBinarySearch(this.selectedTokens, mi.spanStart);
         for (let i = this.selectedTokensImages.length - 1; i > end && i > 0; i--) {
             const ti = this.selectedTokensImages[i];
             if (ti === mi.value) {

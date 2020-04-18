@@ -129,3 +129,7 @@ jobs:
 
       - script: npm run package
         displayName: npm run package
+
+      - script: npm run package
+        displayName: package pythia CLI
+        workingDirectory: pythia

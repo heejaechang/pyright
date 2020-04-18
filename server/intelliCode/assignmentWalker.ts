@@ -78,11 +78,11 @@ export class AssignmentWalker extends BaseParseTreeWalker {
             if (name.value) {
                 if (asName?.value) {
                     this._currentScope.assignments.push(
-                        new Assignment(asName.value, rootModuleName + '.' + name.value, name.start + name.length)
+                        new Assignment(asName.value, `${rootModuleName}.${name.value}`, name.start + name.length)
                     );
                 } else {
                     this._currentScope.assignments.push(
-                        new Assignment(name.value, name.value, name.start + name.length)
+                        new Assignment(name.value, `${rootModuleName}.${name.value}`, name.start + name.length)
                     );
                 }
             } else if (asName?.value) {

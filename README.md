@@ -53,6 +53,10 @@ const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', '--inspect-brk']
 -   To run all tests from command line use `npm run test:all`.
 -   Useful extensions: `Jest` (from Orta)
 
+## Debugging IntelliCode CLI
+
+IntelliCode CLI is an utility that processes one or multiple repos and generates training data. Code is in `pythia/pythia.ts` with its own build and packaging. There is a task `IntelliCode Debug CLI` in `launch.json` that can be used for debugging. Adjust CLI arguments as needed in the `launch.json`.
+
 ## Code style
 
 -   Formatting: install [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)

@@ -21,6 +21,7 @@ import { getStandardVariableType, IntelliCodeConstants, MethodInvokation, Standa
 
 export class ExpressionWalker extends BaseParseTreeWalker {
     methodInvokations: MethodInvokation[] = [];
+    methodCount = 0;
 
     constructor(scopes: Scope[]) {
         super();
@@ -48,6 +49,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
 
     visitMemberAccess(node: MemberAccessNode): boolean {
         if (node.memberName?.value) {
+            this.methodCount++;
             this.handleMemberExpression(node.memberName.value, node.leftExpression);
         }
         return true;
@@ -71,7 +73,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
                     break;
             }
         }
-        return false;
+        return true;
     }
 
     // Recursively walk through member functions to figure out the invocations
@@ -85,15 +87,20 @@ export class ExpressionWalker extends BaseParseTreeWalker {
             case ParseNodeType.Name:
                 {
                     const variableName = callTarget.value;
-                    let resolvedName: string | undefined;
-                    if (variableName) {
-                        resolvedName = resolveVariable(this._currentScope, variableName, callTarget.start);
-                        if (resolvedName) {
-                            const key = prevFunctionsCalled ? `${resolvedName}.${prevFunctionsCalled}` : resolvedName;
-                            this.addMethod(key, functionName, callTargetEnd);
-                        } else if (IntelliCodeConstants.IncludeUnresolvedType) {
-                            this.addMethod(IntelliCodeConstants.UnresolvedType, functionName, callTargetEnd);
+                    if (!variableName) {
+                        return;
+                    }
+
+                    let resolvedName = resolveVariable(this._currentScope, variableName, callTarget.start);
+                    if (resolvedName) {
+                        let spanStart = callTargetEnd;
+                        if (prevFunctionsCalled) {
+                            resolvedName = `${resolvedName}.${prevFunctionsCalled}`;
+                            spanStart += prevFunctionsCalled.length;
                         }
+                        this.addMethod(resolvedName, functionName, spanStart);
+                    } else if (IntelliCodeConstants.IncludeUnresolvedType) {
+                        this.addMethod(IntelliCodeConstants.UnresolvedType, functionName, callTargetEnd);
                     }
                 }
                 break;
@@ -114,7 +121,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
                             }
                             break;
                         case ParseNodeType.Name:
-                            this.handleMemberExpression(functionName, target);
+                            this.handleMemberExpression(functionName, target, prevFunctionsCalled);
                             break;
                     }
                 }

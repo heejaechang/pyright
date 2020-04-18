@@ -37,6 +37,11 @@ export class StandardVariableType {
     public static readonly Dictionary = 'dict';
 }
 
+export enum LiteralTokenImage {
+    String = 'STR_LIT',
+    Number = 'NUM_LIT',
+}
+
 // Determine the type of the variable and return a variable to type value pair.
 export function getStandardVariableType(node: ParseNode) {
     switch (node.nodeType) {

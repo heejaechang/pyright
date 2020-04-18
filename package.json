@@ -14,10 +14,11 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ..",
+        "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ../pythia && npm install && cd ..",
         "build": "npm run clean:pyright && npm run build:client && npm run build:server",
         "build:client": "cd client && npm run build && cd ..",
         "build:server": "cd server && npm run build && cd ..",
+        "build:pythia": "cd pythia && npm run package && cd ..",
         "build:pyrightDebug": "cd server/pyright && npm run build:clientServerDebug && cd ../..",
         "clean": "del-cli \"./client/server\" && del-cli \"./client/out\" && del-cli \"./dist\"",
         "clean:pyright": "cd server/pyright && npm run clean && cd ../..",

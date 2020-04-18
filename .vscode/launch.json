@@ -161,6 +161,42 @@
             "windows": {
                 "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
             }
-        }
+        },
+        {
+            "name": "IntelliCode Debug CLI",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "${workspaceRoot}/pythia/dist/pythia/src/pythia.js",
+                "pipeline",
+                "${workspaceRoot}/pythia/src/tests/data/repo1",
+                "${workspaceRoot}/pythia/src/tests/out/repo1_test",
+                "repo1"
+            ],
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceRoot}/server/out/**/*.js"
+            ]
+        },
+        {
+            "name": "IntelliCode CLI jest current file",
+            "type": "node",
+            "request": "launch",
+            "args": [
+                "${fileBasenameNoExtension}",
+                "--config",
+                "${workspaceRoot}/pythia/jest.config.js"
+            ],
+            "cwd": "${workspaceFolder}/pythia",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/pythia/node_modules/jest/bin/jest",
+            "windows": {
+                "program": "${workspaceFolder}/pythia/node_modules/jest/bin/jest"
+            }
+        },   
     ]
 }

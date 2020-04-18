@@ -1,0 +1,165 @@
+[
+  {
+    "Repo": "E:\\pyrx\\pythia\\src\\tests\\data\\repo1",
+    "Project": "E:\\pyrx\\pythia\\src\\tests\\data\\repo1",
+    "Document": "sample1.py",
+    "References": {
+      "numpy": {
+        "hstack": {
+          "spanStart": [
+            103
+          ],
+          "lookbackTokens": [
+            [
+              "import",
+              "numpy",
+              "as",
+              "numpy",
+              "\n",
+              "from",
+              "sklearn",
+              "import",
+              "LinearDiscriminantAnalysis",
+              "\n",
+              "a",
+              "=",
+              "b",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "y",
+              "=",
+              "x",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "x",
+              "=",
+              "numpy",
+              ".",
+              "hstack"
+            ]
+          ]
+        },
+        "random": {
+          "spanStart": [
+            117
+          ],
+          "lookbackTokens": [
+            [
+              "import",
+              "numpy",
+              "as",
+              "numpy",
+              "\n",
+              "from",
+              "sklearn",
+              "import",
+              "LinearDiscriminantAnalysis",
+              "\n",
+              "a",
+              "=",
+              "b",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "y",
+              "=",
+              "x",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "x",
+              "=",
+              "numpy",
+              ".",
+              "hstack"
+            ]
+          ]
+        }
+      },
+      "numpy.random": {
+        "randn": {
+          "spanStart": [
+            124
+          ],
+          "lookbackTokens": [
+            [
+              "import",
+              "numpy",
+              "as",
+              "np",
+              "\n",
+              "from",
+              "sklearn",
+              "import",
+              "LinearDiscriminantAnalysis",
+              "\n",
+              "a",
+              "=",
+              "b",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "y",
+              "=",
+              "x",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "x",
+              "=",
+              "np",
+              ".",
+              "hstack"
+            ]
+          ]
+        }
+      },
+      "sklearn.LinearDiscriminantAnalysis": {
+        "fit": {
+          "spanStart": [
+            210
+          ],
+          "lookbackTokens": [
+            [
+              "import",
+              "numpy",
+              "as",
+              "np",
+              "\n",
+              "from",
+              "sklearn",
+              "import",
+              "sklearn.LinearDiscriminantAnalysis",
+              "\n",
+              "a",
+              "=",
+              "b",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "y",
+              "=",
+              "x",
+              "=",
+              "NUM_LIT",
+              "\n",
+              "x",
+              "=",
+              "np",
+              ".",
+              "hstack",
+              "\n",
+              "clf1",
+              "=",
+              "sklearn.LinearDiscriminantAnalysis",
+              ".",
+              "fit"
+            ]
+          ]
+        }
+      }
+    }
+  }
+]
