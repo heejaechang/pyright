@@ -4,7 +4,8 @@
  * Licensed under the MIT license.
  * Author: Eric Traut
  *
- * Run analyzer service of the given workspaceServiceInstance with the given option
+ * Runs the analyzer service of a given workspace service instance
+ * with a specified set of options.
  */
 
 import { CommandLineOptions } from '../common/commandLineOptions';
@@ -16,7 +17,8 @@ export class AnalyzerServiceExecutor {
         languageServiceRootPath: string,
         workspace: WorkspaceServiceInstance,
         serverSettings: ServerSettings,
-        typeStubTargetImportName?: string
+        typeStubTargetImportName?: string,
+        trackFiles = true
     ): void {
         const commandLineOptions = _getCommandLineOptions(
             languageServiceRootPath,
@@ -25,29 +27,13 @@ export class AnalyzerServiceExecutor {
             typeStubTargetImportName
         );
 
-        // setting option cause analyzer service to re-analyze everything
-        workspace.serviceInstance.setOptions(commandLineOptions);
-    }
+        if (!trackFiles) {
+            commandLineOptions.watchForSourceChanges = false;
+            commandLineOptions.watchForLibraryChanges = false;
+        }
 
-    static withOptions(
-        languageServiceRootPath: string,
-        workspace: WorkspaceServiceInstance,
-        serverSettings: ServerSettings,
-        typeStubTargetImportName?: string
-    ): void {
-        const commandLineOptions = _getCommandLineOptions(
-            languageServiceRootPath,
-            workspace.rootPath,
-            serverSettings,
-            typeStubTargetImportName
-        );
-
-        // don't track file changes
-        commandLineOptions.watchForSourceChanges = false;
-        commandLineOptions.watchForLibraryChanges = false;
-
-        // set option without tracking files and analysis
-        workspace.serviceInstance.setOptions(commandLineOptions, false);
+        // Setting options causes the analyzer service to re-analyze everything.
+        workspace.serviceInstance.setOptions(commandLineOptions, trackFiles);
     }
 }
 
