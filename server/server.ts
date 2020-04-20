@@ -138,7 +138,7 @@ class PyRxServer extends LanguageServerBase {
         this.recordUserInteractionTime();
 
         const filePath = convertUriToPath(params.textDocument.uri);
-        const workspace = this.getWorkspaceForFile(filePath);
+        const workspace = await this.getWorkspaceForFile(filePath);
         return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, params.range, token);
     }
 

@@ -7,10 +7,11 @@ pr:
 
 variables:
   nodeVersion: '12.x'
+  npm_config_cache: $(Pipeline.Workspace)/.npm
 
 jobs:
   - job: test
-    displayName: Build and test
+    displayName: Test
     strategy:
       matrix:
         linux:
@@ -35,17 +36,19 @@ jobs:
         inputs:
           versionSpec: $(nodeVersion)
 
-      - task: Npm@1
-        displayName: npm run package
+      - task: Cache@2
+        displayName: Cache npm
         inputs:
-          command: 'custom'
-          customCommand: 'run package'
+          key: 'npm | "$(Agent.OS)" | **/package-lock.json, !**/node_modules/**'
+          restoreKeys: |
+            npm | "$(Agent.OS)"
+          path: $(npm_config_cache)
 
-      - task: Npm@1
+      - script: npm run install:all
+        displayName: npm run install:all
+
+      - script: npm run test:all:pipeline
         displayName: npm run test:all:pipeline
-        inputs:
-          command: 'custom'
-          customCommand: 'run test:all:pipeline'
 
       - task: PublishPipelineArtifact@1
         displayName: Publish Istanbul report as artifact
@@ -82,29 +85,51 @@ jobs:
         inputs:
           versionSpec: $(nodeVersion)
 
-      - task: Npm@1
-        displayName: npm run install:all
+      - task: Cache@2
+        displayName: Cache npm
         inputs:
-          command: 'custom'
-          customCommand: 'run install:all'
+          key: 'npm | "$(Agent.OS)" | **/package-lock.json, !**/node_modules/**'
+          restoreKeys: |
+            npm | "$(Agent.OS)"
+          path: $(npm_config_cache)
+
+      - script: npm run install:all
+        displayName: npm run install:all
 
       - bash: git diff --exit-code --name-only
         displayName: Diff after npm install
 
-      - task: Npm@1
+      - script: npm run prettier
         displayName: npm run prettier
-        inputs:
-          command: 'custom'
-          customCommand: 'run prettier'
 
-      - task: Npm@1
+      - script: npm run eslint
         displayName: npm run eslint
-        inputs:
-          command: 'custom'
-          customCommand: 'run eslint'
 
-      - task: Npm@1
+      - script: npm run syncpack:check
         displayName: npm run syncpack:check
+
+  - job: package
+    displayName: Package
+    pool:
+      name: 'VSEng-MicroBuildVS2019' # This is where we do our final builds for distribution; test packaging here.
+
+    steps:
+      - task: NodeTool@0
+        displayName: Use Node $(nodeVersion)
         inputs:
-          command: 'custom'
-          customCommand: 'run syncpack:check'
+          versionSpec: $(nodeVersion)
+
+      - task: Cache@2
+        displayName: Cache npm
+        inputs:
+          key: 'npm | "$(Agent.OS)" | **/package-lock.json, !**/node_modules/**'
+          restoreKeys: |
+            npm | "$(Agent.OS)"
+          path: $(npm_config_cache)
+
+      - script: npm run package
+        displayName: npm run package
+
+      - script: npm run package
+        displayName: package pythia CLI
+        workingDirectory: pythia

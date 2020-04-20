@@ -4,6 +4,8 @@
  * IntelliCode data models.
  */
 
+export const LookbackTokenLength = 100;
+
 // Usage data model for offline training
 export class UsageDataModel {
     Repo: string;

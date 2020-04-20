@@ -346,3 +346,14 @@ class A:
         { key: 'd', value: StandardVariableType.Int, spanStart: 239 },
     ]);
 });
+
+test('IntelliCode assignment walker: from import', () => {
+    const code = `
+from a import b
+`;
+    const aw = walkAssignments(code);
+    expect(aw.scopes).toBeArrayOfSize(1);
+
+    const assignments = aw.scopes[0].assignments;
+    expect(assignments).toIncludeSameMembers([{ key: 'b', value: 'a.b', spanStart: 16 }]);
+});

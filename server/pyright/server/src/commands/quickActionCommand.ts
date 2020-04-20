@@ -1,5 +1,7 @@
 /*
  * quickActionCommand.ts
+ * Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT license.
  *
  * Implements command that maps to a quick action.
  */
@@ -19,7 +21,7 @@ export class QuickActionCommand implements ServerCommand {
             const docUri = params.arguments[0];
             const otherArgs = params.arguments.slice(1);
             const filePath = convertUriToPath(docUri);
-            const workspace = this._ls.getWorkspaceForFile(filePath);
+            const workspace = await this._ls.getWorkspaceForFile(filePath);
 
             if (params.command === Commands.orderImports && workspace.disableOrganizeImports) {
                 return [];

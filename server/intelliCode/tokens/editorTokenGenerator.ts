@@ -8,7 +8,7 @@ import { assert } from '../../pyright/server/src/common/debug';
 import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
 import { TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
 import { ExpressionWalker } from '../expressionWalker';
-import { EditorInvocation } from '../models';
+import { EditorInvocation, LookbackTokenLength } from '../models';
 import { LookBackTokenGenerator } from './lookbackTokenGenerator';
 import { TokenSet } from './tokenSet';
 
@@ -18,26 +18,27 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
         ast: ModuleNode,
         content: string,
         ew: ExpressionWalker,
-        lookback: number,
-        position: number
+        position: number,
+        lookback?: number
     ): EditorInvocation | undefined {
         const ts = this.extractTokens(ast, content);
-        // Walk backwards through method invocation
+        let method: string | undefined;
         let type: string | undefined;
         let spanStart = -1;
 
-        for (let i = ew.methodInvokations.length - 1; i >= 0; i--) {
-            const mi = ew.methodInvokations[i];
+        lookback = lookback || LookbackTokenLength;
+
+        const sorted = ew.methodInvokations.sort((a, b) => b.spanStart - a.spanStart);
+        for (const mi of sorted) {
             type = mi.key;
+            method = mi.value;
 
             // Find correct spanstart for current method invocation
             let mpos = ts.findMethodPosition(mi);
-
-            // Extract current invocation for online use case, need to optimize for speed later.
             if (mpos >= position) {
                 continue;
             }
-
+            // Extract current invocation for online use case, need to optimize for speed later.
             if (mpos < position - 1) {
                 mpos = position - 1;
             }
@@ -96,8 +97,8 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
 
         return {
             spanStart: spanStart,
-            lookbackTokens: tokenImages,
-            type: type,
+            lookbackTokens: this.filterTokens(tokenImages),
+            type: method ? `${type}.${method}` : type,
         };
     }
 

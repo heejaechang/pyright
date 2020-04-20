@@ -1,0 +1,37 @@
+{
+    "name": "pythia",
+    "displayName": "Pythia",
+    "description": "Pythia for Python repo analysis utility",
+    "version": "0.1.0",
+    "license": "LicenseRef-LICENSE",
+    "author": {
+        "name": "Microsoft Corporation"
+    },
+    "publisher": "Microsoft Corporation",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/PyRx"
+    },
+    "scripts": {
+        "build": "npm install && tsc --project tsconfig.json",
+        "package": "npm run build && npx webpack"
+    },
+    "devDependencies": {
+        "@types/jest": "^25.2.1",
+        "@types/node": "^13.13.0",
+        "@typescript-eslint/eslint-plugin": "^2.28.0",
+        "@typescript-eslint/parser": "^2.28.0",
+        "eslint": "^6.8.0",
+        "eslint-config-prettier": "^6.10.1",
+        "eslint-plugin-simple-import-sort": "^5.0.2",
+        "jest": "^25.4.0",
+        "jest-extended": "^0.11.5",
+        "jest-junit": "^10.0.0",
+        "node-loader": "^0.6.0",
+        "ts-jest": "^25.4.0",
+        "ts-loader": "^6.2.2",
+        "typescript": "^3.8.3",
+        "webpack": "^4.42.1",
+        "webpack-cli": "^3.3.11"
+    }
+}

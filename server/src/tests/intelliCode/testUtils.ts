@@ -3,6 +3,7 @@
  *
  * IntelliCode test utilities.
  */
+import 'jest-extended';
 
 import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
@@ -28,4 +29,12 @@ export function walkExpressions(code: string): ExpressionWalker {
     const ew = new ExpressionWalker(aw.scopes);
     ew.walk(pr.parseTree);
     return ew;
+}
+
+export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]) {
+    const keys: K[] = [];
+    map.forEach((value: V, key: K) => {
+        keys.push(key);
+    });
+    expect(expected).toIncludeSameMembers(keys);
 }
