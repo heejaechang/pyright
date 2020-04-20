@@ -16,9 +16,10 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 
-import { throwIfCancellationRequested } from '../common/cancellationUtils';
+import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
+import { isDebugMode } from '../common/core';
 import { assert } from '../common/debug';
 import { Diagnostic } from '../common/diagnostic';
 import { FileDiagnostics } from '../common/diagnosticSink';
@@ -605,9 +606,20 @@ export class Program {
 
         // For very large programs, we may need to discard the evaluator and
         // its cached types to avoid running out of heap space.
-        if (this._evaluator.hasGrownTooLarge()) {
-            this._console.log('Emptying type cache to avoid heap overflow');
-            this._createNewEvaluator();
+        const typeCacheSize = this._evaluator.getTypeCacheSize();
+
+        // If the type cache size has exceeded a high-water mark, query the heap usage.
+        // Don't bother doing this until we hit this point because the heap usage may not
+        // drop immediately after we empty the cache due to garbage collection timing.
+        if (typeCacheSize > 750000) {
+            const heapSizeInMb = Math.round(process.memoryUsage().heapUsed / (1024 * 1024));
+
+            // Don't allow the heap to get close to the 2GB limit imposed by
+            // the OS when running Node in a 32-bit process.
+            if (heapSizeInMb > 1536) {
+                this._console.log(`Emptying type cache to avoid heap overflow. Heap size used: ${heapSizeInMb}MB`);
+                this._createNewEvaluator();
+            }
         }
 
         fileToCheck.sourceFile.check(this._evaluator);
@@ -1035,16 +1047,20 @@ export class Program {
     // any other unexpected exceptions.
     private _runEvaluatorWithCancellationToken<T>(token: CancellationToken | undefined, callback: () => T): T {
         try {
-            if (token) {
+            // Don't support cancellation in debug mode because cancellation
+            // checks and exceptions interfere with debugging.
+            if (token && !isDebugMode()) {
                 return this._evaluator.runWithCancellationToken(token, callback);
             } else {
                 return callback();
             }
         } catch (e) {
-            // An unexpected exception or cancellation occurred, potentially
-            // leaving the current evaluator in an inconsistent state. Discard
-            // it and replace it with a fresh one.
-            this._createNewEvaluator();
+            // An unexpected exception occurred, potentially leaving the current evaluator
+            // in an inconsistent state. Discard it and replace it with a fresh one. It is
+            // Cancellation exceptions are known to handle this correctly.
+            if (!(e instanceof OperationCanceledException)) {
+                this._createNewEvaluator();
+            }
             throw e;
         }
     }

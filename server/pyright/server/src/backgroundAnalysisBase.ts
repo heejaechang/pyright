@@ -36,7 +36,7 @@ export class BackgroundAnalysisBase {
     private _onAnalysisCompletion: AnalysisCompleteCallback = nullCallback;
 
     protected constructor() {
-        /* don't allow instanciating this type directly */
+        // Don't allow instantiation of this type directly.
     }
 
     protected setup(worker: Worker, console: ConsoleInterface) {
@@ -49,12 +49,14 @@ export class BackgroundAnalysisBase {
                 case 'log':
                     this.log(msg.data);
                     break;
+
                 case 'analysisResult': {
-                    // change in diagnostics due to host such as file closed rather than
-                    // analyzing files
+                    // Change in diagnostics due to host such as file closed rather than
+                    // analyzing files.
                     this._onAnalysisCompletion(convertAnalysisResults(msg.data));
                     break;
                 }
+
                 default:
                     debug.fail(`${msg.requestType} is not expected`);
             }
@@ -94,24 +96,23 @@ export class BackgroundAnalysisBase {
     }
 
     startAnalysis(token: CancellationToken) {
-        // REVIEW: do we want to change this to asyncIterator? we can't change it to
-        // regular promise sicne we want it to stream restuls rather than return all
-        // results at once
         const { port1, port2 } = new MessageChannel();
 
-        // this is the response from BG thread to main thread
+        // Handle response from background thread to main thread.
         port1.on('message', (msg: AnalysisResponse) => {
             switch (msg.requestType) {
                 case 'analysisResult': {
                     this._onAnalysisCompletion(convertAnalysisResults(msg.data));
                     break;
                 }
+
                 case 'analysisDone': {
                     disposeCancellationToken(token);
                     port2.close();
                     port1.close();
                     break;
                 }
+
                 default:
                     debug.fail(`${msg.requestType} is not expected`);
             }
@@ -139,7 +140,7 @@ export class BackgroundAnalysisBase {
         port2.close();
         port1.close();
 
-        return convertDiagnsotics(result);
+        return convertDiagnostics(result);
     }
 
     async writeTypeStub(
@@ -205,29 +206,34 @@ export class BackgroundAnalysisRunnerBase {
     }
 
     start() {
-        this.log(`background analysis started`);
+        this.log(`Background analysis started`);
 
-        // get requests from main thread
+        // Get requests from main thread.
         parentPort?.on('message', (msg: AnalysisRequest) => {
             switch (msg.requestType) {
                 case 'analyze': {
                     const port = msg.port!;
                     const token = getCancellationTokenFromId(msg.data);
 
-                    // this streams results at the interval of the max analysis time
+                    // Report results at the interval of the max analysis time.
                     const maxTime = { openFilesTimeInMs: 50, noOpenFilesTimeInMs: 200 };
-                    analyzeProgram(
-                        this._program,
-                        maxTime,
-                        this._configOptions,
-                        (result) => this._onAnalysisCompletion(port, result),
-                        this._getConsole(),
-                        token
-                    );
+                    let moreToAnalyze = true;
+
+                    while (moreToAnalyze) {
+                        moreToAnalyze = analyzeProgram(
+                            this._program,
+                            maxTime,
+                            this._configOptions,
+                            (result) => this._onAnalysisCompletion(port, result),
+                            this._getConsole(),
+                            token
+                        );
+                    }
 
                     this._analysisDone(port, msg.data);
                     break;
                 }
+
                 case 'getDiagnosticsForRange': {
                     run(() => {
                         const { filePath, range, cancellationId } = msg.data;
@@ -238,6 +244,7 @@ export class BackgroundAnalysisRunnerBase {
                     }, msg.port!);
                     break;
                 }
+
                 case 'writeTypeStub': {
                     run(() => {
                         const { targetImportPath, targetIsSingleFile, typingsPath, cancellationId } = msg.data;
@@ -255,6 +262,7 @@ export class BackgroundAnalysisRunnerBase {
                     }, msg.port!);
                     break;
                 }
+
                 case 'setConfigOptions': {
                     this._configOptions = createConfigOptionsFrom(msg.data);
                     this._importResolver = this.createImportResolver(this._fs, this._configOptions);
@@ -262,33 +270,40 @@ export class BackgroundAnalysisRunnerBase {
                     this._program.setImportResolver(this._importResolver);
                     break;
                 }
+
                 case 'setTrackedFiles': {
                     const diagnostics = this._program.setTrackedFiles(msg.data);
                     this._reportDiagnostics(diagnostics, this._program.getFilesToAnalyzeCount(), 0);
                     break;
                 }
+
                 case 'setAllowedThirdPartyImports': {
                     this._program.setAllowedThirdPartyImports(msg.data);
                     break;
                 }
+
                 case 'setFileOpened': {
                     const { filePath, version, contents } = msg.data;
                     this._program.setFileOpened(filePath, version, contents);
                     break;
                 }
+
                 case 'setFileClosed': {
                     const diagnostics = this._program.setFileClosed(msg.data);
                     this._reportDiagnostics(diagnostics, this._program.getFilesToAnalyzeCount(), 0);
                     break;
                 }
+
                 case 'markAllFilesDirty': {
                     this._program.markAllFilesDirty(msg.data);
                     break;
                 }
+
                 case 'markFilesDirty': {
                     this._program.markFilesDirty(msg.data);
                     break;
                 }
+
                 case 'invalidateAndForceReanalysis': {
                     // Make sure the import resolver doesn't have invalid
                     // cached entries.
@@ -298,14 +313,17 @@ export class BackgroundAnalysisRunnerBase {
                     this._program.markAllFilesDirty(true);
                     break;
                 }
+
                 case 'restart': {
                     // recycle import resolver
                     this._importResolver = this.createImportResolver(this._fs, this._configOptions);
                     this._program.setImportResolver(this._importResolver);
                     break;
                 }
-                default:
+
+                default: {
                     debug.fail(`${msg.requestType} is not expected`);
+                }
             }
         });
 
@@ -360,10 +378,10 @@ export class BackgroundAnalysisRunnerBase {
 }
 
 function createConfigOptionsFrom(jsonObject: any): ConfigOptions {
-    // make this better than what I have now
-    // https://github.com/microsoft/pyrx/issues/197
-
     const configOptions = new ConfigOptions(jsonObject.projectRoot);
+    const getFileSpec = (fileSpec: any): FileSpec => {
+        return { wildcardRoot: fileSpec.wildcardRoot, regExp: new RegExp(fileSpec.regExp.source) };
+    };
 
     configOptions.pythonPath = jsonObject.pythonPath;
     configOptions.typeshedPath = jsonObject.typeshedPath;
@@ -385,10 +403,6 @@ function createConfigOptionsFrom(jsonObject: any): ConfigOptions {
     configOptions.strict = jsonObject.strict.map((f: any) => getFileSpec(f));
 
     return configOptions;
-
-    function getFileSpec(fileSpec: any): FileSpec {
-        return { wildcardRoot: fileSpec.wildcardRoot, regExp: new RegExp(fileSpec.regExp.source) };
-    }
 }
 
 function run(code: () => any, port: MessagePort) {
@@ -412,12 +426,15 @@ function getBackgroundWaiter<T>(port: MessagePort): Promise<T> {
                 case 'ok':
                     resolve(m.data);
                     break;
+
                 case 'cancelled':
                     reject(new OperationCanceledException());
                     break;
+
                 case 'failed':
                     reject(m.data);
                     break;
+
                 default:
                     debug.fail(`unknown kind ${m.kind}`);
             }
@@ -429,15 +446,16 @@ function convertAnalysisResults(result: AnalysisResults): AnalysisResults {
     result.diagnostics = result.diagnostics.map((f: FileDiagnostics) => {
         return {
             filePath: f.filePath,
-            diagnostics: convertDiagnsotics(f.diagnostics),
+            diagnostics: convertDiagnostics(f.diagnostics),
         };
     });
 
     return result;
 }
 
-function convertDiagnsotics(diagnostics: Diagnostic[]) {
-    // get elements as any since data crossing thread barrier loses type info
+function convertDiagnostics(diagnostics: Diagnostic[]) {
+    // Elements are typed as "any" since data crossing the process
+    // boundary loses type info.
     return diagnostics.map<Diagnostic>((d: any) => {
         const diag = new Diagnostic(d.category, d.message, d.range);
         if (d._actions) {
