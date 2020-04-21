@@ -6,7 +6,14 @@
 
 import * as path from 'path';
 import { isArray } from 'util';
-import { CancellationToken, CodeAction, CodeActionParams, Command, ExecuteCommandParams } from 'vscode-languageserver';
+import {
+    CancellationToken,
+    CodeAction,
+    CodeActionParams,
+    Command,
+    ConfigurationItem,
+    ExecuteCommandParams,
+} from 'vscode-languageserver';
 import { isMainThread } from 'worker_threads';
 
 import { BackgroundAnalysis } from './backgroundAnalysis';
@@ -36,16 +43,20 @@ import { AnalysisTracker } from './src/services/analysisTracker';
 import { LogServiceImplementation } from './src/services/logger';
 import { TelemetryServiceImplementation } from './src/services/telemetry';
 
+const pythonSectionName = 'python';
+const pythonAnalysisSectionName = 'python.analysis';
+
 class PyRxServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
     private _telemetry: TelemetryService;
     private _logger: LogService;
+    private _intelliCode: IntelliCodeExtension;
 
     constructor() {
         const rootDirectory = __dirname;
-        const ic = new IntelliCodeExtension();
-        super('Python', rootDirectory, ic);
+        const intelliCode = new IntelliCodeExtension();
+        super('Python', rootDirectory, intelliCode);
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -66,23 +77,30 @@ class PyRxServer extends LanguageServerBase {
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryServiceImplementation(this._connection as any);
         this._logger = new LogServiceImplementation();
-        ic.initialize(this._logger, this._telemetry, this.fs);
+
+        // IntelliCode may be enabled or disabled depending on user settings.
+        // We don't know the state here since settings haven't been accessed yet.
+        this._intelliCode = intelliCode;
+        intelliCode.initialize(this._logger, this._telemetry, this.fs);
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
         const serverSettings: ServerSettings = {
+            autoSearchPaths: true,
             disableLanguageServices: false,
+            openFilesOnly: true,
+            useLibraryCodeForTypes: true,
             watchForLibraryChanges: true,
         };
 
         try {
-            const pythonSection = await this.getConfiguration(workspace, 'python');
+            const pythonSection = await this.getConfiguration(workspace, pythonSectionName);
             if (pythonSection) {
                 serverSettings.pythonPath = normalizeSlashes(pythonSection.pythonPath);
                 serverSettings.venvPath = normalizeSlashes(pythonSection.venvPath);
             }
 
-            const pythonAnalysisSection = await this.getConfiguration(workspace, 'python.analysis');
+            const pythonAnalysisSection = await this.getConfiguration(workspace, pythonAnalysisSectionName);
             if (pythonAnalysisSection) {
                 const typeshedPaths = pythonAnalysisSection.typeshedPaths;
                 if (typeshedPaths && isArray(typeshedPaths) && typeshedPaths.length > 0) {
@@ -90,15 +108,9 @@ class PyRxServer extends LanguageServerBase {
                 }
 
                 // default openFilesOnly and useLibraryCodeForTypes to "true" unless users have set it explicitly
-                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? true;
-                serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes ?? true;
-                serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths ?? true;
-
-                this.setLogLevel(pythonAnalysisSection.logLevel);
-            } else {
-                serverSettings.openFilesOnly = true;
-                serverSettings.useLibraryCodeForTypes = true;
-                serverSettings.autoSearchPaths = true;
+                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly || true;
+                serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes || true;
+                serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths || true;
             }
         } catch (error) {
             this.console.log(`Error reading settings: ${error}`);
@@ -113,6 +125,11 @@ class PyRxServer extends LanguageServerBase {
         }
 
         return new BackgroundAnalysis(this.console);
+    }
+
+    updateSettingsForAllWorkspaces(): void {
+        this.updateGlobalSettings().ignoreErrors();
+        super.updateSettingsForAllWorkspaces();
     }
 
     protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
@@ -169,24 +186,14 @@ class PyRxServer extends LanguageServerBase {
         }
     }
 
-    private setLogLevel(value: string): void {
-        switch (value) {
-            case 'Error':
-                this._logger.setLogLevel(LogLevel.Error);
-                break;
-            case 'Warning':
-                this._logger.setLogLevel(LogLevel.Warning);
-                break;
-            case 'Info':
-                this._logger.setLogLevel(LogLevel.Info);
-                break;
-            case 'Trace':
-                this._logger.setLogLevel(LogLevel.Trace);
-                break;
-            default:
-                this._logger.setLogLevel(LogLevel.Info);
-                break;
-        }
+    private async updateGlobalSettings(): Promise<void> {
+        const item: ConfigurationItem = {
+            scopeUri: undefined,
+            section: pythonAnalysisSectionName,
+        };
+        const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
+        this._logger.setLogLevel(pythonAnalysis?.logLevel || LogLevel.Info);
+        this._intelliCode.enable(pythonAnalysis?.enableIntelliCode || true);
     }
 }
 
