@@ -16,6 +16,7 @@ import { getZip, Zip } from '../../../intelliCode/zip';
 import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
 import { LogLevel, LogService } from '../../common/logger';
 import { formatEventName, TelemetryEventName, TelemetryService } from '../../common/telemetry';
+import { prepareTestModel, verifyErrorLog, verifyErrorTelemetry } from './testUtils';
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
@@ -36,20 +37,15 @@ beforeEach(() => {
 });
 
 test('IntelliCode model loader: unpack model', async () => {
-    const tmpSrcFolder = dirSync();
-    const tmpDstFolder = dirSync();
+    const tmpFolder = dirSync();
 
     try {
         // Copy model zip to a temp folder elsewhere
-        const srcFolder = process.cwd();
-        const testModelPath = path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', 'model.zip');
-        const icFolder = path.join(tmpSrcFolder.name, 'IntelliCode');
-
-        realFs.mkdirSync(icFolder);
-        realFs.copyFileSync(testModelPath, path.join(icFolder, 'model.zip'));
+        prepareTestModel(tmpFolder.name);
+        const icFolder = path.join(tmpFolder.name, intelliCode);
 
         const vfs = createFromRealFileSystem();
-        const m = await new ModelLoader(vfs, getZip(vfs), log, telemetry).loadModel(tmpSrcFolder.name);
+        const m = await new ModelLoader(vfs, getZip(vfs), log, telemetry).loadModel(tmpFolder.name);
 
         expect(m).toBeDefined();
         expect(m!.metaData.LicenseTerm.length).toBeGreaterThan(0);
@@ -62,8 +58,7 @@ test('IntelliCode model loader: unpack model', async () => {
         expect(realFs.existsSync(path.join(icFolder, 'model.onnx'))).toBeTrue();
         verify(mockedTelemetry.sendTelemetry(anything())).never();
     } finally {
-        tmpSrcFolder.removeCallback();
-        tmpDstFolder.removeCallback();
+        tmpFolder.removeCallback();
     }
 });
 
@@ -138,15 +133,15 @@ test('IntelliCode model loader: failed to unpack model', async () => {
     when(mockedZip.unzip(anyString(), anyString())).thenThrow(makeError());
     await new ModelLoader(instance(mockedFs), instance(mockedZip), log, telemetry).loadModel(modelFolder);
 
-    verifyErrorLog('Unable to unpack');
-    verifyErrorTelemetry();
+    verifyErrorLog(mockedLog, 'Unable to unpack');
+    verifyErrorTelemetry(mockedTelemetry);
 });
 
 test('IntelliCode model loader: unable to read folder', async () => {
     when(mockedFs.readdirSync(anyString())).thenThrow(makeError());
     await verifyLogOnError(instance(mockedFs), 'Unable to access');
 
-    verifyErrorTelemetry();
+    verifyErrorTelemetry(mockedTelemetry);
 });
 
 test('IntelliCode model loader: no files in folder', async () => {
@@ -173,19 +168,5 @@ async function verifyLogOnError(fs: FileSystem, message: string): Promise<void> 
     when(mockedZip.unzip(anyString(), anyString())).thenReturn(Promise.resolve(3));
 
     await new ModelLoader(fs, instance(mockedZip), log, telemetry).loadModel(modelFolder);
-    verifyErrorLog(message);
-}
-
-function verifyErrorLog(message: string) {
-    verify(mockedLog.log(LogLevel.Error, anyString())).once();
-    const [l, m] = capture(mockedLog.log).first();
-    expect(l).toEqual(LogLevel.Error);
-    expect(m).toStartWith(message);
-}
-
-function verifyErrorTelemetry() {
-    verify(mockedTelemetry.sendTelemetry(anything())).once();
-    const [te] = capture(mockedTelemetry.sendTelemetry).first();
-    expect(te.EventName).toEqual(formatEventName(TelemetryEventName.EXCEPTION_IC));
-    expect(te.Properties['exception-name']).toStartWith('Error');
+    verifyErrorLog(mockedLog, message);
 }

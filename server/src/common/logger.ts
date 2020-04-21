@@ -5,10 +5,10 @@
  */
 
 export enum LogLevel {
-    Error,
-    Warning,
-    Info,
-    Trace,
+    Error = 'Error',
+    Warning = 'Warning',
+    Info = 'Info',
+    Trace = 'Trace',
 }
 
 export interface LogService {
