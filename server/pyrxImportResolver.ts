@@ -60,16 +60,19 @@ export class PyrxImportResolver extends ImportResolver {
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
         importName: string,
-        importFailureInfo: string[] = []
+        importFailureInfo: string[] = [],
+        allowPyi = true
     ): ImportResult | undefined {
-        const stubsPath = getBundledTypeStubsPath(this.fileSystem.getModulePath());
-        if (stubsPath) {
-            importFailureInfo.push(`Looking in bundled stubs path '${stubsPath}'`);
-            const result = this.resolveAbsoluteImport(stubsPath, moduleDescriptor, importName, importFailureInfo);
-            if (result && result.isImportFound) {
-                // We will treat bundled stubs files as "third party".
-                result.importType = ImportType.ThirdParty;
-                return result;
+        if (allowPyi) {
+            const stubsPath = getBundledTypeStubsPath(this.fileSystem.getModulePath());
+            if (stubsPath) {
+                importFailureInfo.push(`Looking in bundled stubs path '${stubsPath}'`);
+                const result = this.resolveAbsoluteImport(stubsPath, moduleDescriptor, importName, importFailureInfo);
+                if (result && result.isImportFound) {
+                    // We will treat bundled stubs files as "third party".
+                    result.importType = ImportType.ThirdParty;
+                    return result;
+                }
             }
         }
         return undefined;
