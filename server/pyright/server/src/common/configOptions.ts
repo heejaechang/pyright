@@ -229,6 +229,12 @@ export function getDiagLevelDiagnosticRules() {
     ];
 }
 
+export function getStrictModeNotOverridenRules() {
+    // In strict mode, the value in the user config file should be honored and
+    // not overwritten by the value from the strict ruleset.
+    return [DiagnosticRule.reportMissingModuleSource];
+}
+
 export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
         strictListInference: true,

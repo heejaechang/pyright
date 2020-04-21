@@ -13,7 +13,7 @@ import { CancellationToken, Command, CompletionItem, Diagnostic, MarkupContent, 
 
 import { ImportResolver, ImportResolverFactory } from '../../../analyzer/importResolver';
 import { Program } from '../../../analyzer/program';
-import { AnalyzerService } from '../../../analyzer/service';
+import { AnalyzerService, configFileNames } from '../../../analyzer/service';
 import { CommandController } from '../../../commands/commandController';
 import { ConfigOptions } from '../../../common/configOptions';
 import { ConsoleInterface, NullConsole } from '../../../common/console';
@@ -49,7 +49,6 @@ import {
     Marker,
     MetadataOptionNames,
     MultiMap,
-    pythonSettingFilename,
     Range,
     TestCancellationToken,
 } from './fourSlashTypes';
@@ -836,7 +835,7 @@ export class TestState {
 
     private _isConfig(file: FourSlashFile, ignoreCase: boolean): boolean {
         const comparer = getStringComparer(ignoreCase);
-        return comparer(getBaseFileName(file.fileName), pythonSettingFilename) === Comparison.EqualTo;
+        return configFileNames.some((f) => comparer(getBaseFileName(file.fileName), f) === Comparison.EqualTo);
     }
 
     private _convertGlobalOptionsToConfigOptions(globalOptions: CompilerSettings): ConfigOptions {
