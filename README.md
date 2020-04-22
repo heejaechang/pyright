@@ -84,16 +84,28 @@ and a `.gitrepo` file which stores the subrepo's metadata (no magic strings in c
 Use the `.\subrepo.ps1` script to manage the subrepo. Example commands include:
 
 ```ps1
+# Pull from upstream pyright into server/pyright
 .\subrepo.ps1 pull
+# Create a squashed commit on a temporary branch to push back to pyright
 .\subrepo.ps1 branch -m "commit message"
+# Push the squashed comment created by "subrepo branch" to your fork ("pyright-fork" remote, see below)
 .\subrepo.ps1 push-to-fork -forkBranch some-branch-name
+# Push the squashed comment created by "subrepo branch" to a specific remote.
 .\subrepo.ps1 push-to-fork -forkRemote my-custom-remote -forkBranch some-branch-name
-.\subrepo.ps1 reclone
 ```
 
 The script contain comments which explain each of the steps. If the `git subrepo` fails, it will
 typically print a list of steps to follow by hand in order to complete the change (e.g. fixing
 a merge conflict on pull).
+
+In order to push to pyright, you'll need to add your fork as a remote, by doing one of:
+
+```sh
+# If using git via SSH auth.
+git remote add pyright-fork git@github.com:<USERNAME>/pyright.git
+# If using git via HTTPS username/password auth.
+git remote add pyright-fork https://github.com/<USERNAME>/pyright.git
+```
 
 _NOTE:_ **DO NOT** use `git subrepo push`; this subcommand will push changes directly to `pyright`
 if you have push access (as this method is intended to distribute a large repo as many small ones).
