@@ -90,6 +90,9 @@ For convenience, the `.\subrepo.ps1` script handles most of the below via comman
 .\subrepo.ps1 push-to-fork -forkRemote my-custom-remote -forkBranch some-branch-name
 ```
 
+The below instructions are for informational purposes only; the script is preffered
+as it does a few extra steps to ensure the repo's metadata is managed properly.
+
 ### Installing git-subrepo
 
 `git-subrepo` is not included with the main git installation. To install on Windows:
