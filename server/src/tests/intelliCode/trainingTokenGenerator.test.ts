@@ -127,3 +127,36 @@ z = b(1, 2, 3).fit(x, y)
     const expectedTokens = ['\n', 'from', 'a', 'import', 'a.b', '\n', 'z', '=', 'a.b', '.', 'fit'];
     expect(fit!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
 });
+
+test('IntelliCode token generator: method in call arguments', () => {
+    const code = `
+import tensorflow as tf
+tf.placeholder(tf.float32)
+`;
+    const inf = getInference(code);
+    expect(inf).toBeDefined();
+    verifyKeys(inf!, ['tensorflow']);
+
+    const tf = inf!.get('tensorflow');
+    expect(tf).toBeDefined();
+    verifyKeys(tf!, ['placeholder', 'float32']);
+
+    const f32 = tf!.get('float32');
+    expect(f32?.spanStart[0]).toEqual(43);
+
+    const expectedTokens = [
+        '\n',
+        'import',
+        'tensorflow',
+        'as',
+        'tensorflow',
+        '\n',
+        'tensorflow',
+        '.',
+        'placeholder',
+        'tensorflow',
+        '.',
+        'float32',
+    ];
+    expect(f32!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
+});

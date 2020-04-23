@@ -72,13 +72,14 @@ export abstract class LookBackTokenGenerator {
                     break;
                 case ')':
                     if (braces.length > 0) {
-                        braces.pop();
-                        tokenImages[i] = '';
-                    }
-                    break;
-                default:
-                    if (braces.length > 0) {
-                        tokenImages[i] = '';
+                        const openBraceIndex = braces.pop();
+                        // We only clear arguments on closing brace since
+                        // in case of a method invoke inside argument like in
+                        // 'a(b.x)' tokens come as 'a(b.x' and we don't want
+                        // b.x to be wiped out.
+                        for (let j = openBraceIndex!; j <= i; j++) {
+                            tokenImages[j] = '';
+                        }
                     }
                     break;
             }
