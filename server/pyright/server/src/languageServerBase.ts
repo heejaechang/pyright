@@ -80,6 +80,7 @@ export interface ServerSettings {
     disableLanguageServices?: boolean;
     disableOrganizeImports?: boolean;
     autoSearchPaths?: boolean;
+    watchForSourceChanges?: boolean;
     watchForLibraryChanges?: boolean;
 }
 
