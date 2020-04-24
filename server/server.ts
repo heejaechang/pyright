@@ -90,6 +90,7 @@ class PyRxServer extends LanguageServerBase {
             disableLanguageServices: false,
             openFilesOnly: true,
             useLibraryCodeForTypes: true,
+            watchForSourceChanges: true,
             watchForLibraryChanges: true,
         };
 
