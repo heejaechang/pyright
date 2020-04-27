@@ -293,7 +293,18 @@ export class Program {
         if (!sourceFileInfo) {
             return undefined;
         }
+
         return sourceFileInfo.sourceFile;
+    }
+
+    getBoundSourceFile(filePath: string): SourceFile | undefined {
+        const sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (!sourceFileInfo) {
+            return undefined;
+        }
+
+        this._bindFile(sourceFileInfo);
+        return this.getSourceFile(filePath);
     }
 
     // Performs parsing and analysis of any source files in the program

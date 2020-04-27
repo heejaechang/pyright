@@ -41,6 +41,7 @@ import {
     TextDocumentSyncKind,
     TextEdit,
     WatchKind,
+    WorkDoneProgressReporter,
     WorkspaceEdit,
 } from 'vscode-languageserver';
 
@@ -145,7 +146,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         private _productName: string,
         rootDirectory: string,
         private _extension?: LanguageServiceExtension,
-        private _maxAnalysisTimeInForeground?: MaxAnalysisTime
+        private _maxAnalysisTimeInForeground?: MaxAnalysisTime,
+        supportedCommands?: string[]
     ) {
         this._connection.console.log(`${_productName} language server starting`);
         this.fs = createFromRealFileSystem(this._connection.console, this);
@@ -166,13 +168,14 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._workspaceMap = new WorkspaceMap(this);
 
         // Set up callbacks.
-        this._setupConnection();
+        this._setupConnection(supportedCommands ?? []);
 
         // Listen on the connection.
         this._connection.listen();
     }
 
     abstract createBackgroundAnalysis(): BackgroundAnalysisBase | undefined;
+
     protected abstract async executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any>;
     protected abstract async executeCodeAction(
         params: CodeActionParams,
@@ -298,7 +301,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return fileWatcher;
     }
 
-    private _setupConnection(): void {
+    private _setupConnection(supportedCommands: string[]): void {
         // After the server has started the client sends an initialize request. The server receives
         // in the passed params the rootPath of the workspace plus the client capabilities.
         this._connection.onInitialize(
@@ -361,7 +364,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                             workDoneProgress: true,
                         },
                         executeCommandProvider: {
-                            commands: [],
+                            commands: supportedCommands,
                             workDoneProgress: true,
                         },
                     },
@@ -690,18 +693,22 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         // We support running only one command at a time.
         let lastCancellationSource: CancellationTokenSource;
-        this._connection.onExecuteCommand(async (params, token) => {
+        this._connection.onExecuteCommand(async (params, token, reporter) => {
             if (lastCancellationSource) {
                 // Cancel running command if there is one.
                 lastCancellationSource.cancel();
             }
 
-            const progress = await this._connection.window.createWorkDoneProgress();
+            const progress = await this._getProgressReporter(params.workDoneToken, reporter);
             const source = CancelAfter(token, progress.token);
             lastCancellationSource = source;
 
             try {
-                return await this.executeCommand(params, source.token);
+                const result = await this.executeCommand(params, source.token);
+                if (WorkspaceEdit.is(result)) {
+                    // tell client to apply edits
+                    this._connection.workspace.applyEdit(result);
+                }
             } finally {
                 progress.done();
                 source.dispose();
@@ -764,6 +771,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         typeStubTargetImportName?: string
     ) {
         AnalyzerServiceExecutor.runWithOptions(this.rootPath, workspace, serverSettings, typeStubTargetImportName);
+    }
+
+    private async _getProgressReporter(workDoneToken: string | number | undefined, reporter: WorkDoneProgressReporter) {
+        return workDoneToken ? reporter : await this._connection.window.createWorkDoneProgress();
     }
 
     private _GetConnectionOptions(): ConnectionOptions {

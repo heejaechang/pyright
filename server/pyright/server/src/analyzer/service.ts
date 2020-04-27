@@ -175,6 +175,10 @@ export class AnalyzerService {
         this._scheduleReanalysis(false);
     }
 
+    getParseResult(path: string) {
+        return this._program.getBoundSourceFile(path)?.getParseResults();
+    }
+
     getDefinitionForPosition(
         filePath: string,
         position: Position,

@@ -17,7 +17,6 @@ import {
 import { isMainThread } from 'worker_threads';
 
 import { BackgroundAnalysis } from './backgroundAnalysis';
-import { CommandController } from './commands/commandController';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
@@ -29,8 +28,9 @@ import { FileSystem } from './pyright/server/src/common/fileSystem';
 import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
-import { CodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
+import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
+import { CommandController } from './src/commands/commandController';
 import { LogLevel, LogService } from './src/common/logger';
 import {
     addMeasurementsToEvent,
@@ -39,6 +39,7 @@ import {
     TelemetryEventName,
     TelemetryService,
 } from './src/common/telemetry';
+import { CodeActionProvider as PyrxCodeActionProvider } from './src/languageService/codeActionProvider';
 import { AnalysisTracker } from './src/services/analysisTracker';
 import { LogServiceImplementation } from './src/services/logger';
 import { TelemetryServiceImplementation } from './src/services/telemetry';
@@ -56,7 +57,7 @@ class PyRxServer extends LanguageServerBase {
     constructor() {
         const rootDirectory = __dirname;
         const intelliCode = new IntelliCodeExtension();
-        super('Python', rootDirectory, intelliCode);
+        super('Python', rootDirectory, intelliCode, undefined, CommandController.supportedCommands());
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -157,7 +158,21 @@ class PyRxServer extends LanguageServerBase {
 
         const filePath = convertUriToPath(params.textDocument.uri);
         const workspace = await this.getWorkspaceForFile(filePath);
-        return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, params.range, token);
+        const actions1 = await PyrightCodeActionProvider.getCodeActionsForPosition(
+            workspace,
+            filePath,
+            params.range,
+            token
+        );
+
+        const actions2 = await PyrxCodeActionProvider.getCodeActionsForPosition(
+            workspace,
+            filePath,
+            params.range,
+            token
+        );
+
+        return [...actions1, ...actions2];
     }
 
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {

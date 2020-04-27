@@ -41,23 +41,6 @@
                 ]
             }
         ],
-        "commands": [
-            {
-                "command": "pyright.organizeimports",
-                "title": "Organize Imports",
-                "category": "PyRx"
-            }
-        ],
-        "menus": {
-            "editor/context": [
-                {
-                    "command": "pyright.organizeimports",
-                    "title": "PyRx: Organize Imports",
-                    "group": "PyRx",
-                    "when": "editorLangId == python"
-                }
-            ]
-        },
         "configuration": {
             "type": "object",
             "title": "PyRx Configuration",

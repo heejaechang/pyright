@@ -9,12 +9,21 @@
 
 import * as assert from 'assert';
 import Char from 'typescript-char';
-import { CancellationToken, Command, CompletionItem, Diagnostic, MarkupContent, TextEdit } from 'vscode-languageserver';
+import {
+    CancellationToken,
+    CodeAction,
+    Command,
+    CompletionItem,
+    Diagnostic,
+    ExecuteCommandParams,
+    MarkupContent,
+    TextEdit,
+    WorkspaceEdit,
+} from 'vscode-languageserver';
 
 import { ImportResolver, ImportResolverFactory } from '../../../analyzer/importResolver';
 import { Program } from '../../../analyzer/program';
 import { AnalyzerService, configFileNames } from '../../../analyzer/service';
-import { CommandController } from '../../../commands/commandController';
 import { ConfigOptions } from '../../../common/configOptions';
 import { ConsoleInterface, NullConsole } from '../../../common/console';
 import { Comparison, isNumber, isString, toBoolean } from '../../../common/core';
@@ -31,10 +40,8 @@ import {
 } from '../../../common/pathUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../../../common/positionUtils';
 import { getStringComparer } from '../../../common/stringUtils';
-import { Position, TextRange } from '../../../common/textRange';
-import { Range as PosRange } from '../../../common/textRange';
-import { WorkspaceServiceInstance } from '../../../languageServerBase';
-import { CodeActionProvider } from '../../../languageService/codeActionProvider';
+import { Position, Range as PositionRange, rangesAreEqual, TextRange } from '../../../common/textRange';
+import { LanguageServerInterface, WorkspaceServiceInstance } from '../../../languageServerBase';
 import { convertHoverResults } from '../../../languageService/hoverProvider';
 import { ParseResults } from '../../../parser/parser';
 import * as host from '../host';
@@ -52,16 +59,30 @@ import {
     Range,
     TestCancellationToken,
 } from './fourSlashTypes';
-import { TestLanguageService } from './testLanguageService';
+import { TestFeatures, TestLanguageService } from './testLanguageService';
 
 export interface TextChange {
     span: TextRange;
     newText: string;
 }
 
+export interface HostSpecificFeatures {
+    importResolverFactory: ImportResolverFactory;
+
+    getCodeActionsForPosition(
+        workspace: WorkspaceServiceInstance,
+        filePath: string,
+        range: PositionRange,
+        token: CancellationToken
+    ): Promise<CodeAction[]>;
+
+    execute(ls: LanguageServerInterface, params: ExecuteCommandParams, token: CancellationToken): Promise<any>;
+}
+
 export class TestState {
     private readonly _cancellationToken: TestCancellationToken;
     private readonly _files: string[] = [];
+    private readonly _hostSpecificFeatures: HostSpecificFeatures;
 
     // indicate whether test is done or not
     private readonly _testDoneCallback?: jest.DoneCallback;
@@ -87,8 +108,10 @@ export class TestState {
         public testData: FourSlashData,
         cb?: jest.DoneCallback,
         mountPaths?: Map<string, string>,
-        importResolverFactory?: ImportResolverFactory
+        hostSpecificFeatures?: HostSpecificFeatures
     ) {
+        this._hostSpecificFeatures = hostSpecificFeatures ?? new TestFeatures();
+
         const nullConsole = new NullConsole();
         const ignoreCase = toBoolean(testData.globalOptions[GlobalMetadataOptionNames.ignoreCase]);
 
@@ -129,7 +152,7 @@ export class TestState {
 
         const service = this._createAnalysisService(
             nullConsole,
-            importResolverFactory ?? AnalyzerService.createImportResolver,
+            this._hostSpecificFeatures.importResolverFactory,
             configOptions
         );
 
@@ -235,6 +258,17 @@ export class TestState {
 
     getMarkerNames(): string[] {
         return [...this.testData.markerPositions.keys()];
+    }
+
+    getPositionRange(markerString: string) {
+        const marker = this.getMarkerByName(markerString);
+        const ranges = this.getRanges().filter((r) => r.marker === marker);
+        if (ranges.length !== 1) {
+            this._raiseError(`no matching range for ${markerString}`);
+        }
+
+        const range = ranges[0];
+        return this._convertOffsetsToRange(range.fileName, range.pos, range.end);
     }
 
     goToPosition(positionOrLineAndColumn: number | Position) {
@@ -544,16 +578,27 @@ export class TestState {
             for (const expected of map[name].codeActions) {
                 const actual = await this._getCodeActions(range);
 
-                const command = {
+                const expectedCommand = {
                     title: expected.command.title,
                     command: expected.command.command,
-                    arguments: expected.command.arguments?.map((a) => normalizeSlashes(a)),
+                    arguments: convertToString(expected.command.arguments),
                 };
 
-                const matches = actual.filter(
-                    (a) =>
-                        a.title === expected.title && a.kind! === expected.kind && this._deepEqual(a.command, command)
-                );
+                const matches = actual.filter((a) => {
+                    const actualCommand = a.command
+                        ? {
+                              title: a.command.title,
+                              command: a.command.command,
+                              arguments: convertToString(a.command.arguments),
+                          }
+                        : undefined;
+
+                    return (
+                        a.title === expected.title &&
+                        a.kind! === expected.kind &&
+                        this._deepEqual(actualCommand, expectedCommand)
+                    );
+                });
 
                 if (matches.length !== 1) {
                     this._raiseError(
@@ -564,13 +609,23 @@ export class TestState {
         }
 
         this.markTestDone();
+
+        function convertToString(args: any[] | undefined): string[] | undefined {
+            return args?.map((a) => {
+                if (isString(a)) {
+                    return normalizeSlashes(a);
+                }
+
+                return JSON.stringify(a);
+            });
+        }
     }
 
     async verifyCommand(command: Command, files: { [filePath: string]: string }): Promise<any> {
         this._analyze();
 
-        const controller = new CommandController(new TestLanguageService(this.workspace, this.console, this.fs));
-        const commandResult = await controller.execute(
+        const commandResult = await this._hostSpecificFeatures.execute(
+            new TestLanguageService(this.workspace, this.console, this.fs),
             { command: command.command, arguments: command.arguments },
             CancellationToken.None
         );
@@ -593,26 +648,46 @@ export class TestState {
     }
 
     async verifyInvokeCodeAction(map: {
-        [marker: string]: { title: string; files: { [filePath: string]: string } };
+        [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
     }): Promise<any> {
         this._analyze();
 
         for (const range of this.getRanges()) {
             const name = this.getMarkerName(range.marker!);
-            const controller = new CommandController(new TestLanguageService(this.workspace, this.console, this.fs));
+            if (!map[name]) {
+                continue;
+            }
+
+            const ls = new TestLanguageService(this.workspace, this.console, this.fs);
 
             const codeActions = await this._getCodeActions(range);
             for (const codeAction of codeActions.filter((c) => c.title === map[name].title)) {
-                await controller.execute(
+                const results = await this._hostSpecificFeatures.execute(
+                    ls,
                     {
                         command: codeAction.command!.command,
                         arguments: codeAction.command?.arguments,
                     },
                     CancellationToken.None
                 );
+
+                if (map[name].edits) {
+                    const workspaceEdits = results as WorkspaceEdit;
+                    for (const edits of Object.values(workspaceEdits.changes!)) {
+                        for (const edit of edits) {
+                            assert(
+                                map[name].edits!.filter(
+                                    (e) => rangesAreEqual(e.range, edit.range) && e.newText === edit.newText
+                                ).length === 1
+                            );
+                        }
+                    }
+                }
             }
 
-            await this._verifyFiles(map[name].files);
+            if (map[name].files) {
+                await this._verifyFiles(map[name].files!);
+            }
         }
 
         this.markTestDone();
@@ -886,7 +961,7 @@ export class TestState {
         return convertOffsetToPosition(offset, result.tokenizerOutput.lines);
     }
 
-    private _convertOffsetsToRange(fileName: string, startOffset: number, endOffset: number): PosRange {
+    private _convertOffsetsToRange(fileName: string, startOffset: number, endOffset: number): PositionRange {
         const result = this._getParseResult(fileName);
 
         return {
@@ -896,8 +971,7 @@ export class TestState {
     }
 
     private _getParseResult(fileName: string) {
-        const file = this.program.getSourceFile(fileName)!;
-        file.parse(this.configOptions, this.importResolver);
+        const file = this.program.getBoundSourceFile(fileName)!;
         return file.getParseResults()!;
     }
 
@@ -1201,7 +1275,12 @@ export class TestState {
             end: this._convertOffsetToPosition(file, range.end),
         };
 
-        return CodeActionProvider.getCodeActionsForPosition(this.workspace, file, textRange, CancellationToken.None);
+        return this._hostSpecificFeatures.getCodeActionsForPosition(
+            this.workspace,
+            file,
+            textRange,
+            CancellationToken.None
+        );
     }
 
     private async _verifyFiles(files: { [filePath: string]: string }) {
