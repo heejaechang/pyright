@@ -18,11 +18,12 @@ function getInference(code: string, position: number): EditorInvocation | undefi
     return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, position, 100);
 }
 
-function verifySingle(code: string, type: string, spanStart: number, position?: number) {
+function verifySingle(code: string, type: string, spanStart: number, position?: number): EditorInvocation {
     const ei = getInference(code, position || code.length - 1);
     expect(ei).toBeDefined();
     expect(ei!.type).toEqual(type);
     expect(ei!.spanStart).toEqual(spanStart);
+    return ei!;
 }
 
 test('IntelliCode editor token generator: empty', () => {
@@ -45,7 +46,7 @@ os.mkdir('dir'). `;
     verifySingle(code, 'os.mkdir', 30);
 });
 
-test('IntelliCode editor token generator: module member return 2', () => {
+test('IntelliCode editor token generator: array element', () => {
     const code = `
 x = [1, 2, 3]
 x[1]. `;
@@ -116,4 +117,31 @@ test('IntelliCode editor token generator: remove arguments', () => {
 from a import b
 z = b(1, 2, 3).fit(x, y). `;
     verifySingle(code, 'a.b.fit', 41);
+});
+
+test('IntelliCode editor token generator: drop array contents', () => {
+    const code = `
+x = [1, a(), 3]
+x[0]. `;
+    const ei = verifySingle(code, StandardVariableType.String, 21);
+    const expectedTokens = ['\n', 'x', '=', '[', 'a', ']', '\n', 'x', '[', 'str', '.'];
+    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+});
+
+test('IntelliCode editor token generator: drop tuple contents', () => {
+    const code = `
+x = (1, a(), 'a', z)
+x[0]. `;
+    const ei = verifySingle(code, StandardVariableType.String, 26);
+    const expectedTokens = ['\n', 'x', '=', '(', ')', '\n', 'x', '[', 'str', '.'];
+    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+});
+
+test('IntelliCode editor token generator: drop dict contents', () => {
+    const code = `
+x = {'a': 1, 'b': 2, 'c': 3}
+x[0]. `;
+    const ei = verifySingle(code, StandardVariableType.String, 34);
+    const expectedTokens = ['\n', 'x', '=', '{', '}', '\n', 'x', '[', 'str', '.'];
+    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
 });

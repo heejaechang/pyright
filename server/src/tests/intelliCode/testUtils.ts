@@ -42,7 +42,7 @@ export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]): void {
     map.forEach((value: V, key: K) => {
         keys.push(key);
     });
-    expect(expected).toIncludeSameMembers(keys);
+    expect(keys).toIncludeSameMembers(expected);
 }
 
 export function prepareTestModel(dstFolderName: string): void {

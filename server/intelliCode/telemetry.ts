@@ -37,7 +37,7 @@ export function buildRecommendationsTelemetry(
     te.Properties['ModelType'] = modelType;
     te.Properties['FailureReason'] = failureReason;
 
-    if (failureReason == FailureReason.NotInModel) {
+    if (failureReason === FailureReason.NotInModel) {
         //not logging class name not in Pythia model for GDPR concerns
         te.Properties['Class'] = '';
     } else {

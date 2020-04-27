@@ -5,6 +5,7 @@
  */
 
 import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
+import { TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
 import { ExpressionWalker } from '../expressionWalker';
 import { LookbackTokenLength, TrainingInvocations } from '../models';
 import { LookBackTokenGenerator } from './lookbackTokenGenerator';
@@ -35,20 +36,20 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
                 type = relevantName.value;
             }
 
-            const tokenImages = this.extractLookbackTokens(ts, spanStart, type, relevantName.value, lookback);
-            // If token images count is only 1 (or smaller) then undefined is returned.
-            if (tokenImages.length <= 1) {
+            const tokenValues = this.extractLookbackTokens(ts, spanStart, type, relevantName.value, lookback);
+            // If token count is only 1 (or smaller) then undefined is returned.
+            if (tokenValues.length <= 1) {
                 return undefined;
             }
 
             // Double check we are dealing with invocations only
-            if (tokenImages[tokenImages.length - 2] != '.') {
+            if (tokenValues[tokenValues.length - 2] !== '.') {
                 continue;
             }
-            // put into references
+            // Put into references
             const invocations: TrainingInvocations = {
                 spanStart: [spanStart],
-                lookbackTokens: [tokenImages],
+                lookbackTokens: [tokenValues],
             };
 
             const methodsInvoked = references.get(type);
@@ -56,7 +57,7 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
                 const functions = methodsInvoked.get(method);
                 if (functions) {
                     functions.spanStart.push(spanStart);
-                    functions.lookbackTokens.push(tokenImages);
+                    functions.lookbackTokens.push(tokenValues);
                 } else {
                     methodsInvoked.set(method, invocations);
                 }
@@ -82,21 +83,21 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
         }
 
         let start = methodInvocationIndex - lookback + 1;
-        let count = lookback;
+        let end = start + lookback;
         if (lookback > methodInvocationIndex) {
             start = 0;
-            count = methodInvocationIndex + 1;
+            end = methodInvocationIndex + 1;
         }
 
-        const tokenImages = ts.selectedTokensImages.slice(start, start + count);
-        // If token images is not larger than 2, there's no point on continuing, we return token_images.
-        if (tokenImages.length <= 2) {
-            return tokenImages;
+        const tokens = ts.slice(start, end);
+        // If token coult is not larger than 2, there's no point on continuing.
+        if (tokens.length <= 2) {
+            return tokens.map((t) => t.value);
         }
         // only if parent token type is inferred
         // normalize select tokens in the input sequence based on type
-        if (tokenImages[tokenImages.length - 3] == ')') {
-            const spanStartRightParenth = ts.selectedTokens[methodInvocationIndex - 2].start;
+        if (tokens[tokens.length - 3].token.type === TokenType.CloseParenthesis) {
+            const spanStartRightParenth = ts.selectedTokens[methodInvocationIndex - 2].token.start;
             const rightParenthIndex = integerBinarySearch(ts.rightParenthesisSpanStarts, spanStartRightParenth);
             relevantName = ts.relevantNames[rightParenthIndex];
             if (this.isTypeUnknown(type)) {
@@ -105,24 +106,24 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
         }
 
         if (this.isTypeUnknown(type)) {
-            return tokenImages;
+            return tokens.map((t) => t.value);
         }
 
-        for (let ii = 0; ii < tokenImages.length; ii++) {
+        for (let i = 0; i < tokens.length; i++) {
             if (relevantName) {
-                if (tokenImages[ii] === relevantName && ii != tokenImages.length - 1) {
-                    tokenImages[ii] = type;
+                if (tokens[i].value === relevantName && i !== tokens.length - 1) {
+                    tokens[i].value = type;
                 }
-            } else if (tokenImages[ii] == tokenImages[tokenImages.length - 3]) {
-                tokenImages[ii] = type;
+            } else if (tokens[i].value === tokens[tokens.length - 3].value) {
+                tokens[i].value = type;
             }
         }
 
         // parent token normalization based on type
-        if (relevantName == '') {
-            tokenImages[tokenImages.length - 3] = type;
+        if (relevantName === '') {
+            tokens[tokens.length - 3].value = type;
         }
 
-        return this.filterTokens(tokenImages);
+        return this.reduceFunctionCallArguments(tokens);
     }
 }

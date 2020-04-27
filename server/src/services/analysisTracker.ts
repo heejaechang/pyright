@@ -43,7 +43,7 @@ export class AnalysisTracker {
             this._isTrackingAnalysis = false;
 
             const canSendTelemetry =
-                this._telemetryLimiter == undefined ||
+                this._telemetryLimiter === undefined ||
                 this._telemetryLimiter.getDurationInSeconds() > TelemetryWaitTimeSeconds;
             if (!canSendTelemetry) {
                 this._peakRssMB = 0;

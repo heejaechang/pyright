@@ -57,7 +57,7 @@ os.mkdir()
     expect(mkdir!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
 });
 
-test('IntelliCode token generator: module member return', () => {
+test('IntelliCode token generator: sklearn sample', () => {
     const code = `
 import numpy as np
 from sklearn import LinearDiscriminantAnalysis

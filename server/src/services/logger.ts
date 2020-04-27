@@ -50,7 +50,7 @@ export class LogServiceImplementation implements LogService {
 
     private getNumericalLevel(level: LogLevel): number {
         const numericLevel = this._levelMap.get(level);
-        assert(numericLevel != undefined, 'Logger: unknown log level.');
-        return numericLevel != undefined ? numericLevel : 2;
+        assert(numericLevel !== undefined, 'Logger: unknown log level.');
+        return numericLevel !== undefined ? numericLevel : 2;
     }
 }

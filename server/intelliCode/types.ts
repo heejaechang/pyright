@@ -37,7 +37,7 @@ export class StandardVariableType {
     public static readonly Dictionary = 'dict';
 }
 
-export enum LiteralTokenImage {
+export enum LiteralTokenValue {
     String = 'STR_LIT',
     Number = 'NUM_LIT',
 }
@@ -48,7 +48,7 @@ export function getStandardVariableType(node: ParseNode) {
         case ParseNodeType.String:
             return StandardVariableType.String;
         case ParseNodeType.Number:
-            return node.value == Math.round(node.value) ? StandardVariableType.Int : StandardVariableType.Float;
+            return node.value === Math.round(node.value) ? StandardVariableType.Int : StandardVariableType.Float;
     }
     return StandardVariableType.Null;
 }
