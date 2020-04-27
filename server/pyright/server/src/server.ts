@@ -47,7 +47,7 @@ class PyrightServer extends LanguageServerBase {
                 }
                 serverSettings.autoSearchPaths = !!pythonAnalysisSection.autoSearchPaths;
             } else {
-                serverSettings.autoSearchPaths = false;
+                serverSettings.autoSearchPaths = true;
             }
 
             const pyrightSection = await this.getConfiguration(workspace, 'pyright');
