@@ -15,34 +15,37 @@ export function integerBinarySearch(array: number[], value: number): number {
     });
 }
 
-export function positionBinarySearch(array: Token[], value: number): number {
+export function positionBinarySearch(array: TokenValuePair[], value: number): number {
     return binarySearchKey(
         array,
         value,
-        (t) => t.start,
+        (p) => p.token.start,
         (a, b) => {
             return a < b ? Comparison.LessThan : a > b ? Comparison.GreaterThan : Comparison.EqualTo;
         }
     );
 }
 
+export class TokenValuePair {
+    constructor(public token: Token, public value: string) {}
+}
+
 export class TokenSet {
-    selectedTokens: Token[] = [];
-    selectedTokensImages: string[] = [];
+    selectedTokens: TokenValuePair[] = [];
     leftParenthesisSpanStarts: number[] = [];
     rightParenthesisSpanStarts: number[] = [];
     relevantNames: string[] = [];
 
-    hasLeftParenthesisAt(position: number): boolean {
-        return integerBinarySearch(this.leftParenthesisSpanStarts, position) >= 0;
+    slice(start: number, end: number): TokenValuePair[] {
+        const tokens: TokenValuePair[] = [];
+        for (let i = start; i < end; i++) {
+            tokens.push(new TokenValuePair(this.selectedTokens[i].token, this.selectedTokens[i].value));
+        }
+        return tokens;
     }
 
-    hasRightParenthesisAt(position: number): boolean {
-        return integerBinarySearch(this.rightParenthesisSpanStarts, position) >= 0;
-    }
-
-    hasSelectedTokenAt(position: number): boolean {
-        return this.getSelectedTokenPositionIndex(position) >= 0;
+    addToken(token: Token, value: string) {
+        this.selectedTokens.push(new TokenValuePair(token, value));
     }
 
     getSelectedTokenPositionIndex(position: number): number {
@@ -52,10 +55,10 @@ export class TokenSet {
     findMethodPosition(mi: MethodInvokation): number {
         // Find correct spanstart for current method invocation
         const end = positionBinarySearch(this.selectedTokens, mi.spanStart);
-        for (let i = this.selectedTokensImages.length - 1; i > end && i > 0; i--) {
-            const ti = this.selectedTokensImages[i];
-            if (ti === mi.value) {
-                return this.selectedTokens[i].start;
+        for (let i = this.selectedTokens.length - 1; i > end && i > 0; i--) {
+            const ti = this.selectedTokens[i];
+            if (ti.value === mi.value) {
+                return this.selectedTokens[i].token.start;
             }
         }
         return -1;

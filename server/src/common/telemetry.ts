@@ -76,7 +76,7 @@ export function sendMeasurementsTelemetry(
 
 export function addMeasurementsToEvent(te: TelemetryEvent, metrics: Object) {
     for (const [key, value] of Object.entries(metrics)) {
-        if (typeof value == 'number') {
+        if (typeof value === 'number') {
             const current = te.Measurements[key] || 0;
             te.Measurements[key] = current + value;
         }

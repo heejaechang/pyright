@@ -242,7 +242,7 @@ function tryCreateFolder(folderPath: string) {
     try {
         fs.mkdirSync(folderPath, { recursive: true });
     } catch (e) {
-        if (e.code != 'EEXIST') {
+        if (e.code !== 'EEXIST') {
             console.log(`Can't create folder ${folderPath}.`);
             process.exit(2);
         }

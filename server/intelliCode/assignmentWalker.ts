@@ -49,7 +49,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
     }
 
     visitAssignment(node: AssignmentNode): boolean {
-        if (node.leftExpression.nodeType == ParseNodeType.Name) {
+        if (node.leftExpression.nodeType === ParseNodeType.Name) {
             const n = node.leftExpression;
             this.handleAssignment(n.value, n.start, node.rightExpression);
         }
@@ -135,7 +135,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
     // for p in list: p becomes list.element_inside.
     visitFor(node: ForNode): boolean {
         const elementInsideString = 'element_inside';
-        if (node.targetExpression.nodeType != ParseNodeType.Name) {
+        if (node.targetExpression.nodeType !== ParseNodeType.Name) {
             return false;
         }
 
@@ -169,7 +169,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
             case ParseNodeType.Call:
                 {
                     const callTarget = node.iterableExpression.leftExpression;
-                    if (callTarget.nodeType == ParseNodeType.MemberAccess) {
+                    if (callTarget.nodeType === ParseNodeType.MemberAccess) {
                         this.handleMemberExpression(targetName, target.start, callTarget, elementInsideString);
                     }
                 }
@@ -184,8 +184,8 @@ export class AssignmentWalker extends BaseParseTreeWalker {
 
     visitListComprehensionFor(node: ListComprehensionForNode): boolean {
         if (
-            node.targetExpression.nodeType != ParseNodeType.Name ||
-            node.iterableExpression.nodeType != ParseNodeType.List
+            node.targetExpression.nodeType !== ParseNodeType.Name ||
+            node.iterableExpression.nodeType !== ParseNodeType.List
         ) {
             return false;
         }
@@ -194,12 +194,12 @@ export class AssignmentWalker extends BaseParseTreeWalker {
             return false;
         }
         const list = node.iterableExpression;
-        if (!list.entries || list.entries.length == 0) {
+        if (!list.entries || list.entries.length === 0) {
             return false;
         }
         const entry = list.entries[0];
         const type = getStandardVariableType(entry);
-        if (type != StandardVariableType.Null) {
+        if (type !== StandardVariableType.Null) {
             this._currentScope.assignments.push(new Assignment(key, type, entry.start));
         }
         return false;
@@ -210,9 +210,9 @@ export class AssignmentWalker extends BaseParseTreeWalker {
             case ParseNodeType.Call:
                 {
                     // q = a.count().bitLength()
-                    if (right.leftExpression.nodeType == ParseNodeType.MemberAccess) {
+                    if (right.leftExpression.nodeType === ParseNodeType.MemberAccess) {
                         this.handleMemberExpression(leftVariableName, startIndex, right.leftExpression, '');
-                    } else if (right.leftExpression.nodeType == ParseNodeType.Name) {
+                    } else if (right.leftExpression.nodeType === ParseNodeType.Name) {
                         // y = open()
                         const functionName = right.leftExpression.value; // open
                         this._currentScope.assignments.push(
@@ -234,7 +234,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
                     this._currentScope.assignments.push(
                         new Assignment(
                             leftVariableName,
-                            Math.round(right.value) == right.value
+                            Math.round(right.value) === right.value
                                 ? StandardVariableType.Int
                                 : StandardVariableType.Float,
                             startIndex

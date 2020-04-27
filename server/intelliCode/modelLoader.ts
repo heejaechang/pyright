@@ -34,7 +34,7 @@ export class ModelLoader {
             this._fs.mkdirSync(modelFolder);
             // eslint-disable-next-line no-empty
         } catch (error) {
-            if (error.code != 'EEXIST') {
+            if (error.code !== 'EEXIST') {
                 this._logger?.log(LogLevel.Error, `Unable to create folder ${modelFolder}: ${error.code}`);
                 sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, error);
                 return undefined;

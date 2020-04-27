@@ -6,11 +6,11 @@
 
 import { assert } from '../../pyright/server/src/common/debug';
 import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
-import { TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
+import { Token, TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
 import { ExpressionWalker } from '../expressionWalker';
 import { EditorInvocation, LookbackTokenLength } from '../models';
 import { LookBackTokenGenerator } from './lookbackTokenGenerator';
-import { TokenSet } from './tokenSet';
+import { TokenSet, TokenValuePair } from './tokenSet';
 
 export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
     // Used by online (editor) parser to generate context for deep LSTM model inferencing.
@@ -60,44 +60,45 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
 
         const lastInvocationIndex = ts.getSelectedTokenPositionIndex(spanStart);
         // If the last invocation is not found or not triggerred by ".", we return here.
-        if (lastInvocationIndex < 0 || ts.selectedTokensImages[lastInvocationIndex] != '.') {
+        if (lastInvocationIndex < 0 || ts.selectedTokens[lastInvocationIndex].token.type !== TokenType.Dot) {
             return undefined;
         }
 
         // Point index to the next token, if it's not ".", will be replaced with "."
-        const tokenImages = this.extractLookbackTokens(lookback, ts, type, lastInvocationIndex);
+        const tokens = this.extractLookbackTokens(lookback, ts, type, lastInvocationIndex);
+        if (!tokens) {
+            return undefined;
+        }
 
-        // If token images is undefined or token images has fewer than 2 elements.
-        // If token image previous element was a symbol or number, extractLookbackTokens
-        // returns undefined.
-        if (!tokenImages || tokenImages.length <= 1) {
+        // If there are fewer than 2 tokens return undefined.
+        if (tokens.length <= 1) {
             return undefined;
         }
 
         if (!this.isTypeUnknown(type)) {
             // only if parent token type is inferred
             // normalize select tokens in the input sequence based on type
-            for (let ii = 0; ii < tokenImages.length; ii++) {
+            for (let ii = 0; ii < tokens.length; ii++) {
                 if (relevantName) {
-                    if (tokenImages[ii] === relevantName.value) {
-                        tokenImages[ii] = type;
+                    if (tokens[ii].value === relevantName.value) {
+                        tokens[ii].value = type;
                     }
                 } else {
-                    if (tokenImages[ii] == tokenImages[tokenImages.length - 2]) {
-                        tokenImages[ii] = type;
+                    if (tokens[ii].value === tokens[tokens.length - 2].value) {
+                        tokens[ii].value = type;
                     }
                 }
             }
 
             // parent token normalization based on type
             if (!relevantName.value) {
-                tokenImages[tokenImages.length - 2] = type;
+                tokens[tokens.length - 2].value = type;
             }
         }
 
         return {
             spanStart: spanStart,
-            lookbackTokens: this.filterTokens(tokenImages),
+            lookbackTokens: this.reduceFunctionCallArguments(tokens),
             type: method ? `${type}.${method}` : type,
         };
     }
@@ -107,7 +108,7 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
         ts: TokenSet,
         type: string,
         lastInvocationIndex: number
-    ): string[] | undefined {
+    ): TokenValuePair[] | undefined {
         let count = lookback;
         let start = lastInvocationIndex - lookback + 1;
         if (start < 0) {
@@ -117,34 +118,44 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
 
         const end = start + count;
         assert(end >= start && end < ts.selectedTokens.length);
-        assert(ts.selectedTokens.length == ts.selectedTokensImages.length);
 
-        const tokenImages = ts.selectedTokensImages.slice(start, end);
-        // If token images count is only 1 (or smaller) then null is undefined.
-        if (tokenImages.length <= 1) {
+        const tokens = ts.selectedTokens.slice(start, end);
+        // If token count is too small, return undefined.
+        if (tokens.length <= 1) {
             return undefined;
         }
 
-        const tokens = ts.selectedTokens.slice(start, end);
-        const beforeLast = tokens[tokens.length - 2];
+        const beforeLast = tokens[tokens.length - 2].token;
         if (beforeLast.type === TokenType.Number || this.isSymbol(beforeLast.type)) {
             return undefined;
         }
 
         // Enforce "." for the last token
-        const last = tokens[tokens.length - 1];
-        if (last.type != TokenType.Dot && last.type != TokenType.CloseParenthesis) {
-            tokenImages[tokenImages.length - 1] = '.';
-            return tokenImages;
+        const last = tokens[tokens.length - 1].token;
+        if (last.type !== TokenType.Dot && last.type !== TokenType.CloseParenthesis) {
+            tokens[tokens.length - 1].token = Token.create(TokenType.Dot, last.start, 1, undefined);
+            tokens[tokens.length - 1].value = '.';
+            return tokens;
         }
 
         if (last.type === TokenType.Dot && beforeLast.type === TokenType.CloseParenthesis) {
-            tokenImages[tokenImages.length - 1] = '\n';
-            tokenImages.push(type);
-            tokenImages.push('.');
+            tokens[tokens.length - 1].token = Token.create(TokenType.NewLine, last.start, 1, undefined);
+            tokens[tokens.length - 1].value = '\n';
+
+            const typeToken = Token.create(TokenType.Identifier, last.start + 1, type.length, undefined);
+            tokens.push({
+                token: typeToken,
+                value: type,
+            });
+
+            const dot = Token.create(TokenType.Dot, typeToken.start + typeToken.length, 1, undefined);
+            tokens.push({
+                token: dot,
+                value: '.',
+            });
         }
 
-        return tokenImages;
+        return tokens;
     }
 
     private isSymbol(t: TokenType): boolean {
