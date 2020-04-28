@@ -892,7 +892,7 @@ export class AnalyzerService {
 
                     // Delete comes in as a change event, so try to distinguish them here
                     if (event === 'change' && this._fs.existsSync(path)) {
-                        this._backgroundAnalysisProgram.markFilesDirty([path]);
+                        this._backgroundAnalysisProgram.markFilesDirty([path], false);
                         this._scheduleReanalysis(false);
                     } else {
                         // Added/deleted/renamed files impact imports,
