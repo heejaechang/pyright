@@ -93,6 +93,7 @@ class PyRxServer extends LanguageServerBase {
             useLibraryCodeForTypes: true,
             watchForSourceChanges: true,
             watchForLibraryChanges: true,
+            typeCheckingMode: 'off',
         };
 
         try {
@@ -113,6 +114,7 @@ class PyRxServer extends LanguageServerBase {
                 serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly || true;
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes || true;
                 serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths || true;
+                serverSettings.typeCheckingMode = pythonAnalysisSection.typeCheckingMode || 'off';
             }
         } catch (error) {
             this.console.log(`Error reading settings: ${error}`);
