@@ -3416,21 +3416,19 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
     function getTypeArg(node: ExpressionNode, flags: EvaluatorFlags): TypeResult {
         let typeResult: TypeResult;
 
+        const adjustedFlags =
+            flags |
+            EvaluatorFlags.ConvertEllipsisToAny |
+            EvaluatorFlags.EvaluateStringLiteralAsType |
+            EvaluatorFlags.FinalDisallowed;
         if (node.nodeType === ParseNodeType.List) {
             typeResult = {
                 type: UnknownType.create(),
-                typeList: node.entries.map((entry) => getTypeOfExpression(entry, undefined, flags)),
+                typeList: node.entries.map((entry) => getTypeOfExpression(entry, undefined, adjustedFlags)),
                 node,
             };
         } else {
-            typeResult = getTypeOfExpression(
-                node,
-                undefined,
-                flags |
-                    EvaluatorFlags.ConvertEllipsisToAny |
-                    EvaluatorFlags.EvaluateStringLiteralAsType |
-                    EvaluatorFlags.FinalDisallowed
-            );
+            typeResult = getTypeOfExpression(node, undefined, adjustedFlags);
         }
 
         return typeResult;
@@ -6251,6 +6249,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                         name: `p${index.toString()}`,
                         isNameSynthesized: true,
                         type: convertClassToObject(entry.type),
+                        hasDeclaredType: true,
                     });
                 });
             } else if (isEllipsisType(typeArgs[0].type)) {
@@ -9361,6 +9360,11 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             });
 
             return combineTypes(remainingTypes);
+        } else if (isInstanceCheck && isPositiveTest && isAnyOrUnknown(effectiveType)) {
+            // If this is a positive test for isinstance and the effective
+            // type is Any or Unknown, we can assume that the type matches
+            // one of the specified types.
+            type = combineTypes(classTypeList.map((classType) => ObjectType.create(classType)));
         }
 
         // Return the original type.
