@@ -12,10 +12,10 @@ import {
     getContainingImportStatement,
 } from '../../pyright/server/src/analyzer/importStatementUtils';
 import * as ParseTreeUtils from '../../pyright/server/src/analyzer/parseTreeUtils';
-import { convertWorkspaceEdits } from '../../pyright/server/src/commands/commandController';
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { convertOffsetsToRange } from '../../pyright/server/src/common/positionUtils';
+import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
 import { doRangesOverlap, Range, TextRange } from '../../pyright/server/src/common/textRange';
 import { TextRangeCollection } from '../../pyright/server/src/common/textRangeCollection';
 import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';

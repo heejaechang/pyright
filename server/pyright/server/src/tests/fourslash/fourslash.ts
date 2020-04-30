@@ -74,6 +74,20 @@ declare namespace _ {
         newText: string;
     }
 
+    interface DocumentRange {
+        path: string;
+        range: PositionRange;
+    }
+
+    interface TextEditAction {
+        range: PositionRange;
+        replacementText: string;
+    }
+
+    interface FileEditAction extends TextEditAction {
+        filePath: string;
+    }
+
     interface Fourslash {
         getMarkerName(m: Marker): string;
         getMarkerByName(markerName: string): Marker;
@@ -85,6 +99,7 @@ declare namespace _ {
         getRangesByText(): Map<string, Range[]>;
 
         getPositionRange(markerString: string): PositionRange;
+        convertPositionRange(range: Range): PositionRange;
 
         goToBOF(): void;
         goToEOF(): void;
@@ -125,6 +140,17 @@ declare namespace _ {
                 }[];
                 activeSignature?: number;
                 activeParameter?: number;
+            };
+        }): void;
+        verifyFindAllReferences(map: {
+            [marker: string]: {
+                references: DocumentRange[];
+            };
+        }): void;
+        verifyRename(map: {
+            [marker: string]: {
+                newName: string;
+                changes: FileEditAction[];
             };
         }): void;
 

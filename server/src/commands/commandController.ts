@@ -6,12 +6,10 @@
 
 import { CancellationToken, ExecuteCommandParams, TextEdit } from 'vscode-languageserver';
 
-import {
-    CommandController as PyrightCommandController,
-    convertWorkspaceEdits,
-} from '../../pyright/server/src/commands/commandController';
+import { CommandController as PyrightCommandController } from '../../pyright/server/src/commands/commandController';
 import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
 import { convertUriToPath } from '../../pyright/server/src/common/pathUtils';
+import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
 import { LanguageServerInterface } from '../../pyright/server/src/languageServerBase';
 import { Commands } from './commands';
 import { QuickActionCommand } from './quickActionCommand';

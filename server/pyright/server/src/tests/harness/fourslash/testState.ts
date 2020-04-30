@@ -30,6 +30,7 @@ import { Comparison, isNumber, isString, toBoolean } from '../../../common/core'
 import * as debug from '../../../common/debug';
 import { createDeferred } from '../../../common/deferred';
 import { DiagnosticCategory } from '../../../common/diagnostic';
+import { FileEditAction } from '../../../common/editAction';
 import {
     combinePaths,
     comparePaths,
@@ -40,10 +41,12 @@ import {
 } from '../../../common/pathUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../../../common/positionUtils';
 import { getStringComparer } from '../../../common/stringUtils';
-import { Position, Range as PositionRange, rangesAreEqual, TextRange } from '../../../common/textRange';
+import { DocumentRange, Position, Range as PositionRange, rangesAreEqual, TextRange } from '../../../common/textRange';
+import { TextRangeCollection } from '../../../common/textRangeCollection';
 import { LanguageServerInterface, WorkspaceServiceInstance } from '../../../languageServerBase';
 import { convertHoverResults } from '../../../languageService/hoverProvider';
 import { ParseResults } from '../../../parser/parser';
+import { Tokenizer } from '../../../parser/tokenizer';
 import * as host from '../host';
 import { stringify } from '../utils';
 import { createFromFileSystem } from '../vfs/factory';
@@ -268,6 +271,10 @@ export class TestState {
         }
 
         const range = ranges[0];
+        return this.convertPositionRange(range);
+    }
+
+    convertPositionRange(range: Range) {
         return this._convertOffsetsToRange(range.fileName, range.pos, range.end);
     }
 
@@ -900,6 +907,68 @@ export class TestState {
         }
     }
 
+    verifyFindAllReferences(map: {
+        [marker: string]: {
+            references: DocumentRange[];
+        };
+    }) {
+        this._analyze();
+
+        for (const marker of this.getMarkers()) {
+            const fileName = marker.fileName;
+            const name = this.getMarkerName(marker);
+
+            if (!(name in map)) {
+                continue;
+            }
+
+            const expected = map[name].references;
+
+            const position = this._convertOffsetToPosition(fileName, marker.position);
+            const actual = this.program.getReferencesForPosition(fileName, position, true, CancellationToken.None);
+
+            assert.equal(expected.length, actual?.length ?? 0);
+
+            for (const r of expected) {
+                assert.equal(actual?.filter((d) => this._deepEqual(d, r)).length, 1);
+            }
+        }
+    }
+
+    verifyRename(map: {
+        [marker: string]: {
+            newName: string;
+            changes: FileEditAction[];
+        };
+    }) {
+        this._analyze();
+
+        for (const marker of this.getMarkers()) {
+            const fileName = marker.fileName;
+            const name = this.getMarkerName(marker);
+
+            if (!(name in map)) {
+                continue;
+            }
+
+            const expected = map[name];
+
+            const position = this._convertOffsetToPosition(fileName, marker.position);
+            const actual = this.program.renameSymbolAtPosition(
+                fileName,
+                position,
+                expected.newName,
+                CancellationToken.None
+            );
+
+            assert.equal(expected.changes.length, actual?.length ?? 0);
+
+            for (const c of expected.changes) {
+                assert.equal(actual?.filter((e) => this._deepEqual(e, c)).length, 1);
+            }
+        }
+    }
+
     setCancelled(numberOfCalls: number): void {
         this._cancellationToken.setCancelled(numberOfCalls);
     }
@@ -951,28 +1020,39 @@ export class TestState {
     }
 
     private _convertPositionToOffset(fileName: string, position: Position): number {
-        const result = this._getParseResult(fileName);
-        return convertPositionToOffset(position, result.tokenizerOutput.lines)!;
+        const lines = this._getTextRangeCollection(fileName);
+        return convertPositionToOffset(position, lines)!;
     }
 
     private _convertOffsetToPosition(fileName: string, offset: number): Position {
-        const result = this._getParseResult(fileName);
+        const lines = this._getTextRangeCollection(fileName);
 
-        return convertOffsetToPosition(offset, result.tokenizerOutput.lines);
+        return convertOffsetToPosition(offset, lines);
     }
 
     private _convertOffsetsToRange(fileName: string, startOffset: number, endOffset: number): PositionRange {
-        const result = this._getParseResult(fileName);
+        const lines = this._getTextRangeCollection(fileName);
 
         return {
-            start: convertOffsetToPosition(startOffset, result.tokenizerOutput.lines),
-            end: convertOffsetToPosition(endOffset, result.tokenizerOutput.lines),
+            start: convertOffsetToPosition(startOffset, lines),
+            end: convertOffsetToPosition(endOffset, lines),
         };
     }
 
     private _getParseResult(fileName: string) {
         const file = this.program.getBoundSourceFile(fileName)!;
         return file.getParseResults()!;
+    }
+
+    private _getTextRangeCollection(fileName: string): TextRangeCollection<TextRange> {
+        if (fileName in this._files) {
+            return this._getParseResult(fileName).tokenizerOutput.lines;
+        }
+
+        // slow path
+        const fileContents = this.fs.readFileSync(fileName, 'utf8');
+        const tokenizer = new Tokenizer();
+        return tokenizer.tokenize(fileContents).lines;
     }
 
     private _raiseError(message: string): never {

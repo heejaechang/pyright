@@ -39,7 +39,6 @@ import {
     SignatureInformation,
     SymbolInformation,
     TextDocumentSyncKind,
-    TextEdit,
     WatchKind,
     WorkDoneProgressReporter,
     WorkspaceEdit,
@@ -65,6 +64,7 @@ import {
     FileWatcherEventType,
 } from './common/fileSystem';
 import { containsPath, convertPathToUri, convertUriToPath } from './common/pathUtils';
+import { convertWorkspaceEdits } from './common/textEditUtils';
 import { Position } from './common/textRange';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
 import { CompletionItemData } from './languageService/completionProvider';
@@ -403,28 +403,50 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
         });
 
-        this._connection.onReferences(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
-
-            const position: Position = {
-                line: params.position.line,
-                character: params.position.character,
-            };
-
-            const workspace = await this.getWorkspaceForFile(filePath);
-            if (workspace.disableLanguageServices) {
-                return;
+        // We support running only one "find all reference" at a time.
+        let lastFARCancellationSource: CancellationTokenSource;
+        this._connection.onReferences(async (params, token, reporter) => {
+            if (lastFARCancellationSource) {
+                // Cancel running FAR if there is one.
+                lastFARCancellationSource.cancel();
             }
-            const locations = workspace.serviceInstance.getReferencesForPosition(
-                filePath,
-                position,
-                params.context.includeDeclaration,
-                token
-            );
-            if (!locations) {
-                return undefined;
+
+            // The vscode currently doesn't support cancellation on FAR.
+            // It is a problem for us since it will completely block any further messages
+            // from being processed.
+            // For now, we will start progress bar ourselves with the cancellation button
+            // so that the user can cancel any long-running FAR.
+            const progress = await this._getProgressReporter(params.workDoneToken, reporter, 'finding references');
+            const source = CancelAfter(token, progress.token);
+            lastFARCancellationSource = source;
+
+            try {
+                const filePath = convertUriToPath(params.textDocument.uri);
+                const position: Position = {
+                    line: params.position.line,
+                    character: params.position.character,
+                };
+
+                const workspace = await this.getWorkspaceForFile(filePath);
+                if (workspace.disableLanguageServices) {
+                    return;
+                }
+
+                const locations = workspace.serviceInstance.getReferencesForPosition(
+                    filePath,
+                    position,
+                    params.context.includeDeclaration,
+                    source.token
+                );
+
+                if (!locations) {
+                    return undefined;
+                }
+                return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
+            } finally {
+                progress.done();
+                source.dispose();
             }
-            return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
         });
 
         this._connection.onDocumentSymbol(async (params, token) => {
@@ -594,24 +616,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return undefined;
             }
 
-            const edits: WorkspaceEdit = {
-                changes: {},
-            };
-
-            editActions.forEach((editAction) => {
-                const uri = convertPathToUri(editAction.filePath);
-                if (edits.changes![uri] === undefined) {
-                    edits.changes![uri] = [];
-                }
-
-                const textEdit: TextEdit = {
-                    range: editAction.range,
-                    newText: editAction.replacementText,
-                };
-                edits.changes![uri].push(textEdit);
-            });
-
-            return edits;
+            return convertWorkspaceEdits(editActions);
         });
 
         this._connection.onDidOpenTextDocument(async (params) => {
@@ -693,16 +698,16 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         // We support running only one command at a time.
-        let lastCancellationSource: CancellationTokenSource;
+        let lastCommandCancellationSource: CancellationTokenSource;
         this._connection.onExecuteCommand(async (params, token, reporter) => {
-            if (lastCancellationSource) {
+            if (lastCommandCancellationSource) {
                 // Cancel running command if there is one.
-                lastCancellationSource.cancel();
+                lastCommandCancellationSource.cancel();
             }
 
-            const progress = await this._getProgressReporter(params.workDoneToken, reporter);
+            const progress = await this._getProgressReporter(params.workDoneToken, reporter, 'executing a command');
             const source = CancelAfter(token, progress.token);
-            lastCancellationSource = source;
+            lastCommandCancellationSource = source;
 
             try {
                 const result = await this.executeCommand(params, source.token);
@@ -774,8 +779,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         AnalyzerServiceExecutor.runWithOptions(this.rootPath, workspace, serverSettings, typeStubTargetImportName);
     }
 
-    private async _getProgressReporter(workDoneToken: string | number | undefined, reporter: WorkDoneProgressReporter) {
-        return workDoneToken ? reporter : await this._connection.window.createWorkDoneProgress();
+    private async _getProgressReporter(
+        workDoneToken: string | number | undefined,
+        reporter: WorkDoneProgressReporter,
+        title: string
+    ) {
+        if (workDoneToken) {
+            return reporter;
+        }
+
+        const serverInitiatedReporter = await this._connection.window.createWorkDoneProgress();
+        serverInitiatedReporter.begin(title, undefined, undefined, true);
+
+        return serverInitiatedReporter;
     }
 
     private _GetConnectionOptions(): ConnectionOptions {

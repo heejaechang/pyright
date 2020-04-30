@@ -9,8 +9,9 @@
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { convertUriToPath } from '../common/pathUtils';
+import { convertTextEdits } from '../common/textEditUtils';
 import { LanguageServerInterface } from '../languageServerBase';
-import { convertTextEdits, ServerCommand } from './commandController';
+import { ServerCommand } from './commandController';
 import { Commands } from './commands';
 
 export class QuickActionCommand implements ServerCommand {
