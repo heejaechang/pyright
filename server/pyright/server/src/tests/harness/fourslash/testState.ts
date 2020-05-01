@@ -644,7 +644,7 @@ export class TestState {
             const actualText = (commandResult as TextEdit[])[0].newText;
             const expectedText: string = Object.values(files)[0];
 
-            if (actualText != expectedText) {
+            if (actualText !== expectedText) {
                 this._raiseError(
                     `doesn't contain expected result: ${stringify(expectedText)}, actual: ${stringify(actualText)}`
                 );

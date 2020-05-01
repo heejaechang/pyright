@@ -94,7 +94,7 @@ Usage: node <path/pythia.js> pipeline <repo_path> <output_path> <prefix> [lookba
 function processRepo(repoPath: string, usageOutputPath: string, lookback: number, prefix = ''): RepoStats | undefined {
     const pythonFiles = getPythonFiles(repoPath);
     // Skip if there are no python files in the repo
-    if (pythonFiles.length == 0) {
+    if (pythonFiles.length === 0) {
         return undefined;
     }
 
