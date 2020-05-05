@@ -294,6 +294,12 @@ test('TypeConstraint10', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint11.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -752,6 +758,12 @@ test('Literals2', () => {
     validateResults(analysisResults, 3);
 });
 
+test('Literals3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals3.py']);
+
+    validateResults(analysisResults, 4);
+});
+
 test('TypeAlias1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias1.py']);
 
@@ -1124,6 +1136,12 @@ test('Protocol6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol6.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('Protocol7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol7.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('TypedDict1', () => {
