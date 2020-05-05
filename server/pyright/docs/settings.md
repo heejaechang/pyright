@@ -16,7 +16,7 @@ The Pyright VS Code extension honors the following settings.
 
 **python.analysis.autoSearchPaths** [boolean]: Determines whether pyright automatically adds common search paths like "src" if there are no execution environments defined in the config file.
 
-**python.analysis.extraPaths** [boolean]: Paths to add to the default execution environment extra paths if there are no execution environments defined in the config file.
+**python.analysis.extraPaths** [array of paths]: Paths to add to the default execution environment extra paths if there are no execution environments defined in the config file.
 
 **python.pythonPath** [path]: Path to Python interpreter.
 
