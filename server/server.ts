@@ -115,6 +115,11 @@ class PyRxServer extends LanguageServerBase {
                 serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes || true;
                 serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths || true;
                 serverSettings.typeCheckingMode = pythonAnalysisSection.typeCheckingMode || 'off';
+
+                const extraPaths = pythonAnalysisSection.extraPaths;
+                if (extraPaths && isArray(extraPaths) && extraPaths.length > 0) {
+                    serverSettings.extraPaths = extraPaths.map((p) => normalizeSlashes(p));
+                }
             }
         } catch (error) {
             this.console.log(`Error reading settings: ${error}`);
