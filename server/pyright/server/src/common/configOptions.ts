@@ -290,7 +290,7 @@ export function getNoTypeCheckingDiagnosticRuleSet(): DiagnosticRuleSet {
         enableTypeIgnoreComments: true,
         reportGeneralTypeIssues: 'none',
         reportTypeshedErrors: 'none',
-        reportMissingImports: 'none',
+        reportMissingImports: 'warning',
         reportMissingModuleSource: 'warning',
         reportMissingTypeStubs: 'none',
         reportImportCycles: 'none',
