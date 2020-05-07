@@ -228,7 +228,7 @@ class PyRxServer extends LanguageServerBase {
         };
         const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
         this._logger.setLogLevel(pythonAnalysis?.logLevel ?? LogLevel.Info);
-        this._intelliCode.enable(pythonAnalysis?.enableIntelliCode ?? true);
+        this._intelliCode.enable(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
 }
 
