@@ -4,7 +4,19 @@
  * IntelliCode data models.
  */
 
+import * as path from 'path';
+
+// How far back IC looks from the point of invocation.
 export const LookbackTokenLength = 100;
+
+// IC folder under current bundle
+export const IntelliCodeFolderName = 'intelliCode';
+// IC folder for the model
+export const ModelSubFolder = path.join(IntelliCodeFolderName, 'model');
+export const ModelZipFileName = 'model.zip';
+export const ModelFileName = 'model.onnx';
+export const ModelMetaDataFileName = 'metadata.json';
+export const ModelTokensFileName = 'tokens.json';
 
 // Usage data model for offline training
 export class UsageDataModel {
@@ -36,8 +48,15 @@ export interface PythiaModelMetaData {
 }
 
 export interface PythiaModel {
+    onnxModelPath: string;
     metaData: PythiaModelMetaData;
     tokenIdMap: Map<string, number>;
     tokens: string[];
-    // session: InferenceSession;
+}
+
+// TODO: this interface is temporary and will be replaced by the actual
+// acquisition service from an npm module provided by the IntelliCode team.
+export interface ModelZipAcquisitionService {
+    // TODO: provide progress reposting facilities.
+    getModel(): Promise<string>;
 }

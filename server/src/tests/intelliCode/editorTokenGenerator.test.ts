@@ -26,122 +26,133 @@ function verifySingle(code: string, type: string, spanStart: number, position?: 
     return ei!;
 }
 
-test('IntelliCode editor token generator: empty', () => {
-    const code = ``;
-    const ei = getInference(code, 0);
-    expect(ei).toBeUndefined();
-});
+describe('IntelliCode editor token generator', () => {
+    test('empty', () => {
+        const code = ``;
+        const ei = getInference(code, 0);
+        expect(ei).toBeUndefined();
+    });
 
-test('IntelliCode editor token generator: module member', () => {
-    const code = `
+    test('simple string', () => {
+        const code = `
+s = 'str'
+s. `;
+        const ei = verifySingle(code, StandardVariableType.String, 12);
+        const expectedTokens = ['\n', 's', '=', 'STR_LIT', '\n', 'str', '.'];
+        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+    });
+
+    test('module member', () => {
+        const code = `
 import os    
 os. `;
-    verifySingle(code, 'os', 17);
-});
+        verifySingle(code, 'os', 17);
+    });
 
-test('IntelliCode editor token generator: module member return 1', () => {
-    const code = `
+    test('module member return 1', () => {
+        const code = `
 import os    
 os.mkdir('dir'). `;
-    verifySingle(code, 'os.mkdir', 30);
-});
+        verifySingle(code, 'os.mkdir', 30);
+    });
 
-test('IntelliCode editor token generator: array element', () => {
-    const code = `
+    test('array element', () => {
+        const code = `
 x = [1, 2, 3]
 x[1]. `;
-    // Type of each list/dictionary item is assigned as String by default.
-    // Default recommendation list will filter out String's recommendation
-    // list if actual type is not string.
-    verifySingle(code, StandardVariableType.String, 19);
-});
+        // Type of each list/dictionary item is assigned as String by default.
+        // Default recommendation list will filter out String's recommendation
+        // list if actual type is not string.
+        verifySingle(code, StandardVariableType.String, 19);
+    });
 
-test('IntelliCode editor token generator: expression in braces', () => {
-    const code = `
+    test('expression in braces', () => {
+        const code = `
 import os    
 (os). `;
-    verifySingle(code, 'os', 19);
-});
+        verifySingle(code, 'os', 19);
+    });
 
-test('IntelliCode editor token generator: constant string', () => {
-    const code = `
+    test('constant string', () => {
+        const code = `
 'str'. `;
-    verifySingle(code, StandardVariableType.String, 6);
-});
+        verifySingle(code, StandardVariableType.String, 6);
+    });
 
-test('IntelliCode editor token generator: constant number', () => {
-    const code = `
+    test('constant number', () => {
+        const code = `
 1.0. `;
-    const ei = getInference(code, code.length - 1);
-    // IntelliCode does not suggest on numerics.
-    expect(ei).toBeUndefined();
-});
+        const ei = getInference(code, code.length - 1);
+        // IntelliCode does not suggest on numerics.
+        expect(ei).toBeUndefined();
+    });
 
-test('IntelliCode editor token generator: numerics', () => {
-    let code = 'languages=data[questionNames[year]]. ';
-    let ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
+    test('numerics', () => {
+        let code = 'languages=data[questionNames[year]]. ';
+        let ei = getInference(code, code.length - 1);
+        expect(ei).toBeDefined();
 
-    code = 'summary.sum(axis=1). ';
-    ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
+        code = 'summary.sum(axis=1). ';
+        ei = getInference(code, code.length - 1);
+        expect(ei).toBeDefined();
 
-    code = `{1:'a', 2:'b'}. `;
-    ei = getInference(code, code.length - 1);
-    expect(ei).toBeDefined();
+        code = `{1:'a', 2:'b'}. `;
+        ei = getInference(code, code.length - 1);
+        expect(ei).toBeDefined();
 
-    // IntelliCode does not suggest on numerics.
-    code = 'W = tf.Variable([. ';
-    ei = getInference(code, code.length - 1);
-    expect(ei).toBeUndefined();
+        // IntelliCode does not suggest on numerics.
+        code = 'W = tf.Variable([. ';
+        ei = getInference(code, code.length - 1);
+        expect(ei).toBeUndefined();
 
-    code = 'W = tf.Variable([-. ';
-    ei = getInference(code, code.length - 1);
-    expect(ei).toBeUndefined();
+        code = 'W = tf.Variable([-. ';
+        ei = getInference(code, code.length - 1);
+        expect(ei).toBeUndefined();
 
-    code = 'W = tf.Variable([-0. ';
-    ei = getInference(code, code.length - 1);
-    expect(ei).toBeUndefined();
-});
+        code = 'W = tf.Variable([-0. ';
+        ei = getInference(code, code.length - 1);
+        expect(ei).toBeUndefined();
+    });
 
-// TODO: see if we can fix completion type in the middle of an expression.
-// test('IntelliCode editor token generator: complete inside expression', () => {
-//     const code = `
-// from a import b
-// z = b(1, 2, 3).fit(x, y)`;
-//     verifySingle(code, 'a.b', 31, code.length - 9);
-// });
+    // TODO: see if we can fix completion type in the middle of an expression.
+    // test('complete inside expression', () => {
+    //     const code = `
+    // from a import b
+    // z = b(1, 2, 3).fit(x, y)`;
+    //     verifySingle(code, 'a.b', 31, code.length - 9);
+    // });
 
-test('IntelliCode editor token generator: remove arguments', () => {
-    const code = `
+    test('remove arguments', () => {
+        const code = `
 from a import b
 z = b(1, 2, 3).fit(x, y). `;
-    verifySingle(code, 'a.b.fit', 41);
-});
+        verifySingle(code, 'a.b.fit', 41);
+    });
 
-test('IntelliCode editor token generator: drop array contents', () => {
-    const code = `
+    test('drop array contents', () => {
+        const code = `
 x = [1, a(), 3]
 x[0]. `;
-    const ei = verifySingle(code, StandardVariableType.String, 21);
-    const expectedTokens = ['\n', 'x', '=', '[', 'a', ']', '\n', 'x', '[', 'str', '.'];
-    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
-});
+        const ei = verifySingle(code, StandardVariableType.String, 21);
+        const expectedTokens = ['\n', 'x', '=', '[', 'a', ']', '\n', 'x', '[', 'str', '.'];
+        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+    });
 
-test('IntelliCode editor token generator: drop tuple contents', () => {
-    const code = `
+    test('drop tuple contents', () => {
+        const code = `
 x = (1, a(), 'a', z)
 x[0]. `;
-    const ei = verifySingle(code, StandardVariableType.String, 26);
-    const expectedTokens = ['\n', 'x', '=', '(', ')', '\n', 'x', '[', 'str', '.'];
-    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
-});
+        const ei = verifySingle(code, StandardVariableType.String, 26);
+        const expectedTokens = ['\n', 'x', '=', '(', ')', '\n', 'x', '[', 'str', '.'];
+        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+    });
 
-test('IntelliCode editor token generator: drop dict contents', () => {
-    const code = `
+    test('drop dict contents', () => {
+        const code = `
 x = {'a': 1, 'b': 2, 'c': 3}
 x[0]. `;
-    const ei = verifySingle(code, StandardVariableType.String, 34);
-    const expectedTokens = ['\n', 'x', '=', '{', '}', '\n', 'x', '[', 'str', '.'];
-    expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+        const ei = verifySingle(code, StandardVariableType.String, 34);
+        const expectedTokens = ['\n', 'x', '=', '{', '}', '\n', 'x', '[', 'str', '.'];
+        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+    });
 });

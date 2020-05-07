@@ -575,7 +575,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return;
             }
 
-            const completions = workspace.serviceInstance.getCompletionsForPosition(
+            const completions = await workspace.serviceInstance.getCompletionsForPosition(
                 filePath,
                 position,
                 workspace.rootPath,

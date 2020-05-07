@@ -18,7 +18,7 @@ export class LogServiceImplementation implements LogService {
     ]);
     private _maxLevel = 2;
 
-    constructor(private _console?: RemoteConsole) {}
+    constructor(private _console: RemoteConsole) {}
 
     setLogLevel(level: LogLevel): void {
         let maxLevel = this._levelMap.get(level);

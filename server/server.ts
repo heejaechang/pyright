@@ -13,11 +13,14 @@ import {
     Command,
     ConfigurationItem,
     ExecuteCommandParams,
+    RemoteConsole,
 } from 'vscode-languageserver';
 import { isMainThread } from 'worker_threads';
 
 import { BackgroundAnalysis } from './backgroundAnalysis';
 import { IntelliCodeExtension } from './intelliCode/extension';
+import { ModelZipAcquisionServiceImpl } from './intelliCode/modelAcquisitionService';
+import { ModelSubFolder } from './intelliCode/models';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
@@ -77,12 +80,19 @@ class PyRxServer extends LanguageServerBase {
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryServiceImplementation(this._connection as any);
-        this._logger = new LogServiceImplementation();
+        this._logger = new LogServiceImplementation((this._connection.console as any) as RemoteConsole);
 
         // IntelliCode may be enabled or disabled depending on user settings.
         // We don't know the state here since settings haven't been accessed yet.
         this._intelliCode = intelliCode;
-        intelliCode.initialize(this._logger, this._telemetry, this.fs);
+        const icModelSubfolder = path.join(this.fs.getModulePath(), ModelSubFolder);
+        intelliCode.initialize(
+            this._logger,
+            this._telemetry,
+            this.fs,
+            new ModelZipAcquisionServiceImpl(this.fs),
+            icModelSubfolder
+        );
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {

@@ -221,7 +221,7 @@ export class AnalyzerService {
         position: Position,
         workspacePath: string,
         token: CancellationToken
-    ): CompletionList | undefined {
+    ): Promise<CompletionList | undefined> {
         return this._program.getCompletionsForPosition(filePath, position, workspacePath, token);
     }
 
