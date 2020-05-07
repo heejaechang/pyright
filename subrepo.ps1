@@ -86,10 +86,10 @@ switch ($subcommand) {
             Write-Error "Please provide a commit message with -m." -ErrorAction Stop
         }
 
-        # Ensure we have all of the subrepo refs.
-        Invoke-Call { git subrepo fetch server/pyright }
         # Remove the temporary branch and worktree.
         Invoke-Call { git subrepo clean server/pyright }
+        # Ensure we have all of the subrepo refs.
+        Invoke-Call { git subrepo fetch server/pyright }
         # Populate the subrepo/server/pyright branch with new changes.
         Invoke-Call { git subrepo branch server/pyright }
         # Enter worktree; changes here are applied to the subrepo/server/pyright branch.
