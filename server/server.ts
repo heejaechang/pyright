@@ -120,11 +120,13 @@ class PyRxServer extends LanguageServerBase {
                     serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
                 }
 
-                // default openFilesOnly and useLibraryCodeForTypes to "true" unless users have set it explicitly
-                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly || true;
-                serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes || true;
-                serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths || true;
-                serverSettings.typeCheckingMode = pythonAnalysisSection.typeCheckingMode || 'off';
+                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? serverSettings.openFilesOnly;
+                serverSettings.useLibraryCodeForTypes =
+                    pythonAnalysisSection.useLibraryCodeForTypes ?? serverSettings.useLibraryCodeForTypes;
+                serverSettings.autoSearchPaths =
+                    pythonAnalysisSection.autoSearchPaths ?? serverSettings.autoSearchPaths;
+                serverSettings.typeCheckingMode =
+                    pythonAnalysisSection.typeCheckingMode ?? serverSettings.typeCheckingMode;
 
                 const extraPaths = pythonAnalysisSection.extraPaths;
                 if (extraPaths && isArray(extraPaths) && extraPaths.length > 0) {
@@ -225,8 +227,8 @@ class PyRxServer extends LanguageServerBase {
             section: pythonAnalysisSectionName,
         };
         const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
-        this._logger.setLogLevel(pythonAnalysis?.logLevel || LogLevel.Info);
-        this._intelliCode.enable(pythonAnalysis?.enableIntelliCode || true);
+        this._logger.setLogLevel(pythonAnalysis?.logLevel ?? LogLevel.Info);
+        this._intelliCode.enable(pythonAnalysis?.enableIntelliCode ?? true);
     }
 }
 
