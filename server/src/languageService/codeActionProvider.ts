@@ -12,7 +12,7 @@ import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
 import { Range } from '../../pyright/server/src/common/textRange';
 import { WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
-import { Commands } from '../commands/commands';
+import { addImportSimilarityLimit, Commands } from '../commands/commands';
 
 export class CodeActionProvider {
     static async getCodeActionsForPosition(
@@ -46,9 +46,16 @@ export class CodeActionProvider {
             // This requires binding, but binding doesn't allow cancellation.
             // If that becomes a problem, we need to either make binding cancellable or
             // precalculate all necessary information when diagnostics are generated
-            const autoImports = workspace.serviceInstance.getAutoImports(filePath, diagRange, token);
+            const autoImports = workspace.serviceInstance.getAutoImports(
+                filePath,
+                diagRange,
+                addImportSimilarityLimit,
+                token
+            );
 
             for (const result of autoImports) {
+                throwIfCancellationRequested(token);
+
                 if (result.name.startsWith('__')) {
                     // don't include any private symbol or module
                     continue;

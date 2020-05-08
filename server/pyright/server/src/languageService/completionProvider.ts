@@ -833,6 +833,7 @@ export class CompletionProvider {
 
         for (const result of autoImporter.getAutoImportCandidates(
             priorWord,
+            similarityLimit,
             completionList.items.filter((i) => !i.data?.autoImport).map((i) => i.label),
             this._cancellationToken
         )) {

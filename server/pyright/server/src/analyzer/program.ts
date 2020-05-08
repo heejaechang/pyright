@@ -762,7 +762,12 @@ export class Program {
         }
     }
 
-    getAutoImports(filePath: string, range: Range, token: CancellationToken): AutoImportResult[] {
+    getAutoImports(
+        filePath: string,
+        range: Range,
+        similarityLimit: number,
+        token: CancellationToken
+    ): AutoImportResult[] {
         const sourceFileInfo = this._sourceFileMap.get(filePath);
         if (!sourceFileInfo) {
             return [];
@@ -793,7 +798,7 @@ export class Program {
                 parseTree,
                 map
             );
-            return autoImporter.getAutoImportCandidates(word, [], token);
+            return autoImporter.getAutoImportCandidates(word, similarityLimit, [], token);
         });
     }
 

@@ -7,14 +7,14 @@
 //// }
 
 // @filename: test1.py
-//// [|/*result*/|]a = [|/*marker*/Pesp|]
+//// [|/*result*/|]a = [|/*marker*/MyDlass|]
 
 // @filename: test2.py
 //// import testLib
 
 // @filename: testLib/__init__.pyi
 // @library: true
-//// class Test:
+//// class MyClass:
 ////     pass
 
 {
@@ -23,10 +23,10 @@
 
     helper.verifyInvokeCodeAction({
         marker: {
-            title: 'Add import Test from testLib',
+            title: 'Add import MyClass from testLib',
             edits: [
-                { range: resultRange, newText: 'from testLib import Test\n\n\n' },
-                { range: markerRange, newText: 'Test' },
+                { range: resultRange, newText: 'from testLib import MyClass\n\n\n' },
+                { range: markerRange, newText: 'MyClass' },
             ],
         },
     });

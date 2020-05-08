@@ -47,10 +47,6 @@ export function buildModuleSymbolsMap(files: SourceFile[], token: CancellationTo
     return moduleSymbolMap;
 }
 
-// We'll use a somewhat-arbitrary cutoff value here to determine
-// whether it's sufficiently similar.
-const similarityLimit = 0.25;
-
 export interface AutoImportResult {
     name: string;
     symbol?: Symbol;
@@ -67,7 +63,7 @@ export class AutoImporter {
         private _moduleSymbolMap: ModuleSymbolMap
     ) {}
 
-    getAutoImportCandidates(word: string, excludes: string[], token: CancellationToken) {
+    getAutoImportCandidates(word: string, similarityLimit: number, excludes: string[], token: CancellationToken) {
         const results: AutoImportResult[] = [];
 
         const importStatements = getTopLevelImports(this._parseResults.parseTree);
@@ -88,11 +84,7 @@ export class AutoImporter {
                 // For very short matching strings, we will require an exact match. Otherwise
                 // we will tend to return a list that's too long. Once we get beyond two
                 // characters, we can do a fuzzy match.
-                const isSimilar =
-                    word.length > 2
-                        ? StringUtils.computeCompletionSimilarity(word, name) > similarityLimit
-                        : word.length > 0 && name.startsWith(word);
-
+                const isSimilar = this._isSimilar(word, name, similarityLimit);
                 if (!isSimilar || symbol.isExternallyHidden()) {
                     return;
                 }
@@ -156,6 +148,11 @@ export class AutoImporter {
                 return;
             }
 
+            const isSimilar = this._isSimilar(word, name, similarityLimit);
+            if (!isSimilar) {
+                return;
+            }
+
             const alreadyIncluded = this._containsName(name, importSource, excludes, results);
             if (alreadyIncluded) {
                 return;
@@ -174,6 +171,12 @@ export class AutoImporter {
         });
 
         return results;
+    }
+
+    private _isSimilar(word: string, name: string, similarityLimit: number) {
+        return word.length > 2
+            ? StringUtils.computeCompletionSimilarity(word, name) > similarityLimit
+            : word.length > 0 && name.startsWith(word);
     }
 
     private _containsName(name: string, source: string | undefined, excludes: string[], results: AutoImportResult[]) {
