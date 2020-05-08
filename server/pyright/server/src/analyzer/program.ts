@@ -36,7 +36,7 @@ import {
 import { convertPositionToOffset } from '../common/positionUtils';
 import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
-import { ModuleSymbolMap } from '../languageService/completionProvider';
+import { buildModuleSymbolsMap, ModuleSymbolMap } from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportLookupResult } from './analyzerFileInfo';
@@ -46,7 +46,6 @@ import { ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
 import { Scope } from './scope';
 import { SourceFile } from './sourceFile';
-import { SymbolTable } from './symbol';
 import { createTypeEvaluator, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
 
@@ -580,19 +579,11 @@ export class Program {
 
     // Build a map of all modules within this program and the module-
     // level scope that contains the symbol table for the module.
-    private _buildModuleSymbolsMap(sourceFileToExclude?: SourceFileInfo): ModuleSymbolMap {
-        const moduleSymbolMap = new Map<string, SymbolTable>();
-
-        this._sourceFileList.forEach((fileInfo) => {
-            if (fileInfo !== sourceFileToExclude) {
-                const symbolTable = fileInfo.sourceFile.getModuleSymbolTable();
-                if (symbolTable) {
-                    moduleSymbolMap.set(fileInfo.sourceFile.getFilePath(), symbolTable);
-                }
-            }
-        });
-
-        return moduleSymbolMap;
+    private _buildModuleSymbolsMap(sourceFileToExclude: SourceFileInfo, token: CancellationToken): ModuleSymbolMap {
+        return buildModuleSymbolsMap(
+            this._sourceFileList.filter((s) => s !== sourceFileToExclude).map((s) => s.sourceFile),
+            token
+        );
     }
 
     private _checkTypes(fileToCheck: SourceFileInfo) {
@@ -951,7 +942,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                () => this._buildModuleSymbolsMap(sourceFileInfo),
+                () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 token
             );
         });
@@ -993,7 +984,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                () => this._buildModuleSymbolsMap(sourceFileInfo),
+                () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 completionItem,
                 token
             );
