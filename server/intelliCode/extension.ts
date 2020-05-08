@@ -12,9 +12,10 @@ import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { Duration } from '../pyright/server/src/common/timing';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { LogLevel, LogService } from '../src/common/logger';
+import { Platform } from '../src/common/platform';
 import { sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
-import { DeepLearning, isOnnxSupported } from './deepLearning';
+import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
 import { ModelZipAcquisitionService, PythiaModel } from './models';
@@ -33,6 +34,7 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
         logger: LogService,
         telemetry: TelemetryService,
         fs: FileSystem,
+        platform: Platform,
         mas: ModelZipAcquisitionService,
         modelUnpackFolder: string
     ): void {
@@ -40,12 +42,15 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
             logger,
             telemetry,
             fs,
+            platform,
             mas,
             modelUnpackFolder
         );
     }
-    enable(enable: boolean): void {
-        this._icCompletionExtension.enable(enable).ignoreErrors();
+
+    updateSettings(enable: boolean): void {
+        this._icCompletionExtension;
+        this._icCompletionExtension.updateSettings(enable).ignoreErrors();
     }
 }
 
@@ -59,11 +64,12 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         private readonly _logger: LogService,
         private readonly _telemetry: TelemetryService,
         private readonly _fs: FileSystem,
+        private readonly _platform: Platform,
         private readonly _mas: ModelZipAcquisitionService,
         private readonly _modelUnpackFolder: string
     ) {}
 
-    async enable(enable: boolean): Promise<boolean> {
+    async updateSettings(enable: boolean): Promise<boolean> {
         // First 'enable' comes when settings are retrieved after LS initialization.
         // When IntelliCode is not enabled, do nothing. If IntelliCode is enabled,
         // but model has not been downloaded yet or deep learning engine has not been
@@ -77,26 +83,32 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         // }, 10000);
         // await d.promise;
 
-        if (!isOnnxSupported()) {
-            enable = false; // Temporary, until ONNX is available on other platforms.
+        if (!this._platform.isOnnxSupported()) {
+            enable = false; // ONNX may not be available on all platforms.
         }
 
         this._enable = enable;
-        if (!enable || (enable && this._model && this._deepLearning) || this._failedToDownloadModel) {
+        if (!enable || this._failedToDownloadModel) {
+            this._deepLearning = undefined;
             return true;
         }
 
         const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger, this._telemetry);
         try {
-            this._model = await loader.loadModel(this._mas, this._modelUnpackFolder);
+            if (!this._model) {
+                this._model = await loader.loadModel(this._mas, this._modelUnpackFolder);
+            }
+
             if (this._model) {
-                this._deepLearning = new DeepLearning(this._model, this._logger, this._telemetry);
+                if (!this._deepLearning) {
+                    this._deepLearning = new DeepLearning(this._model, this._platform, this._logger, this._telemetry);
+                }
                 await this._deepLearning.initialize();
                 return true;
             }
         } catch (e) {
             sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
-            this._logger.log(LogLevel.Warning, `Failed to download IntelliCode data. Exception: ${e.message}`);
+            this._logger.log(LogLevel.Warning, `Failed to start IntelliCode. Exception: ${e.message} in ${e.stack}`);
         }
 
         this._failedToDownloadModel = true;
@@ -117,7 +129,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
         try {
             const dt = new Duration();
-            const memoryUsedBeforeInference = process.memoryUsage().heapUsed / 1024;
+            const memoryBefore = process.memoryUsage().heapUsed / 1024;
 
             const aw = new AssignmentWalker(ast);
             aw.walk(ast);
@@ -126,10 +138,12 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
             const completionItems = completionList.items;
             const recommendations = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
-            this._logger?.log(LogLevel.Trace, `Recommendations: ${recommendations.join(', ')}`);
+            if (recommendations.length > 0) {
+                this._logger?.log(LogLevel.Trace, `Recommendations: ${recommendations.join(', ')}`);
+            }
 
-            const memoryUsedAfterInference = process.memoryUsage().heapUsed / 1024;
-            const memoryIncrease = memoryUsedAfterInference - memoryUsedBeforeInference;
+            const memoryAfter = process.memoryUsage().heapUsed / 1024;
+            const memoryIncrease = Math.round(memoryAfter - memoryBefore);
             this._logger?.log(
                 LogLevel.Trace,
                 `Time taken to get recommendations: ${dt.getDurationInMilliseconds()} ms, Memory increase: ${memoryIncrease} KB.`
@@ -192,6 +206,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         if (!item.filterText || item.filterText.length === 0) {
             item.filterText = item.insertText || item.label;
         }
+
         item.label = `${IntelliCodeConstants.UnicodeStar}${item.label}`;
         item.sortText = `0.${rank}`;
         item.preselect = rank === 0;

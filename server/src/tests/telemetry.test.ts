@@ -16,7 +16,6 @@ import {
     TelemetryEventName,
     TelemetryService,
 } from '../common/telemetry';
-import { TelemetryServiceImplementation } from '../services/telemetry';
 
 let ts: TelemetryService;
 let mockedTelemetry: Telemetry;
@@ -29,7 +28,7 @@ beforeEach(() => {
     when(mockedConnection.telemetry).thenReturn(telemetry);
     const connection = instance(mockedConnection);
 
-    ts = new TelemetryServiceImplementation(connection);
+    ts = new TelemetryService(connection);
 });
 
 test('Telemetry: send exception', () => {

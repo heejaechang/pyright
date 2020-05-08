@@ -6,8 +6,10 @@
 
 import { CancellationToken } from 'vscode-languageserver';
 
+import { assert } from '../pyright/server/src/common/debug';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { LogLevel, LogService } from '../src/common/logger';
+import { Platform } from '../src/common/platform';
 import { sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
 import { PythiaModel } from './models';
@@ -15,29 +17,41 @@ import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';
 
 const LookbackTokenLength = 100;
 
-// TODO: remove when ONNX is available on other platforms.
-let onnx: any;
-if (isOnnxSupported()) {
-    onnx = require('onnxruntime');
-}
-
-export function isOnnxSupported() {
-    // IC is temporarily disabled until webpack native loader works.
-    return false;
-    // return process.platform === 'win32' && process.arch === 'x64';
-}
-
 export class DeepLearning {
+    private _onnx: any; // require('onnxruntime')
     private _session: any; // InferenceSession;
 
     constructor(
         private readonly _model: PythiaModel,
+        private readonly _platform: Platform,
         private readonly _logger?: LogService,
         private readonly _telemetry?: TelemetryService
     ) {}
 
-    async initialize(): Promise<void> {
-        this._session = await onnx.InferenceSession.create(this._model.onnxModelPath);
+    async initialize(): Promise<any> {
+        if (!this._platform.isOnnxSupported()) {
+            this._logger?.log(LogLevel.Warning, 'IntelliCode is not supported on this platform.');
+            return;
+        }
+
+        if (!this._onnx) {
+            this._logger?.log(LogLevel.Trace, 'Loading ONNX runtime...');
+            try {
+                this._onnx = require('onnxruntime');
+                this._logger?.log(LogLevel.Trace, 'Loaded ONNX runtime. Creating IntelliCode session...');
+            } catch {
+                this._logger?.log(LogLevel.Trace, 'Failed to load ONNX runtime.');
+            }
+        }
+
+        assert(this._onnx);
+        assert(this._onnx.InferenceSession);
+        assert(this._onnx.InferenceSession.create);
+
+        this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
+            logSeverityLevel: this.getOnnxLogLevel(),
+        });
+        this._logger?.log(LogLevel.Trace, 'Created IntelliCode session.');
     }
 
     async getRecommendations(
@@ -47,14 +61,14 @@ export class DeepLearning {
         position: number,
         token: CancellationToken
     ): Promise<string[]> {
-        if (!onnx) {
+        if (!this._onnx) {
             return []; // Unsupported platform
         }
 
         const tg = new EditorLookBackTokenGenerator();
         const editorInvoke = tg.generateLookbackTokens(ast, content, expressionWalker, position);
         if (!editorInvoke) {
-            this._logger?.log(LogLevel.Trace, 'Current invocation did not produce any meaningful tokens.');
+            this._logger?.log(LogLevel.Trace, 'IntelliCode: current invocation did not produce any meaningful tokens.');
             return [];
         }
 
@@ -63,8 +77,8 @@ export class DeepLearning {
         try {
             const tokenIds = this.convertTokenToId(editorInvoke.lookbackTokens);
 
-            const tensor1 = new onnx.Tensor('int32', tokenIds, [1, tokenIds.length]);
-            const tensor2 = new onnx.Tensor('int32', [LookbackTokenLength], [1]);
+            const tensor1 = new this._onnx.Tensor('int32', tokenIds, [1, tokenIds.length]);
+            const tensor2 = new this._onnx.Tensor('int32', [LookbackTokenLength], [1]);
             const input = {
                 ['input_batch:0']: tensor1,
                 ['lengths:0']: tensor2,
@@ -85,7 +99,7 @@ export class DeepLearning {
                 }
             }
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `IntelliCode exception: ${e.message}`);
+            this._logger?.log(LogLevel.Error, `IntelliCode exception: ${e.stack}`);
             sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
         }
         return recommendations;
@@ -122,5 +136,31 @@ export class DeepLearning {
             }
         }
         return result;
+    }
+
+    private getOnnxLogLevel(): number {
+        // ONNX log severity level. See
+        // https://github.com/microsoft/onnxruntime/blob/master/include/onnxruntime/core/common/logging/severity.h
+        //
+        // enum class Severity {
+        //   kVERBOSE = 0,
+        //   kINFO = 1,
+        //   kWARNING = 2,
+        //   kERROR = 3,
+        //   kFATAL = 4
+        // };
+        //
+        // Note that ONNX is quite chatty and outputs bunch of stuff even on `WARNING`.
+        // Thus we set ONNX level to ERROR in all cases except Trace in order to
+        // reduce amount of internal information in the console.
+        switch (this._logger?.level) {
+            case LogLevel.Error:
+            case LogLevel.Warning:
+            case LogLevel.Info:
+                return 3;
+            case LogLevel.Trace:
+                return 0;
+        }
+        return 1;
     }
 }

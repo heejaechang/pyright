@@ -21,13 +21,14 @@ import { BackgroundAnalysis } from './backgroundAnalysis';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelZipAcquisionServiceImpl } from './intelliCode/modelAcquisitionService';
 import { ModelSubFolder } from './intelliCode/models';
+import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
 import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import * as debug from './pyright/server/src/common/debug';
-import { FileSystem } from './pyright/server/src/common/fileSystem';
+import { createFromRealFileSystem, FileSystem } from './pyright/server/src/common/fileSystem';
 import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
@@ -35,6 +36,7 @@ import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/serve
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { CommandController } from './src/commands/commandController';
 import { LogLevel, LogService } from './src/common/logger';
+import { Platform } from './src/common/platform';
 import {
     addMeasurementsToEvent,
     sendMeasurementsTelemetry,
@@ -44,8 +46,6 @@ import {
 } from './src/common/telemetry';
 import { CodeActionProvider as PyrxCodeActionProvider } from './src/languageService/codeActionProvider';
 import { AnalysisTracker } from './src/services/analysisTracker';
-import { LogServiceImplementation } from './src/services/logger';
-import { TelemetryServiceImplementation } from './src/services/telemetry';
 
 const pythonSectionName = 'python';
 const pythonAnalysisSectionName = 'python.analysis';
@@ -55,6 +55,7 @@ class PyRxServer extends LanguageServerBase {
     private _analysisTracker: AnalysisTracker;
     private _telemetry: TelemetryService;
     private _logger: LogService;
+    private _platform: Platform;
     private _intelliCode: IntelliCodeExtension;
 
     constructor() {
@@ -79,8 +80,9 @@ class PyRxServer extends LanguageServerBase {
         );
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
-        this._telemetry = new TelemetryServiceImplementation(this._connection as any);
-        this._logger = new LogServiceImplementation((this._connection.console as any) as RemoteConsole);
+        this._telemetry = new TelemetryService(this._connection as any);
+        this._logger = new LogService((this._connection.console as any) as RemoteConsole);
+        this._platform = new Platform();
 
         // IntelliCode may be enabled or disabled depending on user settings.
         // We don't know the state here since settings haven't been accessed yet.
@@ -90,6 +92,7 @@ class PyRxServer extends LanguageServerBase {
             this._logger,
             this._telemetry,
             this.fs,
+            this._platform,
             new ModelZipAcquisionServiceImpl(this.fs),
             icModelSubfolder
         );
@@ -227,11 +230,12 @@ class PyRxServer extends LanguageServerBase {
             section: pythonAnalysisSectionName,
         };
         const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
-        this._logger.setLogLevel(pythonAnalysis?.logLevel ?? LogLevel.Info);
-        this._intelliCode.enable(pythonAnalysis?.intelliCodeEnabled ?? true);
+        this._logger.level = pythonAnalysis?.logLevel ?? LogLevel.Info;
+        this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
 }
 
 if (isMainThread) {
+    prepareNativesForCurrentPlatform(createFromRealFileSystem(), new Platform());
     new PyRxServer();
 }

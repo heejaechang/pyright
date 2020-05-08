@@ -10,7 +10,7 @@ import * as path from 'path';
 import { instance, mock, when } from 'ts-mockito';
 import { CancellationToken } from 'vscode-languageserver';
 
-import { DeepLearning, isOnnxSupported } from '../../../intelliCode/deepLearning';
+import { DeepLearning } from '../../../intelliCode/deepLearning';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
 import { ModelLoader } from '../../../intelliCode/modelLoader';
 import {
@@ -22,7 +22,10 @@ import {
 } from '../../../intelliCode/models';
 import { Zip } from '../../../intelliCode/zip';
 import { createFromRealFileSystem } from '../../../pyright/server/src/common/fileSystem';
+import { Platform } from '../../common/platform';
 import { clientServerModelLocation, parseCode, walkAssignments } from './testUtils';
+
+const platform = new Platform();
 
 let deepLearning: DeepLearning;
 let modelZipFolderPath: string | undefined;
@@ -41,7 +44,7 @@ describe('IntelliCode deep learning', () => {
             return;
         }
         // TODO: remove when ONNX is available on other platforms.
-        if (!isOnnxSupported()) {
+        if (!platform.isOnnxSupported()) {
             modelZipFolderPath = undefined;
             return;
         }
@@ -56,7 +59,7 @@ describe('IntelliCode deep learning', () => {
         const model = await loader.loadModel(instance(mas), modelUnpackFolder);
         expect(model).toBeDefined();
 
-        deepLearning = new DeepLearning(model!);
+        deepLearning = new DeepLearning(model!, platform);
         await deepLearning.initialize();
     });
 

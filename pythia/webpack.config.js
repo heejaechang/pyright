@@ -13,7 +13,9 @@ const webpack = require('webpack');
 module.exports = {
     context: path.resolve(__dirname),
     entry: './src/pythia.ts',
-    mode: 'production',
+    // mode: 'production',
+    mode: 'development',
+    devtool: 'source-map',
     target: 'node',
     output: {
         filename: 'pythia.js',

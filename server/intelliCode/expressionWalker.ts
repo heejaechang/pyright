@@ -40,10 +40,9 @@ export class ExpressionWalker extends BaseParseTreeWalker {
 
     visitFunction(node: FunctionNode): boolean {
         const scope = this.scopes!.find((s) => s.node === node);
-        if (!scope) {
-            throw new Error('IntelliCode ExpressionWalker: unable to find scope for function node.');
+        if (scope) {
+            this._currentScope = scope;
         }
-        this._currentScope = scope;
         return true;
     }
 

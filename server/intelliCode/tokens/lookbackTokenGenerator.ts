@@ -89,7 +89,7 @@ export abstract class LookBackTokenGenerator {
 
     // This function is used to check if the type of the invocation is unknown or null
     protected isTypeUnknown(type: string): boolean {
-        return type === null || type.startsWith(IntelliCodeConstants.UnresolvedType);
+        return !type || type.startsWith(IntelliCodeConstants.UnresolvedType);
     }
 
     protected reduceFunctionCallArguments(tokens: TokenValuePair[]): string[] {
@@ -115,8 +115,8 @@ export abstract class LookBackTokenGenerator {
                 case TokenType.CloseParenthesis:
                     if (braces.length > 0) {
                         const openBraceIndex = braces.pop();
-                        const fnToken = fnTracker.pop();
-                        if (fnToken!.type === TokenType.Identifier) {
+                        const fnToken = fnTracker.pop(); // can pop undefined
+                        if (fnToken?.type === TokenType.Identifier) {
                             // We only clear arguments on closing brace since
                             // in case of a method invoke inside argument like in
                             // 'a(b.x)' tokens come as 'a(b.x' and we don't want

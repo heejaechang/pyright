@@ -9,22 +9,32 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const webpack = require('webpack');
+const CopyPlugin = require('copy-webpack-plugin');
+
+const nodeModules = 'node_modules';
+const serverFolder = path.resolve(__dirname, '.');
+const serverNodeModules = path.join(serverFolder, nodeModules);
+const onnxBin = path.join(serverNodeModules, 'onnxruntime', 'bin');
+const outputPath = path.resolve(__dirname, path.join(serverFolder, '..', 'dist'));
+const onnxOut = path.join(outputPath, 'native', 'onnxruntime');
 
 module.exports = {
-    context: path.resolve(__dirname),
-    entry: './server.ts',
+    context: serverFolder,
+    entry: path.join(serverFolder, 'server.ts'),
     mode: 'production',
+    // mode: 'development',
+    // devtool: 'source-map',
     target: 'node',
     output: {
         filename: 'server.bundle.js',
-        path: path.resolve(__dirname, '../dist'),
+        path: outputPath,
     },
     optimization: {
         usedExports: true,
     },
     resolve: {
-        modules: [path.resolve(__dirname, '.'), 'node_modules'],
-        extensions: ['.js', '.ts'],
+        modules: [serverFolder, serverNodeModules],
+        extensions: ['.js', '.ts', '.node'],
     },
     module: {
         rules: [
@@ -32,12 +42,14 @@ module.exports = {
                 test: /\.ts$/,
                 loader: 'ts-loader',
                 options: {
-                    configFile: 'tsconfig.json',
+                    configFile: path.join(serverFolder, 'tsconfig.json'),
                 },
             },
             {
-                test: /\.node$/,
-                use: 'node-loader',
+                // Native node bindings: rewrite 'require' calls.
+                // Actual binaries are deployed with CopyPlugin below.
+                test: /\.(node)$/,
+                loader: 'native-ext-loader',
             },
         ],
     },
@@ -46,5 +58,8 @@ module.exports = {
         __dirname: false,
         __filename: false,
     },
-    plugins: [new webpack.EnvironmentPlugin(['NUGETPACKAGEVERSION'])],
+    plugins: [
+        new webpack.EnvironmentPlugin(['NUGETPACKAGEVERSION']),
+        new CopyPlugin([{ from: `${onnxBin}`, to: onnxOut }]),
+    ],
 };

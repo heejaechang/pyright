@@ -78,7 +78,7 @@ export class ModelLoader {
             assert(modelZipFilePath !== undefined);
             this._logger?.log(LogLevel.Info, 'Successfully downloaded IntelliCode data.');
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `Failed to download IntelliCode data. Exception: ${e.message}`);
+            this._logger?.log(LogLevel.Error, `Failed to download IntelliCode data. Exception: ${e.stack}`);
             sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
             return false;
         }

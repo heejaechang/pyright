@@ -10,14 +10,16 @@ import * as realFs from 'fs';
 import * as path from 'path';
 import { anyString, anything, instance, mock, verify, when } from 'ts-mockito';
 
-import { isOnnxSupported } from '../../../intelliCode/deepLearning';
 import { IntelliCodeCompletionListExtension } from '../../../intelliCode/extension';
 import { ModelZipAcquisionServiceImpl } from '../../../intelliCode/modelAcquisitionService';
 import { ModelFileName, ModelZipAcquisitionService } from '../../../intelliCode/models';
 import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
 import { LogService } from '../../common/logger';
+import { Platform } from '../../common/platform';
 import { TelemetryService } from '../../common/telemetry';
 import { clientServerModelLocation, verifyErrorLog, verifyErrorTelemetry } from './testUtils';
+
+const platform = new Platform();
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
@@ -38,15 +40,22 @@ describe('IntelliCode extension', () => {
     });
 
     test('disable', async () => {
-        const ic = new IntelliCodeCompletionListExtension(log, telemetry, instance(mockedFs), instance(mas), '');
-        await ic.enable(false);
+        const ic = new IntelliCodeCompletionListExtension(
+            log,
+            telemetry,
+            instance(mockedFs),
+            platform,
+            instance(mas),
+            ''
+        );
+        await ic.updateSettings(false);
         // There should not be any exceptions even that fs is just a mock.
         verify(mockedTelemetry.sendTelemetry(anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
     });
 
     const testModelDownloadFailedName = 'enable, failed to download model';
-    if (isOnnxSupported()) {
+    if (platform.isOnnxSupported()) {
         test(testModelDownloadFailedName, async () => {
             await testModelDownloadFailed();
         });
@@ -62,8 +71,15 @@ describe('IntelliCode extension', () => {
         });
 
         when(mockedFs.getModulePath()).thenReturn('irrelevant');
-        const ic = new IntelliCodeCompletionListExtension(log, telemetry, instance(mockedFs), instance(mas), '');
-        await ic.enable(true);
+        const ic = new IntelliCodeCompletionListExtension(
+            log,
+            telemetry,
+            instance(mockedFs),
+            platform,
+            instance(mas),
+            ''
+        );
+        await ic.updateSettings(true);
 
         // Should log errors since we didn't provide model zip.
         verifyErrorLog(mockedLog, 'Failed to download', 2);
@@ -71,7 +87,7 @@ describe('IntelliCode extension', () => {
     }
 
     const testEnableIntelliCodeExtensionName = 'enable';
-    if (isOnnxSupported()) {
+    if (platform.isOnnxSupported()) {
         test(
             testEnableIntelliCodeExtensionName,
             async () => {
@@ -89,8 +105,8 @@ describe('IntelliCode extension', () => {
         const mas = new ModelZipAcquisionServiceImpl(vfs);
 
         const modelUnpackFolder = path.join(__dirname, clientServerModelLocation);
-        const ic = new IntelliCodeCompletionListExtension(log, telemetry, vfs, mas, modelUnpackFolder);
-        await ic.enable(true);
+        const ic = new IntelliCodeCompletionListExtension(log, telemetry, vfs, platform, mas, modelUnpackFolder);
+        await ic.updateSettings(true);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
         expect(realFs.existsSync(path.join(modelUnpackFolder, ModelFileName))).toBeTrue();

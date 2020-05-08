@@ -45,6 +45,20 @@
             ]
         },
         {
+            "type": "node",
+            "request": "launch",
+            "name": "PyRx Launch Server",
+            "program": "${workspaceRoot}/dist/server.bundle.js",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "args": [
+                "--node-ipc"
+            ],
+            "sourceMaps": true,
+            "stopOnEntry": true
+        },
+        {
             "name": "PyRx jest current file",
             "type": "node",
             "request": "launch",

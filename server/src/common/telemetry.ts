@@ -4,6 +4,9 @@
  * Definitions of services available.
  */
 
+import { IConnection } from 'vscode-languageserver';
+
+import { assert } from '../../pyright/server/src/common/debug';
 import { VERSION } from './constants';
 
 function isError(o: any): o is Error {
@@ -45,8 +48,18 @@ export class TelemetryEvent {
     }
 }
 
-export interface TelemetryService {
-    sendTelemetry(event: TelemetryEvent): void;
+export class TelemetryService {
+    private _connection: IConnection;
+
+    constructor(connection: any) {
+        assert(connection !== undefined);
+        this._connection = connection as IConnection;
+        assert(this._connection !== undefined);
+    }
+
+    sendTelemetry(event: TelemetryEvent): void {
+        this._connection?.telemetry.logEvent(event);
+    }
 }
 
 export function sendExceptionTelemetry(ts: TelemetryService | undefined, eventName: TelemetryEventName, e: any): void {
