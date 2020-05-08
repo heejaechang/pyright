@@ -1,4 +1,5 @@
 /// <reference path="fourslash.ts" />
+// @asynctest: true
 
 // @filename: test1.py
 //// Test[|/*marker*/|]
