@@ -44,12 +44,14 @@ export class CommandController extends PyrightCommandController {
             Commands.orderImports,
             Commands.addMissingOptionalToParam,
             Commands.removeUnusedImport,
+            Commands.addImport,
         ];
     }
 
     async execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         switch (cmdParams.command) {
             case Commands.removeUnusedImport:
+            case Commands.addImport:
                 return await this._pyrxQuickAction.execute(cmdParams, token);
         }
 

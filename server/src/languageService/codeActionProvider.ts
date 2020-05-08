@@ -9,6 +9,7 @@ import { CancellationToken, CodeAction, CodeActionKind, Command } from 'vscode-l
 
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
+import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
 import { Range } from '../../pyright/server/src/common/textRange';
 import { WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
 import { Commands } from '../commands/commands';
@@ -37,6 +38,33 @@ export class CodeActionProvider {
                 );
             });
 
-        return [...unusedImportCodeActions];
+        const unknownSymbols: CodeAction[] = [];
+        const unknownSymbolDiags = diags.filter((d) => d.getRule() === DiagnosticRule.reportGeneralTypeIssues);
+        if (unknownSymbolDiags.length > 0) {
+            const diagRange = unknownSymbolDiags[0].range;
+
+            // This requires binding, but binding doesn't allow cancellation.
+            // If that becomes a problem, we need to either make binding cancellable or
+            // precalculate all necessary information when diagnostics are generated
+            const autoImports = workspace.serviceInstance.getAutoImports(filePath, diagRange, token);
+
+            for (const result of autoImports) {
+                if (result.name.startsWith('__')) {
+                    // don't include any private symbol or module
+                    continue;
+                }
+
+                const title = `Add import ${result.name} from ${result.source}`;
+                unknownSymbols.push(
+                    CodeAction.create(
+                        title,
+                        Command.create(title, Commands.addImport, filePath, diagRange, result.name, result.source),
+                        CodeActionKind.QuickFix
+                    )
+                );
+            }
+        }
+
+        return [...unusedImportCodeActions, ...unknownSymbols];
     }
 }

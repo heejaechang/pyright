@@ -9,4 +9,5 @@ export enum Commands {
     orderImports = 'python.orderImports',
     addMissingOptionalToParam = 'python.addOptionalForParam',
     removeUnusedImport = 'python.removeUnusedImport',
+    addImport = 'python.addImport',
 }

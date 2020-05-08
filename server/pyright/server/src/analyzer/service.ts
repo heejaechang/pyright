@@ -179,6 +179,10 @@ export class AnalyzerService {
         return this._program.getBoundSourceFile(path)?.getParseResults();
     }
 
+    getAutoImports(filePath: string, range: Range, token: CancellationToken) {
+        return this._program.getAutoImports(filePath, range, token);
+    }
+
     getDefinitionForPosition(
         filePath: string,
         position: Position,

@@ -833,7 +833,7 @@ export class CompletionProvider {
 
         for (const result of autoImporter.getAutoImportCandidates(
             priorWord,
-            completionList.items.filter((i) => !i.data.autoImport).map((i) => i.label),
+            completionList.items.filter((i) => !i.data?.autoImport).map((i) => i.label),
             this._cancellationToken
         )) {
             if (result.symbol) {

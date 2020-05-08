@@ -97,8 +97,8 @@ export class AutoImporter {
                     return;
                 }
 
-                const excluded = excludes.find((item) => item === name);
-                if (excluded) {
+                const alreadyIncluded = this._containsName(name, undefined, excludes, results);
+                if (alreadyIncluded) {
                     return;
                 }
 
@@ -156,23 +156,8 @@ export class AutoImporter {
                 return;
             }
 
-            const excluded = excludes.find((item) => {
-                if (item === name) {
-                    // Don't add if there's already a local completion suggestion.
-                    if (!results.find((r) => r.name === name)) {
-                        return true;
-                    }
-
-                    // Don't add the same auto-import suggestion twice.
-                    if (results.find((r) => r.source === importSource)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
-
-            if (excluded) {
+            const alreadyIncluded = this._containsName(name, importSource, excludes, results);
+            if (alreadyIncluded) {
                 return;
             }
 
@@ -189,6 +174,18 @@ export class AutoImporter {
         });
 
         return results;
+    }
+
+    private _containsName(name: string, source: string | undefined, excludes: string[], results: AutoImportResult[]) {
+        if (excludes.find((e) => e === name)) {
+            return true;
+        }
+
+        if (results.find((r) => r.name === name && r.source === source)) {
+            return true;
+        }
+
+        return false;
     }
 
     // Given the file path of a module that we want to import,

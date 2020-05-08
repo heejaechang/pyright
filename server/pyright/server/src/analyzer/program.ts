@@ -33,10 +33,15 @@ import {
     normalizePath,
     stripFileExtension,
 } from '../common/pathUtils';
-import { convertPositionToOffset } from '../common/positionUtils';
+import { convertPositionToOffset, convertRangeToTextRange } from '../common/positionUtils';
 import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
-import { buildModuleSymbolsMap, ModuleSymbolMap } from '../languageService/autoImporter';
+import {
+    AutoImporter,
+    AutoImportResult,
+    buildModuleSymbolsMap,
+    ModuleSymbolMap,
+} from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportLookupResult } from './analyzerFileInfo';
@@ -755,6 +760,41 @@ export class Program {
                 this._markFileDirtyRecursive(dep, markMap);
             });
         }
+    }
+
+    getAutoImports(filePath: string, range: Range, token: CancellationToken): AutoImportResult[] {
+        const sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (!sourceFileInfo) {
+            return [];
+        }
+
+        const sourceFile = sourceFileInfo.sourceFile;
+        const fileContents = sourceFile.getFileContents();
+        if (!fileContents) {
+            // this only works with opened file
+            return [];
+        }
+
+        return this._runEvaluatorWithCancellationToken(token, () => {
+            this._bindFile(sourceFileInfo);
+
+            const parseTree = sourceFile.getParseResults()!;
+            const textRange = convertRangeToTextRange(range, parseTree.tokenizerOutput.lines);
+            if (!textRange) {
+                return [];
+            }
+
+            const word = fileContents.substr(textRange.start, textRange.length);
+            const map = this._buildModuleSymbolsMap(sourceFileInfo, token);
+            const autoImporter = new AutoImporter(
+                this._configOptions,
+                sourceFile.getFilePath(),
+                this._importResolver,
+                parseTree,
+                map
+            );
+            return autoImporter.getAutoImportCandidates(word, [], token);
+        });
     }
 
     getDiagnostics(options: ConfigOptions): FileDiagnostics[] {
