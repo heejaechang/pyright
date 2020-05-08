@@ -658,9 +658,12 @@ export class TestState {
         this.markTestDone();
     }
 
-    async verifyInvokeCodeAction(map: {
-        [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
-    }): Promise<any> {
+    async verifyInvokeCodeAction(
+        map: {
+            [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
+        },
+        verifyCodeActionCount?: boolean
+    ): Promise<any> {
         this._analyze();
 
         for (const range of this.getRanges()) {
@@ -672,6 +675,14 @@ export class TestState {
             const ls = new TestLanguageService(this.workspace, this.console, this.fs);
 
             const codeActions = await this._getCodeActions(range);
+            if (verifyCodeActionCount) {
+                if (codeActions.length !== Object.keys(map).length) {
+                    this._raiseError(
+                        `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(codeActions)}`
+                    );
+                }
+            }
+
             const matches = codeActions.filter((c) => c.title === map[name].title);
             if (matches.length === 0) {
                 this._raiseError(

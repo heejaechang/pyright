@@ -25,13 +25,16 @@
     const resultRange = helper.getPositionRange('result');
     const markerRange = helper.getPositionRange('marker');
 
-    helper.verifyInvokeCodeAction({
-        marker: {
-            title: 'Add import MyClass2 from testLib',
-            edits: [
-                { range: resultRange, newText: ', MyClass2' },
-                { range: markerRange, newText: 'MyClass2' },
-            ],
+    helper.verifyInvokeCodeAction(
+        {
+            marker: {
+                title: 'Add import MyClass2 from testLib',
+                edits: [
+                    { range: resultRange, newText: ', MyClass2' },
+                    { range: markerRange, newText: 'MyClass2' },
+                ],
+            },
         },
-    });
+        true
+    );
 }
