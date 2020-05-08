@@ -204,10 +204,6 @@ export class TestState {
         this._markedDone = true;
     }
 
-    markTestFailed(...args: any[]) {
-        this.markTestDone(args);
-    }
-
     // Entry points from fourslash.ts
     goToMarker(nameOrMarker: string | Marker = '') {
         const marker = isString(nameOrMarker) ? this.getMarkerByName(nameOrMarker) : nameOrMarker;
@@ -799,7 +795,7 @@ export class TestState {
             if (result) {
                 if (verifyMode === 'exact') {
                     if (result.items.length !== expectedCompletions.length) {
-                        this.markTestFailed(
+                        assert.fail(
                             `Expected ${expectedCompletions.length} items but received ${
                                 result.items.length
                             }. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
@@ -813,7 +809,7 @@ export class TestState {
                     if (actualIndex >= 0) {
                         if (verifyMode === 'excluded') {
                             // we're not supposed to find the completions passed to the test
-                            this.markTestFailed(
+                            assert.fail(
                                 `Completion item with label "${
                                     expected.label
                                 }" unexpected. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
@@ -831,7 +827,7 @@ export class TestState {
                                 assert.equal(actual.documentation.value, expected.documentation?.value);
                                 assert.equal(actual.documentation.kind, expected.documentation?.kind);
                             } else {
-                                this.markTestFailed(
+                                assert.fail(
                                     `Unexpected type of contents object "${actual.documentation}", should be MarkupContent.`
                                 );
                             }
@@ -841,7 +837,7 @@ export class TestState {
                     } else {
                         if (verifyMode === 'included' || verifyMode === 'exact') {
                             // we're supposed to find all items passed to the test
-                            this.markTestFailed(
+                            assert.fail(
                                 `Completion item with label "${
                                     expected.label
                                 }" expected. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
@@ -853,13 +849,11 @@ export class TestState {
                 if (verifyMode === 'exact') {
                     if (result.items.length !== 0) {
                         // we removed every item we found, there should not be any remaining
-                        this.markTestFailed(
-                            `Completion items unexpected: ${stringify(result.items.map((r) => r.label))}`
-                        );
+                        assert.fail(`Completion items unexpected: ${stringify(result.items.map((r) => r.label))}`);
                     }
                 }
             } else {
-                this.markTestFailed('Failed to get completions');
+                assert.fail('Failed to get completions');
             }
         }
 
