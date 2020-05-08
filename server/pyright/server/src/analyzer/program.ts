@@ -49,7 +49,9 @@ import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
 import { ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
+import { findNodeByOffset } from './parseTreeUtils';
 import { Scope } from './scope';
+import { getScopeForNode } from './scopeUtils';
 import { SourceFile } from './sourceFile';
 import { createTypeEvaluator, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
@@ -789,6 +791,11 @@ export class Program {
                 return [];
             }
 
+            const currentNode = findNodeByOffset(parseTree.parseTree, textRange.start);
+            if (!currentNode) {
+                return [];
+            }
+
             const word = fileContents.substr(textRange.start, textRange.length);
             const map = this._buildModuleSymbolsMap(sourceFileInfo, token);
             const autoImporter = new AutoImporter(
@@ -798,7 +805,12 @@ export class Program {
                 parseTree,
                 map
             );
-            return autoImporter.getAutoImportCandidates(word, similarityLimit, [], token);
+
+            // Filter out any name that is already defined in the current scope.
+            const currentScope = getScopeForNode(currentNode);
+            return autoImporter
+                .getAutoImportCandidates(word, similarityLimit, [], token)
+                .filter((r) => !currentScope.lookUpSymbolRecursive(r.name));
         });
     }
 
