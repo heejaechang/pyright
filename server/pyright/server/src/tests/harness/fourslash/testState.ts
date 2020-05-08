@@ -672,7 +672,14 @@ export class TestState {
             const ls = new TestLanguageService(this.workspace, this.console, this.fs);
 
             const codeActions = await this._getCodeActions(range);
-            for (const codeAction of codeActions.filter((c) => c.title === map[name].title)) {
+            const matches = codeActions.filter((c) => c.title === map[name].title);
+            if (matches.length === 0) {
+                this._raiseError(
+                    `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(codeActions)}`
+                );
+            }
+
+            for (const codeAction of matches) {
                 const results = await this._hostSpecificFeatures.execute(
                     ls,
                     {
@@ -686,11 +693,17 @@ export class TestState {
                     const workspaceEdits = results as WorkspaceEdit;
                     for (const edits of Object.values(workspaceEdits.changes!)) {
                         for (const edit of edits) {
-                            assert(
+                            if (
                                 map[name].edits!.filter(
                                     (e) => rangesAreEqual(e.range, edit.range) && e.newText === edit.newText
-                                ).length === 1
-                            );
+                                ).length !== 1
+                            ) {
+                                this._raiseError(
+                                    `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(
+                                        edits
+                                    )}`
+                                );
+                            }
                         }
                     }
                 }

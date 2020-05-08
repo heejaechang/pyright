@@ -3,16 +3,15 @@
 
 // @filename: mspythonconfig.json
 //// {
-////   "reportUnusedImport": true
+////   "typeCheckingMode ": "basic"
 //// }
 
-// @filename: testLib/__init__.py
-// @library: true
-//// class Test:
-////    pass
+// @filename: test1.py
+//// c = [|/*marker*/Test|]()
 
-// @filename: test.py
-//// import testLib as [|/*marker*/t|]l
+// @filename: test2.py
+//// class Test:
+////     pass
 
 {
     const positionRange = helper.getPositionRange(`marker`);
@@ -21,12 +20,12 @@
         marker: {
             codeActions: [
                 {
-                    title: `Remove unused import`,
+                    title: `Add import Test from test2`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Remove unused import',
-                        command: 'python.removeUnusedImport',
-                        arguments: ['\\test.py', JSON.stringify(positionRange)],
+                        title: 'Add import Test from test2',
+                        command: 'python.addImport',
+                        arguments: ['\\test1.py', JSON.stringify(positionRange), 'Test', 'test2'],
                     },
                 },
             ],
