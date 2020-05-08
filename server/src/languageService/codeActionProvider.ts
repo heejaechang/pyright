@@ -39,7 +39,11 @@ export class CodeActionProvider {
             });
 
         const unknownSymbols: CodeAction[] = [];
-        const unknownSymbolDiags = diags.filter((d) => d.getRule() === DiagnosticRule.reportGeneralTypeIssues);
+        const unknownSymbolDiags = diags.filter(
+            (d) =>
+                d.getRule() === DiagnosticRule.reportUnboundVariable ||
+                d.getRule() === DiagnosticRule.reportUndefinedVariable
+        );
         if (unknownSymbolDiags.length > 0) {
             const diagRange = unknownSymbolDiags[0].range;
 
