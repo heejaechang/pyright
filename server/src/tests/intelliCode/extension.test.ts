@@ -3,7 +3,6 @@
  *
  * IntelliCode model loader tests.
  */
-
 import 'jest-extended';
 
 import * as realFs from 'fs';

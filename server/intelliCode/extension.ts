@@ -3,6 +3,7 @@
  *
  * Language service extension implementing IntelliCode.
  */
+import '../pyright/server/src/common/extensions';
 
 import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
 
