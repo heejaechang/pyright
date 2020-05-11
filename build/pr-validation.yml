@@ -35,6 +35,7 @@ jobs:
         displayName: Use Node $(nodeVersion)
         inputs:
           versionSpec: $(nodeVersion)
+          checkLatest: true
 
       - task: Cache@2
         displayName: Cache npm
@@ -84,6 +85,7 @@ jobs:
         displayName: Use Node $(nodeVersion)
         inputs:
           versionSpec: $(nodeVersion)
+          checkLatest: true
 
       - task: Cache@2
         displayName: Cache npm
@@ -118,6 +120,7 @@ jobs:
         displayName: Use Node $(nodeVersion)
         inputs:
           versionSpec: $(nodeVersion)
+          checkLatest: true
 
       - task: Cache@2
         displayName: Cache npm
