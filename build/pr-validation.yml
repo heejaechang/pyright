@@ -33,7 +33,6 @@ jobs:
     steps:
       - task: NodeTool@0
         displayName: Use Node $(nodeVersion)
-        condition: ne(variables['Agent.OS'], 'Linux') # Temporary fix until ubuntu image is fixed.
         inputs:
           versionSpec: $(nodeVersion)
           checkLatest: true
@@ -84,7 +83,6 @@ jobs:
     steps:
       - task: NodeTool@0
         displayName: Use Node $(nodeVersion)
-        condition: ne(variables['Agent.OS'], 'Linux') # Temporary fix until ubuntu image is fixed.
         inputs:
           versionSpec: $(nodeVersion)
           checkLatest: true
@@ -120,7 +118,6 @@ jobs:
     steps:
       - task: NodeTool@0
         displayName: Use Node $(nodeVersion)
-        condition: ne(variables['Agent.OS'], 'Linux') # Temporary fix until ubuntu image is fixed.
         inputs:
           versionSpec: $(nodeVersion)
           checkLatest: true
