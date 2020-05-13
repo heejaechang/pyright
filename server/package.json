@@ -13,7 +13,7 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && cd pyright && npm install && cd server && npm install && cd ../client && npm install && cd ..",
+        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && cd pyright && npm run install:all && cd ..",
         "start": "npm i && npm run build:server",
         "build": "npm run build:server && npm run installServer",
         "build:server": "tsc",
@@ -65,6 +65,7 @@
         "jest": "^25.5.4",
         "jest-extended": "^0.11.5",
         "jest-junit": "^10.0.0",
+        "nan": "^2.14.1",
         "native-ext-loader": "^2.3.0",
         "node-loader": "^0.6.0",
         "nyc": "^15.0.0",
