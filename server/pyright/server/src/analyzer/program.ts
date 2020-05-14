@@ -109,16 +109,16 @@ export class Program {
         private _extension?: LanguageServiceExtension
     ) {
         this._console = console || new StandardConsole();
-        this._evaluator = createTypeEvaluator(this._lookUpImport, Program._getPrintTypeFlags(initialConfigOptions));
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
+        this._createNewEvaluator();
     }
 
     setConfigOptions(configOptions: ConfigOptions) {
         this._configOptions = configOptions;
 
         // Create a new evaluator with the updated config options.
-        this._evaluator = createTypeEvaluator(this._lookUpImport, Program._getPrintTypeFlags(this._configOptions));
+        this._createNewEvaluator();
     }
 
     setImportResolver(importResolver: ImportResolver) {
@@ -486,6 +486,10 @@ export class Program {
 
         if (configOptions.diagnosticRuleSet.omitTypeArgsIfAny) {
             flags |= PrintTypeFlags.OmitTypeArgumentsIfAny;
+        }
+
+        if (configOptions.diagnosticRuleSet.pep604Printing) {
+            flags |= PrintTypeFlags.PEP604;
         }
 
         return flags;

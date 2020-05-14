@@ -51,6 +51,9 @@ export interface DiagnosticRuleSet {
     // when printed if all arguments are Unknown or Any?
     omitTypeArgsIfAny: boolean;
 
+    // Should Union and Optional types be printed in PEP 604 format?
+    pep604Printing: boolean;
+
     // Use strict inference rules for list expressions?
     strictListInference: boolean;
 
@@ -254,6 +257,7 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
         printUnknownAsAny: false,
         omitTypeArgsIfAny: false,
+        pep604Printing: true,
         strictListInference: true,
         strictDictionaryInference: true,
         strictParameterNoneValue: true,
@@ -305,6 +309,7 @@ export function getNoTypeCheckingDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
         printUnknownAsAny: true,
         omitTypeArgsIfAny: true,
+        pep604Printing: true,
         strictListInference: false,
         strictDictionaryInference: false,
         strictParameterNoneValue: false,
@@ -356,6 +361,7 @@ export function getDefaultDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
         printUnknownAsAny: false,
         omitTypeArgsIfAny: false,
+        pep604Printing: true,
         strictListInference: false,
         strictDictionaryInference: false,
         strictParameterNoneValue: false,
@@ -648,6 +654,7 @@ export class ConfigOptions {
         this.diagnosticRuleSet = {
             printUnknownAsAny: defaultSettings.printUnknownAsAny,
             omitTypeArgsIfAny: defaultSettings.omitTypeArgsIfAny,
+            pep604Printing: defaultSettings.pep604Printing,
 
             // Use strict inference rules for list expressions?
             strictListInference: this._convertBoolean(
