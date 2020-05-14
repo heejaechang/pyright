@@ -291,6 +291,16 @@ export const enum MemberAccessFlags {
     SkipForMethodLookup = SkipInstanceMembers | SkipGetAttributeCheck | SkipGetCheck,
 }
 
+export const enum PrintTypeFlags {
+    None = 0,
+
+    // Avoid printing "Unknown" and always use "Any" instead.
+    PrintUnknownWithAny = 1 << 0,
+
+    // Omit type arguments for generic classes if they are "Any".
+    OmitTypeArgumentsIfAny = 1 << 1,
+}
+
 interface ParamAssignmentInfo {
     argsNeeded: number;
     argsReceived: number;
@@ -470,7 +480,7 @@ interface ReturnTypeInferenceContext {
 // performance.
 const maxReturnTypeInferenceStackSize = 3;
 
-export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
+export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: PrintTypeFlags): TypeEvaluator {
     const symbolResolutionStack: SymbolResolutionStackEntry[] = [];
     const isReachableRecursionMap = new Map<number, true>();
     const functionRecursionMap = new Map<number, true>();
@@ -3969,23 +3979,28 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         let validOverload: FunctionType | undefined;
 
         for (const overload of callType.overloads) {
-            // Temporarily disable diagnostic output.
-            useSpeculativeMode(errorNode, () => {
-                const callResult = validateCallArguments(
-                    errorNode,
-                    argList,
-                    overload,
-                    new TypeVarMap(),
-                    /* skipUnknownArgCheck */ true,
-                    /* inferReturnTypeIfNeeded */ false
-                );
-                if (!callResult.argumentErrors) {
-                    validOverload = overload;
-                }
-            });
+            // Only iterate through the functions that have the @overload
+            // decorator, not the final function that omits the overload.
+            // This is the intended behavior according to PEP 484.
+            if (FunctionType.isOverloaded(overload)) {
+                // Temporarily disable diagnostic output.
+                useSpeculativeMode(errorNode, () => {
+                    const callResult = validateCallArguments(
+                        errorNode,
+                        argList,
+                        overload,
+                        new TypeVarMap(),
+                        /* skipUnknownArgCheck */ true,
+                        /* inferReturnTypeIfNeeded */ false
+                    );
+                    if (!callResult.argumentErrors) {
+                        validOverload = overload;
+                    }
+                });
 
-            if (validOverload) {
-                break;
+                if (validOverload) {
+                    break;
+                }
             }
         }
 
@@ -6710,6 +6725,8 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             Final: { alias: '', module: 'builtins' },
             Literal: { alias: '', module: 'builtins' },
             TypedDict: { alias: '_TypedDict', module: 'self' },
+            Union: { alias: '', module: 'builtins' },
+            Optional: { alias: '', module: 'builtins' },
         };
 
         const aliasMapEntry = specialTypes[assignedName];
@@ -6740,8 +6757,6 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             _promote: { alias: '', module: 'builtins' },
             no_type_check: { alias: '', module: 'builtins' },
             NoReturn: { alias: '', module: 'builtins' },
-            Union: { alias: '', module: 'builtins' },
-            Optional: { alias: '', module: 'builtins' },
             List: { alias: 'list', module: 'builtins' },
             Dict: { alias: 'dict', module: 'builtins' },
             DefaultDict: { alias: 'defaultdict', module: 'collections' },
@@ -8274,7 +8289,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             assert(!parentNode.isWildcardImport);
 
             const importInfo = AnalyzerNodeInfo.getImportInfo(parentNode.module);
-            if (importInfo && importInfo.isImportFound) {
+            if (importInfo && importInfo.isImportFound && !importInfo.isNativeLib) {
                 const resolvedPath = importInfo.resolvedPaths[importInfo.resolvedPaths.length - 1];
 
                 // If we were able to resolve the import, report the error as
@@ -9946,7 +9961,12 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
         } else if (node.parent && node.parent.nodeType === ParseNodeType.ModuleName) {
             const namePartIndex = node.parent.nameParts.findIndex((part) => part === node);
             const importInfo = AnalyzerNodeInfo.getImportInfo(node.parent);
-            if (namePartIndex >= 0 && importInfo && namePartIndex < importInfo.resolvedPaths.length) {
+            if (
+                namePartIndex >= 0 &&
+                importInfo &&
+                !importInfo.isNativeLib &&
+                namePartIndex < importInfo.resolvedPaths.length
+            ) {
                 if (importInfo.resolvedPaths[namePartIndex]) {
                     // Synthesize an alias declaration for this name part. The only
                     // time this case is used is for the hover provider.
@@ -10407,7 +10427,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 });
 
                 // Do we need to wrap this in an awaitable?
-                if (returnType && FunctionType.isWrapReturnTypeInAwait(type) && !isNoReturnType(returnType)) {
+                if (returnType && FunctionType.isWrapReturnTypeInAwait(type)) {
                     returnType = createAwaitableReturnType(functionNode, returnType);
                 }
             }
@@ -12123,14 +12143,19 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             if (type.typeArguments) {
                 // Handle Tuple[()] as a special case.
                 if (type.typeArguments.length > 0) {
-                    objName +=
-                        '[' +
-                        type.typeArguments
-                            .map((typeArg) => {
-                                return printType(typeArg, recursionCount + 1);
-                            })
-                            .join(', ') +
-                        ']';
+                    if (
+                        (printTypeFlags & PrintTypeFlags.OmitTypeArgumentsIfAny) === 0 ||
+                        type.typeArguments.some((typeArg) => !isAnyOrUnknown(typeArg))
+                    ) {
+                        objName +=
+                            '[' +
+                            type.typeArguments
+                                .map((typeArg) => {
+                                    return printType(typeArg, recursionCount + 1);
+                                })
+                                .join(', ') +
+                            ']';
+                    }
                 } else {
                     if (ClassType.isBuiltIn(type, 'Tuple')) {
                         objName += '[()]';
@@ -12140,14 +12165,19 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 const typeParams = ClassType.getTypeParameters(type);
 
                 if (typeParams.length > 0) {
-                    objName +=
-                        '[' +
-                        typeParams
-                            .map((typeArg) => {
-                                return printType(typeArg, recursionCount + 1);
-                            })
-                            .join(', ') +
-                        ']';
+                    if (
+                        (printTypeFlags & PrintTypeFlags.OmitTypeArgumentsIfAny) === 0 ||
+                        typeParams.some((typeParam) => !isAnyOrUnknown(typeParam))
+                    ) {
+                        objName +=
+                            '[' +
+                            typeParams
+                                .map((typeParam) => {
+                                    return printType(typeParam, recursionCount + 1);
+                                })
+                                .join(', ') +
+                            ']';
+                    }
                 }
             }
         }
@@ -12215,7 +12245,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
             }
 
             case TypeCategory.Unknown: {
-                return 'Unknown';
+                return (printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0 ? 'Any' : 'Unknown';
             }
 
             case TypeCategory.Module: {
@@ -12304,7 +12334,7 @@ export function createTypeEvaluator(importLookup: ImportLookup): TypeEvaluator {
                 // If it's synthesized, don't expose the internal
                 // name we generated. This will confuse users.
                 if (type.isSynthesized) {
-                    return 'Unknown';
+                    return (printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0 ? 'Any' : 'Unknown';
                 }
 
                 const typeName = type.name;
