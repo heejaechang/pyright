@@ -7,7 +7,7 @@
 //// }
 
 // @filename: test1.py
-//// [|/*result*/|]a = [|/*marker*/testLib|]
+//// [|/*result*/|]a = [|/*marker*/test1|]
 
 // @filename: test2.py
 //// import testLib
@@ -37,10 +37,10 @@
 
     helper.verifyInvokeCodeAction({
         marker: {
-            title: 'Add import testLib from lib.site-packages',
+            title: 'Add import test1 from testLib',
             edits: [
-                { range: resultRange, newText: 'from lib.site-packages import testLib\n\n\n' },
-                { range: markerRange, newText: 'testLib' },
+                { range: resultRange, newText: 'from testLib import test1\n\n\n' },
+                { range: markerRange, newText: 'test1' },
             ],
         },
     });
