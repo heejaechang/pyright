@@ -432,12 +432,7 @@ export class Program {
         }
     }
 
-    writeTypeStub(
-        targetImportPath: string,
-        targetIsSingleFile: boolean,
-        typingsPath: string,
-        token: CancellationToken
-    ) {
+    writeTypeStub(targetImportPath: string, targetIsSingleFile: boolean, stubPath: string, token: CancellationToken) {
         for (const sourceFileInfo of this._sourceFileList) {
             throwIfCancellationRequested(token);
 
@@ -447,7 +442,7 @@ export class Program {
             // not any files that the target module happened to import.
             const relativePath = getRelativePath(filePath, targetImportPath);
             if (relativePath !== undefined) {
-                let typeStubPath = normalizePath(combinePaths(typingsPath, relativePath));
+                let typeStubPath = normalizePath(combinePaths(stubPath, relativePath));
 
                 // If the target is a single file implementation, as opposed to
                 // a package in a directory, transform the name of the type stub
@@ -461,7 +456,7 @@ export class Program {
                 const typeStubDir = getDirectoryPath(typeStubPath);
 
                 try {
-                    makeDirectories(this._fs, typeStubDir, typingsPath);
+                    makeDirectories(this._fs, typeStubDir, stubPath);
                 } catch (e) {
                     const errMsg = `Could not create directory for '${typeStubDir}'`;
                     throw new Error(errMsg);

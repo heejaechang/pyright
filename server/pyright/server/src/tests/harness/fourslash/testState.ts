@@ -1049,8 +1049,8 @@ export class TestState {
         configOptions.defaultVenv = vfs.MODULE_PATH;
 
         // make sure we set typing path
-        if (configOptions.typingsPath === undefined) {
-            configOptions.typingsPath = normalizePath(combinePaths(vfs.MODULE_PATH, 'typings'));
+        if (configOptions.stubPath === undefined) {
+            configOptions.stubPath = normalizePath(combinePaths(vfs.MODULE_PATH, 'typings'));
         }
 
         return configOptions;

@@ -54,6 +54,34 @@
                     "description": "Paths to look for typeshed modules.",
                     "scope": "resource"
                 },
+                "python.analysis.stubPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to directory containing custom type stub files.",
+                    "scope": "resource"
+                },
+                "python.analysis.diagnosticMode": {
+                    "type": "string",
+                    "default": "openFilesOnly",
+                    "enum": [
+                        "openFilesOnly",
+                        "workspace"
+                    ],
+                    "enumDescriptions": [
+                        "Analyzes and reports errors on only open files.",
+                        "Analyzes and reports errors on all files in the workspace."
+                    ],
+                    "scope": "resource"
+                },
+                "python.analysis.extraPaths": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Additional import search resolution paths",
+                    "scope": "resource"
+                },
                 "python.pythonPath": {
                     "type": "string",
                     "default": "python",

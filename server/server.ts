@@ -27,6 +27,7 @@ import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
 import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
+import { isString } from './pyright/server/src/common/core';
 import * as debug from './pyright/server/src/common/debug';
 import { createFromRealFileSystem, FileSystem } from './pyright/server/src/common/fileSystem';
 import * as consts from './pyright/server/src/common/pathConsts';
@@ -123,7 +124,11 @@ class PyRxServer extends LanguageServerBase {
                     serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
                 }
 
-                serverSettings.openFilesOnly = pythonAnalysisSection.openFilesOnly ?? serverSettings.openFilesOnly;
+                const stubPath = pythonAnalysisSection.stubPath;
+                if (stubPath && isString(stubPath)) {
+                    serverSettings.stubPath = normalizeSlashes(stubPath);
+                }
+                serverSettings.openFilesOnly = this.isOpenFilesOnly(pythonAnalysisSection.diagnosticMode);
                 serverSettings.useLibraryCodeForTypes =
                     pythonAnalysisSection.useLibraryCodeForTypes ?? serverSettings.useLibraryCodeForTypes;
                 serverSettings.autoSearchPaths =
