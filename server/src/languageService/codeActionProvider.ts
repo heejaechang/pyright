@@ -7,6 +7,7 @@
 
 import { CancellationToken, CodeAction, CodeActionKind, Command } from 'vscode-languageserver';
 
+import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
@@ -27,18 +28,24 @@ export class CodeActionProvider {
             return [];
         }
 
+        const codeActions: CodeAction[] = [];
         const diags = await workspace.serviceInstance.getDiagnosticsForRange(filePath, range, token);
-        const unusedImportCodeActions = diags
-            .filter((d) => d.category === DiagnosticCategory.UnusedCode)
-            .map((d) => {
-                return CodeAction.create(
+        const unusedImportDiags = diags.filter(
+            (d) =>
+                d.category === DiagnosticCategory.UnusedCode &&
+                d.getActions()?.some((a) => a.action === PyrightCommands.unusedImport)
+        );
+        if (unusedImportDiags.length > 0) {
+            const diagRange = unusedImportDiags[0].range;
+            codeActions.push(
+                CodeAction.create(
                     `Remove unused import`,
-                    Command.create('Remove unused import', Commands.removeUnusedImport, filePath, d.range),
+                    Command.create('Remove unused import', Commands.removeUnusedImport, filePath, diagRange),
                     CodeActionKind.QuickFix
-                );
-            });
+                )
+            );
+        }
 
-        const unknownSymbols: CodeAction[] = [];
         const unknownSymbolDiags = diags.filter(
             (d) =>
                 d.getRule() === DiagnosticRule.reportUnboundVariable ||
@@ -66,7 +73,7 @@ export class CodeActionProvider {
                 }
 
                 const title = `Add import ${result.name} from ${result.source}`;
-                unknownSymbols.push(
+                codeActions.push(
                     CodeAction.create(
                         title,
                         Command.create(title, Commands.addImport, filePath, diagRange, result.name, result.source),
@@ -76,6 +83,6 @@ export class CodeActionProvider {
             }
         }
 
-        return [...unusedImportCodeActions, ...unknownSymbols];
+        return codeActions;
     }
 }
