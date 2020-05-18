@@ -147,6 +147,11 @@ declare namespace _ {
                 references: DocumentRange[];
             };
         }): void;
+        verifyFindDefinitions(map: {
+            [marker: string]: {
+                definitions: DocumentRange[];
+            };
+        }): void;
         verifyRename(map: {
             [marker: string]: {
                 newName: string;

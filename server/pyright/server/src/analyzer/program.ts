@@ -46,6 +46,7 @@ import { ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
 import { Scope } from './scope';
 import { SourceFile } from './sourceFile';
+import { SourceMapper } from './sourceMapper';
 import { SymbolTable } from './symbol';
 import { createTypeEvaluator, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
@@ -820,7 +821,12 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
-            return sourceFileInfo.sourceFile.getDefinitionsForPosition(position, this._evaluator, token);
+            return sourceFileInfo.sourceFile.getDefinitionsForPosition(
+                this._createSourceMapper(),
+                position,
+                this._evaluator,
+                token
+            );
         });
     }
 
@@ -904,7 +910,12 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
-            return sourceFileInfo.sourceFile.getHoverForPosition(position, this._evaluator, token);
+            return sourceFileInfo.sourceFile.getHoverForPosition(
+                this._createSourceMapper(),
+                position,
+                this._evaluator,
+                token
+            );
         });
     }
 
@@ -1214,6 +1225,15 @@ export class Program {
         }
 
         return false;
+    }
+
+    private _createSourceMapper() {
+        const program = this;
+        const sourceMapper = new SourceMapper(this._importResolver, this._evaluator, (sourceFilePath: string) => {
+            program.addTrackedFile(sourceFilePath);
+            return program.getBoundSourceFile(sourceFilePath);
+        });
+        return sourceMapper;
     }
 
     private _isImportAllowed(importer: SourceFileInfo, importResult: ImportResult, isImportStubFile: boolean): boolean {

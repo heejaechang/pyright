@@ -11,9 +11,16 @@
 
 import { CancellationToken, Hover, MarkupKind } from 'vscode-languageserver';
 
-import { Declaration, DeclarationType } from '../analyzer/declaration';
+import {
+    ClassDeclaration,
+    Declaration,
+    DeclarationBase,
+    DeclarationType,
+    FunctionDeclaration,
+} from '../analyzer/declaration';
 import { convertDocStringToMarkdown } from '../analyzer/docStringToMarkdown';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
+import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { Type, TypeCategory, UnknownType } from '../analyzer/types';
 import { ClassMemberLookupFlags, isProperty, lookUpClassMember } from '../analyzer/typeUtils';
@@ -21,7 +28,7 @@ import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import { Position, Range } from '../common/textRange';
 import { TextRange } from '../common/textRange';
-import { NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
+import { ModuleNode, NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 
 export interface HoverTextPart {
@@ -36,6 +43,7 @@ export interface HoverResults {
 
 export class HoverProvider {
     static getHoverForPosition(
+        sourceMapper: SourceMapper,
         parseResults: ParseResults,
         position: Position,
         evaluator: TypeEvaluator,
@@ -64,7 +72,7 @@ export class HoverProvider {
         if (node.nodeType === ParseNodeType.Name) {
             const declarations = evaluator.getDeclarationsForNameNode(node);
             if (declarations && declarations.length > 0) {
-                this._addResultsForDeclaration(results.parts, declarations[0], node, evaluator);
+                this._addResultsForDeclaration(sourceMapper, results.parts, declarations[0], node, evaluator);
             } else if (!node.parent || node.parent.nodeType !== ParseNodeType.ModuleName) {
                 // If we had no declaration, see if we can provide a minimal tooltip. We'll skip
                 // this if it's part of a module name, since a module name part with no declaration
@@ -84,7 +92,7 @@ export class HoverProvider {
                     }
 
                     this._addResultsPart(results.parts, typeText, true);
-                    this._addDocumentationPart(results.parts, node, evaluator);
+                    this._addDocumentationPart(sourceMapper, results.parts, node, evaluator, undefined);
                 }
             }
         }
@@ -93,6 +101,7 @@ export class HoverProvider {
     }
 
     private static _addResultsForDeclaration(
+        sourceMapper: SourceMapper,
         parts: HoverTextPart[],
         declaration: Declaration,
         node: NameNode,
@@ -107,7 +116,7 @@ export class HoverProvider {
         switch (resolvedDecl.type) {
             case DeclarationType.Intrinsic: {
                 this._addResultsPart(parts, node.value + this._getTypeText(node, evaluator), true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
 
@@ -130,13 +139,13 @@ export class HoverProvider {
                 }
 
                 this._addResultsPart(parts, `(${label}) ` + node.value + this._getTypeText(typeNode, evaluator), true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
 
             case DeclarationType.Parameter: {
                 this._addResultsPart(parts, '(parameter) ' + node.value + this._getTypeText(node, evaluator), true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
 
@@ -184,7 +193,7 @@ export class HoverProvider {
                 }
 
                 this._addResultsPart(parts, '(class) ' + classText, true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
 
@@ -196,13 +205,13 @@ export class HoverProvider {
                 }
 
                 this._addResultsPart(parts, `(${label}) ` + node.value + this._getTypeText(node, evaluator), true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
 
             case DeclarationType.Alias: {
                 this._addResultsPart(parts, '(module) ' + node.value, true);
-                this._addDocumentationPart(parts, node, evaluator);
+                this._addDocumentationPart(sourceMapper, parts, node, evaluator, resolvedDecl);
                 break;
             }
         }
@@ -213,25 +222,103 @@ export class HoverProvider {
         return ': ' + evaluator.printType(type);
     }
 
-    private static _addDocumentationPart(parts: HoverTextPart[], node: NameNode, evaluator: TypeEvaluator) {
+    private static _addDocumentationPart(
+        sourceMapper: SourceMapper,
+        parts: HoverTextPart[],
+        node: NameNode,
+        evaluator: TypeEvaluator,
+        resolvedDecl: DeclarationBase | undefined
+    ) {
         const type = evaluator.getType(node);
         if (type) {
-            this._addDocumentationPartForType(parts, type);
+            this._addDocumentationPartForType(sourceMapper, parts, type, resolvedDecl);
         }
     }
 
-    private static _addDocumentationPartForType(parts: HoverTextPart[], type: Type) {
+    private static _addDocumentationPartForType(
+        sourceMapper: SourceMapper,
+        parts: HoverTextPart[],
+        type: Type,
+        resolvedDecl: DeclarationBase | undefined
+    ) {
         if (type.category === TypeCategory.Module) {
-            this._addDocumentationResultsPart(parts, type.docString);
+            if (type.docString) {
+                this._addDocumentationResultsPart(parts, type.docString);
+            } else {
+                if (resolvedDecl && isStubFile(resolvedDecl.path)) {
+                    const modules = sourceMapper.findModules(resolvedDecl.path);
+                    const docString = this._getModuleDocString(modules);
+                    if (docString) {
+                        this._addDocumentationResultsPart(parts, docString);
+                    }
+                }
+            }
         } else if (type.category === TypeCategory.Class) {
-            this._addDocumentationResultsPart(parts, type.details.docString);
+            if (type.details.docString) {
+                this._addDocumentationResultsPart(parts, type.details.docString);
+            } else {
+                if (resolvedDecl && isStubFile(resolvedDecl.path) && resolvedDecl.type === DeclarationType.Class) {
+                    const implDecls = sourceMapper.findClassDeclarations(resolvedDecl as ClassDeclaration);
+                    const docString = this._getFunctionOrClassDocString(implDecls);
+                    if (docString) {
+                        this._addDocumentationResultsPart(parts, docString);
+                    }
+                }
+            }
         } else if (type.category === TypeCategory.Function) {
-            this._addDocumentationResultsPart(parts, type.details.docString);
+            if (type.details.docString) {
+                this._addDocumentationResultsPart(parts, type.details.docString);
+            } else {
+                const decl = type.details.declaration;
+                if (decl && isStubFile(decl.path)) {
+                    const implDecls = sourceMapper.findFunctionDeclarations(decl);
+                    const docString = this._getFunctionOrClassDocString(implDecls);
+                    if (docString) {
+                        this._addDocumentationResultsPart(parts, docString);
+                    }
+                }
+            }
         } else if (type.category === TypeCategory.OverloadedFunction) {
-            type.overloads.forEach((overload) => {
-                this._addDocumentationResultsPart(parts, overload.details.docString);
-            });
+            if (type.overloads.some((o) => o.details.docString)) {
+                type.overloads.forEach((overload) => {
+                    this._addDocumentationResultsPart(parts, overload.details.docString);
+                });
+            } else if (
+                resolvedDecl &&
+                isStubFile(resolvedDecl.path) &&
+                resolvedDecl.type === DeclarationType.Function
+            ) {
+                const implDecls = sourceMapper.findFunctionDeclarations(resolvedDecl as FunctionDeclaration);
+                const docString = this._getFunctionOrClassDocString(implDecls);
+                if (docString) {
+                    this._addDocumentationResultsPart(parts, docString);
+                }
+            }
         }
+    }
+
+    private static _getFunctionOrClassDocString(decls: FunctionDeclaration[] | ClassDeclaration[]): string | undefined {
+        for (const decl of decls) {
+            const docString = ParseTreeUtils.getDocString(decl.node?.suite?.statements);
+            if (docString) {
+                return docString;
+            }
+        }
+
+        return undefined;
+    }
+
+    private static _getModuleDocString(modules: ModuleNode[]): string | undefined {
+        for (const module of modules) {
+            if (module.statements) {
+                const docString = ParseTreeUtils.getDocString(module.statements);
+                if (docString) {
+                    return docString;
+                }
+            }
+        }
+
+        return undefined;
     }
 
     private static _addDocumentationResultsPart(parts: HoverTextPart[], docString?: string) {

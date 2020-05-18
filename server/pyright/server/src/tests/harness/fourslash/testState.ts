@@ -939,6 +939,34 @@ export class TestState {
         }
     }
 
+    verifyFindDefinitions(map: {
+        [marker: string]: {
+            definitions: DocumentRange[];
+        };
+    }) {
+        this._analyze();
+
+        for (const marker of this.getMarkers()) {
+            const fileName = marker.fileName;
+            const name = this.getMarkerName(marker);
+
+            if (!(name in map)) {
+                continue;
+            }
+
+            const expected = map[name].definitions;
+
+            const position = this._convertOffsetToPosition(fileName, marker.position);
+            const actual = this.program.getDefinitionsForPosition(fileName, position, CancellationToken.None);
+
+            assert.equal(expected.length, actual?.length ?? 0);
+
+            for (const r of expected) {
+                assert.equal(actual?.filter((d) => this._deepEqual(d, r)).length, 1);
+            }
+        }
+    }
+
     verifyRename(map: {
         [marker: string]: {
             newName: string;
