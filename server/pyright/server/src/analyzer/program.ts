@@ -1296,10 +1296,9 @@ export class Program {
     }
 
     private _createSourceMapper() {
-        const program = this;
         const sourceMapper = new SourceMapper(this._importResolver, this._evaluator, (sourceFilePath: string) => {
-            program.addTrackedFile(sourceFilePath);
-            return program.getBoundSourceFile(sourceFilePath);
+            this.addTrackedFile(sourceFilePath);
+            return this.getBoundSourceFile(sourceFilePath);
         });
         return sourceMapper;
     }
