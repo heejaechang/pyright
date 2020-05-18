@@ -879,6 +879,12 @@ test('Assignment6', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Assignment7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment7.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -1466,4 +1472,32 @@ test('Unions1', () => {
     configOptions.defaultPythonVersion = PythonVersion.V39;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
     validateResults(analysisResults39, 0);
+});
+
+test('ParamSpec1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec1.py'], configOptions);
+    validateResults(results, 7);
+});
+
+test('ParamSpec2', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
+    validateResults(analysisResults38, 1);
+
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
+    validateResults(analysisResults39, 0);
+});
+
+test('ParamSpec3', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec3.py'], configOptions);
+    validateResults(results, 1);
 });
