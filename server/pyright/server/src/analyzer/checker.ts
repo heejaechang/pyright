@@ -12,6 +12,7 @@
  * cannot (or should not be) performed lazily.
  */
 
+import { Commands } from '../commands/commands';
 import { DiagnosticLevel } from '../common/configOptions';
 import { assert } from '../common/debug';
 import { Diagnostic, DiagnosticAddendum } from '../common/diagnostic';
@@ -963,7 +964,8 @@ export class Checker extends ParseTreeWalker {
                             TextRange.extend(textRange, nameParts[nameParts.length - 1]);
                             this._fileInfo.diagnosticSink.addUnusedCodeWithTextRange(
                                 `"${multipartName}" is not accessed`,
-                                textRange
+                                textRange,
+                                { action: Commands.unusedImport }
                             );
 
                             this._evaluator.addDiagnosticForTextRange(
@@ -1033,7 +1035,12 @@ export class Checker extends ParseTreeWalker {
         }
 
         if (nameNode && rule !== undefined && message) {
-            this._fileInfo.diagnosticSink.addUnusedCodeWithTextRange(`"${nameNode.value}" is not accessed`, nameNode);
+            const action = rule === DiagnosticRule.reportUnusedImport ? { action: Commands.unusedImport } : undefined;
+            this._fileInfo.diagnosticSink.addUnusedCodeWithTextRange(
+                `"${nameNode.value}" is not accessed`,
+                nameNode,
+                action
+            );
             this._evaluator.addDiagnostic(diagnosticLevel, rule, message, nameNode);
         }
     }
@@ -1078,9 +1085,17 @@ export class Checker extends ParseTreeWalker {
             return;
         }
 
+        // Several built-in classes don't follow the normal class hierarchy
+        // rules, so we'll avoid emitting false-positive diagnostics if these
+        // are used.
+        const nonstandardClassTypes = ['FunctionType', 'LambdaType', 'BuiltinFunctionType', 'BuiltinMethodType'];
+
         const classTypeList: ClassType[] = [];
         if (arg1Type.category === TypeCategory.Class) {
             classTypeList.push(arg1Type);
+            if (ClassType.isBuiltIn(arg1Type) && nonstandardClassTypes.some((name) => name === arg1Type.details.name)) {
+                return;
+            }
         } else if (arg1Type.category === TypeCategory.Object) {
             // The isinstance and issubclass call supports a variation where the second
             // parameter is a tuple of classes.
@@ -1094,13 +1109,17 @@ export class Checker extends ParseTreeWalker {
                     }
                 });
             }
+            if (ClassType.isBuiltIn(objClass) && nonstandardClassTypes.some((name) => name === objClass.details.name)) {
+                return;
+            }
         } else {
             return;
         }
 
         // According to PEP 544, protocol classes cannot be used as the right-hand
-        // argument to isinstance or issubclass.
-        if (classTypeList.some((type) => ClassType.isProtocolClass(type))) {
+        // argument to isinstance or issubclass unless they are annotated as
+        // "runtime checkable".
+        if (classTypeList.some((type) => ClassType.isProtocolClass(type) && !ClassType.isRuntimeCheckable(type))) {
             this._evaluator.addError(
                 `Protocol class cannot be used in ${callName} call`,
                 node.arguments[1].valueExpression

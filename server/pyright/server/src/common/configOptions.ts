@@ -44,6 +44,16 @@ export class ExecutionEnvironment {
 export type DiagnosticLevel = 'none' | 'warning' | 'error';
 
 export interface DiagnosticRuleSet {
+    // Should "Unknown" types be reported as "Any"?
+    printUnknownAsAny: boolean;
+
+    // Should type arguments to a generic class be omitted
+    // when printed if all arguments are Unknown or Any?
+    omitTypeArgsIfAny: boolean;
+
+    // Should Union and Optional types be printed in PEP 604 format?
+    pep604Printing: boolean;
+
     // Use strict inference rules for list expressions?
     strictListInference: boolean;
 
@@ -168,6 +178,12 @@ export interface DiagnosticRuleSet {
 
     // Report implicit concatenation of string literals.
     reportImplicitStringConcatenation: DiagnosticLevel;
+
+    // Report usage of undefined variables.
+    reportUndefinedVariable: DiagnosticLevel;
+
+    // Report usage of unbound or possibly unbound variables.
+    reportUnboundVariable: DiagnosticLevel;
 }
 
 export function cloneDiagnosticRuleSet(diagSettings: DiagnosticRuleSet): DiagnosticRuleSet {
@@ -226,17 +242,22 @@ export function getDiagLevelDiagnosticRules() {
         DiagnosticRule.reportAssertAlwaysTrue,
         DiagnosticRule.reportSelfClsParameterName,
         DiagnosticRule.reportImplicitStringConcatenation,
+        DiagnosticRule.reportUndefinedVariable,
+        DiagnosticRule.reportUnboundVariable,
     ];
 }
 
-export function getStrictModeNotOverridenRules() {
+export function getStrictModeNotOverriddenRules() {
     // In strict mode, the value in the user config file should be honored and
-    // not overwritten by the value from the strict ruleset.
+    // not overwritten by the value from the strict rule set.
     return [DiagnosticRule.reportMissingModuleSource];
 }
 
 export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
+        printUnknownAsAny: false,
+        omitTypeArgsIfAny: false,
+        pep604Printing: true,
         strictListInference: true,
         strictDictionaryInference: true,
         strictParameterNoneValue: true,
@@ -277,6 +298,8 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
         reportAssertAlwaysTrue: 'error',
         reportSelfClsParameterName: 'error',
         reportImplicitStringConcatenation: 'none',
+        reportUnboundVariable: 'error',
+        reportUndefinedVariable: 'error',
     };
 
     return diagSettings;
@@ -284,13 +307,16 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
 
 export function getNoTypeCheckingDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
+        printUnknownAsAny: true,
+        omitTypeArgsIfAny: true,
+        pep604Printing: true,
         strictListInference: false,
         strictDictionaryInference: false,
         strictParameterNoneValue: false,
         enableTypeIgnoreComments: true,
         reportGeneralTypeIssues: 'none',
         reportTypeshedErrors: 'none',
-        reportMissingImports: 'none',
+        reportMissingImports: 'warning',
         reportMissingModuleSource: 'warning',
         reportMissingTypeStubs: 'none',
         reportImportCycles: 'none',
@@ -324,6 +350,8 @@ export function getNoTypeCheckingDiagnosticRuleSet(): DiagnosticRuleSet {
         reportAssertAlwaysTrue: 'none',
         reportSelfClsParameterName: 'none',
         reportImplicitStringConcatenation: 'none',
+        reportUnboundVariable: 'warning',
+        reportUndefinedVariable: 'warning',
     };
 
     return diagSettings;
@@ -331,6 +359,9 @@ export function getNoTypeCheckingDiagnosticRuleSet(): DiagnosticRuleSet {
 
 export function getDefaultDiagnosticRuleSet(): DiagnosticRuleSet {
     const diagSettings: DiagnosticRuleSet = {
+        printUnknownAsAny: false,
+        omitTypeArgsIfAny: false,
+        pep604Printing: true,
         strictListInference: false,
         strictDictionaryInference: false,
         strictParameterNoneValue: false,
@@ -371,6 +402,8 @@ export function getDefaultDiagnosticRuleSet(): DiagnosticRuleSet {
         reportAssertAlwaysTrue: 'warning',
         reportSelfClsParameterName: 'warning',
         reportImplicitStringConcatenation: 'none',
+        reportUnboundVariable: 'error',
+        reportUndefinedVariable: 'error',
     };
 
     return diagSettings;
@@ -395,7 +428,7 @@ export class ConfigOptions {
     typeshedPath?: string;
 
     // Path to custom typings (stub) modules.
-    typingsPath?: string;
+    stubPath?: string;
 
     // A list of file specs to include in the analysis. Can contain
     // directories, in which case all "*.py" files within those directories
@@ -494,17 +527,31 @@ export class ConfigOptions {
         return execEnv;
     }
 
-    addExecEnvironmentForAutoSearchPaths(fs: FileSystem) {
-        // Auto-detect the common scenario where the sources are under the src folder
-        const srcPath = combinePaths(this.projectRoot, pathConsts.src);
-        if (fs.existsSync(srcPath) && !fs.existsSync(combinePaths(srcPath, '__init__.py'))) {
+    addExecEnvironmentForExtraPaths(fs: FileSystem, autoSearchPaths: boolean, extraPaths: string[]) {
+        const paths: string[] = [];
+
+        if (autoSearchPaths) {
+            // Auto-detect the common scenario where the sources are under the src folder
+            const srcPath = normalizePath(combinePaths(this.projectRoot, pathConsts.src));
+            if (fs.existsSync(srcPath) && !fs.existsSync(combinePaths(srcPath, '__init__.py'))) {
+                paths.push(srcPath);
+            }
+        }
+
+        if (extraPaths.length > 0) {
+            for (const p of extraPaths) {
+                paths.push(normalizePath(combinePaths(this.projectRoot, p)));
+            }
+        }
+
+        if (paths.length > 0) {
             const execEnv = new ExecutionEnvironment(
                 this.projectRoot,
                 this.defaultPythonVersion,
                 this.defaultPythonPlatform
             );
 
-            execEnv.extraPaths.push(srcPath);
+            execEnv.extraPaths.push(...paths);
 
             this.executionEnvironments.push(execEnv);
         }
@@ -605,6 +652,10 @@ export class ConfigOptions {
         const defaultSettings = ConfigOptions.getDiagnosticRuleSet(configTypeCheckingMode || typeCheckingMode);
 
         this.diagnosticRuleSet = {
+            printUnknownAsAny: defaultSettings.printUnknownAsAny,
+            omitTypeArgsIfAny: defaultSettings.omitTypeArgsIfAny,
+            pep604Printing: defaultSettings.pep604Printing,
+
             // Use strict inference rules for list expressions?
             strictListInference: this._convertBoolean(
                 configObj.strictListInference,
@@ -885,6 +936,20 @@ export class ConfigOptions {
                 DiagnosticRule.reportImplicitStringConcatenation,
                 defaultSettings.reportImplicitStringConcatenation
             ),
+
+            // Read the "reportUndefinedVariable" entry.
+            reportUndefinedVariable: this._convertDiagnosticLevel(
+                configObj.reportUndefinedVariable,
+                DiagnosticRule.reportUndefinedVariable,
+                defaultSettings.reportUndefinedVariable
+            ),
+
+            // Read the "reportUnboundVariable" entry.
+            reportUnboundVariable: this._convertDiagnosticLevel(
+                configObj.reportUnboundVariable,
+                DiagnosticRule.reportUnboundVariable,
+                defaultSettings.reportUnboundVariable
+            ),
         };
 
         // Read the "venvPath".
@@ -944,13 +1009,24 @@ export class ConfigOptions {
             }
         }
 
-        // Read the "typingsPath" setting.
-        this.typingsPath = undefined;
+        // Read the "stubPath" setting.
+        this.stubPath = undefined;
+
+        // Keep this for backward compatibility
         if (configObj.typingsPath !== undefined) {
             if (typeof configObj.typingsPath !== 'string') {
                 console.log(`Config "typingsPath" field must contain a string.`);
             } else {
-                this.typingsPath = normalizePath(combinePaths(this.projectRoot, configObj.typingsPath));
+                console.log(`Config "typingsPath" is now deprecated. Please, use stubPath instead.`);
+                this.stubPath = normalizePath(combinePaths(this.projectRoot, configObj.typingsPath));
+            }
+        }
+
+        if (configObj.stubPath !== undefined) {
+            if (typeof configObj.stubPath !== 'string') {
+                console.log(`Config "stubPath" field must contain a string.`);
+            } else {
+                this.stubPath = normalizePath(combinePaths(this.projectRoot, configObj.stubPath));
             }
         }
 

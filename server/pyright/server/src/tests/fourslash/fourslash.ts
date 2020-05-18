@@ -117,20 +117,26 @@ declare namespace _ {
         moveCaretRight(count: number): void;
 
         verifyDiagnostics(map?: { [marker: string]: { category: string; message: string } }): void;
-        verifyCodeActions(map: {
-            [marker: string]: { codeActions: { title: string; kind: string; command: Command }[] };
-        }): void;
+        verifyCodeActions(
+            map: {
+                [marker: string]: { codeActions: { title: string; kind: string; command: Command }[] };
+            },
+            verifyCodeActionCount?: boolean
+        ): void;
         verifyCommand(command: Command, files: { [filePath: string]: string }): void;
-        verifyInvokeCodeAction(map: {
-            [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
-        }): void;
+        verifyInvokeCodeAction(
+            map: {
+                [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
+            },
+            verifyCodeActionCount?: boolean
+        ): void;
         verifyHover(map: { [marker: string]: { value: string; kind: string } }): void;
         verifyCompletion(
             verifyMode: 'exact' | 'included' | 'excluded',
             map: {
                 [marker: string]: { completions: { label: string; documentation?: { kind: string; value: string } }[] };
             }
-        ): void;
+        ): Promise<void>;
         verifySignature(map: {
             [marker: string]: {
                 noSig?: boolean;

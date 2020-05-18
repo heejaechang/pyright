@@ -16,7 +16,7 @@ Relative paths specified within the config file are relative to the config file�
 
 **typeshedPath** [path, optional]: Path to a directory that contains typeshed type stub files. Pyright ships with an internal copy of some typeshed type stubs (those that cover the Python stdlib packages). If you want to use a full copy of the typeshed type stubs (including those for third-party packages), you can clone the [typeshed github repo](https://github.com/python/typeshed) to a local directory and reference the location with this path.
 
-**typingsPath** [path, optional]: Path to a directory that contains custom type stubs. Each package's type stub file(s) are expected to be in its own subdirectory. The default value of this setting is "./typings".
+**stubPath** [path, optional]: Path to a directory that contains custom type stubs. Each package's type stub file(s) are expected to be in its own subdirectory. The default value of this setting is "./typings". (typingsPath is now deprecated)
 
 **venvPath** [path, optional]: Path to a directory containing one or more subdirectories, each of which contains a virtual environment. Each execution environment (see below for details) can refer to a different virtual environment. When used in conjunction with a **venv** setting (see below), pyright will search for imports in the virtual environment’s site-packages directory rather than the paths specified in PYTHONPATH.
 
@@ -44,7 +44,7 @@ The following settings control pyright’s diagnostic output (warnings or errors
 
 **enableTypeIgnoreComments** [boolean]: PEP 484 defines support for "# type: ignore" comments. This switch enables or disables support for these comments. The default value for this setting is 'true'.
 
-**reportGeneralTypeIssues** [boolean or string, optional]: Generate or suppress diagnostics for general type inconsistencies, unbound symbols, unsupported operations, argument/parameter mismatches, etc. This covers all of the basic type-checking rules not covered by other rules. It does not include syntax errors. The default value for this setting is 'error'.
+**reportGeneralTypeIssues** [boolean or string, optional]: Generate or suppress diagnostics for general type inconsistencies, unsupported operations, argument/parameter mismatches, etc. This covers all of the basic type-checking rules not covered by other rules. It does not include syntax errors. The default value for this setting is 'error'.
 
 **reportTypeshedErrors** [boolean or string, optional]: Generate or suppress diagnostics for typeshed type stub files. In general, these type stub files should be “clean” and generate no errors. The default value for this setting is 'none'.
 
@@ -116,6 +116,10 @@ The following settings control pyright’s diagnostic output (warnings or errors
 
 **reportImplicitStringConcatenation** [boolean or string, optional]: Generate or suppress diagnostics for two or more string literals that follow each other, indicating an implicit concatenation. This is considered a bad practice and often masks bugs such as missing commas. The default value for this setting is 'none'.
 
+**reportUndefinedVariable** [boolean or string, optional]: Generate or suppress diagnostics for undefined variables. The default value for this setting is 'error'.
+
+**reportUnboundVariable** [boolean or string, optional]: Generate or suppress diagnostics for unbound and possibly unbound variables. The default value for this setting is 'error'.
+
 
 ## Execution Environment Options
 Pyright allows multiple “execution environments” to be defined for different portions of your source tree. For example, a subtree may be designed to run with different import search paths or a different version of the python interpreter than the rest of the source base.
@@ -161,7 +165,7 @@ The following is an example of a pyright config file:
     "src/oldstuff"
   ],
 
-  "typingsPath": "src/typestubs",
+  "stubPath": "src/typestubs",
   "venvPath": "/home/foo/.venvs",
 
   "reportTypeshedErrors": false,

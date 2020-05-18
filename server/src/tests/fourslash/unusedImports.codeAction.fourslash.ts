@@ -14,20 +14,22 @@
 // @filename: test.py
 //// import testLib as [|/*marker*/t|]l
 
-const positionRange = helper.getPositionRange(`marker`);
+{
+    const positionRange = helper.getPositionRange(`marker`);
 
-helper.verifyCodeActions({
-    marker: {
-        codeActions: [
-            {
-                title: `Remove unused import`,
-                kind: Consts.CodeActionKind.QuickFix,
-                command: {
-                    title: 'Remove unused import',
-                    command: 'python.removeUnusedImport',
-                    arguments: ['\\test.py', JSON.stringify(positionRange)],
+    helper.verifyCodeActions({
+        marker: {
+            codeActions: [
+                {
+                    title: `Remove unused import`,
+                    kind: Consts.CodeActionKind.QuickFix,
+                    command: {
+                        title: 'Remove unused import',
+                        command: 'python.removeUnusedImport',
+                        arguments: ['\\test.py', JSON.stringify(positionRange)],
+                    },
                 },
-            },
-        ],
-    },
-});
+            ],
+        },
+    });
+}

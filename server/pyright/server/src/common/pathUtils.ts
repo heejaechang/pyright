@@ -506,16 +506,22 @@ export function stripTrailingDirectorySeparator(pathString: string) {
     return pathString.substr(0, pathString.length - 1);
 }
 
-export function getFileExtension(fileName: string) {
-    return path.extname(fileName);
+export function getFileExtension(fileName: string, multiDotExtension = false) {
+    if (!multiDotExtension) {
+        return path.extname(fileName);
+    }
+
+    fileName = getFileName(fileName);
+    const firstDotIndex = fileName.indexOf('.');
+    return fileName.substr(firstDotIndex);
 }
 
 export function getFileName(pathString: string) {
     return path.basename(pathString);
 }
 
-export function stripFileExtension(fileName: string) {
-    const ext = path.extname(fileName);
+export function stripFileExtension(fileName: string, multiDotExtension = false) {
+    const ext = getFileExtension(fileName, multiDotExtension);
     return fileName.substr(0, fileName.length - ext.length);
 }
 

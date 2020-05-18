@@ -70,7 +70,11 @@ export type Type =
     | UnionType
     | TypeVarType;
 
-export type LiteralValue = number | boolean | string;
+export class EnumLiteral {
+    constructor(public className: string, public itemName: string) {}
+}
+
+export type LiteralValue = number | boolean | string | EnumLiteral;
 
 export type TypeSourceId = number;
 export const maxTypeRecursionCount = 16;
@@ -209,6 +213,10 @@ export const enum ClassTypeFlags {
     // annotated types and is treated as though each parameter
     // is a generic type for purposes of type inference.
     PseudoGenericClass = 1 << 12,
+
+    // A protocol class that is "runtime checkable" can be used
+    // in an isinstance call.
+    RuntimeCheckable = 1 << 13,
 }
 
 interface ClassDetails {
@@ -349,6 +357,10 @@ export namespace ClassType {
 
     export function getDataClassEntries(classType: ClassType): DataClassEntry[] {
         return classType.details.dataClassEntries || [];
+    }
+
+    export function isRuntimeCheckable(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.RuntimeCheckable);
     }
 
     export function getTypeParameters(classType: ClassType) {
@@ -540,6 +552,23 @@ export namespace ObjectType {
         newType.literalValue = value;
         return newType;
     }
+
+    export function isLiteralValueSame(type1: ObjectType, type2: ObjectType) {
+        if (type1.literalValue === undefined) {
+            return type2.literalValue === undefined;
+        } else if (type2.literalValue === undefined) {
+            return false;
+        }
+
+        if (type1.literalValue instanceof EnumLiteral) {
+            if (type2.literalValue instanceof EnumLiteral) {
+                return type1.literalValue.itemName === type2.literalValue.itemName;
+            }
+            return false;
+        }
+
+        return type1.literalValue === type2.literalValue;
+    }
 }
 
 export interface FunctionParameter {
@@ -606,6 +635,7 @@ export const enum FunctionTypeFlags {
 }
 
 interface FunctionDetails {
+    name: string;
     flags: FunctionTypeFlags;
     parameters: FunctionParameter[];
     declaredReturnType?: Type;
@@ -637,10 +667,11 @@ export interface FunctionType extends TypeBase {
 }
 
 export namespace FunctionType {
-    export function create(flags: FunctionTypeFlags, docString?: string) {
+    export function create(name: string, flags: FunctionTypeFlags, docString?: string) {
         const newFunctionType: FunctionType = {
             category: TypeCategory.Function,
             details: {
+                name,
                 flags,
                 parameters: [],
                 docString,
@@ -652,10 +683,11 @@ export namespace FunctionType {
     // Creates a deep copy of the function type, including a fresh
     // version of _functionDetails.
     export function clone(type: FunctionType, deleteFirstParam = false): FunctionType {
-        const newFunction = create(type.details.flags, type.details.docString);
+        const newFunction = create(type.details.name, type.details.flags, type.details.docString);
         const startParam = deleteFirstParam ? 1 : 0;
 
         newFunction.details = {
+            name: type.details.name,
             flags: type.details.flags,
             parameters: type.details.parameters.slice(startParam),
             declaredReturnType: type.details.declaredReturnType,
@@ -691,7 +723,7 @@ export namespace FunctionType {
         type: FunctionType,
         specializedTypes: SpecializedFunctionTypes
     ): FunctionType {
-        const newFunction = create(type.details.flags, type.details.docString);
+        const newFunction = create(type.details.name, type.details.flags, type.details.docString);
         newFunction.details = type.details;
 
         assert(specializedTypes.parameterTypes.length === type.details.parameters.length);
@@ -983,7 +1015,7 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
         case TypeCategory.Object: {
             const objType2 = type2 as ObjectType;
 
-            if (type1.literalValue !== objType2.literalValue) {
+            if (!ObjectType.isLiteralValueSame(type1, objType2)) {
                 return false;
             }
 
@@ -1171,6 +1203,27 @@ export function removeFromUnion(type: Type, removeFilter: (type: Type) => boolea
     }
 
     return type;
+}
+
+// Determines whether the specified type is a type that can be
+// combined with other types for a union.
+export function canUnionType(type: Type): boolean {
+    switch (type.category) {
+        case TypeCategory.Any:
+        case TypeCategory.Class:
+        case TypeCategory.Function:
+        case TypeCategory.None:
+        case TypeCategory.OverloadedFunction:
+        case TypeCategory.TypeVar:
+            return true;
+
+        case TypeCategory.Union: {
+            return !type.subtypes.some((subtype) => !canUnionType(subtype));
+        }
+
+        default:
+            return false;
+    }
 }
 
 // Combines multiple types into a single type. If the types are

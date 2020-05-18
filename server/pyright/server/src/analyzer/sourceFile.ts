@@ -28,7 +28,8 @@ import * as StringUtils from '../common/stringUtils';
 import { DocumentRange, getEmptyRange, Position, TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
 import { timingStats } from '../common/timing';
-import { CompletionItemData, CompletionProvider, ModuleSymbolMap } from '../languageService/completionProvider';
+import { ModuleSymbolMap } from '../languageService/autoImporter';
+import { CompletionItemData, CompletionProvider } from '../languageService/completionProvider';
 import { DefinitionProvider } from '../languageService/definitionProvider';
 import { DocumentSymbolProvider } from '../languageService/documentSymbolProvider';
 import { HoverProvider, HoverResults } from '../languageService/hoverProvider';
@@ -172,7 +173,8 @@ export class SourceFile {
                 fileName === '_importlib_modulespec.pyi' ||
                 fileName === 'dataclasses.pyi' ||
                 fileName === 'abc.pyi' ||
-                fileName === 'enum.pyi'
+                fileName === 'enum.pyi' ||
+                fileName === 'types.pyi'
             ) {
                 this._isBuiltInStubFile = true;
             }

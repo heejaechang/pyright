@@ -36,10 +36,17 @@ export interface Stats {
     isSocket(): boolean;
 }
 
+export interface MkDirOptions {
+    recursive: boolean;
+    // Not supported on Windows so commented out.
+    // mode: string | number;
+}
+
 export interface FileSystem {
     existsSync(path: string): boolean;
-    mkdirSync(path: string): void;
+    mkdirSync(path: string, options?: MkDirOptions | number): void;
     chdir(path: string): void;
+    readdirEntriesSync(path: string): fs.Dirent[];
     readdirSync(path: string): string[];
     readFileSync(path: string, encoding?: null): Buffer;
     readFileSync(path: string, encoding: string): string;
@@ -52,6 +59,7 @@ export interface FileSystem {
     createFileSystemWatcher(paths: string[], listener: FileWatcherEventHandler): FileWatcher;
     createReadStream(path: string): fs.ReadStream;
     createWriteStream(path: string): fs.WriteStream;
+    copyFileSync(src: string, dst: string): void;
     // Async I/O
     readFile(path: string): Promise<Buffer>;
     readFileText(path: string, encoding?: string): Promise<string>;
@@ -84,16 +92,19 @@ class RealFileSystem implements FileSystem {
         return fs.existsSync(path);
     }
 
-    mkdirSync(path: string) {
-        fs.mkdirSync(path);
+    mkdirSync(path: string, options?: MkDirOptions | number) {
+        fs.mkdirSync(path, options);
     }
 
     chdir(path: string) {
         process.chdir(path);
     }
 
-    readdirSync(path: string) {
+    readdirSync(path: string): string[] {
         return fs.readdirSync(path);
+    }
+    readdirEntriesSync(path: string): fs.Dirent[] {
+        return fs.readdirSync(path, { withFileTypes: true });
     }
 
     readFileSync(path: string, encoding?: null): Buffer;
@@ -135,6 +146,10 @@ class RealFileSystem implements FileSystem {
     }
     createWriteStream(path: string): fs.WriteStream {
         return fs.createWriteStream(path);
+    }
+
+    copyFileSync(src: string, dst: string): void {
+        fs.copyFileSync(src, dst);
     }
 
     readFile(path: string): Promise<Buffer> {

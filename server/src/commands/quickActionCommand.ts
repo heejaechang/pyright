@@ -8,6 +8,7 @@
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
+import { AddImportCommand } from './addImportCommand';
 import { ServerCommand } from './commandController';
 import { Commands } from './commands';
 import { RemoveUnusedImportCommand } from './removeUnusedImportCommand';
@@ -19,6 +20,10 @@ export class QuickActionCommand implements ServerCommand {
         switch (params.command) {
             case Commands.removeUnusedImport: {
                 const command = new RemoveUnusedImportCommand(this._ls);
+                return command.execute(params, token);
+            }
+            case Commands.addImport: {
+                const command = new AddImportCommand(this._ls);
                 return command.execute(params, token);
             }
             default:

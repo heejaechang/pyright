@@ -294,6 +294,12 @@ test('TypeConstraint10', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint11.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -478,6 +484,12 @@ test('Properties3', () => {
 
 test('Properties4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['properties4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Properties5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['properties5.py']);
 
     validateResults(analysisResults, 0);
 });
@@ -704,6 +716,12 @@ test('With1', () => {
     validateResults(analysisResults, 3);
 });
 
+test('With2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['with2.py']);
+
+    validateResults(analysisResults, 3);
+});
+
 test('ForLoops1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['forLoops1.py']);
 
@@ -750,6 +768,12 @@ test('Literals2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals2.py']);
 
     validateResults(analysisResults, 3);
+});
+
+test('Literals3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals3.py']);
+
+    validateResults(analysisResults, 4);
 });
 
 test('TypeAlias1', () => {
@@ -1126,6 +1150,12 @@ test('Protocol6', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Protocol7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol7.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('TypedDict1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict1.py']);
 
@@ -1274,6 +1304,11 @@ test('Overload2', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Overload3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload3.py']);
+    validateResults(analysisResults, 1);
+});
+
 test('Final1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final1.py']);
     validateResults(analysisResults, 1);
@@ -1347,6 +1382,42 @@ test('ParamName1', () => {
     validateResults(analysisResults, 4, 0);
 });
 
+test('DataClass1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass1.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('DataClass3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('DataClass4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass4.py']);
+
+    validateResults(analysisResults, 5);
+});
+
+test('DataClass5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass5.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('DataClass6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass6.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('DataClass7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass7.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('DataClass8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass8.py']);
 
@@ -1381,4 +1452,18 @@ test('ThreePartVersion1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['threePartVersion1.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('Unions1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // Analyze with Python 3.8 settings. This will generate errors.
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
+    validateResults(analysisResults38, 7);
+
+    // Analyze with Python 3.9 settings.
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
+    validateResults(analysisResults39, 0);
 });

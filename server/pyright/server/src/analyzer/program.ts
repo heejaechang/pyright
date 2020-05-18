@@ -33,10 +33,15 @@ import {
     normalizePath,
     stripFileExtension,
 } from '../common/pathUtils';
-import { convertPositionToOffset } from '../common/positionUtils';
+import { convertPositionToOffset, convertRangeToTextRange } from '../common/positionUtils';
 import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
-import { ModuleSymbolMap } from '../languageService/completionProvider';
+import {
+    AutoImporter,
+    AutoImportResult,
+    buildModuleSymbolsMap,
+    ModuleSymbolMap,
+} from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportLookupResult } from './analyzerFileInfo';
@@ -44,11 +49,12 @@ import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
 import { ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
+import { findNodeByOffset } from './parseTreeUtils';
 import { Scope } from './scope';
+import { getScopeForNode } from './scopeUtils';
 import { SourceFile } from './sourceFile';
 import { SourceMapper } from './sourceMapper';
-import { SymbolTable } from './symbol';
-import { createTypeEvaluator, TypeEvaluator } from './typeEvaluator';
+import { createTypeEvaluator, PrintTypeFlags, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
 
 const _maxImportDepth = 256;
@@ -104,13 +110,16 @@ export class Program {
         private _extension?: LanguageServiceExtension
     ) {
         this._console = console || new StandardConsole();
-        this._evaluator = createTypeEvaluator(this._lookUpImport);
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
+        this._createNewEvaluator();
     }
 
     setConfigOptions(configOptions: ConfigOptions) {
         this._configOptions = configOptions;
+
+        // Create a new evaluator with the updated config options.
+        this._createNewEvaluator();
     }
 
     setImportResolver(importResolver: ImportResolver) {
@@ -215,10 +224,10 @@ export class Program {
             sourceFileInfo.sourceFile.setClientVersion(null, '');
 
             if (this._configOptions.checkOnlyOpenFiles) {
-                // Reset the diagnostic version so we force an update
-                // to the diagnostics, which can change based on whether
+                // Set the diagnostic version to an invalid value so we force an
+                // update to the diagnostics, which can change based on whether
                 // the file is open.
-                sourceFileInfo.diagnosticsVersion = undefined;
+                sourceFileInfo.diagnosticsVersion = -1;
             }
         }
 
@@ -255,7 +264,7 @@ export class Program {
                 // because we'll receive updates directly from the client.
                 if (
                     evenIfContentsAreSame ||
-                    (!sourceFileInfo.isOpenByClient && !sourceFileInfo.sourceFile.didContentsChangeOnDisk())
+                    (!sourceFileInfo.isOpenByClient && sourceFileInfo.sourceFile.didContentsChangeOnDisk())
                 ) {
                     sourceFileInfo.sourceFile.markDirty();
 
@@ -424,12 +433,7 @@ export class Program {
         }
     }
 
-    writeTypeStub(
-        targetImportPath: string,
-        targetIsSingleFile: boolean,
-        typingsPath: string,
-        token: CancellationToken
-    ) {
+    writeTypeStub(targetImportPath: string, targetIsSingleFile: boolean, stubPath: string, token: CancellationToken) {
         for (const sourceFileInfo of this._sourceFileList) {
             throwIfCancellationRequested(token);
 
@@ -439,7 +443,7 @@ export class Program {
             // not any files that the target module happened to import.
             const relativePath = getRelativePath(filePath, targetImportPath);
             if (relativePath !== undefined) {
-                let typeStubPath = normalizePath(combinePaths(typingsPath, relativePath));
+                let typeStubPath = normalizePath(combinePaths(stubPath, relativePath));
 
                 // If the target is a single file implementation, as opposed to
                 // a package in a directory, transform the name of the type stub
@@ -453,7 +457,7 @@ export class Program {
                 const typeStubDir = getDirectoryPath(typeStubPath);
 
                 try {
-                    makeDirectories(this._fs, typeStubDir, typingsPath);
+                    makeDirectories(this._fs, typeStubDir, stubPath);
                 } catch (e) {
                     const errMsg = `Could not create directory for '${typeStubDir}'`;
                     throw new Error(errMsg);
@@ -467,6 +471,24 @@ export class Program {
                 });
             }
         }
+    }
+
+    private static _getPrintTypeFlags(configOptions: ConfigOptions): PrintTypeFlags {
+        let flags = PrintTypeFlags.None;
+
+        if (configOptions.diagnosticRuleSet.printUnknownAsAny) {
+            flags |= PrintTypeFlags.PrintUnknownWithAny;
+        }
+
+        if (configOptions.diagnosticRuleSet.omitTypeArgsIfAny) {
+            flags |= PrintTypeFlags.OmitTypeArgumentsIfAny;
+        }
+
+        if (configOptions.diagnosticRuleSet.pep604Printing) {
+            flags |= PrintTypeFlags.PEP604;
+        }
+
+        return flags;
     }
 
     private get _fs() {
@@ -502,7 +524,7 @@ export class Program {
     }
 
     private _createNewEvaluator() {
-        this._evaluator = createTypeEvaluator(this._lookUpImport);
+        this._evaluator = createTypeEvaluator(this._lookUpImport, Program._getPrintTypeFlags(this._configOptions));
     }
 
     private _parseFile(fileToParse: SourceFileInfo) {
@@ -581,19 +603,11 @@ export class Program {
 
     // Build a map of all modules within this program and the module-
     // level scope that contains the symbol table for the module.
-    private _buildModuleSymbolsMap(sourceFileToExclude?: SourceFileInfo): ModuleSymbolMap {
-        const moduleSymbolMap = new Map<string, SymbolTable>();
-
-        this._sourceFileList.forEach((fileInfo) => {
-            if (fileInfo !== sourceFileToExclude) {
-                const symbolTable = fileInfo.sourceFile.getModuleSymbolTable();
-                if (symbolTable) {
-                    moduleSymbolMap.set(fileInfo.sourceFile.getFilePath(), symbolTable);
-                }
-            }
-        });
-
-        return moduleSymbolMap;
+    private _buildModuleSymbolsMap(sourceFileToExclude: SourceFileInfo, token: CancellationToken): ModuleSymbolMap {
+        return buildModuleSymbolsMap(
+            this._sourceFileList.filter((s) => s !== sourceFileToExclude).map((s) => s.sourceFile),
+            token
+        );
     }
 
     private _checkTypes(fileToCheck: SourceFileInfo) {
@@ -765,6 +779,56 @@ export class Program {
                 this._markFileDirtyRecursive(dep, markMap);
             });
         }
+    }
+
+    getAutoImports(
+        filePath: string,
+        range: Range,
+        similarityLimit: number,
+        token: CancellationToken
+    ): AutoImportResult[] {
+        const sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (!sourceFileInfo) {
+            return [];
+        }
+
+        const sourceFile = sourceFileInfo.sourceFile;
+        const fileContents = sourceFile.getFileContents();
+        if (!fileContents) {
+            // this only works with opened file
+            return [];
+        }
+
+        return this._runEvaluatorWithCancellationToken(token, () => {
+            this._bindFile(sourceFileInfo);
+
+            const parseTree = sourceFile.getParseResults()!;
+            const textRange = convertRangeToTextRange(range, parseTree.tokenizerOutput.lines);
+            if (!textRange) {
+                return [];
+            }
+
+            const currentNode = findNodeByOffset(parseTree.parseTree, textRange.start);
+            if (!currentNode) {
+                return [];
+            }
+
+            const word = fileContents.substr(textRange.start, textRange.length);
+            const map = this._buildModuleSymbolsMap(sourceFileInfo, token);
+            const autoImporter = new AutoImporter(
+                this._configOptions,
+                sourceFile.getFilePath(),
+                this._importResolver,
+                parseTree,
+                map
+            );
+
+            // Filter out any name that is already defined in the current scope.
+            const currentScope = getScopeForNode(currentNode);
+            return autoImporter
+                .getAutoImportCandidates(word, similarityLimit, [], token)
+                .filter((r) => !currentScope.lookUpSymbolRecursive(r.name));
+        });
     }
 
     getDiagnostics(options: ConfigOptions): FileDiagnostics[] {
@@ -941,49 +1005,53 @@ export class Program {
         });
     }
 
-    getCompletionsForPosition(
+    async getCompletionsForPosition(
         filePath: string,
         position: Position,
         workspacePath: string,
         token: CancellationToken
-    ): CompletionList | undefined {
-        return this._runEvaluatorWithCancellationToken(token, () => {
-            const sourceFileInfo = this._sourceFileMap.get(filePath);
-            if (!sourceFileInfo) {
-                return undefined;
-            }
+    ): Promise<CompletionList | undefined> {
+        const sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (!sourceFileInfo) {
+            return undefined;
+        }
 
+        let completionList = this._runEvaluatorWithCancellationToken(token, () => {
             this._bindFile(sourceFileInfo);
 
-            let completionList = sourceFileInfo.sourceFile.getCompletionsForPosition(
+            return sourceFileInfo.sourceFile.getCompletionsForPosition(
                 position,
                 workspacePath,
                 this._configOptions,
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                () => this._buildModuleSymbolsMap(sourceFileInfo),
+                () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 token
             );
-
-            if (completionList && this._extension?.completionListExtension) {
-                const pr = sourceFileInfo.sourceFile.getParseResults();
-                if (pr?.parseTree) {
-                    const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
-                    if (offset) {
-                        completionList = this._extension.completionListExtension.updateCompletionList(
-                            completionList,
-                            pr.parseTree,
-                            filePath,
-                            offset,
-                            this._configOptions
-                        );
-                    }
-                }
-            }
-
-            return completionList;
         });
+
+        if (!completionList || !this._extension?.completionListExtension) {
+            return completionList;
+        }
+
+        const pr = sourceFileInfo.sourceFile.getParseResults();
+        const content = sourceFileInfo.sourceFile.getFileContents();
+        if (pr?.parseTree && content) {
+            const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
+            if (offset) {
+                completionList = await this._extension.completionListExtension.updateCompletionList(
+                    completionList,
+                    pr.parseTree,
+                    content,
+                    offset,
+                    this._configOptions,
+                    token
+                );
+            }
+        }
+
+        return completionList;
     }
 
     resolveCompletionItem(filePath: string, completionItem: CompletionItem, token: CancellationToken) {
@@ -1000,7 +1068,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                () => this._buildModuleSymbolsMap(sourceFileInfo),
+                () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 completionItem,
                 token
             );
@@ -1167,7 +1235,7 @@ export class Program {
                 ) {
                     // If the old diagnostic version was undefined or zero, we haven't
                     // reported any diagnostics for this file, so no need to clear them.
-                    if (fileInfo.diagnosticsVersion !== undefined && fileInfo.diagnosticsVersion > 0) {
+                    if (fileInfo.diagnosticsVersion !== undefined && fileInfo.diagnosticsVersion !== 0) {
                         fileDiagnostics.push({
                             filePath: fileInfo.sourceFile.getFilePath(),
                             diagnostics: [],

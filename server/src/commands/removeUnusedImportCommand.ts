@@ -46,7 +46,8 @@ export class RemoveUnusedImportCommand implements ServerCommand {
         }
 
         const importNode = getContainingImportStatement(
-            ParseTreeUtils.findNodeByPosition(parseResult.parseTree, range.start, parseResult.tokenizerOutput.lines)
+            ParseTreeUtils.findNodeByPosition(parseResult.parseTree, range.start, parseResult.tokenizerOutput.lines),
+            token
         );
 
         if (!importNode) {

@@ -40,6 +40,9 @@ export class CommandLineOptions {
     // Path of typeshed stubs.
     typeshedPath?: string;
 
+    // Path of typing folder
+    stubPath?: string;
+
     // Absolute execution root (current working directory).
     executionRoot: string;
 
@@ -60,6 +63,10 @@ export class CommandLineOptions {
     // add them as extra paths if the user has not explicitly defined
     // execution environments.
     autoSearchPaths?: boolean;
+
+    // Extra paths to add to the default execution environment
+    // when user has not explicitly defined execution environments.
+    extraPaths?: string[];
 
     // Default type-checking rule set. Should be one of 'off',
     // 'basic', or 'strict'.

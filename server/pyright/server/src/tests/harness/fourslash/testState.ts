@@ -575,23 +575,37 @@ export class TestState {
         }
     }
 
-    async verifyCodeActions(map: {
-        [marker: string]: { codeActions: { title: string; kind: string; command: Command }[] };
-    }): Promise<any> {
+    async verifyCodeActions(
+        map: {
+            [marker: string]: { codeActions: { title: string; kind: string; command: Command }[] };
+        },
+        verifyCodeActionCount?: boolean
+    ): Promise<any> {
         this._analyze();
 
         for (const range of this.getRanges()) {
             const name = this.getMarkerName(range.marker!);
-            for (const expected of map[name].codeActions) {
-                const actual = await this._getCodeActions(range);
+            if (!map[name]) {
+                continue;
+            }
 
+            const codeActions = await this._getCodeActions(range);
+            if (verifyCodeActionCount) {
+                if (codeActions.length !== map[name].codeActions.length) {
+                    this._raiseError(
+                        `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(codeActions)}`
+                    );
+                }
+            }
+
+            for (const expected of map[name].codeActions) {
                 const expectedCommand = {
                     title: expected.command.title,
                     command: expected.command.command,
                     arguments: convertToString(expected.command.arguments),
                 };
 
-                const matches = actual.filter((a) => {
+                const matches = codeActions.filter((a) => {
                     const actualCommand = a.command
                         ? {
                               title: a.command.title,
@@ -609,7 +623,7 @@ export class TestState {
 
                 if (matches.length !== 1) {
                     this._raiseError(
-                        `doesn't contain expected result: ${stringify(expected)}, actual: ${stringify(actual)}`
+                        `doesn't contain expected result: ${stringify(expected)}, actual: ${stringify(codeActions)}`
                     );
                 }
             }
@@ -658,9 +672,12 @@ export class TestState {
         this.markTestDone();
     }
 
-    async verifyInvokeCodeAction(map: {
-        [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
-    }): Promise<any> {
+    async verifyInvokeCodeAction(
+        map: {
+            [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
+        },
+        verifyCodeActionCount?: boolean
+    ): Promise<any> {
         this._analyze();
 
         for (const range of this.getRanges()) {
@@ -672,7 +689,22 @@ export class TestState {
             const ls = new TestLanguageService(this.workspace, this.console, this.fs);
 
             const codeActions = await this._getCodeActions(range);
-            for (const codeAction of codeActions.filter((c) => c.title === map[name].title)) {
+            if (verifyCodeActionCount) {
+                if (codeActions.length !== Object.keys(map).length) {
+                    this._raiseError(
+                        `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(codeActions)}`
+                    );
+                }
+            }
+
+            const matches = codeActions.filter((c) => c.title === map[name].title);
+            if (matches.length === 0) {
+                this._raiseError(
+                    `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(codeActions)}`
+                );
+            }
+
+            for (const codeAction of matches) {
                 const results = await this._hostSpecificFeatures.execute(
                     ls,
                     {
@@ -686,11 +718,17 @@ export class TestState {
                     const workspaceEdits = results as WorkspaceEdit;
                     for (const edits of Object.values(workspaceEdits.changes!)) {
                         for (const edit of edits) {
-                            assert(
+                            if (
                                 map[name].edits!.filter(
                                     (e) => rangesAreEqual(e.range, edit.range) && e.newText === edit.newText
-                                ).length === 1
-                            );
+                                ).length !== 1
+                            ) {
+                                this._raiseError(
+                                    `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(
+                                        edits
+                                    )}`
+                                );
+                            }
                         }
                     }
                 }
@@ -774,10 +812,10 @@ export class TestState {
         this._verifyTextMatches(this._rangeText(this._getOnlyRange()), !!includeWhiteSpace, expectedText);
     }
 
-    verifyCompletion(
+    async verifyCompletion(
         verifyMode: 'exact' | 'included' | 'excluded',
         map: { [marker: string]: { completions: { label: string; documentation?: { kind: string; value: string } }[] } }
-    ) {
+    ): Promise<void> {
         this._analyze();
 
         for (const marker of this.getMarkers()) {
@@ -785,7 +823,7 @@ export class TestState {
             const expectedCompletions = map[this.getMarkerName(marker)].completions;
             const completionPosition = this._convertOffsetToPosition(filePath, marker.position);
 
-            const result = this.program.getCompletionsForPosition(
+            const result = await this.program.getCompletionsForPosition(
                 filePath,
                 completionPosition,
                 this.workspace.rootPath,
@@ -856,6 +894,8 @@ export class TestState {
                 assert.fail('Failed to get completions');
             }
         }
+
+        this.markTestDone();
     }
 
     verifySignature(map: {
@@ -1037,8 +1077,8 @@ export class TestState {
         configOptions.defaultVenv = vfs.MODULE_PATH;
 
         // make sure we set typing path
-        if (configOptions.typingsPath === undefined) {
-            configOptions.typingsPath = normalizePath(combinePaths(vfs.MODULE_PATH, 'typings'));
+        if (configOptions.stubPath === undefined) {
+            configOptions.stubPath = normalizePath(combinePaths(vfs.MODULE_PATH, 'typings'));
         }
 
         return configOptions;
