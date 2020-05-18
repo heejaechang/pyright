@@ -9,6 +9,18 @@
  * of the analyzer).
  */
 
+export const enum DiagnosticSeverityOverrides {
+    Error = 'error',
+    Warning = 'warning',
+    None = 'none',
+}
+
+export function getDiagnosticSeverityOverrides() {
+    return [DiagnosticSeverityOverrides.Error, DiagnosticSeverityOverrides.Warning, DiagnosticSeverityOverrides.None];
+}
+
+export type DiagnosticSeverityOverridesMap = { [ruleName: string]: DiagnosticSeverityOverrides };
+
 // Some options can be specified by command line.
 export class CommandLineOptions {
     constructor(executionRoot: string, fromVsCodeExtension: boolean) {
@@ -76,4 +88,7 @@ export class CommandLineOptions {
     // from the command-line. Useful for providing clearer error
     // messages.
     fromVsCodeExtension: boolean;
+
+    // Indicates diagnostic severity overrides
+    diagnosticSeverityOverrides?: DiagnosticSeverityOverridesMap;
 }

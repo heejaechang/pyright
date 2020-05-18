@@ -51,10 +51,16 @@ import { AnalyzerService, configFileNames } from './analyzer/service';
 import { BackgroundAnalysisBase } from './backgroundAnalysisBase';
 import { CancelAfter, getCancellationStrategyFromArgv } from './common/cancellationUtils';
 import { getNestedProperty } from './common/collectionUtils';
-import { ConfigOptions } from './common/configOptions';
+import {
+    DiagnosticSeverityOverrides,
+    DiagnosticSeverityOverridesMap,
+    getDiagnosticSeverityOverrides,
+} from './common/commandLineOptions';
+import { ConfigOptions, getDiagLevelDiagnosticRules } from './common/configOptions';
 import { ConsoleInterface } from './common/console';
 import { createDeferred, Deferred } from './common/deferred';
 import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/diagnostic';
+import { DiagnosticRule } from './common/diagnosticRules';
 import { LanguageServiceExtension } from './common/extensibility';
 import {
     createFromRealFileSystem,
@@ -85,6 +91,7 @@ export interface ServerSettings {
     extraPaths?: string[];
     watchForSourceChanges?: boolean;
     watchForLibraryChanges?: boolean;
+    diagnosticSeverityOverrides?: DiagnosticSeverityOverridesMap;
 }
 
 export interface WorkspaceServiceInstance {
@@ -219,6 +226,24 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     protected isOpenFilesOnly(diagnosticMode: string): boolean {
         return diagnosticMode !== 'workspace';
+    }
+
+    protected getSeverityOverrides(value: string): DiagnosticSeverityOverrides | undefined {
+        const enumValue = value as DiagnosticSeverityOverrides;
+        if (getDiagnosticSeverityOverrides().includes(enumValue)) {
+            return enumValue;
+        }
+
+        return undefined;
+    }
+
+    protected getDiagnosticRuleName(value: string): DiagnosticRule | undefined {
+        const enumValue = value as DiagnosticRule;
+        if (getDiagLevelDiagnosticRules().includes(enumValue)) {
+            return enumValue;
+        }
+
+        return undefined;
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {

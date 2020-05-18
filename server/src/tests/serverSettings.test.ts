@@ -7,6 +7,7 @@
 import * as assert from 'assert';
 
 import { AnalyzerService } from '../../pyright/server/src/analyzer/service';
+import { DiagnosticSeverityOverrides } from '../../pyright/server/src/common/commandLineOptions';
 import { NullConsole } from '../../pyright/server/src/common/console';
 import { createDeferred } from '../../pyright/server/src/common/deferred';
 import { FileSystem } from '../../pyright/server/src/common/fileSystem';
@@ -58,6 +59,19 @@ test('expand workspace folder stubPath', () => {
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
     assert(normalizeSlashes('/stubs'), workspace.serviceInstance.test_configOptions.stubPath);
+});
+
+test('diagnostic overrides', () => {
+    const workspace = createWorkspaceInstance();
+
+    const serverSettings: ServerSettings = {
+        diagnosticSeverityOverrides: {
+            reportGeneralTypeIssues: DiagnosticSeverityOverrides.Warning,
+        },
+    };
+
+    AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
+    assert('warning', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
 });
 
 function createWorkspaceInstance(fs?: FileSystem): WorkspaceServiceInstance {
