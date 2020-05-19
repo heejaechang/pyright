@@ -11,16 +11,16 @@
 
 import { CancellationToken, Hover, MarkupKind } from 'vscode-languageserver';
 
-import {
-    ClassDeclaration,
-    Declaration,
-    DeclarationBase,
-    DeclarationType,
-    FunctionDeclaration,
-} from '../analyzer/declaration';
+import { Declaration, DeclarationBase, DeclarationType } from '../analyzer/declaration';
 import { convertDocStringToMarkdown } from '../analyzer/docStringToMarkdown';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
-import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
+import { SourceMapper } from '../analyzer/sourceMapper';
+import {
+    getClassDocString,
+    getFunctionDocString,
+    getModuleDocString,
+    getOverloadedFunctionDocStrings,
+} from '../analyzer/typeDocStringUtils';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { Type, TypeCategory, UnknownType } from '../analyzer/types';
 import { ClassMemberLookupFlags, isProperty, lookUpClassMember } from '../analyzer/typeUtils';
@@ -28,7 +28,7 @@ import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import { Position, Range } from '../common/textRange';
 import { TextRange } from '../common/textRange';
-import { ModuleNode, NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
+import { NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 
 export interface HoverTextPart {
@@ -242,83 +242,26 @@ export class HoverProvider {
         resolvedDecl: DeclarationBase | undefined
     ) {
         if (type.category === TypeCategory.Module) {
-            if (type.docString) {
-                this._addDocumentationResultsPart(parts, type.docString);
-            } else {
-                if (resolvedDecl && isStubFile(resolvedDecl.path)) {
-                    const modules = sourceMapper.findModules(resolvedDecl.path);
-                    const docString = this._getModuleDocString(modules);
-                    if (docString) {
-                        this._addDocumentationResultsPart(parts, docString);
-                    }
-                }
+            const docString = getModuleDocString(type, resolvedDecl, sourceMapper);
+            if (docString) {
+                this._addDocumentationResultsPart(parts, docString);
             }
         } else if (type.category === TypeCategory.Class) {
-            if (type.details.docString) {
-                this._addDocumentationResultsPart(parts, type.details.docString);
-            } else {
-                if (resolvedDecl && isStubFile(resolvedDecl.path) && resolvedDecl.type === DeclarationType.Class) {
-                    const implDecls = sourceMapper.findClassDeclarations(resolvedDecl as ClassDeclaration);
-                    const docString = this._getFunctionOrClassDocString(implDecls);
-                    if (docString) {
-                        this._addDocumentationResultsPart(parts, docString);
-                    }
-                }
+            const docString = getClassDocString(type, resolvedDecl, sourceMapper);
+            if (docString) {
+                this._addDocumentationResultsPart(parts, docString);
             }
         } else if (type.category === TypeCategory.Function) {
-            if (type.details.docString) {
-                this._addDocumentationResultsPart(parts, type.details.docString);
-            } else {
-                const decl = type.details.declaration;
-                if (decl && isStubFile(decl.path)) {
-                    const implDecls = sourceMapper.findFunctionDeclarations(decl);
-                    const docString = this._getFunctionOrClassDocString(implDecls);
-                    if (docString) {
-                        this._addDocumentationResultsPart(parts, docString);
-                    }
-                }
+            const docString = getFunctionDocString(type, sourceMapper);
+            if (docString) {
+                this._addDocumentationResultsPart(parts, docString);
             }
         } else if (type.category === TypeCategory.OverloadedFunction) {
-            if (type.overloads.some((o) => o.details.docString)) {
-                type.overloads.forEach((overload) => {
-                    this._addDocumentationResultsPart(parts, overload.details.docString);
-                });
-            } else if (
-                resolvedDecl &&
-                isStubFile(resolvedDecl.path) &&
-                resolvedDecl.type === DeclarationType.Function
-            ) {
-                const implDecls = sourceMapper.findFunctionDeclarations(resolvedDecl as FunctionDeclaration);
-                const docString = this._getFunctionOrClassDocString(implDecls);
-                if (docString) {
-                    this._addDocumentationResultsPart(parts, docString);
-                }
+            const docStrings = getOverloadedFunctionDocStrings(type, resolvedDecl, sourceMapper);
+            for (const docString of docStrings) {
+                this._addDocumentationResultsPart(parts, docString);
             }
         }
-    }
-
-    private static _getFunctionOrClassDocString(decls: FunctionDeclaration[] | ClassDeclaration[]): string | undefined {
-        for (const decl of decls) {
-            const docString = ParseTreeUtils.getDocString(decl.node?.suite?.statements);
-            if (docString) {
-                return docString;
-            }
-        }
-
-        return undefined;
-    }
-
-    private static _getModuleDocString(modules: ModuleNode[]): string | undefined {
-        for (const module of modules) {
-            if (module.statements) {
-                const docString = ParseTreeUtils.getDocString(module.statements);
-                if (docString) {
-                    return docString;
-                }
-            }
-        }
-
-        return undefined;
     }
 
     private static _addDocumentationResultsPart(parts: HoverTextPart[], docString?: string) {

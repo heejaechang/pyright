@@ -696,6 +696,7 @@ export class SourceFile {
         importResolver: ImportResolver,
         importLookup: ImportLookup,
         evaluator: TypeEvaluator,
+        sourceMapper: SourceMapper,
         moduleSymbolsCallback: () => ModuleSymbolMap,
         token: CancellationToken
     ): CompletionList | undefined {
@@ -720,6 +721,7 @@ export class SourceFile {
             configOptions,
             importLookup,
             evaluator,
+            sourceMapper,
             moduleSymbolsCallback,
             token
         );
@@ -732,6 +734,7 @@ export class SourceFile {
         importResolver: ImportResolver,
         importLookup: ImportLookup,
         evaluator: TypeEvaluator,
+        sourceMapper: SourceMapper,
         moduleSymbolsCallback: () => ModuleSymbolMap,
         completionItem: CompletionItem,
         token: CancellationToken
@@ -751,6 +754,7 @@ export class SourceFile {
             configOptions,
             importLookup,
             evaluator,
+            sourceMapper,
             moduleSymbolsCallback,
             token
         );

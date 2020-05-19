@@ -1026,6 +1026,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
+                this._createSourceMapper(),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 token
             );
@@ -1068,6 +1069,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
+                this._createSourceMapper(),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 completionItem,
                 token

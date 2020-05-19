@@ -24,9 +24,11 @@ import { Declaration, DeclarationType } from '../analyzer/declaration';
 import { convertDocStringToMarkdown } from '../analyzer/docStringToMarkdown';
 import { ImportedModuleDescriptor, ImportResolver } from '../analyzer/importResolver';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
+import { SourceMapper } from '../analyzer/sourceMapper';
 import { Symbol, SymbolTable } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
+import { getClassDocString, getFunctionDocString, getModuleDocString } from '../analyzer/typeDocStringUtils';
 import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
 import { ClassType, FunctionType, Type, TypeCategory } from '../analyzer/types';
 import { doForSubtypes, getMembersForClass, getMembersForModule } from '../analyzer/typeUtils';
@@ -176,6 +178,7 @@ export class CompletionProvider {
         private _configOptions: ConfigOptions,
         private _importLookup: ImportLookup,
         private _evaluator: TypeEvaluator,
+        private _sourceMapper: SourceMapper,
         private _moduleSymbolsCallback: () => ModuleSymbolMap,
         private _cancellationToken: CancellationToken
     ) {}
@@ -1074,11 +1077,11 @@ export class CompletionProvider {
                             }
 
                             if (type.category === TypeCategory.Module) {
-                                documentation = type.docString;
+                                documentation = getModuleDocString(type, primaryDecl, this._sourceMapper);
                             } else if (type.category === TypeCategory.Class) {
-                                documentation = type.details.docString;
+                                documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
                             } else if (type.category === TypeCategory.Function) {
-                                documentation = type.details.docString;
+                                documentation = getFunctionDocString(type, this._sourceMapper);
                             }
 
                             let markdownString = '```python\n' + typeDetail + '\n```\n';
