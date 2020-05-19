@@ -208,5 +208,5 @@ export function isStubFile(filePath: string): boolean {
 }
 
 function _isDefined<T>(element: T | undefined): element is T {
-    return !!element;
+    return element !== undefined;
 }
