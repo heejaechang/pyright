@@ -161,4 +161,23 @@ tf.placeholder(tf.float32)
         ];
         expect(f32!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
     });
+
+    test('call arguments', () => {
+        const code = `
+print("a: {}".format(a))
+`;
+        const inf = getInference(code);
+        expect(inf).toBeDefined();
+        verifyKeys(inf!, ['str']);
+
+        const s = inf!.get('str');
+        expect(s).toBeDefined();
+        verifyKeys(s!, ['format']);
+
+        const f = s!.get('format');
+        expect(f?.spanStart[0]).toEqual(15);
+
+        const expectedTokens = ['\n', 'print', 'str', '.', 'format'];
+        expect(f!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
+    });
 });

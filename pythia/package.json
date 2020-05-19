@@ -16,6 +16,9 @@
         "build": "npm install && tsc --project tsconfig.json",
         "package": "npm run build && npx webpack"
     },
+    "dependencies": {
+        "JSONStream": "^1.3.5"
+    },
     "devDependencies": {
         "@types/jest": "^25.2.1",
         "@types/node": "^13.13.5",

@@ -2,13 +2,13 @@
  * pythia.ts
  *
  * Command line interface for generating data from repo(s).
- *
- * tsc pythia.ts | node pythia.js
- *
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const JSONStream = require('JSONStream');
 
 import { AssignmentWalker } from '../../server/intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../server/intelliCode/expressionWalker';
@@ -21,6 +21,7 @@ const USAGE_OUTPUT_SUFFIX = '_usage.json';
 const USAGE_OUTPUT_FOLDER = 'UsageOutput';
 const RESULT_OUTPUT_SUFFIX = 'result.json';
 const PIPELINE_MODE = 'pipeline';
+const RUN_GC_AFTER_N_FILES = 20;
 
 interface RepoStats {
     methodCount: number;
@@ -38,6 +39,10 @@ if (process.argv.filter((a) => a.includes('jest')).length === 0) {
 }
 
 export function pythiaCliMain(argv: string[]) {
+    if (!global.gc) {
+        console.log('Please run node with --expose-gc flag');
+        process.exit(1);
+    }
     argv.length > 1 && argv[2] === PIPELINE_MODE ? processSingleRepo(argv) : processMultipleRepos(argv);
 }
 // ------ END MAIN -----
@@ -47,10 +52,11 @@ function processSingleRepo(argv: string[]): void {
     if (argv.length < 5) {
         console.log(
             `Invalid arguments for pipeline mode. 
-Usage: node <path/pythia.js> pipeline <repo_path> <output_path> <prefix> [lookback token depth]`
+Usage: node --expose-gc <path/pythia.js> pipeline <repo_path> <output_path> <prefix> [lookback token depth]`
         );
         process.exit(1);
     }
+
     // argv[0] == node.exe
     // argv[1] == <path/pythia.js>
     // argv[2] == 'pipeline'
@@ -104,6 +110,7 @@ function processRepo(repoPath: string, usageOutputPath: string, lookback: number
 
     let methodCount = 0;
     let invocationCount = 0;
+    let count = 0;
 
     for (const filePath of pythonFiles) {
         const result = processPython(filePath, lookback);
@@ -131,10 +138,19 @@ function processRepo(repoPath: string, usageOutputPath: string, lookback: number
 
         methodCount += result.methodCount;
         invocationCount += result.invocationCount;
+
+        count++;
+        if (Math.round(count / RUN_GC_AFTER_N_FILES) * RUN_GC_AFTER_N_FILES === count) {
+            global.gc();
+        }
     }
 
-    const json = JSON.stringify(usageData, null, 2);
-    fs.writeFileSync(usageDataPath, json, { encoding: 'utf8' });
+    const transformStream = JSONStream.stringify('[\n', '\n,\n', '\n]\n', 2);
+    const outputStream = fs.createWriteStream(usageDataPath);
+    transformStream.pipe(outputStream);
+    usageData.forEach(transformStream.write);
+    transformStream.end();
+
     console.log(`Output analysis to ${usageDataPath}`);
 
     return {
