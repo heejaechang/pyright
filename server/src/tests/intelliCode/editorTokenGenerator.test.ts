@@ -128,31 +128,4 @@ from a import b
 z = b(1, 2, 3).fit(x, y). `;
         verifySingle(code, 'a.b.fit', 41);
     });
-
-    test('drop array contents', () => {
-        const code = `
-x = [1, a(), 3]
-x[0]. `;
-        const ei = verifySingle(code, StandardVariableType.String, 21);
-        const expectedTokens = ['\n', 'x', '=', '[', 'a', ']', '\n', 'x', '[', 'str', '.'];
-        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
-    });
-
-    test('drop tuple contents', () => {
-        const code = `
-x = (1, a(), 'a', z)
-x[0]. `;
-        const ei = verifySingle(code, StandardVariableType.String, 26);
-        const expectedTokens = ['\n', 'x', '=', '(', ')', '\n', 'x', '[', 'str', '.'];
-        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
-    });
-
-    test('drop dict contents', () => {
-        const code = `
-x = {'a': 1, 'b': 2, 'c': 3}
-x[0]. `;
-        const ei = verifySingle(code, StandardVariableType.String, 34);
-        const expectedTokens = ['\n', 'x', '=', '{', '}', '\n', 'x', '[', 'str', '.'];
-        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
-    });
 });
