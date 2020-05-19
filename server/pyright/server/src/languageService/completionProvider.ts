@@ -28,7 +28,12 @@ import { SourceMapper } from '../analyzer/sourceMapper';
 import { Symbol, SymbolTable } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
-import { getClassDocString, getFunctionDocString, getModuleDocString } from '../analyzer/typeDocStringUtils';
+import {
+    getClassDocString,
+    getFunctionDocString,
+    getModuleDocString,
+    getOverloadedFunctionDocStrings,
+} from '../analyzer/typeDocStringUtils';
 import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
 import { ClassType, FunctionType, Type, TypeCategory } from '../analyzer/types';
 import { doForSubtypes, getMembersForClass, getMembersForModule } from '../analyzer/typeUtils';
@@ -1082,6 +1087,12 @@ export class CompletionProvider {
                                 documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
                             } else if (type.category === TypeCategory.Function) {
                                 documentation = getFunctionDocString(type, this._sourceMapper);
+                            } else if (type.category === TypeCategory.OverloadedFunction) {
+                                documentation = getOverloadedFunctionDocStrings(
+                                    type,
+                                    primaryDecl,
+                                    this._sourceMapper
+                                ).find((doc) => doc);
                             }
 
                             let markdownString = '```python\n' + typeDetail + '\n```\n';
