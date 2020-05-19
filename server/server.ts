@@ -108,6 +108,7 @@ class PyRxServer extends LanguageServerBase {
             watchForSourceChanges: true,
             watchForLibraryChanges: true,
             typeCheckingMode: 'off',
+            diagnosticSeverityOverrides: {},
         };
 
         try {
@@ -128,6 +129,18 @@ class PyRxServer extends LanguageServerBase {
                 if (stubPath && isString(stubPath)) {
                     serverSettings.stubPath = normalizeSlashes(stubPath);
                 }
+
+                const diagnosticSeverityOverrides = pythonAnalysisSection.diagnosticSeverityOverrides;
+                if (diagnosticSeverityOverrides) {
+                    for (const [name, value] of Object.entries(diagnosticSeverityOverrides)) {
+                        const ruleName = this.getDiagnosticRuleName(name);
+                        const severity = this.getSeverityOverrides(value as string);
+                        if (ruleName && severity) {
+                            serverSettings.diagnosticSeverityOverrides![ruleName] = severity!;
+                        }
+                    }
+                }
+
                 serverSettings.openFilesOnly = this.isOpenFilesOnly(pythonAnalysisSection.diagnosticMode);
                 serverSettings.useLibraryCodeForTypes =
                     pythonAnalysisSection.useLibraryCodeForTypes ?? serverSettings.useLibraryCodeForTypes;
@@ -157,7 +170,7 @@ class PyRxServer extends LanguageServerBase {
     }
 
     updateSettingsForAllWorkspaces(): void {
-        this.updateGlobalSettings().ignoreErrors();
+        this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
     }
 
@@ -229,7 +242,7 @@ class PyRxServer extends LanguageServerBase {
         }
     }
 
-    private async updateGlobalSettings(): Promise<void> {
+    private async _updateGlobalSettings(): Promise<void> {
         const item: ConfigurationItem = {
             scopeUri: undefined,
             section: pythonAnalysisSectionName,
