@@ -362,8 +362,8 @@ export class ImportResolver {
                 if (result.isStubFile && result.isImportFound && result.nonStubImportResult) {
                     if (result.resolvedPaths.some((f) => f === stubFilePath)) {
                         if (result.nonStubImportResult.isImportFound) {
-                            const nonEmptyPaths = result.nonStubImportResult.resolvedPaths.filter(
-                                (p) => p.length > 0 && p.endsWith('.py')
+                            const nonEmptyPaths = result.nonStubImportResult.resolvedPaths.filter((p) =>
+                                p.endsWith('.py')
                             );
                             sourceFilePaths.push(...nonEmptyPaths);
                         }
@@ -372,7 +372,10 @@ export class ImportResolver {
             });
         });
 
+        // We haven't seen an import of that stub, attempt to find the source
+        // in some other ways.
         if (sourceFilePaths.length === 0) {
+            // Simple case where the stub and source files are next to each other.
             const sourceFilePath = changeAnyExtension(stubFilePath, '.py');
             if (this.fileSystem.existsSync(sourceFilePath)) {
                 sourceFilePaths.push(sourceFilePath);

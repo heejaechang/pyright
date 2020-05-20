@@ -52,7 +52,7 @@ export class SourceMapper {
     }
 
     public findClassDeclarations(stubDecl: ClassDeclaration): ClassDeclaration[] {
-        const className = this.getFullClassName(stubDecl.node);
+        const className = this._getFullClassName(stubDecl.node);
 
         const sourceFiles = this._getBoundSourceFiles(stubDecl.path);
         return sourceFiles.flatMap((sourceFile) => this._findClassDeclarations(sourceFile, className));
@@ -68,7 +68,7 @@ export class SourceMapper {
                 return [];
             }
 
-            const className = this.getFullClassName(classNode);
+            const className = this._getFullClassName(classNode);
 
             return sourceFiles.flatMap((sourceFile) =>
                 this._findMethodDeclarations(sourceFile, className, functionName)
@@ -185,7 +185,7 @@ export class SourceMapper {
         return decls ?? [];
     }
 
-    private getFullClassName(node: ClassNode) {
+    private _getFullClassName(node: ClassNode) {
         const fullName: string[] = [];
 
         let current: ClassNode | undefined = node;
@@ -204,7 +204,7 @@ export class SourceMapper {
 }
 
 export function isStubFile(filePath: string): boolean {
-    return getAnyExtensionFromPath(filePath, ['.pyi'], /* ignoreCase */ true) === '.pyi';
+    return getAnyExtensionFromPath(filePath, ['.pyi'], /* ignoreCase */ false) === '.pyi';
 }
 
 function _isDefined<T>(element: T | undefined): element is T {
