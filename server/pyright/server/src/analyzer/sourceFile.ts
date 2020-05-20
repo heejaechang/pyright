@@ -49,6 +49,7 @@ import { ImportResolver } from './importResolver';
 import { ImportResult } from './importResult';
 import { ParseTreeCleanerWalker } from './parseTreeCleaner';
 import { Scope } from './scope';
+import { SourceMapper } from './sourceMapper';
 import { SymbolTable } from './symbol';
 import { TestWalker } from './testWalker';
 import { TypeEvaluator } from './typeEvaluator';
@@ -567,6 +568,7 @@ export class SourceFile {
     }
 
     getDefinitionsForPosition(
+        sourceMapper: SourceMapper,
         position: Position,
         evaluator: TypeEvaluator,
         token: CancellationToken
@@ -576,7 +578,13 @@ export class SourceFile {
             return undefined;
         }
 
-        return DefinitionProvider.getDefinitionsForPosition(this._parseResults, position, evaluator, token);
+        return DefinitionProvider.getDefinitionsForPosition(
+            sourceMapper,
+            this._parseResults,
+            position,
+            evaluator,
+            token
+        );
     }
 
     getDeclarationForPosition(
@@ -654,6 +662,7 @@ export class SourceFile {
     }
 
     getHoverForPosition(
+        sourceMapper: SourceMapper,
         position: Position,
         evaluator: TypeEvaluator,
         token: CancellationToken
@@ -663,7 +672,7 @@ export class SourceFile {
             return undefined;
         }
 
-        return HoverProvider.getHoverForPosition(this._parseResults, position, evaluator, token);
+        return HoverProvider.getHoverForPosition(sourceMapper, this._parseResults, position, evaluator, token);
     }
 
     getSignatureHelpForPosition(
@@ -687,6 +696,7 @@ export class SourceFile {
         importResolver: ImportResolver,
         importLookup: ImportLookup,
         evaluator: TypeEvaluator,
+        sourceMapper: SourceMapper,
         moduleSymbolsCallback: () => ModuleSymbolMap,
         token: CancellationToken
     ): CompletionList | undefined {
@@ -711,6 +721,7 @@ export class SourceFile {
             configOptions,
             importLookup,
             evaluator,
+            sourceMapper,
             moduleSymbolsCallback,
             token
         );
@@ -723,6 +734,7 @@ export class SourceFile {
         importResolver: ImportResolver,
         importLookup: ImportLookup,
         evaluator: TypeEvaluator,
+        sourceMapper: SourceMapper,
         moduleSymbolsCallback: () => ModuleSymbolMap,
         completionItem: CompletionItem,
         token: CancellationToken
@@ -742,6 +754,7 @@ export class SourceFile {
             configOptions,
             importLookup,
             evaluator,
+            sourceMapper,
             moduleSymbolsCallback,
             token
         );

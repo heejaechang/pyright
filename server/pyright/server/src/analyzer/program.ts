@@ -53,6 +53,7 @@ import { findNodeByOffset } from './parseTreeUtils';
 import { Scope } from './scope';
 import { getScopeForNode } from './scopeUtils';
 import { SourceFile } from './sourceFile';
+import { SourceMapper } from './sourceMapper';
 import { createTypeEvaluator, PrintTypeFlags, TypeEvaluator } from './typeEvaluator';
 import { TypeStubWriter } from './typeStubWriter';
 
@@ -884,7 +885,12 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
-            return sourceFileInfo.sourceFile.getDefinitionsForPosition(position, this._evaluator, token);
+            return sourceFileInfo.sourceFile.getDefinitionsForPosition(
+                this._createSourceMapper(),
+                position,
+                this._evaluator,
+                token
+            );
         });
     }
 
@@ -968,7 +974,12 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
-            return sourceFileInfo.sourceFile.getHoverForPosition(position, this._evaluator, token);
+            return sourceFileInfo.sourceFile.getHoverForPosition(
+                this._createSourceMapper(),
+                position,
+                this._evaluator,
+                token
+            );
         });
     }
 
@@ -1015,6 +1026,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
+                this._createSourceMapper(),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 token
             );
@@ -1057,6 +1069,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
+                this._createSourceMapper(),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 completionItem,
                 token
@@ -1282,6 +1295,14 @@ export class Program {
         }
 
         return false;
+    }
+
+    private _createSourceMapper() {
+        const sourceMapper = new SourceMapper(this._importResolver, this._evaluator, (sourceFilePath: string) => {
+            this.addTrackedFile(sourceFilePath);
+            return this.getBoundSourceFile(sourceFilePath);
+        });
+        return sourceMapper;
     }
 
     private _isImportAllowed(importer: SourceFileInfo, importResult: ImportResult, isImportStubFile: boolean): boolean {
