@@ -501,6 +501,10 @@ export class TestState {
                 rangesPerCategory.set('warning', []);
             }
 
+            if (!rangesPerCategory.has('information')) {
+                rangesPerCategory.set('information', []);
+            }
+
             const result = resultPerFile.get(file)!;
             resultPerFile.delete(file);
 
@@ -511,6 +515,8 @@ export class TestState {
                         ? result.errors
                         : category === 'warning'
                         ? result.warnings
+                        : category === 'information'
+                        ? result.information
                         : this._raiseError(`unexpected category ${category}`);
 
                 if (expected.length !== actual.length) {
@@ -1374,6 +1380,7 @@ export class TestState {
                     parseResults: sourceFile.getParseResults(),
                     errors: diagnostics.filter((diag) => diag.category === DiagnosticCategory.Error),
                     warnings: diagnostics.filter((diag) => diag.category === DiagnosticCategory.Warning),
+                    information: diagnostics.filter((diag) => diag.category === DiagnosticCategory.Information),
                 };
                 return [filePath, value] as [string, typeof value];
             } else {

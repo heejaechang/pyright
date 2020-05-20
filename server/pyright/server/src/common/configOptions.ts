@@ -42,7 +42,7 @@ export class ExecutionEnvironment {
     venv?: string;
 }
 
-export type DiagnosticLevel = 'none' | 'warning' | 'error';
+export type DiagnosticLevel = 'none' | 'information' | 'warning' | 'error';
 
 export interface DiagnosticRuleSet {
     // Should "Unknown" types be reported as "Any"?
@@ -1104,12 +1104,12 @@ export class ConfigOptions {
         } else if (typeof value === 'boolean') {
             return value ? 'error' : 'none';
         } else if (typeof value === 'string') {
-            if (value === 'error' || value === 'warning' || value === 'none') {
+            if (value === 'error' || value === 'warning' || value === 'information' || value === 'none') {
                 return value;
             }
         }
 
-        console.log(`Config "${fieldName}" entry must be true, false, "error", "warning" or "none".`);
+        console.log(`Config "${fieldName}" entry must be true, false, "error", "warning", "information" or "none".`);
         return defaultValue;
     }
 

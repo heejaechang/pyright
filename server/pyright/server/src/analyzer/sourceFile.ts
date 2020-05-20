@@ -19,7 +19,7 @@ import { OperationCanceledException } from '../common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment, getDefaultDiagnosticRuleSet } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
 import { assert } from '../common/debug';
-import { Diagnostic, DiagnosticCategory } from '../common/diagnostic';
+import { convertLevelToCategory, Diagnostic, DiagnosticCategory } from '../common/diagnostic';
 import { DiagnosticSink, TextRangeDiagnosticSink } from '../common/diagnosticSink';
 import { TextEditAction } from '../common/editAction';
 import { FileSystem } from '../common/fileSystem';
@@ -229,10 +229,7 @@ export class SourceFile {
         }
 
         if (options.diagnosticRuleSet.reportImportCycles !== 'none' && this._circularDependencies.length > 0) {
-            const category =
-                options.diagnosticRuleSet.reportImportCycles === 'warning'
-                    ? DiagnosticCategory.Warning
-                    : DiagnosticCategory.Error;
+            const category = convertLevelToCategory(options.diagnosticRuleSet.reportImportCycles);
 
             this._circularDependencies.forEach((cirDep) => {
                 diagList.push(
@@ -262,11 +259,12 @@ export class SourceFile {
         if (this._isTypeshedStubFile) {
             if (options.diagnosticRuleSet.reportTypeshedErrors === 'none') {
                 includeWarningsAndErrors = false;
-            } else if (options.diagnosticRuleSet.reportTypeshedErrors === 'warning') {
-                // Convert all the errors to warnings.
+            } else {
+                // convert category to effective ones
+                const effectiveCategory = convertLevelToCategory(options.diagnosticRuleSet.reportTypeshedErrors);
                 diagList = diagList.map((diag) => {
-                    if (diag.category === DiagnosticCategory.Error) {
-                        return new Diagnostic(DiagnosticCategory.Warning, diag.message, diag.range);
+                    if (diag.category !== effectiveCategory) {
+                        return new Diagnostic(effectiveCategory, diag.message, diag.range);
                     }
                     return diag;
                 });

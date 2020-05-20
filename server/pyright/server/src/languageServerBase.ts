@@ -850,8 +850,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     private _convertDiagnostics(diags: AnalyzerDiagnostic[]): Diagnostic[] {
         return diags.map((diag) => {
-            const severity =
-                diag.category === DiagnosticCategory.Error ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+            const severity = convertCategoryToSeverity(diag.category);
 
             let source = this._productName;
             const rule = diag.getRule();
@@ -878,6 +877,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             return vsDiag;
         });
+
+        function convertCategoryToSeverity(category: DiagnosticCategory) {
+            switch (category) {
+                case DiagnosticCategory.Error:
+                    return DiagnosticSeverity.Error;
+                case DiagnosticCategory.Warning:
+                    return DiagnosticSeverity.Warning;
+                case DiagnosticCategory.Information:
+                    return DiagnosticSeverity.Information;
+                case DiagnosticCategory.UnusedCode:
+                    return DiagnosticSeverity.Hint;
+            }
+        }
     }
 
     protected recordUserInteractionTime() {

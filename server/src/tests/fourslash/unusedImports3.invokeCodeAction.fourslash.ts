@@ -1,4 +1,5 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+// @asynctest: true
 
 // @filename: mspythonconfig.json
 //// {

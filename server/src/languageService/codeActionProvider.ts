@@ -35,6 +35,7 @@ export class CodeActionProvider {
                 d.category === DiagnosticCategory.UnusedCode &&
                 d.getActions()?.some((a) => a.action === PyrightCommands.unusedImport)
         );
+
         if (unusedImportDiags.length > 0) {
             const diagRange = unusedImportDiags[0].range;
             codeActions.push(
@@ -51,6 +52,7 @@ export class CodeActionProvider {
                 d.getRule() === DiagnosticRule.reportUnboundVariable ||
                 d.getRule() === DiagnosticRule.reportUndefinedVariable
         );
+
         if (unknownSymbolDiags.length > 0) {
             const diagRange = unknownSymbolDiags[0].range;
 

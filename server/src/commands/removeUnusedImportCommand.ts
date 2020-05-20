@@ -12,6 +12,7 @@ import {
     getContainingImportStatement,
 } from '../../pyright/server/src/analyzer/importStatementUtils';
 import * as ParseTreeUtils from '../../pyright/server/src/analyzer/parseTreeUtils';
+import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { convertOffsetsToRange } from '../../pyright/server/src/common/positionUtils';
@@ -36,7 +37,13 @@ export class RemoveUnusedImportCommand implements ServerCommand {
         const workspace = await this._ls.getWorkspaceForFile(filePath);
 
         const diagnostics = await workspace.serviceInstance.getDiagnosticsForRange(filePath, range, token);
-        if (diagnostics.filter((d) => d.category === DiagnosticCategory.UnusedCode).length === 0) {
+        if (
+            diagnostics.filter(
+                (d) =>
+                    d.category === DiagnosticCategory.UnusedCode &&
+                    d.getActions()?.some((a) => a.action === PyrightCommands.unusedImport)
+            ).length === 0
+        ) {
             return [];
         }
 
@@ -58,7 +65,11 @@ export class RemoveUnusedImportCommand implements ServerCommand {
         const importRange = convertOffsetsToRange(importNode.start, TextRange.getEnd(importNode), lines);
         const unusedImports = (
             await workspace.serviceInstance.getDiagnosticsForRange(filePath, importRange, token)
-        ).filter((d) => d.category === DiagnosticCategory.UnusedCode);
+        ).filter(
+            (d) =>
+                d.category === DiagnosticCategory.UnusedCode &&
+                d.getActions()?.some((a) => a.action === PyrightCommands.unusedImport)
+        );
 
         const nameNodes = getAllImportNames(importNode);
 

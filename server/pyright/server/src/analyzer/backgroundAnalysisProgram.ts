@@ -131,9 +131,11 @@ export class BackgroundAnalysisProgram {
 
     async getDiagnosticsForRange(filePath: string, range: Range, token: CancellationToken): Promise<Diagnostic[]> {
         if (this._backgroundAnalysis) {
+            // backgroundAnalysis returns Promise<Diagnostics[]>
             return this._backgroundAnalysis.getDiagnosticsForRange(filePath, range, token);
         }
 
+        // program returns Promise<Diagnostics[]>
         return this._program.getDiagnosticsForRange(filePath, range);
     }
 

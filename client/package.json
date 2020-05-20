@@ -76,7 +76,7 @@
                 "python.analysis.diagnosticSeverityOverrides": {
                     "type": "object",
                     "default": {},
-                    "description": "Allow a user to override the severity levels for individual diagnostics should they desire.",
+                    "description": "Allows a user to override the severity levels for individual diagnostics.",
                     "scope": "resource"
                 },
                 "python.analysis.extraPaths": {

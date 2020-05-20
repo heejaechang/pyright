@@ -12,11 +12,17 @@
 export const enum DiagnosticSeverityOverrides {
     Error = 'error',
     Warning = 'warning',
+    Information = 'information',
     None = 'none',
 }
 
 export function getDiagnosticSeverityOverrides() {
-    return [DiagnosticSeverityOverrides.Error, DiagnosticSeverityOverrides.Warning, DiagnosticSeverityOverrides.None];
+    return [
+        DiagnosticSeverityOverrides.Error,
+        DiagnosticSeverityOverrides.Warning,
+        DiagnosticSeverityOverrides.Information,
+        DiagnosticSeverityOverrides.None,
+    ];
 }
 
 export type DiagnosticSeverityOverridesMap = { [ruleName: string]: DiagnosticSeverityOverrides };

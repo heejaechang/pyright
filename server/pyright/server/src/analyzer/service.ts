@@ -254,7 +254,7 @@ export class AnalyzerService {
         this._program.printDependencies(this._executionRootPath, verbose);
     }
 
-    async getDiagnosticsForRange(filePath: string, range: Range, token: CancellationToken): Promise<Diagnostic[]> {
+    getDiagnosticsForRange(filePath: string, range: Range, token: CancellationToken): Promise<Diagnostic[]> {
         return this._backgroundAnalysisProgram.getDiagnosticsForRange(filePath, range, token);
     }
 

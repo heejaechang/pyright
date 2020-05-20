@@ -74,6 +74,29 @@ test('diagnostic overrides', () => {
     assert('warning', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
 });
 
+test('diagnostic overrides information', () => {
+    const workspace = createWorkspaceInstance();
+
+    const serverSettings: ServerSettings = {
+        diagnosticSeverityOverrides: {
+            reportGeneralTypeIssues: DiagnosticSeverityOverrides.Information,
+        },
+    };
+
+    AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
+    assert('information', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
+});
+
+test('mspythonconfig information support', () => {
+    const fs = new TestFileSystem(false, { cwd: normalizeSlashes('/') });
+    const workspace = createWorkspaceInstance(fs);
+
+    fs.writeFileSync(normalizeSlashes('/mspythonconfig.json'), '{ "reportGeneralTypeIssues": "information" }');
+
+    AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, {});
+    assert('information', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
+});
+
 function createWorkspaceInstance(fs?: FileSystem): WorkspaceServiceInstance {
     return {
         workspaceName: `Test`,
