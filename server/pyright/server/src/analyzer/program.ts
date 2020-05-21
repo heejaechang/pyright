@@ -34,7 +34,7 @@ import {
     stripFileExtension,
 } from '../common/pathUtils';
 import { convertPositionToOffset, convertRangeToTextRange } from '../common/positionUtils';
-import { DocumentRange, doRangesOverlap, Position, Range } from '../common/textRange';
+import { DocumentRange, doesRangeContain, doRangesOverlap, Position, Range } from '../common/textRange';
 import { Duration, timingStats } from '../common/timing';
 import {
     AutoImporter,
@@ -43,6 +43,7 @@ import {
     ModuleSymbolMap,
 } from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
+import { ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
@@ -921,14 +922,55 @@ export class Program {
             // Do we need to do a global search as well?
             if (referencesResult.requiresGlobalSearch) {
                 for (const curSourceFileInfo of this._sourceFileList) {
-                    this._bindFile(curSourceFileInfo);
+                    throwIfCancellationRequested(token);
 
-                    curSourceFileInfo.sourceFile.addReferences(
-                        referencesResult,
-                        includeDeclaration,
-                        this._evaluator,
-                        token
-                    );
+                    // "Find all references" will only include references from user code
+                    // unless the file is explicitly opened in the editor.
+                    if (curSourceFileInfo.isOpenByClient || this._isUserCode(curSourceFileInfo)) {
+                        this._bindFile(curSourceFileInfo);
+
+                        curSourceFileInfo.sourceFile.addReferences(
+                            referencesResult,
+                            includeDeclaration,
+                            this._evaluator,
+                            token
+                        );
+                    }
+                }
+
+                // Make sure to include declarations regardless where they are defined
+                // if includeDeclaration is set.
+                if (includeDeclaration) {
+                    for (const decl of referencesResult.declarations) {
+                        throwIfCancellationRequested(token);
+
+                        if (referencesResult.locations.some((l) => l.path === decl.path)) {
+                            // Already included.
+                            continue;
+                        }
+
+                        const declFileInfo = this._sourceFileMap.get(decl.path);
+                        if (!declFileInfo) {
+                            // The file the declaration belongs to doesn't belong to the program.
+                            continue;
+                        }
+
+                        const tempResult: ReferencesResult = {
+                            requiresGlobalSearch: referencesResult.requiresGlobalSearch,
+                            nodeAtOffset: referencesResult.nodeAtOffset,
+                            symbolName: referencesResult.symbolName,
+                            declarations: referencesResult.declarations,
+                            locations: [],
+                        };
+
+                        declFileInfo.sourceFile.addReferences(tempResult, includeDeclaration, this._evaluator, token);
+                        for (const loc of tempResult.locations) {
+                            // Include declarations only. And throw away any references
+                            if (loc.path === decl.path && doesRangeContain(decl.range, loc.range)) {
+                                referencesResult.locations.push(loc);
+                            }
+                        }
+                    }
                 }
             } else {
                 sourceFileInfo.sourceFile.addReferences(referencesResult, includeDeclaration, this._evaluator, token);

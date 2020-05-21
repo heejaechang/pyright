@@ -116,6 +116,8 @@ declare namespace _ {
 
         moveCaretRight(count: number): void;
 
+        openFile(indexOrName: number | string, content?: string): void;
+
         verifyDiagnostics(map?: { [marker: string]: { category: string; message: string } }): void;
         verifyCodeActions(
             map: {
@@ -166,7 +168,6 @@ declare namespace _ {
         }): void;
 
         /* not tested yet
-        openFile(indexOrName: number | string, content?: string): void;
         paste(text: string): void;
 
         type(text: string): void;
