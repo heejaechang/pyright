@@ -14,7 +14,7 @@ import { Duration } from '../pyright/server/src/common/timing';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { LogLevel, LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
-import { sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
+import { sendExceptionTelemetry, TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
@@ -26,6 +26,8 @@ import { getZip } from './zip';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
     private _icCompletionExtension: IntelliCodeCompletionListExtension;
+    private _telemetry: TelemetryService;
+    private _startup = true;
 
     get completionListExtension(): CompletionListExtension {
         return this._icCompletionExtension;
@@ -39,6 +41,7 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
         mas: ModelZipAcquisitionService,
         modelUnpackFolder: string
     ): void {
+        this._telemetry = telemetry;
         this._icCompletionExtension = new IntelliCodeCompletionListExtension(
             logger,
             telemetry,
@@ -50,8 +53,19 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
     }
 
     updateSettings(enable: boolean): void {
-        this._icCompletionExtension;
-        this._icCompletionExtension.updateSettings(enable).ignoreErrors();
+        const wasEnabled = this._icCompletionExtension.enabled;
+        this._icCompletionExtension
+            .updateSettings(enable)
+            .finally(() => {
+                if (this._startup || wasEnabled !== enable) {
+                    this._startup = false;
+                    const event = new TelemetryEvent(TelemetryEventName.INTELLICODE_ENABLED);
+                    event.Properties['enabled'] = `${enable}`;
+                    event.Properties['startup'] = `${this._startup}`;
+                    this._telemetry.sendTelemetry(event);
+                }
+            })
+            .ignoreErrors();
     }
 }
 
@@ -69,6 +83,10 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         private readonly _mas: ModelZipAcquisitionService,
         private readonly _modelUnpackFolder: string
     ) {}
+
+    get enabled(): boolean {
+        return this._enable;
+    }
 
     async updateSettings(enable: boolean): Promise<boolean> {
         // First 'enable' comes when settings are retrieved after LS initialization.
