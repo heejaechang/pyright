@@ -113,7 +113,7 @@ export class ImportResolver {
 
             const bestImport = this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, true);
             if (bestImport) {
-                if (bestImport.isStubFile && bestImport.importType !== ImportType.BuiltIn) {
+                if (bestImport.isStubFile) {
                     bestImport.nonStubImportResult =
                         this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, false) ||
                         notFoundResult;
