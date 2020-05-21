@@ -19,6 +19,7 @@ export enum TelemetryEventName {
     INTELLICODE = 'intellicode',
     EXCEPTION = 'exception',
     EXCEPTION_IC = 'exception_intellicode',
+    INTELLICODE_ENABLED = 'intellicode_enabled',
 }
 
 const eventNamePrefix = 'language_server/';
