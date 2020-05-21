@@ -69,7 +69,7 @@ describe('pyrx fourslash tests', () => {
             const fn = normalizeSlashes(file);
             const justName = fn.replace(/^.*[\\/]/, '');
 
-            it('fourslash test ' + justName + ' runs correctly', (cb) => {
+            it('fourslash test ' + justName + ' run', (cb) => {
                 runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, pyrxFeatures);
             });
         });

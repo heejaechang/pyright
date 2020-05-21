@@ -1,5 +1,4 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
-// @asynctest: true
 
 // @filename: mspythonconfig.json
 //// {
@@ -11,7 +10,8 @@
 ////     [|/*marker*/c1|] = 1
 
 {
-    helper.verifyCodeActions(
+    // @ts-ignore
+    await helper.verifyCodeActions(
         {
             marker: {
                 codeActions: [],

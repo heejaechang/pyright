@@ -1,5 +1,4 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
-// @asynctest: true
 
 // @filename: mspythonconfig.json
 //// {
@@ -16,7 +15,8 @@
 {
     const positionRange = helper.getPositionRange(`marker`);
 
-    helper.verifyCodeActions({
+    // @ts-ignore
+    await helper.verifyCodeActions({
         marker: {
             codeActions: [
                 {

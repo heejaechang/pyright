@@ -1,5 +1,4 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
-// @asynctest: true
 
 // @filename: mspythonconfig.json
 //// {
@@ -21,7 +20,8 @@
     const resultRange = helper.getPositionRange('result');
     const markerRange = helper.getPositionRange('marker');
 
-    helper.verifyInvokeCodeAction({
+    // @ts-ignore
+    await helper.verifyInvokeCodeAction({
         marker: {
             title: 'Add import MyClass from testLib',
             edits: [

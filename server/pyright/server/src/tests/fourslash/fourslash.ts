@@ -124,14 +124,14 @@ declare namespace _ {
                 [marker: string]: { codeActions: { title: string; kind: string; command: Command }[] };
             },
             verifyCodeActionCount?: boolean
-        ): void;
-        verifyCommand(command: Command, files: { [filePath: string]: string }): void;
+        ): Promise<any>;
+        verifyCommand(command: Command, files: { [filePath: string]: string }): Promise<any>;
         verifyInvokeCodeAction(
             map: {
                 [marker: string]: { title: string; files?: { [filePath: string]: string }; edits?: TextEdit[] };
             },
             verifyCodeActionCount?: boolean
-        ): void;
+        ): Promise<any>;
         verifyHover(map: { [marker: string]: { value: string; kind: string } }): void;
         verifyCompletion(
             verifyMode: 'exact' | 'included' | 'excluded',

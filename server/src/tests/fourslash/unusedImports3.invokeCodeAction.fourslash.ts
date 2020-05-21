@@ -1,5 +1,4 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
-// @asynctest: true
 
 // @filename: mspythonconfig.json
 //// {
@@ -32,7 +31,9 @@
 {
     const result1 = helper.getPositionRange('result1');
     const result2 = helper.getPositionRange('result2');
-    helper.verifyInvokeCodeAction({
+
+    // @ts-ignore
+    await helper.verifyInvokeCodeAction({
         marker1: { title: 'Remove unused import', edits: [{ range: result1, newText: '' }] },
         marker2: { title: 'Remove unused import', edits: [{ range: result2, newText: '' }] },
     });

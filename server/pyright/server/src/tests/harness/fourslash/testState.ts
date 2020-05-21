@@ -87,14 +87,9 @@ export class TestState {
     private readonly _files: string[] = [];
     private readonly _hostSpecificFeatures: HostSpecificFeatures;
 
-    // indicate whether test is done or not
-    private readonly _testDoneCallback?: jest.DoneCallback;
-    private _markedDone = false;
-
     readonly fs: vfs.TestFileSystem;
     readonly workspace: WorkspaceServiceInstance;
     readonly console: ConsoleInterface;
-    readonly asyncTest: boolean;
 
     // The current caret position in the active file
     currentCaretPosition = 0;
@@ -109,7 +104,6 @@ export class TestState {
     constructor(
         basePath: string,
         public testData: FourSlashData,
-        cb?: jest.DoneCallback,
         mountPaths?: Map<string, string>,
         hostSpecificFeatures?: HostSpecificFeatures
     ) {
@@ -173,9 +167,6 @@ export class TestState {
             // Open the first file by default
             this.openFile(this._files[0]);
         }
-
-        this.asyncTest = toBoolean(testData.globalOptions[GlobalMetadataOptionNames.asynctest]);
-        this._testDoneCallback = cb;
     }
 
     get importResolver(): ImportResolver {
@@ -188,20 +179,6 @@ export class TestState {
 
     get program(): Program {
         return this.workspace.serviceInstance.test_program;
-    }
-
-    markTestDone(...args: any[]) {
-        if (this._markedDone) {
-            // test is already marked done
-            return;
-        }
-
-        // call callback to mark the test is done
-        if (this._testDoneCallback) {
-            this._testDoneCallback(...args);
-        }
-
-        this._markedDone = true;
     }
 
     // Entry points from fourslash.ts
@@ -635,8 +612,6 @@ export class TestState {
             }
         }
 
-        this.markTestDone();
-
         function convertToString(args: any[] | undefined): string[] | undefined {
             return args?.map((a) => {
                 if (isString(a)) {
@@ -674,8 +649,6 @@ export class TestState {
                 );
             }
         }
-
-        this.markTestDone();
     }
 
     async verifyInvokeCodeAction(
@@ -744,8 +717,6 @@ export class TestState {
                 await this._verifyFiles(map[name].files!);
             }
         }
-
-        this.markTestDone();
     }
 
     verifyHover(map: { [marker: string]: { value: string; kind: string } }): void {
@@ -900,8 +871,6 @@ export class TestState {
                 assert.fail('Failed to get completions');
             }
         }
-
-        this.markTestDone();
     }
 
     verifySignature(map: {

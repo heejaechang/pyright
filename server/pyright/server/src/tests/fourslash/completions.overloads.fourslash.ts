@@ -1,5 +1,4 @@
 /// <reference path="fourslash.ts" />
-// @asynctest: true
 
 // @filename: overloads_client.py
 //// import overloads
@@ -16,7 +15,8 @@
 ////     '''func docs'''
 ////     pass
 
-helper.verifyCompletion('included', {
+// @ts-ignore
+await helper.verifyCompletion('included', {
     marker1: {
         completions: [
             {
