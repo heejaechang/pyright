@@ -20,6 +20,7 @@ import {
     getFunctionDocString,
     getModuleDocString,
     getOverloadedFunctionDocStrings,
+    getPropertyDocString,
 } from '../analyzer/typeDocStringUtils';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { Type, TypeCategory, UnknownType } from '../analyzer/types';
@@ -241,24 +242,22 @@ export class HoverProvider {
         type: Type,
         resolvedDecl: DeclarationBase | undefined
     ) {
+        const docStrings: (string | undefined)[] = [];
+
         if (type.category === TypeCategory.Module) {
-            const docString = getModuleDocString(type, resolvedDecl, sourceMapper);
-            if (docString) {
-                this._addDocumentationResultsPart(parts, docString);
-            }
+            docStrings.push(getModuleDocString(type, resolvedDecl, sourceMapper));
         } else if (type.category === TypeCategory.Class) {
-            const docString = getClassDocString(type, resolvedDecl, sourceMapper);
-            if (docString) {
-                this._addDocumentationResultsPart(parts, docString);
-            }
+            docStrings.push(getClassDocString(type, resolvedDecl, sourceMapper));
         } else if (type.category === TypeCategory.Function) {
-            const docString = getFunctionDocString(type, sourceMapper);
-            if (docString) {
-                this._addDocumentationResultsPart(parts, docString);
-            }
+            docStrings.push(getFunctionDocString(type, sourceMapper));
         } else if (type.category === TypeCategory.OverloadedFunction) {
-            const docStrings = getOverloadedFunctionDocStrings(type, resolvedDecl, sourceMapper);
-            for (const docString of docStrings) {
+            docStrings.push(...getOverloadedFunctionDocStrings(type, resolvedDecl, sourceMapper));
+        } else if (type.category === TypeCategory.Object) {
+            docStrings.push(getPropertyDocString(type, resolvedDecl, sourceMapper));
+        }
+
+        for (const docString of docStrings) {
+            if (docString) {
                 this._addDocumentationResultsPart(parts, docString);
             }
         }

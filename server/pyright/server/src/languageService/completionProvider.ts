@@ -33,6 +33,7 @@ import {
     getFunctionDocString,
     getModuleDocString,
     getOverloadedFunctionDocStrings,
+    getPropertyDocString,
 } from '../analyzer/typeDocStringUtils';
 import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
 import { ClassType, FunctionType, Type, TypeCategory } from '../analyzer/types';
@@ -1093,6 +1094,8 @@ export class CompletionProvider {
                                     primaryDecl,
                                     this._sourceMapper
                                 ).find((doc) => doc);
+                            } else if (type.category === TypeCategory.Object) {
+                                documentation = getPropertyDocString(type, primaryDecl, this._sourceMapper);
                             }
 
                             let markdownString = '```python\n' + typeDetail + '\n```\n';
