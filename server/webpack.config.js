@@ -59,7 +59,9 @@ module.exports = {
         __filename: false,
     },
     plugins: [
-        new webpack.EnvironmentPlugin(['NUGETPACKAGEVERSION']),
+        new webpack.EnvironmentPlugin({
+            NUGETPACKAGEVERSION: '',
+        }),
         new CopyPlugin([{ from: `${onnxBin}`, to: onnxOut }]),
     ],
 };
