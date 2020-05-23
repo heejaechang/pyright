@@ -11,16 +11,16 @@
 
 import { CancellationToken, Hover, MarkupKind } from 'vscode-languageserver';
 
-import { Declaration, DeclarationBase, DeclarationType } from '../analyzer/declaration';
+import { Declaration, DeclarationBase, DeclarationType, FunctionDeclaration } from '../analyzer/declaration';
 import { convertDocStringToMarkdown } from '../analyzer/docStringToMarkdown';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { SourceMapper } from '../analyzer/sourceMapper';
 import {
     getClassDocString,
-    getFunctionDocString,
+    getFunctionDocStringFromDeclaration,
+    getFunctionDocStringFromType,
     getModuleDocString,
     getOverloadedFunctionDocStrings,
-    getPropertyDocString,
 } from '../analyzer/typeDocStringUtils';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { Type, TypeCategory, UnknownType } from '../analyzer/types';
@@ -249,11 +249,12 @@ export class HoverProvider {
         } else if (type.category === TypeCategory.Class) {
             docStrings.push(getClassDocString(type, resolvedDecl, sourceMapper));
         } else if (type.category === TypeCategory.Function) {
-            docStrings.push(getFunctionDocString(type, sourceMapper));
+            docStrings.push(getFunctionDocStringFromType(type, sourceMapper));
         } else if (type.category === TypeCategory.OverloadedFunction) {
             docStrings.push(...getOverloadedFunctionDocStrings(type, resolvedDecl, sourceMapper));
-        } else if (type.category === TypeCategory.Object) {
-            docStrings.push(getPropertyDocString(type, resolvedDecl, sourceMapper));
+        } else if (resolvedDecl?.type === DeclarationType.Function) {
+            // @property functions
+            docStrings.push(getFunctionDocStringFromDeclaration(resolvedDecl as FunctionDeclaration, sourceMapper));
         }
 
         for (const docString of docStrings) {

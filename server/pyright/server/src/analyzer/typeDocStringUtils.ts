@@ -11,7 +11,7 @@
 import { ClassDeclaration, DeclarationBase, DeclarationType, FunctionDeclaration } from '../analyzer/declaration';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
-import { ClassType, FunctionType, ModuleType, ObjectType, OverloadedFunctionType } from '../analyzer/types';
+import { ClassType, FunctionType, ModuleType, OverloadedFunctionType } from '../analyzer/types';
 import { ModuleNode } from '../parser/parseNodes';
 
 export function getOverloadedFunctionDocStrings(
@@ -66,29 +66,19 @@ export function getClassDocString(
     return docString;
 }
 
-export function getPropertyDocString(
-    type: ObjectType,
-    resolvedDecl: DeclarationBase | undefined,
-    sourceMapper: SourceMapper
-) {
-    let docString = _getPropertyDeclDocString(resolvedDecl);
-    if (!docString) {
-        if (resolvedDecl && isStubFile(resolvedDecl.path) && resolvedDecl.type === DeclarationType.Function) {
-            const implDecls = sourceMapper.findPropertyDeclarations(resolvedDecl as FunctionDeclaration);
-            docString = _getFunctionOrClassDeclDocString(implDecls);
-        }
+export function getFunctionDocStringFromType(type: FunctionType, sourceMapper: SourceMapper) {
+    let docString = type.details.docString;
+    if (!docString && type.details.declaration) {
+        docString = getFunctionDocStringFromDeclaration(type.details.declaration, sourceMapper);
     }
     return docString;
 }
 
-export function getFunctionDocString(type: FunctionType, sourceMapper: SourceMapper) {
-    let docString = type.details.docString;
-    if (!docString) {
-        const decl = type.details.declaration;
-        if (decl && isStubFile(decl.path)) {
-            const implDecls = sourceMapper.findFunctionDeclarations(decl);
-            docString = _getFunctionOrClassDeclDocString(implDecls);
-        }
+export function getFunctionDocStringFromDeclaration(resolvedDecl: FunctionDeclaration, sourceMapper: SourceMapper) {
+    let docString = _getFunctionOrClassDeclDocString([resolvedDecl]);
+    if (!docString && isStubFile(resolvedDecl.path)) {
+        const implDecls = sourceMapper.findFunctionDeclarations(resolvedDecl);
+        docString = _getFunctionOrClassDeclDocString(implDecls);
     }
     return docString;
 }
@@ -96,17 +86,6 @@ export function getFunctionDocString(type: FunctionType, sourceMapper: SourceMap
 function _getFunctionOrClassDeclDocString(decls: FunctionDeclaration[] | ClassDeclaration[]): string | undefined {
     for (const decl of decls) {
         const docString = ParseTreeUtils.getDocString(decl.node?.suite?.statements);
-        if (docString) {
-            return docString;
-        }
-    }
-
-    return undefined;
-}
-
-function _getPropertyDeclDocString(decl: DeclarationBase | undefined): string | undefined {
-    if (decl !== undefined && decl.type === DeclarationType.Function) {
-        const docString = ParseTreeUtils.getDocString((decl as FunctionDeclaration).node?.suite?.statements);
         if (docString) {
             return docString;
         }

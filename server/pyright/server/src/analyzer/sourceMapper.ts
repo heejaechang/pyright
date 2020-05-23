@@ -68,20 +68,6 @@ export class SourceMapper {
         }
     }
 
-    public findPropertyDeclarations(stubDecl: FunctionDeclaration): FunctionDeclaration[] {
-        const functionName = stubDecl.node.name.value;
-        const sourceFiles = this._getBoundSourceFiles(stubDecl.path);
-
-        const classNode = ParseTreeUtils.getEnclosingClass(stubDecl.node);
-        if (classNode === undefined) {
-            return [];
-        }
-
-        const className = this._getFullClassName(classNode);
-
-        return sourceFiles.flatMap((sourceFile) => this._findMethodDeclarations(sourceFile, className, functionName));
-    }
-
     private _findMethodDeclarations(
         sourceFile: SourceFile,
         className: string,
