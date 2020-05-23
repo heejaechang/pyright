@@ -36,6 +36,7 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { CommandController } from './src/commands/commandController';
+import { VERSION } from './src/common/constants';
 import { LogLevel, LogService } from './src/common/logger';
 import { Platform } from './src/common/platform';
 import {
@@ -62,7 +63,7 @@ class PyRxServer extends LanguageServerBase {
     constructor() {
         const rootDirectory = __dirname;
         const intelliCode = new IntelliCodeExtension();
-        super('Python', rootDirectory, intelliCode, undefined, CommandController.supportedCommands());
+        super('Python', rootDirectory, VERSION, intelliCode, undefined, CommandController.supportedCommands());
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
