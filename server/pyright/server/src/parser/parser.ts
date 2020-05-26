@@ -1981,6 +1981,24 @@ export class Parser {
         return leftExpr;
     }
 
+    private _isTypingAnnotation(typeAnnotation: ExpressionNode, name: string): boolean {
+        if (typeAnnotation.nodeType === ParseNodeType.Name) {
+            if (typeAnnotation.value === name) {
+                return true;
+            }
+        } else if (typeAnnotation.nodeType === ParseNodeType.MemberAccess) {
+            if (
+                typeAnnotation.leftExpression.nodeType === ParseNodeType.Name &&
+                (typeAnnotation.leftExpression.value === 'typing' || typeAnnotation.leftExpression.value === 't') &&
+                typeAnnotation.memberName.value === name
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // atom_expr: ['await'] atom trailer*
     // trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
     private _parseAtomExpression(): ExpressionNode {
@@ -2003,6 +2021,11 @@ export class Parser {
 
             // Is it a function call?
             if (this._consumeTokenIfType(TokenType.OpenParenthesis)) {
+                // Generally, function calls are not allowed within type annotations,
+                // but they are permitted in "Annotated" annotations.
+                const wasParsingTypeAnnotation = this._isParsingTypeAnnotation;
+                this._isParsingTypeAnnotation = false;
+
                 const argList = this._parseArgList();
                 const callNode = CallNode.create(atomExpression);
                 callNode.arguments = argList;
@@ -2014,6 +2037,7 @@ export class Parser {
                 }
 
                 const nextToken = this._peekToken();
+                let isArgListTerminated = false;
                 if (!this._consumeTokenIfType(TokenType.CloseParenthesis)) {
                     this._addError('Expected ")"', this._peekToken());
 
@@ -2024,33 +2048,39 @@ export class Parser {
                     // Extend the node's range to include the rest of the line.
                     // This helps the signatureHelpProvider.
                     extendRange(callNode, this._peekToken());
-                    return callNode;
                 } else {
                     extendRange(callNode, nextToken);
+                    isArgListTerminated = true;
                 }
+
+                this._isParsingTypeAnnotation = wasParsingTypeAnnotation;
 
                 if (this._isParsingTypeAnnotation) {
                     const diag = new DiagnosticAddendum();
                     if (atomExpression.nodeType === ParseNodeType.Name && atomExpression.value === 'type') {
                         diag.addMessage('Use Type[T] instead');
+                        this._addError(
+                            `type() call should not be used in type annotation` + diag.getString(),
+                            callNode
+                        );
                     }
-                    this._addError(`Function call not allowed in type annotation` + diag.getString(), callNode);
                 }
 
                 atomExpression = callNode;
+
+                // If the argument list wasn't terminated, break out of the loop
+                if (!isArgListTerminated) {
+                    break;
+                }
             } else if (this._consumeTokenIfType(TokenType.OpenBracket)) {
                 // Is it an index operator?
 
                 // This is an unfortunate hack that's necessary to accommodate 'Literal'
                 // type annotations properly. We need to suspend treating strings as
-                // type annotations within a Literal subscript.
-                const isLiteralSubscript =
-                    (atomExpression.nodeType === ParseNodeType.Name && atomExpression.value === 'Literal') ||
-                    (atomExpression.nodeType === ParseNodeType.MemberAccess &&
-                        atomExpression.leftExpression.nodeType === ParseNodeType.Name &&
-                        atomExpression.leftExpression.value === 'typing' &&
-                        atomExpression.memberName.value === 'Literal');
-
+                // type annotations within a Literal subscript. Note that the code previously
+                // looked for "typing.Literal", but someone submitted a bug report because
+                // they were using an aliased version of 'typing'.
+                const isLiteralSubscript = this._isTypingAnnotation(atomExpression, 'Literal');
                 const wasParsingIndexTrailer = this._isParsingIndexTrailer;
                 const wasParsingTypeAnnotation = this._isParsingTypeAnnotation;
                 if (isLiteralSubscript) {
@@ -2697,7 +2727,21 @@ export class Parser {
                 return leftExpr;
             }
 
+            // This is an unfortunate hack that's necessary to accommodate 'TypeAlias'
+            // declarations properly. We need to treat this assignment differently than
+            // most because the expression on the right side is treated like a type
+            // annotation and therefore allows string-literal forward declarations.
+            const isTypeAliasDeclaration = this._isTypingAnnotation(annotationExpr, 'TypeAlias');
+
+            const wasParsingTypeAnnotation = this._isParsingTypeAnnotation;
+            if (isTypeAliasDeclaration) {
+                this._isParsingTypeAnnotation = true;
+            }
+
             const rightExpr = this._parseTestExpression(false);
+
+            this._isParsingTypeAnnotation = wasParsingTypeAnnotation;
+
             return AssignmentNode.create(leftExpr, rightExpr);
         }
 

@@ -93,6 +93,7 @@ import {
     ModuleLoaderActions,
     VariableDeclaration,
 } from './declaration';
+import { isTypeAliasDeclaration } from './declarationUtils';
 import * as ParseTreeUtils from './parseTreeUtils';
 import { ScopeType } from './scope';
 import * as ScopeUtils from './scopeUtils';
@@ -161,6 +162,7 @@ import {
     isOptionalType,
     isParameterSpecificationType,
     isProperty,
+    isValidTypeAliasType,
     lookUpClassMember,
     lookUpObjectMember,
     partiallySpecializeType,
@@ -187,6 +189,11 @@ interface TypeResult {
     unpackedType?: Type;
     typeList?: TypeResult[];
     isResolutionCyclical?: boolean;
+}
+
+interface EffectiveTypeResult {
+    type: Type;
+    isResolutionCyclical: boolean;
 }
 
 interface FunctionArgument {
@@ -249,6 +256,10 @@ export const enum EvaluatorFlags {
 
     // A ParameterSpecification isn't allowed
     ParameterSpecificationDisallowed = 1 << 7,
+
+    // Expression is expected to be a type (class) rather
+    // than an instance (object)
+    ExpectingType = 1 << 8,
 }
 
 interface EvaluatorUsage {
@@ -710,7 +721,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         typeResult = getTypeOfExpression(
                             node.typeAnnotation,
                             undefined,
-                            flags | EvaluatorFlags.AllowForwardReferences
+                            flags | EvaluatorFlags.AllowForwardReferences | EvaluatorFlags.ExpectingType
                         );
                     } else if (!node.typeAnnotation && node.strings.length === 1) {
                         // We didn't know at parse time that this string node was going
@@ -721,7 +732,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             typeResult = getTypeOfExpression(
                                 expr,
                                 undefined,
-                                flags | EvaluatorFlags.AllowForwardReferences
+                                flags | EvaluatorFlags.AllowForwardReferences | EvaluatorFlags.ExpectingType
                             );
                         }
                     }
@@ -797,7 +808,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case ParseNodeType.BinaryOperation: {
-                typeResult = getTypeFromBinaryOperation(node);
+                typeResult = getTypeFromBinaryOperation(node, flags);
                 break;
             }
 
@@ -885,7 +896,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 typeResult = getTypeOfExpression(
                     node.typeAnnotation,
                     undefined,
-                    EvaluatorFlags.EvaluateStringLiteralAsType | EvaluatorFlags.ParameterSpecificationDisallowed
+                    EvaluatorFlags.EvaluateStringLiteralAsType |
+                        EvaluatorFlags.ParameterSpecificationDisallowed |
+                        EvaluatorFlags.ExpectingType
                 );
                 break;
             }
@@ -932,6 +945,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
 
         let evaluatorFlags =
+            EvaluatorFlags.ExpectingType |
             EvaluatorFlags.ConvertEllipsisToAny |
             EvaluatorFlags.EvaluateStringLiteralAsType |
             EvaluatorFlags.ParameterSpecificationDisallowed;
@@ -1292,6 +1306,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         };
     }
 
+    // Determines whether the specified expression is an explicit TypeAlias declaration.
+    function isDeclaredTypeAlias(expression: ExpressionNode): boolean {
+        if (expression.nodeType === ParseNodeType.TypeAnnotation) {
+            if (expression.valueExpression.nodeType === ParseNodeType.Name) {
+                const symbolWithScope = lookUpSymbolRecursive(expression, expression.valueExpression.value);
+                if (symbolWithScope) {
+                    const symbol = symbolWithScope.symbol;
+                    return symbol.getDeclarations().find((decl) => isTypeAliasDeclaration(decl)) !== undefined;
+                }
+            }
+        }
+
+        return false;
+    }
+
     // Determines whether the specified expression is a symbol with a declared type
     // (either a simple name or a member variable). If so, the type is returned.
     function getDeclaredTypeForExpression(expression: ExpressionNode): Type | undefined {
@@ -1312,7 +1341,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case ParseNodeType.MemberAccess: {
-                const baseType = getTypeOfExpression(expression.leftExpression).type;
+                let baseType = getTypeOfExpression(expression.leftExpression).type;
+                if (baseType.category === TypeCategory.TypeVar) {
+                    baseType = specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true);
+                }
                 let classMemberInfo: ClassMember | undefined;
 
                 if (baseType.category === TypeCategory.Object) {
@@ -1449,7 +1481,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const getItemMethodName = supportGetItem ? '__getitem__' : '';
 
         if (type.category === TypeCategory.TypeVar) {
-            type = specializeType(type, undefined);
+            type = specializeType(type, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         if (type.category === TypeCategory.Union && type.subtypes.some((t) => isNoneOrNever(t))) {
@@ -1834,6 +1866,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         return isFlowNodeReachable(returnFlowNode);
     }
 
+    // Determines whether there is a code flow path from sourceNode to sinkNode.
+    function isFlowPathBetweenNodes(sourceNode: ParseNode, sinkNode: ParseNode) {
+        const sourceFlowNode = AnalyzerNodeInfo.getFlowNode(sourceNode);
+        const sinkFlowNode = AnalyzerNodeInfo.getFlowNode(sinkNode);
+        if (!sourceFlowNode || !sinkFlowNode) {
+            return false;
+        }
+        if (sourceFlowNode === sinkFlowNode) {
+            return true;
+        }
+
+        return isFlowNodeReachable(sinkFlowNode, sourceFlowNode);
+    }
+
     // Determines whether the specified string literal is part
     // of a Literal['xxx'] statement. If so, we will not treat
     // the string as a normal forward-declared type annotation.
@@ -1983,6 +2029,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
     function assignTypeToMemberAccessNode(target: MemberAccessNode, type: Type, srcExpr?: ExpressionNode) {
         const baseTypeResult = getTypeOfExpression(target.leftExpression);
+        let baseType = baseTypeResult.type;
+        if (baseType.category === TypeCategory.TypeVar) {
+            baseType = specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true);
+        }
 
         // Handle member accesses (e.g. self.x or cls.y).
         if (target.leftExpression.nodeType === ParseNodeType.Name) {
@@ -1993,12 +2043,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 const classTypeResults = getTypeOfClass(enclosingClassNode);
 
                 if (classTypeResults && classTypeResults.classType.category === TypeCategory.Class) {
-                    if (baseTypeResult.type.category === TypeCategory.Object) {
-                        if (ClassType.isSameGenericClass(baseTypeResult.type.classType, classTypeResults.classType)) {
+                    if (baseType.category === TypeCategory.Object) {
+                        if (ClassType.isSameGenericClass(baseType.classType, classTypeResults.classType)) {
                             assignTypeToMemberVariable(target, type, true, srcExpr);
                         }
-                    } else if (baseTypeResult.type.category === TypeCategory.Class) {
-                        if (ClassType.isSameGenericClass(baseTypeResult.type, classTypeResults.classType)) {
+                    } else if (baseType.category === TypeCategory.Class) {
+                        if (ClassType.isSameGenericClass(baseType, classTypeResults.classType)) {
                             assignTypeToMemberVariable(target, type, false, srcExpr);
                         }
                     }
@@ -2565,27 +2615,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const symbolWithScope = lookUpSymbolRecursive(node, name);
 
         if (symbolWithScope) {
-            const symbol = symbolWithScope.symbol;
-
-            const effectiveType = getEffectiveTypeOfSymbol(symbol);
-
-            // If the effective type is unbound, that means we were unable to
-            // infer the effective type because of a cyclical dependency
-            // in type evaluation.
-            if (effectiveType.category === TypeCategory.Unbound) {
-                isResolutionCyclical = true;
-            }
-
-            const isSpecialBuiltIn =
-                !!effectiveType &&
-                effectiveType.category === TypeCategory.Class &&
-                ClassType.isSpecialBuiltIn(effectiveType);
-            let useCodeFlowAnalysis = !isSpecialBuiltIn;
-
-            // Don't use code-flow analysis if forward references are allowed.
-            if (flags & EvaluatorFlags.AllowForwardReferences) {
-                useCodeFlowAnalysis = false;
-            }
+            let useCodeFlowAnalysis = (flags & EvaluatorFlags.AllowForwardReferences) === 0;
 
             // If the symbol is implicitly imported from the builtin
             // scope, there's no need to use code flow analysis.
@@ -2602,8 +2632,25 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 }
             }
 
+            const symbol = symbolWithScope.symbol;
+
+            // Get the effective type (either the declared type or the inferred type).
+            // If we're using code flow analysis, pass the usage node so we consider
+            // only the assignment nodes that are reachable from this usage.
+            const effectiveTypeInfo = getEffectiveTypeOfSymbolForUsage(symbol, useCodeFlowAnalysis ? node : undefined);
+            const effectiveType = effectiveTypeInfo.type;
+
+            if (effectiveTypeInfo.isResolutionCyclical) {
+                isResolutionCyclical = true;
+            }
+
+            const isSpecialBuiltIn =
+                !!effectiveType &&
+                effectiveType.category === TypeCategory.Class &&
+                ClassType.isSpecialBuiltIn(effectiveType);
+
             type = effectiveType;
-            if (useCodeFlowAnalysis) {
+            if (useCodeFlowAnalysis && !isSpecialBuiltIn) {
                 // See if code flow analysis can tell us anything more about the type.
                 // If the symbol is declared outside of our execution scope, use its effective
                 // type. If it's declared inside our execution scope, it generally starts
@@ -2720,7 +2767,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case TypeCategory.Class: {
-                type = getTypeFromClassMember(node.memberName, baseType, node.memberName.value, usage, diag);
+                type = getTypeFromClassMember(node.memberName, baseType, memberName, usage, diag);
                 break;
             }
 
@@ -2741,7 +2788,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 return getTypeFromMemberAccessWithBaseType(
                     node,
                     {
-                        type: specializeType(baseType, undefined),
+                        type: specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true),
                         node,
                     },
                     usage,
@@ -2762,14 +2809,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     );
                 }
 
-                type = getTypeFromObjectMember(
-                    node.memberName,
-                    baseType,
-                    node.memberName.value,
-                    usage,
-                    diag,
-                    MemberAccessFlags.None
-                );
+                type = getTypeFromObjectMember(node.memberName, baseType, memberName, usage, diag);
                 break;
             }
 
@@ -2790,13 +2830,26 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         type = UnknownType.create();
                     }
                 } else {
-                    addDiagnostic(
-                        fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                        DiagnosticRule.reportGeneralTypeIssues,
-                        `"${memberName}" is not a known member of module`,
-                        node.memberName
-                    );
-                    type = UnknownType.create();
+                    // Does the module export a top-level __getattr__ function?
+                    if (usage.method === 'get') {
+                        const getAttrSymbol = ModuleType.getField(baseType, '__getattr__');
+                        if (getAttrSymbol) {
+                            const getAttrType = getEffectiveTypeOfSymbol(getAttrSymbol);
+                            if (getAttrType.category === TypeCategory.Function) {
+                                type = getFunctionEffectiveReturnType(getAttrType);
+                            }
+                        }
+                    }
+
+                    if (!type) {
+                        addDiagnostic(
+                            fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            `"${memberName}" is not a known member of module`,
+                            node.memberName
+                        );
+                        type = UnknownType.create();
+                    }
                 }
                 break;
             }
@@ -3281,7 +3334,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         const type = doForSubtypes(baseType, (subtype) => {
             if (subtype.category === TypeCategory.TypeVar) {
-                subtype = specializeType(subtype, undefined);
+                subtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
             }
 
             if (isAnyOrUnknown(subtype)) {
@@ -3545,6 +3598,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         const adjustedFlags =
             flags |
+            EvaluatorFlags.ExpectingType |
             EvaluatorFlags.ConvertEllipsisToAny |
             EvaluatorFlags.EvaluateStringLiteralAsType |
             EvaluatorFlags.FinalDisallowed;
@@ -3706,7 +3760,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // Determine whether there is a further constraint.
         let constrainedClassType: Type;
         if (node.arguments.length > 1) {
-            constrainedClassType = getTypeOfExpression(node.arguments[1].valueExpression).type;
+            constrainedClassType = specializeType(
+                getTypeOfExpression(node.arguments[1].valueExpression).type,
+                /* typeVarMap */ undefined
+            );
 
             let reportError = false;
 
@@ -3784,7 +3841,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const skipUnknownArgCheck = (flags & EvaluatorFlags.DoNotCheckForUnknownArgs) !== 0;
 
         if (callType.category === TypeCategory.TypeVar) {
-            callType = specializeType(callType, undefined);
+            callType = specializeType(callType, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         switch (callType.category) {
@@ -5398,7 +5455,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                     const entryTypeInfo = getTypeOfExpression(
                                         entryTypeNode,
                                         undefined,
-                                        EvaluatorFlags.EvaluateStringLiteralAsType |
+                                        EvaluatorFlags.ExpectingType |
+                                            EvaluatorFlags.EvaluateStringLiteralAsType |
                                             EvaluatorFlags.ParameterSpecificationDisallowed
                                     );
                                     if (entryTypeInfo) {
@@ -5552,7 +5610,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     function getTypeFromUnaryOperation(node: UnaryOperationNode): TypeResult {
         let exprType = getTypeOfExpression(node.expression).type;
         if (exprType.category === TypeCategory.TypeVar) {
-            exprType = specializeType(exprType, undefined);
+            exprType = specializeType(exprType, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         // Map unary operators to magic functions. Note that the bitwise
@@ -5608,7 +5666,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         return { type, node };
     }
 
-    function getTypeFromBinaryOperation(node: BinaryOperationNode): TypeResult {
+    function getTypeFromBinaryOperation(node: BinaryOperationNode, flags: EvaluatorFlags): TypeResult {
         let leftExpression = node.leftExpression;
 
         // If this is a comparison and the left expression is also a comparison,
@@ -5625,17 +5683,18 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         let leftType = getTypeOfExpression(leftExpression).type;
         if (leftType.category === TypeCategory.TypeVar) {
-            leftType = specializeType(leftType, undefined);
+            leftType = specializeType(leftType, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
         let rightType = getTypeOfExpression(node.rightExpression).type;
         if (rightType.category === TypeCategory.TypeVar) {
-            rightType = specializeType(rightType, undefined);
+            rightType = specializeType(rightType, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         // Is this a "|" operator used in a context where it is supposed to be
         // interpreted as a union operator?
         if (node.operator === OperatorType.BitwiseOr) {
-            if (canUnionType(leftType) && canUnionType(rightType)) {
+            const expectingType = (flags & EvaluatorFlags.ExpectingType) !== 0;
+            if (canUnionType(leftType, expectingType) && canUnionType(rightType, expectingType)) {
                 const fileInfo = getFileInfo(node);
                 const unionNotationSupported =
                     fileInfo.isStubFile || fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V39;
@@ -5699,12 +5758,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         let leftType = getTypeOfExpression(node.leftExpression).type;
         if (leftType!.category === TypeCategory.TypeVar) {
-            leftType = specializeType(leftType!, undefined);
+            leftType = specializeType(leftType!, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         let rightType = getTypeOfExpression(node.rightExpression).type;
         if (rightType.category === TypeCategory.TypeVar) {
-            rightType = specializeType(rightType, undefined);
+            rightType = specializeType(rightType, /* typeVarMap */ undefined, /* makeConcrete */ true);
         }
 
         type = doForSubtypes(leftType!, (leftSubtype) => {
@@ -6009,8 +6068,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             const expectedClass = expectedType.classType;
             if (ClassType.isBuiltIn(expectedClass, 'Dict') || ClassType.isBuiltIn(expectedClass, 'dict')) {
                 if (expectedClass.typeArguments && expectedClass.typeArguments.length === 2) {
-                    expectedKeyType = specializeType(expectedClass.typeArguments[0], undefined);
-                    expectedValueType = specializeType(expectedClass.typeArguments[1], undefined);
+                    expectedKeyType = specializeType(expectedClass.typeArguments[0], /* typeVarMap */ undefined);
+                    expectedValueType = specializeType(expectedClass.typeArguments[1], /* typeVarMap */ undefined);
                 }
             } else if (ClassType.isTypedDictClass(expectedClass)) {
                 expectedTypedDictEntries = getTypedDictMembersForClass(expectedClass);
@@ -6314,7 +6373,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             let paramType: Type = UnknownType.create();
             if (expectedFunctionType && index < expectedFunctionType.details.parameters.length) {
                 paramType = FunctionType.getEffectiveParameterType(expectedFunctionType, index);
-                paramType = specializeType(paramType, undefined, true);
+                paramType = specializeType(paramType, /* typeVarMap */ undefined, /* makeConcrete */ true);
             }
 
             if (param.name) {
@@ -6611,7 +6670,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             // A ClassVar should not allow generic types, but the typeshed
             // stubs use this in a few cases. For now, just specialize
             // it in a general way.
-            type = specializeType(type, undefined);
+            type = specializeType(type, /* typeVarMap */ undefined);
         }
 
         return convertClassToObject(type);
@@ -6630,6 +6689,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (typeArgs.length > 1) {
             addError(`Expected a single type argument after "Final"`, errorNode);
+        }
+
+        return typeArgs[0].type;
+    }
+
+    function createAnnotatedType(errorNode: ParseNode, typeArgs: TypeResult[] | undefined): Type {
+        if (!typeArgs || typeArgs.length < 1) {
+            addError(`Expected at least one type argument after "Annotated"`, errorNode);
+            return AnyType.create();
+        }
+
+        if (isEllipsisType(typeArgs[0].type)) {
+            addError(`"..." not allowed in this context`, typeArgs[0].node);
+        } else if (typeArgs[0].type.category === TypeCategory.Module) {
+            addError(`Module not allowed in this context`, typeArgs[0].node);
+        } else if (isParameterSpecificationType(typeArgs[0].type)) {
+            addError(`ParameterSpecification not allowed in this context`, typeArgs[1].node);
         }
 
         return typeArgs[0].type;
@@ -6873,6 +6949,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             TypedDict: { alias: '_TypedDict', module: 'self' },
             Union: { alias: '', module: 'builtins' },
             Optional: { alias: '', module: 'builtins' },
+            Annotated: { alias: '', module: 'builtins' },
+            TypeAlias: { alias: '', module: 'builtins' },
         };
 
         const aliasMapEntry = specialTypes[assignedName];
@@ -6933,8 +7011,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         let rightHandType = readTypeCache(node.rightExpression);
         let isResolutionCycle = false;
 
-        // If there was a cached value and no target of interest or the entire
-        // LHS is the target of interest, there's no need to do additional work.
         if (!rightHandType) {
             // Special-case the typing.pyi file, which contains some special
             // types that the type analyzer needs to interpret differently.
@@ -6949,26 +7025,38 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 // Determine whether there is a declared type.
                 const declaredType = getDeclaredTypeForExpression(node.leftExpression);
 
-                // Evaluate the type of the right-hand side.
-                // Don't specialize it in case it's a type alias with generic
-                // type arguments.
+                // Evaluate the type of the right-hand side. Don't specialize it in
+                // case it's a type alias with generic type arguments.
                 let flags: EvaluatorFlags = EvaluatorFlags.DoNotSpecialize;
                 if (fileInfo.isStubFile) {
                     // An assignment of ellipsis means "Any" within a type stub file.
                     flags |= EvaluatorFlags.ConvertEllipsisToAny;
                 }
+
+                const isTypeAlias = isDeclaredTypeAlias(node.leftExpression);
+                if (isTypeAlias) {
+                    flags |=
+                        EvaluatorFlags.ExpectingType |
+                        EvaluatorFlags.EvaluateStringLiteralAsType |
+                        EvaluatorFlags.ParameterSpecificationDisallowed;
+                }
+
                 const srcTypeResult = getTypeOfExpression(node.rightExpression, declaredType, flags);
                 let srcType = srcTypeResult.type;
                 if (srcTypeResult.isResolutionCyclical) {
                     isResolutionCycle = true;
                 }
 
-                // Determine if the RHS is a constant boolean expression.
-                // If so, assign it a literal type.
+                if (isTypeAlias && !isValidTypeAliasType(srcType)) {
+                    addError(`Expression is is not valid type for TypeAlias`, node.rightExpression);
+                }
+
+                // If the RHS is a constant boolean expression, assign it a literal type.
                 const constExprValue = evaluateStaticBoolExpression(
                     node.rightExpression,
                     fileInfo.executionEnvironment
                 );
+
                 if (constExprValue !== undefined) {
                     const boolType = getBuiltInObject(node, 'bool');
                     if (boolType.category === TypeCategory.Object) {
@@ -7505,7 +7593,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     }
                 }
 
-                concreteAnnotatedType = specializeType(annotatedType, undefined);
+                concreteAnnotatedType = specializeType(annotatedType, /* typeVarMap */ undefined);
             }
 
             let defaultValueType: Type | undefined;
@@ -7649,10 +7737,26 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // For class methods, the cls parameter is allowed to skip the
                     // abstract class test because the caller is possibly passing
                     // in a non-abstract subclass.
-                    return selfSpecializeClassType(containingClassType, true);
+                    const clsType = TypeVarType.create(
+                        `__type_of_cls_${containingClassType.details.name}`,
+                        /* isParameterSpec */ false,
+                        /* isSynthesized */ true
+                    );
+                    clsType.boundType = selfSpecializeClassType(
+                        containingClassType,
+                        /* setSkipAbstractClassTest */ true
+                    );
+                    return clsType;
                 } else if ((flags & FunctionTypeFlags.StaticMethod) === 0) {
-                    const specializedClassType = selfSpecializeClassType(containingClassType);
-                    return ObjectType.create(specializedClassType);
+                    const selfType = TypeVarType.create(
+                        `__type_of_self_${containingClassType.details.name}`,
+                        /* isParameterSpec */ false,
+                        /* isSynthesized */ true
+                    );
+                    selfType.boundType = ObjectType.create(
+                        selfSpecializeClassType(containingClassType, /* setSkipAbstractClassTest */ true)
+                    );
+                    return selfType;
                 }
             }
         }
@@ -8300,7 +8404,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const enterMethodName = isAsync ? '__aenter__' : '__enter__';
         const scopedType = doForSubtypes(exprType, (subtype) => {
             if (subtype.category === TypeCategory.TypeVar) {
-                subtype = specializeType(subtype, undefined);
+                subtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
             }
 
             if (isAnyOrUnknown(subtype)) {
@@ -8367,7 +8471,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const exitMethodName = isAsync ? '__aexit__' : '__exit__';
         doForSubtypes(exprType, (subtype) => {
             if (subtype.category === TypeCategory.TypeVar) {
-                subtype = specializeType(subtype, undefined);
+                subtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
             }
 
             if (isAnyOrUnknown(subtype)) {
@@ -8810,9 +8914,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (node.nodeType === ParseNodeType.MemberAccess) {
             const memberName = node.memberName.value;
-            const baseType = getDeclaredCallBaseType(node.leftExpression);
+            let baseType = getDeclaredCallBaseType(node.leftExpression);
             if (!baseType) {
                 return undefined;
+            }
+
+            if (baseType.category === TypeCategory.TypeVar) {
+                baseType = specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true);
             }
 
             let symbol: Symbol | undefined;
@@ -9253,10 +9361,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         };
     }
 
-    function isFlowNodeReachable(flowNode: FlowNode): boolean {
+    // Determines whether the specified flowNode can be reached by any
+    // control flow path within the execution context. If sourceFlowNode
+    // is specified, it returns true only if at least one control flow
+    // path passes through sourceFlowNode.
+    function isFlowNodeReachable(flowNode: FlowNode, sourceFlowNode?: FlowNode): boolean {
         const visitedFlowNodeMap = new Map<number, true>();
 
-        function isFlowNodeReachableRecursive(flowNode: FlowNode): boolean {
+        function isFlowNodeReachableRecursive(flowNode: FlowNode, sourceFlowNode: FlowNode | undefined): boolean {
             let curFlowNode = flowNode;
 
             while (true) {
@@ -9273,14 +9385,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     return false;
                 }
 
+                if (curFlowNode === sourceFlowNode) {
+                    return true;
+                }
+
                 if (curFlowNode.flags & FlowFlags.Call) {
                     const callFlowNode = curFlowNode as FlowCall;
 
-                    // If this function returns a "NoReturn" type, that means
-                    // it always raises an exception or otherwise doesn't return,
-                    // so we can assume that the code before this is unreachable.
-                    if (isCallNoReturn(callFlowNode.node)) {
-                        return false;
+                    // If we're determining whether a specified source flow node is
+                    // reachable, don't take into consideration possible "no return"
+                    // calls.
+                    if (sourceFlowNode === undefined) {
+                        // If this function returns a "NoReturn" type, that means
+                        // it always raises an exception or otherwise doesn't return,
+                        // so we can assume that the code before this is unreachable.
+                        if (isCallNoReturn(callFlowNode.node)) {
+                            return false;
+                        }
                     }
 
                     curFlowNode = callFlowNode.antecedent;
@@ -9302,7 +9423,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (curFlowNode.flags & (FlowFlags.BranchLabel | FlowFlags.LoopLabel)) {
                     const labelNode = curFlowNode as FlowLabel;
                     for (const antecedent of labelNode.antecedents) {
-                        if (isFlowNodeReachableRecursive(antecedent)) {
+                        if (isFlowNodeReachableRecursive(antecedent, sourceFlowNode)) {
                             return true;
                         }
                     }
@@ -9328,13 +9449,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     const postFinallyFlowNode = curFlowNode as FlowPostFinally;
                     const wasGateClosed = postFinallyFlowNode.preFinallyGate.isGateClosed;
                     postFinallyFlowNode.preFinallyGate.isGateClosed = true;
-                    const isReachable = isFlowNodeReachableRecursive(postFinallyFlowNode.antecedent);
+                    const isReachable = isFlowNodeReachableRecursive(postFinallyFlowNode.antecedent, sourceFlowNode);
                     postFinallyFlowNode.preFinallyGate.isGateClosed = wasGateClosed;
                     return isReachable;
                 }
 
                 if (curFlowNode.flags & FlowFlags.Start) {
-                    return true;
+                    // If we hit the start but were looking for a particular source flow
+                    // node, return false. Otherwise, the start is what we're looking for.
+                    return sourceFlowNode ? false : true;
                 }
 
                 if (curFlowNode.flags & FlowFlags.WildcardImport) {
@@ -9356,7 +9479,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         isReachableRecursionMap.set(flowNode.id, true);
 
         try {
-            const isReachable = isFlowNodeReachableRecursive(flowNode);
+            const isReachable = isFlowNodeReachableRecursive(flowNode, sourceFlowNode);
             isReachableRecursionMap.delete(flowNode.id);
             return isReachable;
         } catch (e) {
@@ -9848,6 +9971,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 case 'Final': {
                     return createFinalType(errorNode, typeArgs, flags);
                 }
+
+                case 'Annotated': {
+                    return createAnnotatedType(errorNode, typeArgs);
+                }
             }
         }
 
@@ -9927,7 +10054,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             arg.valueExpression!,
             undefined,
             expectingType
-                ? EvaluatorFlags.EvaluateStringLiteralAsType | EvaluatorFlags.ParameterSpecificationDisallowed
+                ? EvaluatorFlags.ExpectingType |
+                      EvaluatorFlags.EvaluateStringLiteralAsType |
+                      EvaluatorFlags.ParameterSpecificationDisallowed
                 : EvaluatorFlags.None
         ).type;
     }
@@ -10083,8 +10212,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             node.parent.nodeType === ParseNodeType.MemberAccess &&
             node === node.parent.memberName
         ) {
-            const baseType = getType(node.parent.leftExpression);
+            let baseType = getType(node.parent.leftExpression);
             if (baseType) {
+                baseType = specializeType(baseType, /* typeVarMap */ undefined);
                 const memberName = node.parent.memberName.value;
                 doForSubtypes(baseType, (subtype) => {
                     let symbol: Symbol | undefined;
@@ -10452,11 +10582,24 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
     }
 
+    // Returns the type of the symbol. If the type is explicitly declared, that type
+    // is returned. If not, the type is inferred from assignments to the symbol. All
+    // assigned types are evaluated and combined into a union. If a "usageNode"
+    // node is specified, only declarations that are outside of the current execution
+    // scope or that are reachable (as determined by code flow analysis) are considered.
+    // This helps in cases where there are cyclical dependencies between symbols.
     function getEffectiveTypeOfSymbol(symbol: Symbol): Type {
+        return getEffectiveTypeOfSymbolForUsage(symbol).type;
+    }
+
+    function getEffectiveTypeOfSymbolForUsage(symbol: Symbol, usageNode?: NameNode): EffectiveTypeResult {
         // If there's a declared type, it takes precedence over
         // inferred types.
         if (symbol.hasTypedDeclarations()) {
-            return getDeclaredTypeOfSymbol(symbol) || UnknownType.create();
+            return {
+                type: getDeclaredTypeOfSymbol(symbol) || UnknownType.create(),
+                isResolutionCyclical: false,
+            };
         }
 
         // Infer the type.
@@ -10464,38 +10607,67 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         const isPrivate = symbol.isPrivateMember();
         const decls = symbol.getDeclarations();
         const isFinalVar = isFinalVariable(symbol);
+        let isResolutionCyclical = false;
 
         decls.forEach((decl) => {
-            if (pushSymbolResolution(symbol, decl)) {
-                try {
-                    let type = getInferredTypeOfDeclaration(decl);
-
-                    popSymbolResolution(symbol);
-
-                    if (type) {
-                        const isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
-
-                        type = stripLiteralTypeArgsValue(type);
-
-                        if (decl.type === DeclarationType.Variable) {
-                            // If the symbol is private or constant, we can retain the literal
-                            // value. Otherwise, strip them off to make the type less specific,
-                            // allowing other values to be assigned to it in subclasses.
-                            if (!isPrivate && !isConstant && !isFinalVar) {
-                                type = stripLiteralValue(type);
-                            }
+            let considerDecl = true;
+            if (usageNode !== undefined) {
+                if (decl.type !== DeclarationType.Alias) {
+                    // Is the declaration in the same execution scope as the "usageNode" node?
+                    const usageScope = ParseTreeUtils.getExecutionScopeNode(usageNode);
+                    const declScope = ParseTreeUtils.getExecutionScopeNode(decl.node);
+                    if (usageScope === declScope) {
+                        if (!isFlowPathBetweenNodes(decl.node, usageNode)) {
+                            considerDecl = false;
                         }
-                        typesToCombine.push(type);
                     }
-                } catch (e) {
-                    // Clean up the stack before rethrowing.
-                    popSymbolResolution(symbol);
-                    throw e;
+                }
+            }
+
+            if (considerDecl) {
+                if (pushSymbolResolution(symbol, decl)) {
+                    try {
+                        let type = getInferredTypeOfDeclaration(decl);
+
+                        popSymbolResolution(symbol);
+
+                        if (type) {
+                            const isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
+
+                            type = stripLiteralTypeArgsValue(type);
+
+                            if (decl.type === DeclarationType.Variable) {
+                                // If the symbol is private or constant, we can retain the literal
+                                // value. Otherwise, strip them off to make the type less specific,
+                                // allowing other values to be assigned to it in subclasses.
+                                if (!isPrivate && !isConstant && !isFinalVar) {
+                                    type = stripLiteralValue(type);
+                                }
+                            }
+                            typesToCombine.push(type);
+                        }
+                    } catch (e) {
+                        // Clean up the stack before rethrowing.
+                        popSymbolResolution(symbol);
+                        throw e;
+                    }
+                } else {
+                    isResolutionCyclical = true;
                 }
             }
         });
 
-        return typesToCombine.length > 0 ? combineTypes(typesToCombine) : UnboundType.create();
+        if (typesToCombine.length > 0) {
+            return {
+                type: combineTypes(typesToCombine),
+                isResolutionCyclical: false,
+            };
+        }
+
+        return {
+            type: UnboundType.create(),
+            isResolutionCyclical,
+        };
     }
 
     function getDeclaredTypeOfSymbol(symbol: Symbol): Type | undefined {
@@ -10799,7 +10971,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         const srcMemberType = specializeType(
                             getTypeOfMember(memberInfo),
                             srcClassTypeVarMap,
-                            false,
+                            /* makeConcrete */ false,
                             recursionCount + 1
                         );
 
@@ -10847,7 +11019,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             const specializedSrcProtocol = specializeType(
                 genericDestType,
                 genericDestTypeVarMap,
-                false,
+                /* makeConcrete */ false,
                 recursionCount + 1
             ) as ClassType;
             if (!verifyTypeArgumentsAssignable(destType, specializedSrcProtocol, diag, typeVarMap, recursionCount)) {
@@ -10991,7 +11163,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
 
         const typeVarMap = buildTypeVarMapFromSpecializedClass(srcType);
-        const specializedType = specializeType(baseClass, typeVarMap, false, recursionCount + 1);
+        const specializedType = specializeType(baseClass, typeVarMap, /* makeConcrete */ false, recursionCount + 1);
         assert(specializedType.category === TypeCategory.Class);
         return specializedType as ClassType;
     }
@@ -11817,7 +11989,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
             // Make sure we can assign the specialized dest type to the
             // source type.
-            const specializedDestParamType = specializeType(destParamType, typeVarMap, false, recursionCount + 1);
+            const specializedDestParamType = specializeType(
+                destParamType,
+                typeVarMap,
+                /* makeConcrete */ false,
+                recursionCount + 1
+            );
 
             if (
                 !canAssignType(
@@ -11874,7 +12051,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             const specializedDestParamType = specializeType(
                                 destParam.type,
                                 typeVarMap,
-                                false,
+                                /* makeConcrete */ false,
                                 recursionCount + 1
                             );
                             if (
@@ -12320,7 +12497,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             canAssignType(firstParam.type, baseType, new DiagnosticAddendum(), typeVarMap);
         }
 
-        const specializedFunction = specializeType(memberType, typeVarMap, false) as FunctionType;
+        // Get the effective return type, which will have the side effect of lazily
+        // evaluating (and caching) the inferred return type if there is no defined return type.
+        getFunctionEffectiveReturnType(memberType);
+
+        const specializedFunction = specializeType(memberType, typeVarMap, /* makeConcrete */ false) as FunctionType;
         return stripFirstParameter(specializedFunction);
     }
 
@@ -12544,9 +12725,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case TypeCategory.TypeVar: {
-                // If it's synthesized, don't expose the internal
-                // name we generated. This will confuse users.
+                // If it's synthesized, don't expose the internal name we generated.
+                // This will confuse users. The exception is if it's a bound synthesized
+                // type, in which case we'll print the bound type. This is used for
+                // "self" and "cls" parameters.
                 if (type.isSynthesized) {
+                    if (type.boundType) {
+                        return printType(type.boundType, recursionCount + 1);
+                    }
+
                     return (printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0 ? 'Any' : 'Unknown';
                 }
 
