@@ -30,7 +30,8 @@ import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
 import {
     getClassDocString,
-    getFunctionDocString,
+    getFunctionDocStringFromDeclaration,
+    getFunctionDocStringFromType,
     getModuleDocString,
     getOverloadedFunctionDocStrings,
 } from '../analyzer/typeDocStringUtils';
@@ -1086,13 +1087,16 @@ export class CompletionProvider {
                             } else if (type.category === TypeCategory.Class) {
                                 documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
                             } else if (type.category === TypeCategory.Function) {
-                                documentation = getFunctionDocString(type, this._sourceMapper);
+                                documentation = getFunctionDocStringFromType(type, this._sourceMapper);
                             } else if (type.category === TypeCategory.OverloadedFunction) {
                                 documentation = getOverloadedFunctionDocStrings(
                                     type,
                                     primaryDecl,
                                     this._sourceMapper
                                 ).find((doc) => doc);
+                            } else if (primaryDecl.type === DeclarationType.Function) {
+                                // @property functions
+                                documentation = getFunctionDocStringFromDeclaration(primaryDecl, this._sourceMapper);
                             }
 
                             let markdownString = '```python\n' + typeDetail + '\n```\n';
