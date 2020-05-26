@@ -698,6 +698,12 @@ test('Loops1', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Loops2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops2.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Constants1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constants1.py']);
 
@@ -776,6 +782,12 @@ test('Literals3', () => {
     validateResults(analysisResults, 4);
 });
 
+test('Literals4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals4.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('TypeAlias1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias1.py']);
 
@@ -792,6 +804,18 @@ test('TypeAlias3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias3.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('TypeAlias4', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
+    validateResults(analysisResults38, 8);
+
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
+    validateResults(analysisResults39, 8);
 });
 
 test('Dictionary1', () => {
@@ -1276,6 +1300,11 @@ test('AssignmentExpr5', () => {
     validateResults(analysisResults, 0);
 });
 
+test('AssignmentExpr6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr6.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('Import1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import1.py']);
     validateResults(analysisResults, 0);
@@ -1480,6 +1509,15 @@ test('Unions1', () => {
     validateResults(analysisResults39, 0);
 });
 
+test('Unions2', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // Analyze with Python 3.8 settings.
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unions2.py'], configOptions);
+    validateResults(analysisResults38, 0);
+});
+
 test('ParamSpec1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1493,7 +1531,7 @@ test('ParamSpec2', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V38;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
-    validateResults(analysisResults38, 1);
+    validateResults(analysisResults38, 6);
 
     configOptions.defaultPythonVersion = PythonVersion.V39;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
@@ -1524,4 +1562,22 @@ test('TypeVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar1.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('TypeVar2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar2.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Annotated1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
+    validateResults(analysisResults38, 1);
+
+    configOptions.defaultPythonVersion = PythonVersion.V39;
+    const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
+    validateResults(analysisResults39, 0);
 });
