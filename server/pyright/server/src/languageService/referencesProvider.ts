@@ -19,7 +19,7 @@ import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
-import { DocumentRange, Position, rangesAreEqual } from '../common/textRange';
+import { DocumentRange, Position } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { ModuleNameNode, NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
@@ -231,7 +231,7 @@ export class ReferencesProvider {
 
     private static _addIfUnique(declarations: Declaration[], itemToAdd: Declaration) {
         for (const def of declarations) {
-            if (def.path === itemToAdd.path && rangesAreEqual(def.range, itemToAdd.range)) {
+            if (DeclarationUtils.areDeclarationsSame(def, itemToAdd)) {
                 return;
             }
         }
