@@ -655,7 +655,7 @@ export class Program {
     // level scope that contains the symbol table for the module.
     private _buildModuleSymbolsMap(sourceFileToExclude: SourceFileInfo, token: CancellationToken): ModuleSymbolMap {
         return buildModuleSymbolsMap(
-            this._sourceFileList.filter((s) => s !== sourceFileToExclude).map((s) => s.sourceFile),
+            this._sourceFileList.filter((s) => s !== sourceFileToExclude),
             token
         );
     }

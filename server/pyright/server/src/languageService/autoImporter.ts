@@ -17,7 +17,7 @@ import {
     ImportGroup,
     ImportStatements,
 } from '../analyzer/importStatementUtils';
-import { SourceFile } from '../analyzer/sourceFile';
+import { SourceFileInfo } from '../analyzer/program';
 import { SymbolTable } from '../analyzer/symbol';
 import { Symbol } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
@@ -33,14 +33,14 @@ export type ModuleSymbolMap = Map<string, SymbolTable>;
 
 // Build a map of all modules within this program and the module-
 // level scope that contains the symbol table for the module.
-export function buildModuleSymbolsMap(files: SourceFile[], token: CancellationToken): ModuleSymbolMap {
+export function buildModuleSymbolsMap(files: SourceFileInfo[], token: CancellationToken): ModuleSymbolMap {
     const moduleSymbolMap = new Map<string, SymbolTable>();
 
     files.forEach((file) => {
         throwIfCancellationRequested(token);
-        const symbolTable = file.getModuleSymbolTable();
+        const symbolTable = file.sourceFile.getModuleSymbolTable();
         if (symbolTable) {
-            moduleSymbolMap.set(file.getFilePath(), symbolTable);
+            moduleSymbolMap.set(file.sourceFile.getFilePath(), symbolTable);
         }
     });
 
@@ -48,6 +48,7 @@ export function buildModuleSymbolsMap(files: SourceFile[], token: CancellationTo
 }
 
 export interface AutoImportResult {
+    isImportFrom: boolean;
     name: string;
     symbol?: Symbol;
     source: string;
@@ -131,7 +132,7 @@ export class AutoImporter {
                     importGroup
                 );
 
-                results.push({ name, symbol, source: importSource, edits: autoImportTextEdits });
+                results.push({ name, symbol, source: importSource, edits: autoImportTextEdits, isImportFrom: true });
             });
 
             // See if this file should be offered as an implicit import.
@@ -139,15 +140,41 @@ export class AutoImporter {
             const initPathPy = combinePaths(fileDir, '__init__.py');
             const initPathPyi = initPathPy + 'i';
 
+            const isStubFile = filePath.endsWith('.pyi');
+            const hasInit = this._moduleSymbolMap.has(initPathPy) || this._moduleSymbolMap.has(initPathPyi);
+
             // If the current file is in a directory that also contains an "__init__.py[i]"
             // file, we can use that directory name as an implicit import target.
-            if (!this._moduleSymbolMap.has(initPathPy) && !this._moduleSymbolMap.has(initPathPyi)) {
+            // Or if the file is a stub file, we can use it as import target.
+            if (!isStubFile && !hasInit) {
                 return;
             }
 
-            const name = stripFileExtension(getFileName(filePath));
-            const moduleNameAndType = this._getModuleNameAndTypeFromFilePath(getDirectoryPath(filePath));
-            const importSource = moduleNameAndType.moduleName;
+            let importNamePart: string | undefined;
+            let name: string;
+            let importSource: string;
+            let moduleNameAndType: ModuleNameAndType;
+
+            if (hasInit) {
+                importNamePart = stripFileExtension(getFileName(filePath));
+                moduleNameAndType = this._getModuleNameAndTypeFromFilePath(getDirectoryPath(filePath));
+                importSource = moduleNameAndType.moduleName;
+
+                // See if we can import module as "import xxx"
+                if (importNamePart === '__init__') {
+                    importNamePart = undefined;
+                    name = importSource;
+                } else {
+                    name = importNamePart;
+                }
+            } else {
+                // We don't have init.py[i] but this file is a stub file.
+                // See whether we can import it as "import xx"
+                importNamePart = undefined;
+                moduleNameAndType = this._getModuleNameAndTypeFromFilePath(filePath);
+                name = importSource = moduleNameAndType.moduleName;
+            }
+
             if (!importSource) {
                 return;
             }
@@ -164,14 +191,20 @@ export class AutoImporter {
 
             const importGroup = this._getImportGroupFromModuleNameAndType(moduleNameAndType);
             const autoImportTextEdits = this._getTextEditsForAutoImportByFilePath(
-                name,
+                importNamePart,
                 importStatements,
                 filePath,
                 importSource,
                 importGroup
             );
 
-            results.push({ name, symbol: undefined, source: importSource, edits: autoImportTextEdits });
+            results.push({
+                name: name,
+                symbol: undefined,
+                source: importSource,
+                edits: autoImportTextEdits,
+                isImportFrom: !!importNamePart,
+            });
         });
 
         return results;
@@ -215,16 +248,18 @@ export class AutoImporter {
     }
 
     private _getTextEditsForAutoImportByFilePath(
-        symbolName: string,
+        symbolName: string | undefined,
         importStatements: ImportStatements,
         filePath: string,
         moduleName: string,
         importGroup: ImportGroup
     ): TextEditAction[] {
-        // Does an 'import from' statement already exist? If so, we'll reuse it.
-        const importStatement = importStatements.mapByFilePath.get(filePath);
-        if (importStatement && importStatement.node.nodeType === ParseNodeType.ImportFrom) {
-            return getTextEditsForAutoImportSymbolAddition(symbolName, importStatement, this._parseResults);
+        if (symbolName) {
+            // Does an 'import from' statement already exist? If so, we'll reuse it.
+            const importStatement = importStatements.mapByFilePath.get(filePath);
+            if (importStatement && importStatement.node.nodeType === ParseNodeType.ImportFrom) {
+                return getTextEditsForAutoImportSymbolAddition(symbolName, importStatement, this._parseResults);
+            }
         }
 
         return getTextEditsForAutoImportInsertion(

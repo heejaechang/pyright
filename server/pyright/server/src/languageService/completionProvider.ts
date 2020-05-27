@@ -864,7 +864,7 @@ export class CompletionProvider {
                     completionList,
                     result.name,
                     '',
-                    `Auto-import from ${result.source}`,
+                    result.isImportFrom ? `Auto-import from ${result.source}` : `Auto-import ${result.source}`,
                     undefined,
                     result.edits
                 );

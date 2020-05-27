@@ -796,8 +796,13 @@ export class TestState {
         this._analyze();
 
         for (const marker of this.getMarkers()) {
+            const markerName = this.getMarkerName(marker);
+            if (!map[markerName]) {
+                continue;
+            }
+
             const filePath = marker.fileName;
-            const expectedCompletions = map[this.getMarkerName(marker)].completions;
+            const expectedCompletions = map[markerName].completions;
             const completionPosition = this._convertOffsetToPosition(filePath, marker.position);
 
             const result = await this.program.getCompletionsForPosition(
