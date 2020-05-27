@@ -964,6 +964,7 @@ export class Program {
             this._bindFile(sourceFileInfo);
 
             const referencesResult = sourceFileInfo.sourceFile.getDeclarationForPosition(
+                this._createSourceMapper(),
                 position,
                 this._evaluator,
                 token
@@ -1188,6 +1189,7 @@ export class Program {
             this._bindFile(sourceFileInfo);
 
             const referencesResult = sourceFileInfo.sourceFile.getDeclarationForPosition(
+                this._createSourceMapper(),
                 position,
                 this._evaluator,
                 token
