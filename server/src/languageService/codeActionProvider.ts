@@ -74,7 +74,10 @@ export class CodeActionProvider {
                     continue;
                 }
 
-                const title = `Add import ${result.name} from ${result.source}`;
+                const title = result.isImportFrom
+                    ? `Add import ${result.name} from ${result.source}`
+                    : `Add import ${result.name}`;
+
                 codeActions.push(
                     CodeAction.create(
                         title,

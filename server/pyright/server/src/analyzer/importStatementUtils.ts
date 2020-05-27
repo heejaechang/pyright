@@ -164,7 +164,7 @@ export function getTextEditsForAutoImportSymbolAddition(
 }
 
 export function getTextEditsForAutoImportInsertion(
-    symbolName: string,
+    symbolName: string | undefined,
     importStatements: ImportStatements,
     moduleName: string,
     importGroup: ImportGroup,
@@ -172,8 +172,8 @@ export function getTextEditsForAutoImportInsertion(
 ): TextEditAction[] {
     const textEditList: TextEditAction[] = [];
 
-    // We need to emit a new 'from import' statement.
-    let newImportStatement = `from ${moduleName} import ${symbolName}`;
+    // We need to emit a new 'from import' statement if symbolName is given. otherwise, use 'import' statement.
+    let newImportStatement = symbolName ? `from ${moduleName} import ${symbolName}` : `import ${moduleName}`;
     let insertionPosition: Position;
     if (importStatements.orderedImports.length > 0) {
         let insertBefore = true;
