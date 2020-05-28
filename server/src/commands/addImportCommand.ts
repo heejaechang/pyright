@@ -11,7 +11,7 @@ import { throwIfCancellationRequested } from '../../pyright/server/src/common/ca
 import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
 import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
 import { ServerCommand } from './commandController';
-import { addImportSimilarityLimit } from './commands';
+import { addImportSimilarityLimit, wellKnownAbbreviationMap } from './commands';
 
 export class AddImportCommand implements ServerCommand {
     constructor(private _ls: LanguageServerInterface) {}
@@ -29,7 +29,13 @@ export class AddImportCommand implements ServerCommand {
         const source = params.arguments[3];
 
         const workspace = await this._ls.getWorkspaceForFile(filePath);
-        const autoImports = workspace.serviceInstance.getAutoImports(filePath, range, addImportSimilarityLimit, token);
+        const autoImports = workspace.serviceInstance.getAutoImports(
+            filePath,
+            range,
+            addImportSimilarityLimit,
+            wellKnownAbbreviationMap,
+            token
+        );
         const result = autoImports.find((r) => r.name === name && r.source === source);
         if (!result) {
             return [];
@@ -41,7 +47,7 @@ export class AddImportCommand implements ServerCommand {
             ...result.edits.map((e) => {
                 return { filePath, range: e.range, replacementText: e.replacementText };
             }),
-            { filePath, range, replacementText: name },
+            { filePath, range, replacementText: result.alias ?? result.name },
         ]);
     }
 }

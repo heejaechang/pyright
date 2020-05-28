@@ -840,6 +840,7 @@ export class Program {
         filePath: string,
         range: Range,
         similarityLimit: number,
+        nameMap: Map<string, string> | undefined,
         token: CancellationToken
     ): AutoImportResult[] {
         const sourceFileInfo = this._sourceFileMap.get(filePath);
@@ -868,7 +869,7 @@ export class Program {
                 return [];
             }
 
-            const word = fileContents.substr(textRange.start, textRange.length);
+            const writtenWord = fileContents.substr(textRange.start, textRange.length);
             const map = this._buildModuleSymbolsMap(sourceFileInfo, token);
             const autoImporter = new AutoImporter(
                 this._configOptions,
@@ -880,9 +881,24 @@ export class Program {
 
             // Filter out any name that is already defined in the current scope.
             const currentScope = getScopeForNode(currentNode);
-            return autoImporter
-                .getAutoImportCandidates(word, similarityLimit, [], token)
-                .filter((r) => !currentScope.lookUpSymbolRecursive(r.name));
+
+            const results: AutoImportResult[] = [];
+            const translatedWord = nameMap?.get(writtenWord);
+            if (translatedWord) {
+                // No filter is needed since we only do exact match.
+                const exactMatch = 1;
+                results.push(
+                    ...autoImporter.getAutoImportCandidates(translatedWord, exactMatch, [], writtenWord, token)
+                );
+            }
+
+            results.push(
+                ...autoImporter
+                    .getAutoImportCandidates(writtenWord, similarityLimit, [], undefined, token)
+                    .filter((r) => !currentScope.lookUpSymbolRecursive(r.name))
+            );
+
+            return results;
         });
     }
 

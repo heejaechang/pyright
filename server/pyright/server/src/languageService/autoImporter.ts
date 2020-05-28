@@ -53,6 +53,7 @@ export interface AutoImportResult {
     symbol?: Symbol;
     source: string;
     edits: TextEditAction[];
+    alias?: string;
 }
 
 export class AutoImporter {
@@ -64,7 +65,13 @@ export class AutoImporter {
         private _moduleSymbolMap: ModuleSymbolMap
     ) {}
 
-    getAutoImportCandidates(word: string, similarityLimit: number, excludes: string[], token: CancellationToken) {
+    getAutoImportCandidates(
+        word: string,
+        similarityLimit: number,
+        excludes: string[],
+        aliasName: string | undefined,
+        token: CancellationToken
+    ) {
         const results: AutoImportResult[] = [];
 
         const importStatements = getTopLevelImports(this._parseResults.parseTree);
@@ -129,10 +136,18 @@ export class AutoImporter {
                     importStatements,
                     filePath,
                     importSource,
-                    importGroup
+                    importGroup,
+                    aliasName
                 );
 
-                results.push({ name, symbol, source: importSource, edits: autoImportTextEdits, isImportFrom: true });
+                results.push({
+                    name,
+                    symbol,
+                    source: importSource,
+                    edits: autoImportTextEdits,
+                    isImportFrom: true,
+                    alias: aliasName,
+                });
             });
 
             // See if this file should be offered as an implicit import.
@@ -195,11 +210,13 @@ export class AutoImporter {
                 importStatements,
                 filePath,
                 importSource,
-                importGroup
+                importGroup,
+                aliasName
             );
 
             results.push({
                 name: name,
+                alias: aliasName,
                 symbol: undefined,
                 source: importSource,
                 edits: autoImportTextEdits,
@@ -211,6 +228,10 @@ export class AutoImporter {
     }
 
     private _isSimilar(word: string, name: string, similarityLimit: number) {
+        if (similarityLimit === 1) {
+            return word === name;
+        }
+
         return word.length > 2
             ? StringUtils.computeCompletionSimilarity(word, name) > similarityLimit
             : word.length > 0 && name.startsWith(word);
@@ -252,13 +273,19 @@ export class AutoImporter {
         importStatements: ImportStatements,
         filePath: string,
         moduleName: string,
-        importGroup: ImportGroup
+        importGroup: ImportGroup,
+        aliasName: string | undefined
     ): TextEditAction[] {
         if (symbolName) {
             // Does an 'import from' statement already exist? If so, we'll reuse it.
             const importStatement = importStatements.mapByFilePath.get(filePath);
             if (importStatement && importStatement.node.nodeType === ParseNodeType.ImportFrom) {
-                return getTextEditsForAutoImportSymbolAddition(symbolName, importStatement, this._parseResults);
+                return getTextEditsForAutoImportSymbolAddition(
+                    symbolName,
+                    importStatement,
+                    this._parseResults,
+                    aliasName
+                );
             }
         }
 
@@ -267,7 +294,8 @@ export class AutoImporter {
             importStatements,
             moduleName,
             importGroup,
-            this._parseResults
+            this._parseResults,
+            aliasName
         );
     }
 }
