@@ -13,12 +13,13 @@
         "url": "https://github.com/Microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && cd pyright && npm run install:all && cd ..",
+        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && npm run build:getonnx && cd pyright && npm run install:all && cd ..",
         "start": "npm i && npm run build:server",
         "build": "npm run build:server && npm run installServer",
         "build:server": "tsc",
         "build:copyTypeshed": "node ./copyTypeshedFallback.js",
         "build:copyBundledStubs": "node ./copyBundledStubs.js",
+        "build:getonnx": "node ./build/getonnx.js",
         "installServer": "node ./customInstallServerIntoExtension.js ../client ./package.json ./tsconfig.json ./package-lock.json",
         "eslint": "eslint ./**/*.ts",
         "tslint": "tslint --project tsconfig.json --fix",
@@ -44,7 +45,7 @@
         "yauzl": "^2.10.0"
     },
     "optionalDependencies": {
-        "onnxruntime": "0.0.1-dev.20200429.2"
+        "onnxruntime": "0.0.1-dev.20200506.1"
     },
     "devDependencies": {
         "@types/chalk": "^2.2.0",
@@ -70,6 +71,7 @@
         "node-loader": "^0.6.0",
         "nyc": "^15.0.0",
         "shx": "^0.3.2",
+        "tar": "^6.0.2",
         "tmp": "^0.1.0",
         "ts-jest": "^25.5.1",
         "ts-loader": "^6.2.2",

@@ -69,6 +69,7 @@ describe('IntelliCode native modules init', () => {
     test('copy modules', () => {
         when(mockedPlatform.isBundle()).thenReturn(true);
         when(mockedPlatform.isOnnxSupported()).thenReturn(true);
+        when(mockedPlatform.getPlatformName()).thenReturn('win32');
 
         let call = 1;
         when(mockedFs.readdirEntriesSync(anyString())).thenCall(() => {
