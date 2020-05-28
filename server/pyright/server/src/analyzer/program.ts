@@ -1199,9 +1199,10 @@ export class Program {
                 return undefined;
             }
 
-            referencesResult.declarations = referencesResult.declarations.filter((d) =>
-                this._isUserCode(this._sourceFileMap.get(d.path))
-            );
+            if (referencesResult.declarations.some((d) => !this._isUserCode(this._sourceFileMap.get(d.path)))) {
+                // Some declarations come from non-user code, so do not allow rename
+                return undefined;
+            }
 
             if (referencesResult.declarations.length === 0) {
                 // There is no symbol we can rename

@@ -12,19 +12,14 @@
 
 // @filename: test.py
 //// import foo
-//// import os as [|foo|]
+//// import os as foo
 //// [|/*marker*/foo|] = 3
-//// def [|foo|](): pass
+//// def foo(): pass
 
-{
-    const ranges = helper.getRanges();
-
-    helper.verifyRename({
-        marker: {
-            newName: 'foo1',
-            changes: ranges.map((r) => {
-                return { filePath: r.fileName, range: helper.convertPositionRange(r), replacementText: 'foo1' };
-            }),
-        },
-    });
-}
+// one of the declarations is from site-packages, so do not rename
+helper.verifyRename({
+    marker: {
+        newName: 'foo1',
+        changes: [],
+    },
+});
