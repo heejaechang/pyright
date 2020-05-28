@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from .core import DataFrame, Series, Index
+from .core import DataFrame, Series, Index, _DType
 
 def assert_extension_array_equal(left: Any, right: Any,  check_dtype: bool = ..., check_less_precise: bool = ..., check_exact: bool = ...) -> None: ...
 def assert_frame_equal(left: DataFrame, right: DataFrame, check_like: Optional[bool] = ...) -> None: ...
