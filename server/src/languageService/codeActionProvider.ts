@@ -13,7 +13,7 @@ import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
 import { Range } from '../../pyright/server/src/common/textRange';
 import { WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
-import { addImportSimilarityLimit, Commands } from '../commands/commands';
+import { addImportSimilarityLimit, Commands, wellKnownAbbreviationMap } from '../commands/commands';
 
 export class CodeActionProvider {
     static async getCodeActionsForPosition(
@@ -63,6 +63,7 @@ export class CodeActionProvider {
                 filePath,
                 diagRange,
                 addImportSimilarityLimit,
+                wellKnownAbbreviationMap,
                 token
             );
 
@@ -74,10 +75,11 @@ export class CodeActionProvider {
                     continue;
                 }
 
-                const title = result.isImportFrom
+                let title = result.isImportFrom
                     ? `Add import ${result.name} from ${result.source}`
                     : `Add import ${result.name}`;
 
+                title = result.alias ? `${title} as ${result.alias}` : title;
                 codeActions.push(
                     CodeAction.create(
                         title,

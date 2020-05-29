@@ -36,8 +36,8 @@ export function prepareNativesForCurrentPlatform(fs: FileSystem, platform: Platf
             return; // File already copied;
         }
 
-        // TODO: change to 'onnxruntime/bin/platform'
-        const onnxBin = path.join(targetFolder, nativesRoot, onnxruntime);
+        // node_modules/onnxruntime/napi-v3/{win32|darwin|linux}/x64
+        const onnxBin = path.join(targetFolder, nativesRoot, onnxruntime, 'napi-v3', platform.getPlatformName(), 'x64');
         copyFiles(onnxBin, targetFolder, fs);
     } catch (e) {
         console.log(`Unable to prepare IntelliCode native binaries. Exception: ${e.message}`);

@@ -126,7 +126,8 @@ export function getTopLevelImports(parseTree: ModuleNode): ImportStatements {
 export function getTextEditsForAutoImportSymbolAddition(
     symbolName: string,
     importStatement: ImportStatement,
-    parseResults: ParseResults
+    parseResults: ParseResults,
+    aliasName?: string
 ) {
     const textEditList: TextEditAction[] = [];
 
@@ -153,9 +154,11 @@ export function getTextEditsForAutoImportSymbolAddition(
                 : importStatement.node.start + importStatement.node.length;
             const insertionPosition = convertOffsetToPosition(insertionOffset, parseResults.tokenizerOutput.lines);
 
+            const insertText = aliasName ? `${symbolName} as ${aliasName}` : symbolName;
+
             textEditList.push({
                 range: { start: insertionPosition, end: insertionPosition },
-                replacementText: priorImport ? ', ' + symbolName : symbolName + ', ',
+                replacementText: priorImport ? ', ' + insertText : insertText + ', ',
             });
         }
     }
@@ -168,12 +171,18 @@ export function getTextEditsForAutoImportInsertion(
     importStatements: ImportStatements,
     moduleName: string,
     importGroup: ImportGroup,
-    parseResults: ParseResults
+    parseResults: ParseResults,
+    aliasName?: string
 ): TextEditAction[] {
     const textEditList: TextEditAction[] = [];
 
     // We need to emit a new 'from import' statement if symbolName is given. otherwise, use 'import' statement.
-    let newImportStatement = symbolName ? `from ${moduleName} import ${symbolName}` : `import ${moduleName}`;
+    const importText = symbolName ? symbolName : moduleName;
+    const importTextWithAlias = aliasName ? `${importText} as ${aliasName}` : importText;
+    let newImportStatement = symbolName
+        ? `from ${moduleName} import ${importTextWithAlias}`
+        : `import ${importTextWithAlias}`;
+
     let insertionPosition: Position;
     if (importStatements.orderedImports.length > 0) {
         let insertBefore = true;

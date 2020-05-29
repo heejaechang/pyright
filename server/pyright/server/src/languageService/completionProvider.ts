@@ -844,6 +844,7 @@ export class CompletionProvider {
             priorWord,
             similarityLimit,
             completionList.items.filter((i) => !i.data?.autoImport).map((i) => i.label),
+            undefined,
             this._cancellationToken
         )) {
             if (result.symbol) {

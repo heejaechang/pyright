@@ -36,6 +36,7 @@ export class ModelZipAcquisionServiceImpl implements ModelZipAcquisitionService 
                 response.pipe(fs);
                 fs.on('finish', () => {
                     fs.close();
+                }).on('close', () => {
                     d.resolve(filePath);
                 });
             })

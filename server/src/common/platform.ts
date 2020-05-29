@@ -24,8 +24,7 @@ export class Platform {
     }
 
     isOnnxSupported(): boolean {
-        // TODO: update when ONNX is available on other platforms.
-        return this.isWindows() && this.is64();
+        return (this.isWindows() || this.isMac() || this.isLinux()) && this.is64();
     }
 
     isBundle(): boolean {
