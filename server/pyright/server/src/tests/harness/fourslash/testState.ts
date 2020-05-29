@@ -951,7 +951,7 @@ export class TestState {
             const position = this._convertOffsetToPosition(fileName, marker.position);
             const actual = this.program.getReferencesForPosition(fileName, position, true, CancellationToken.None);
 
-            assert.equal(expected.length, actual?.length ?? 0);
+            assert.equal(actual?.length ?? 0, expected.length);
 
             for (const r of expected) {
                 assert.equal(actual?.filter((d) => this._deepEqual(d, r)).length, 1);
@@ -979,7 +979,7 @@ export class TestState {
             const position = this._convertOffsetToPosition(fileName, marker.position);
             const actual = this.program.getDefinitionsForPosition(fileName, position, CancellationToken.None);
 
-            assert.equal(expected.length, actual?.length ?? 0);
+            assert.equal(actual?.length ?? 0, expected.length);
 
             for (const r of expected) {
                 assert.equal(actual?.filter((d) => this._deepEqual(d, r)).length, 1);
@@ -1013,7 +1013,7 @@ export class TestState {
                 CancellationToken.None
             );
 
-            assert.equal(expected.changes.length, actual?.length ?? 0);
+            assert.equal(actual?.length ?? 0, expected.changes.length);
 
             for (const c of expected.changes) {
                 assert.equal(actual?.filter((e) => this._deepEqual(e, c)).length, 1);
