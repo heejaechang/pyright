@@ -9,7 +9,6 @@ import * as path from 'path';
 import { assert } from '../pyright/server/src/common/debug';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { LogLevel, LogService } from '../src/common/logger';
-import { sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import {
     ModelFileName,
     ModelMetaDataFileName,
@@ -24,12 +23,7 @@ import { Zip } from './zip';
 const modelFilesExt = '.onnx';
 
 export class ModelLoader {
-    constructor(
-        private _fs: FileSystem,
-        private _zip: Zip,
-        private _logger?: LogService,
-        private _telemetry?: TelemetryService
-    ) {}
+    constructor(private _fs: FileSystem, private _zip: Zip, private _logger?: LogService) {}
 
     // Load deep learning model from a model zip file containing three files:
     // 1. *.onnx -- The model file in ONNX format
@@ -79,7 +73,6 @@ export class ModelLoader {
             this._logger?.log(LogLevel.Info, 'Successfully downloaded IntelliCode data.');
         } catch (e) {
             this._logger?.log(LogLevel.Error, `Failed to download IntelliCode data. Exception: ${e.stack}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
             return false;
         }
 
@@ -91,7 +84,6 @@ export class ModelLoader {
         } catch (error) {
             if (error.code !== 'EEXIST') {
                 this._logger?.log(LogLevel.Error, `Unable to create folder ${modelUnpackFolder}: ${error.code}`);
-                sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, error);
                 return false;
             }
         }
@@ -128,11 +120,9 @@ export class ModelLoader {
                 return JSON.parse(content);
             } catch (e) {
                 this._logger?.log(LogLevel.Error, `Unable to parse ${what}. Exception ${e.message} in ${e.stack}`);
-                sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
             }
         } catch (e) {
             this._logger?.log(LogLevel.Error, `Unable to read ${what}. Exception ${e.message} in ${e.stack}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
         }
         return undefined;
     }
@@ -150,7 +140,6 @@ export class ModelLoader {
             return callback();
         } catch (e) {
             this._logger?.log(LogLevel.Error, `${message} Exception ${e.message} in ${e.stack}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
             return undefined;
         }
     }
@@ -160,7 +149,6 @@ export class ModelLoader {
             return await callback();
         } catch (e) {
             this._logger?.log(LogLevel.Error, `${message} Exception ${e.message} in ${e.stack}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
             return undefined;
         }
     }

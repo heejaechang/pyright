@@ -16,7 +16,7 @@ import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/sr
 import { LogService } from '../../common/logger';
 import { Platform } from '../../common/platform';
 import { TelemetryService } from '../../common/telemetry';
-import { clientServerModelLocation, verifyErrorLog, verifyErrorTelemetry } from './testUtils';
+import { clientServerModelLocation, verifyErrorLog } from './testUtils';
 
 const platform = new Platform();
 
@@ -24,7 +24,6 @@ let mockedFs: FileSystem;
 let mockedLog: LogService;
 let mockedTelemetry: TelemetryService;
 let log: LogService;
-let telemetry: TelemetryService;
 let mas: ModelZipAcquisitionService;
 
 describe('IntelliCode extension', () => {
@@ -35,15 +34,14 @@ describe('IntelliCode extension', () => {
         mas = mock<ModelZipAcquisitionService>();
 
         log = instance(mockedLog);
-        telemetry = instance(mockedTelemetry);
     });
 
     test('disable', async () => {
         const ic = new IntelliCodeCompletionListExtension(
             log,
-            telemetry,
             instance(mockedFs),
             platform,
+            instance(mockedTelemetry),
             instance(mas),
             ''
         );
@@ -72,9 +70,9 @@ describe('IntelliCode extension', () => {
         when(mockedFs.getModulePath()).thenReturn('irrelevant');
         const ic = new IntelliCodeCompletionListExtension(
             log,
-            telemetry,
             instance(mockedFs),
             platform,
+            instance(mockedTelemetry),
             instance(mas),
             ''
         );
@@ -82,7 +80,6 @@ describe('IntelliCode extension', () => {
 
         // Should log errors since we didn't provide model zip.
         verifyErrorLog(mockedLog, 'Failed to download', 2);
-        verifyErrorTelemetry(mockedTelemetry);
     }
 
     const testEnableIntelliCodeExtensionName = 'enable';
@@ -104,7 +101,14 @@ describe('IntelliCode extension', () => {
         const mas = new ModelZipAcquisionServiceImpl(vfs);
 
         const modelUnpackFolder = path.join(__dirname, clientServerModelLocation);
-        const ic = new IntelliCodeCompletionListExtension(log, telemetry, vfs, platform, mas, modelUnpackFolder);
+        const ic = new IntelliCodeCompletionListExtension(
+            log,
+            vfs,
+            platform,
+            instance(mockedTelemetry),
+            mas,
+            modelUnpackFolder
+        );
         await ic.updateSettings(true);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();

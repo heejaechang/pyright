@@ -25,6 +25,7 @@ import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
+import { Commands as PyRightCommands } from './pyright/server/src/commands/commands';
 import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import { isString } from './pyright/server/src/common/core';
@@ -36,6 +37,7 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { CommandController } from './src/commands/commandController';
+import { Commands } from './src/commands/commands';
 import { VERSION } from './src/common/constants';
 import { LogLevel, LogService } from './src/common/logger';
 import { Platform } from './src/common/platform';
@@ -175,7 +177,22 @@ class PyRxServer extends LanguageServerBase {
         super.updateSettingsForAllWorkspaces();
     }
 
+    protected isLongRunningCommand(command: string): boolean {
+        // We should determine which commands are actually slow
+        // rather assuming they are all slow wholesale.
+        switch (command) {
+            case Commands.createTypeStub:
+            case PyRightCommands.createTypeStub:
+            case PyRightCommands.restartServer:
+                return true;
+        }
+        return false;
+    }
+
     protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
+        if (params.command.startsWith(this._intelliCode.completionListExtension.commandPrefix)) {
+            return this._intelliCode.completionListExtension.executeCommand(params.command, params.arguments, token);
+        }
         return this._controller.execute(params, token);
     }
 

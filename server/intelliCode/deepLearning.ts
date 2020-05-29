@@ -10,12 +10,18 @@ import { assert } from '../pyright/server/src/common/debug';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { LogLevel, LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
-import { sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
-import { PythiaModel } from './models';
+import { EditorInvocation, PythiaModel } from './models';
 import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';
 
 const LookbackTokenLength = 100;
+
+export interface DeepLearningResult {
+    recommendations: string[];
+    invocation: EditorInvocation | undefined;
+}
+
+const EmptyResult = { recommendations: [], invocation: undefined };
 
 export class DeepLearning {
     private _onnx: any; // require('onnxruntime')
@@ -24,8 +30,7 @@ export class DeepLearning {
     constructor(
         private readonly _model: PythiaModel,
         private readonly _platform: Platform,
-        private readonly _logger?: LogService,
-        private readonly _telemetry?: TelemetryService
+        private readonly _logger?: LogService
     ) {}
 
     async initialize(): Promise<any> {
@@ -60,22 +65,22 @@ export class DeepLearning {
         expressionWalker: ExpressionWalker,
         position: number,
         token: CancellationToken
-    ): Promise<string[]> {
+    ): Promise<DeepLearningResult> {
         if (!this._onnx) {
-            return []; // Unsupported platform
+            return EmptyResult; // Unsupported platform
         }
 
         const tg = new EditorLookBackTokenGenerator();
-        const editorInvoke = tg.generateLookbackTokens(ast, content, expressionWalker, position);
-        if (!editorInvoke) {
+        const invocation = tg.generateLookbackTokens(ast, content, expressionWalker, position);
+        if (!invocation) {
             this._logger?.log(LogLevel.Trace, 'IntelliCode: current invocation did not produce any meaningful tokens.');
-            return [];
+            return EmptyResult;
         }
 
         // Run the inference
         const recommendations: string[] = [];
         try {
-            const tokenIds = this.convertTokenToId(editorInvoke.lookbackTokens);
+            const tokenIds = this.convertTokenToId(invocation.lookbackTokens);
 
             const tensor1 = new this._onnx.Tensor('int32', tokenIds, [1, tokenIds.length]);
             const tensor2 = new this._onnx.Tensor('int32', [LookbackTokenLength], [1]);
@@ -86,7 +91,7 @@ export class DeepLearning {
 
             const rt = await this._session.run(input, ['top_k:1']);
             if (token?.isCancellationRequested) {
-                return [];
+                return EmptyResult;
             }
 
             const results = rt['top_k:1'];
@@ -100,9 +105,8 @@ export class DeepLearning {
             }
         } catch (e) {
             this._logger?.log(LogLevel.Error, `IntelliCode exception: ${e.stack}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
         }
-        return recommendations;
+        return { recommendations, invocation };
     }
 
     private convertTokenToId(lookbackTokens: string[]): number[] {

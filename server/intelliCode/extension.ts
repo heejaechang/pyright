@@ -12,15 +12,16 @@ import { CompletionListExtension, LanguageServiceExtension } from '../pyright/se
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { Duration } from '../pyright/server/src/common/timing';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
+import { Commands, IntelliCodeCompletionCommandPrefix } from '../src/commands/commands';
 import { LogLevel, LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
-import { sendExceptionTelemetry, TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
 import { ModelZipAcquisitionService, PythiaModel } from './models';
-// import { buildRecommendationsTelemetry } from './telemetry';
+import { buildRecommendationsTelemetry } from './telemetry';
 import { IntelliCodeConstants } from './types';
 import { getZip } from './zip';
 
@@ -44,9 +45,9 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
         this._telemetry = telemetry;
         this._icCompletionExtension = new IntelliCodeCompletionListExtension(
             logger,
-            telemetry,
             fs,
             platform,
+            telemetry,
             mas,
             modelUnpackFolder
         );
@@ -77,9 +78,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
     constructor(
         private readonly _logger: LogService,
-        private readonly _telemetry: TelemetryService,
         private readonly _fs: FileSystem,
         private readonly _platform: Platform,
+        private readonly _telemetry: TelemetryService,
         private readonly _mas: ModelZipAcquisitionService,
         private readonly _modelUnpackFolder: string
     ) {}
@@ -112,7 +113,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             return true;
         }
 
-        const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger, this._telemetry);
+        const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger);
         try {
             if (!this._model) {
                 this._model = await loader.loadModel(this._mas, this._modelUnpackFolder);
@@ -120,14 +121,13 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
             if (this._model) {
                 if (!this._deepLearning) {
-                    this._deepLearning = new DeepLearning(this._model, this._platform, this._logger, this._telemetry);
+                    this._deepLearning = new DeepLearning(this._model, this._platform, this._logger);
                 }
                 await this._deepLearning.initialize();
                 return true;
             }
         } catch (e) {
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
-            this._logger.log(LogLevel.Warning, `Failed to start IntelliCode. Exception: ${e.message} in ${e.stack}`);
+            this._logger.log(LogLevel.Warning, `Failed to start IntelliCode. Exception: ${e.stack}`);
         }
 
         this._failedToDownloadModel = true;
@@ -156,9 +156,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             ew.walk(ast);
 
             const completionItems = completionList.items;
-            const recommendations = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
-            if (recommendations.length > 0) {
-                this._logger?.log(LogLevel.Trace, `Recommendations: ${recommendations.join(', ')}`);
+            const result = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
+            if (result.recommendations.length > 0) {
+                this._logger?.log(LogLevel.Trace, `Recommendations: ${result.recommendations.join(', ')}`);
             }
 
             const memoryAfter = process.memoryUsage().heapUsed / 1024;
@@ -172,34 +172,49 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 return completionList;
             }
 
-            if (recommendations.length > 0) {
-                // applied =
-                this.applyModel(completionItems, recommendations);
+            let applied: string[] = [];
+            if (result.recommendations.length > 0) {
+                applied = this.applyModel(completionItems, result.recommendations);
             }
-            // this._telemetry.sendTelemetry(
-            //     buildRecommendationsTelemetry(
-            //         completionItems,
-            //         recommendations,
-            //         applied,
-            //         this._deepLearning.lastInvocation?.type,
-            //         ModelType.LSTM,
-            //         dt.getDurationInMilliseconds(),
-            //         memoryIncrease
-            //     )
-            // );
 
-            return completionList;
+            buildRecommendationsTelemetry(
+                completionItems,
+                result.recommendations,
+                applied,
+                result.invocation?.type,
+                this._model.metaData.Version,
+                dt.getDurationInMilliseconds(),
+                memoryIncrease
+            );
         } catch (e) {
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.EXCEPTION_IC, e);
+            this._logger?.log(LogLevel.Error, `Exception in IntelliCode: ${e.stack}`);
         }
         return completionList;
+    }
+
+    // Prefix to tell extension commands from others.
+    // For example, 'myextension'. Command name then
+    // should be 'myextension.command'.
+    get commandPrefix(): string {
+        return IntelliCodeCompletionCommandPrefix;
+    }
+
+    // Extension executes command attached to commited
+    // completion list item, if any.
+    async executeCommand(command: string, args: any[] | undefined, token: CancellationToken): Promise<void> {
+        if (command === Commands.intelliCodeCompletionItemCommand && args?.length === 1) {
+            const te = args[0] as TelemetryEvent;
+            this._telemetry.sendTelemetry(te);
+            return Promise.resolve();
+        }
     }
 
     // Takes source list of completions and supplied recommentations, then modifies
     // completion list in place, adding '*' to recommended items from the source list
     // and specifying sorting order in such a way so recommended items appear on top.
     // Returns number of items applied from recommentations.
-    private applyModel(completions: CompletionItem[], recommendations: string[]): number {
+    private applyModel(completions: CompletionItem[], recommendations: string[]): string[] {
+        const applied: string[] = [];
         const set = new Map<string, CompletionItem>(
             completions.filter((x) => x.label).map((v) => [v.label, v] as [string, CompletionItem])
         );
@@ -209,13 +224,16 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const completionItem = set.get(r);
             if (completionItem) {
                 this.updateCompletionItem(completionItem, count);
+                if (completionItem.insertText) {
+                    applied.push(completionItem.insertText);
+                }
                 if (count >= IntelliCodeConstants.MaxRecommendation) {
                     break;
                 }
                 count++;
             }
         }
-        return count;
+        return applied;
     }
 
     private updateCompletionItem(item: CompletionItem, rank: number): void {

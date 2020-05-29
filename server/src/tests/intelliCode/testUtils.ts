@@ -7,7 +7,7 @@ import 'jest-extended';
 
 import * as realFs from 'fs';
 import * as path from 'path';
-import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
+import { anyString, capture, instance, mock, verify, when } from 'ts-mockito';
 
 import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
@@ -17,7 +17,6 @@ import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSin
 import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
 import { ParseOptions, Parser, ParseResults } from '../../../pyright/server/src/parser/parser';
 import { LogLevel, LogService } from '../../common/logger';
-import { formatEventName, TelemetryEventName, TelemetryService } from '../../common/telemetry';
 
 export const clientServerModelLocation = '../../../../client/server/intelliCode/model';
 
@@ -87,11 +86,4 @@ export function verifyErrorLog(mockedLog: LogService, message: string, callNo?: 
     }
     expect(callArgs[0]).toEqual(LogLevel.Error);
     expect(callArgs[1]).toStartWith(message);
-}
-
-export function verifyErrorTelemetry(mockedTelemetry: TelemetryService): void {
-    verify(mockedTelemetry.sendTelemetry(anything())).once();
-    const [te] = capture(mockedTelemetry.sendTelemetry).first();
-    expect(te.EventName).toEqual(formatEventName(TelemetryEventName.EXCEPTION_IC));
-    expect(te.Properties['exception-name']).toStartWith('Error');
 }

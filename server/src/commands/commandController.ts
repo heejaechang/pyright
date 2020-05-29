@@ -45,6 +45,7 @@ export class CommandController extends PyrightCommandController {
             Commands.addMissingOptionalToParam,
             Commands.removeUnusedImport,
             Commands.addImport,
+            Commands.intelliCodeCompletionItemCommand,
         ];
     }
 

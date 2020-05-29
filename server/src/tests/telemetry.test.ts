@@ -10,7 +10,6 @@ import { IConnection, Telemetry } from 'vscode-languageserver';
 
 import {
     formatEventName,
-    sendExceptionTelemetry,
     sendMeasurementsTelemetry,
     TelemetryEvent,
     TelemetryEventName,
@@ -29,22 +28,6 @@ beforeEach(() => {
     const connection = instance(mockedConnection);
 
     ts = new TelemetryService(connection);
-});
-
-test('Telemetry: send exception', () => {
-    const e = new Error();
-    e.name = 'name';
-    e.stack = 'stack';
-    sendExceptionTelemetry(ts, TelemetryEventName.EXCEPTION, e);
-
-    const [arg] = capture(mockedTelemetry.logEvent).first();
-    const te = arg as TelemetryEvent;
-
-    verify(mockedTelemetry.logEvent(te)).once();
-    assert(te instanceof TelemetryEvent);
-    assert(te.EventName === formatEventName(TelemetryEventName.EXCEPTION));
-    assert(te.Properties['exception-name'] === 'name');
-    assert(te.Properties['exception-call-stack'] === 'stack');
 });
 
 test('Telemetry: send measurements', () => {
