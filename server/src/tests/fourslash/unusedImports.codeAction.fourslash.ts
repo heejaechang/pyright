@@ -11,7 +11,7 @@
 ////    pass
 
 // @filename: test.py
-//// import testLib as [|/*marker*/t|]l
+//// import testLib as [|/*marker*/tl|]
 
 {
     const positionRange = helper.getPositionRange(`marker`);
