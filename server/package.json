@@ -78,7 +78,8 @@
         "ts-mockito": "^2.5.0",
         "typescript": "^3.9.3",
         "webpack": "^4.43.0",
-        "webpack-cli": "^3.3.11"
+        "webpack-cli": "^3.3.11",
+        "webpack-obfuscator": "^0.28.2"
     },
     "types": "out/main.d.ts",
     "main": "out/main.js"

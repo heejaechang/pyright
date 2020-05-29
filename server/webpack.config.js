@@ -10,6 +10,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
+const JavaScriptObfuscator = require('webpack-obfuscator');
 
 const nodeModules = 'node_modules';
 const serverFolder = path.resolve(__dirname, '.');
@@ -63,5 +64,6 @@ module.exports = {
             NUGETPACKAGEVERSION: '',
         }),
         new CopyPlugin([{ from: `${onnxBin}`, to: onnxOut }]),
+        new JavaScriptObfuscator({ rotateStringArray: true }, []),
     ],
 };
