@@ -24,7 +24,16 @@ From the `server` folder of the repo run `npx webpack`.
 -   Clone [Python Extension](https://github.com/Microsoft/vscode-python)
 -   Create `nodeLanguageServer` subfolder
 -   Copy contents of `dist` folder to `nodeLanguageServer` subfolder in the Python extension.
--   Set `"python.languageServer": "Node"`
+-   Set these attributes in settings.json:
+
+```
+"python.languageServer": "Node"
+"python.downloadLanguageServer": false,
+"python.blobName": "d67e4491-7116-42e0-8d18-5394f74187ce",
+"python.analysis.downloadChannel": "daily",
+"python.packageName": "Python-Language-Server",
+```
+
 -   Launch the extension and open a Python file. The extension should then start PyRx language server.
 
 ## Debugging in VS Code Python extension
