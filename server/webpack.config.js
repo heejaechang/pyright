@@ -61,6 +61,7 @@ module.exports = {
     },
     plugins: [
         new webpack.EnvironmentPlugin({
+            MPLSV2_VERSION: '',
             NUGETPACKAGEVERSION: '',
         }),
         new CopyPlugin([{ from: `${onnxBin}`, to: onnxOut }]),

@@ -2,7 +2,7 @@
     "name": "pyrx",
     "displayName": "PyRx",
     "description": "PyRx extension to VS Code (FOR DEBUGGING ONLY)",
-    "version": "0.1.0",
+    "version": "0.0.0",
     "private": true,
     "license": "MIT",
     "author": {
