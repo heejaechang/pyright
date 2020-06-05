@@ -20,3 +20,5 @@ pythia/src/tests/data
 junit.xml
 coverage/
 coverage-merged/
+
+*.vsix

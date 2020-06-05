@@ -22,7 +22,7 @@
     "categories": [
         "Programming Languages"
     ],
-    "icon": "./images/icon.png",
+    "icon": "images/icon.png",
     "main": "./out/extension.js",
     "contributes": {},
     "scripts": {
@@ -38,16 +38,12 @@
         "@types/vscode": "^1.45.0",
         "@types/jest": "^25.2.3",
         "@types/node": "^13.13.9",
-        "@typescript-eslint/parser": "^2.34.0",
-        "@typescript-eslint/eslint-plugin": "^2.34.0",
-        "eslint": "^6.8.0",
-        "eslint-config-prettier": "^6.11.0",
         "jest": "^25.5.4",
         "jest-extended": "^0.11.5",
         "jest-junit": "^10.0.0",
-        "prettier": "2.0.4",
         "ts-jest": "^25.5.1",
         "ts-mockito": "^2.5.0",
-        "typescript": "^3.9.3"
+        "typescript": "^3.9.3",
+        "vsce": "^1.75.0"
     }
 }
