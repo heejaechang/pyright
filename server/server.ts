@@ -13,6 +13,7 @@ import {
     Command,
     ConfigurationItem,
     ExecuteCommandParams,
+    IConnection,
     RemoteConsole,
 } from 'vscode-languageserver';
 import { isMainThread } from 'worker_threads';
@@ -33,6 +34,7 @@ import * as debug from './pyright/server/src/common/debug';
 import { createFromRealFileSystem, FileSystem } from './pyright/server/src/common/fileSystem';
 import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
+import { ProgressReporter } from './pyright/server/src/common/progressReporter';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
@@ -65,7 +67,14 @@ class PyRxServer extends LanguageServerBase {
     constructor() {
         const rootDirectory = __dirname;
         const intelliCode = new IntelliCodeExtension();
-        super('Python', rootDirectory, VERSION, intelliCode, undefined, CommandController.supportedCommands());
+        super({
+            productName: 'Python',
+            rootDirectory,
+            version: VERSION,
+            extension: intelliCode,
+            supportedCommands: CommandController.supportedCommands(),
+            progressReporterFactory: reporterFactory,
+        });
 
         // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
@@ -236,6 +245,11 @@ class PyRxServer extends LanguageServerBase {
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
         super.onAnalysisCompletedHandler(results);
 
+        if (results.diagnostics.length === 0 && results.filesRequiringAnalysis > 0 && results.elapsedTime === 0) {
+            // This is not from actual analysis
+            return;
+        }
+
         const te = this._analysisTracker.updateTelemetry(results);
         if (te) {
             this._connection.telemetry.logEvent(te);
@@ -269,6 +283,27 @@ class PyRxServer extends LanguageServerBase {
         this._logger.level = pythonAnalysis?.logLevel ?? LogLevel.Info;
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
+}
+
+function reporterFactory(connection: IConnection): ProgressReporter {
+    return {
+        isEnabled(data: AnalysisResults): boolean {
+            // always enabled
+            return true;
+        },
+
+        begin(): void {
+            connection.sendNotification('python/beginProgress');
+        },
+
+        report(message: string): void {
+            connection.sendNotification('python/reportProgress', message);
+        },
+
+        end(): void {
+            connection.sendNotification('python/endProgress');
+        },
+    };
 }
 
 if (isMainThread) {

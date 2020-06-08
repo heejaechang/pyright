@@ -20,7 +20,7 @@ export class ProgressReporting implements Disposable {
 
     constructor(languageClient: LanguageClient) {
         languageClient.onReady().then(() => {
-            languageClient.onNotification('pyright/beginProgress', async () => {
+            languageClient.onNotification('python/beginProgress', async () => {
                 const progressPromise = new Promise<void>((resolve) => {
                     this._resolveProgress = resolve;
                 });
@@ -39,14 +39,14 @@ export class ProgressReporting implements Disposable {
                 this._primeTimeoutTimer();
             });
 
-            languageClient.onNotification('pyright/reportProgress', (message: string) => {
+            languageClient.onNotification('python/reportProgress', (message: string) => {
                 if (this._progress) {
                     this._progress.report({ message });
                     this._primeTimeoutTimer();
                 }
             });
 
-            languageClient.onNotification('pyright/endProgress', () => {
+            languageClient.onNotification('python/endProgress', () => {
                 this._clearProgress();
             });
         });
