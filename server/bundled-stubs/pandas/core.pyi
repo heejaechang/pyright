@@ -15,7 +15,6 @@ from typing import (
     List,
     NewType,
     Optional,
-    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -25,9 +24,9 @@ from typing import (
     overload,
 )
 if sys.version_info >= (3, 8):
-    from typing import Literal
+    from typing import Literal, Protocol
 else:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, Protocol
 
 import numpy as _np
 from pathlib import Path

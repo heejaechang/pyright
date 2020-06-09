@@ -8,11 +8,11 @@ and a lot of time series related APIs.
 """
 
 import sys
-from typing import Tuple, List, Union, IO, Iterable, Optional, Any, overload, Callable, Dict, Protocol, Sequence
+from typing import Tuple, List, Union, IO, Iterable, Optional, Any, overload, Callable, Dict, Sequence
 if sys.version_info >= (3, 8):
-    from typing import Literal
+    from typing import Literal, Protocol
 else:
-    from typing_extensions import Literal
+    from typing_extensions import Literal, Protocol
 from pathlib import Path
 import numpy as _np
 from . import testing
@@ -1559,3 +1559,8 @@ def to_numeric(arg: Any, errors: str = ..., downcast: Any = ...) -> Any: ...
 def to_timedelta(arg: Any, unit: str = ..., errors: str = ...) -> Any: ...
 def unique(values: Series[_DType]) -> _np.ndarray: ...
 def wide_to_long(df: DataFrame, stubnames: Any, i: Any, j: Any, sep: str = ..., suffix: str = ...) -> DataFrame: ...
+
+from . import errors
+from . import plotting
+from .api import types
+
