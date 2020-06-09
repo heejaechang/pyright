@@ -89,6 +89,7 @@ import {
 import {
     ClassMemberLookupFlags,
     containsUnknown,
+    derivesFromAnyOrUnknown,
     derivesFromClassRecursive,
     doForSubtypes,
     getDeclaredGeneratorReturnType,
@@ -164,7 +165,8 @@ export class Checker extends ParseTreeWalker {
         if (functionTypeResult) {
             // Report any unknown parameter types.
             node.parameters.forEach((param, index) => {
-                if (param.name) {
+                // Allow unknown param types if the param is named '_'.
+                if (param.name && param.name.value !== '_') {
                     const paramType = functionTypeResult.functionType.details.parameters[index].type;
                     if (
                         paramType.category === TypeCategory.Unknown ||
@@ -289,7 +291,7 @@ export class Checker extends ParseTreeWalker {
     }
 
     visitCall(node: CallNode): boolean {
-        this._evaluator.getType(node);
+        const returnType = this._evaluator.getType(node);
 
         this._validateIsInstanceCallNecessary(node);
 
@@ -300,6 +302,19 @@ export class Checker extends ParseTreeWalker {
                 Localizer.Diagnostic.defaultValueContainsCall(),
                 node
             );
+        }
+
+        // Is this calling a "NoReturn" function? If so, mark the remainder
+        // of the suite as unreachable.
+        if (returnType) {
+            if (isNoReturnType(returnType)) {
+                const suiteOrModule = ParseTreeUtils.getEnclosingSuiteOrModule(node);
+                if (suiteOrModule) {
+                    const start = node.start + node.length;
+                    const length = suiteOrModule.start + suiteOrModule.length - start;
+                    this._evaluator.addUnusedCode(suiteOrModule, { start, length });
+                }
+            }
         }
 
         return true;
@@ -1124,7 +1139,7 @@ export class Checker extends ParseTreeWalker {
             return transformTypeObjectToClass(subtype);
         });
 
-        if (isAnyOrUnknown(arg0Type)) {
+        if (derivesFromAnyOrUnknown(arg0Type)) {
             return;
         }
 

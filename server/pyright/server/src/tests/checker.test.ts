@@ -300,6 +300,12 @@ test('TypeConstraint11', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint12.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -970,6 +976,12 @@ test('UnnecessaryIsInstance1', () => {
     validateResults(analysisResults, 4);
 });
 
+test('UnnecessaryIsInstance2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('UnnecessaryIsSubclass1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1368,7 +1380,12 @@ test('Final2', () => {
 
 test('Final3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final3.py']);
-    validateResults(analysisResults, 14);
+    validateResults(analysisResults, 15);
+});
+
+test('Final4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final4.pyi']);
+    validateResults(analysisResults, 3);
 });
 
 test('InferredTypes1', () => {
@@ -1586,4 +1603,22 @@ test('Annotated1', () => {
     configOptions.defaultPythonVersion = PythonVersion.V39;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
     validateResults(analysisResults39, 0);
+});
+
+test('Circular1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circular1.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('TryExcept2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept2.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Decorator1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator1.py']);
+
+    validateResults(analysisResults, 0);
 });

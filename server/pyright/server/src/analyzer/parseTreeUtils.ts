@@ -512,6 +512,23 @@ export function getEnclosingFunction(node: ParseNode): FunctionNode | undefined 
     return undefined;
 }
 
+export function getEnclosingSuiteOrModule(node: ParseNode): SuiteNode | ModuleNode | undefined {
+    let curNode = node.parent;
+    while (curNode) {
+        if (curNode.nodeType === ParseNodeType.Suite) {
+            return curNode;
+        }
+
+        if (curNode.nodeType === ParseNodeType.Module) {
+            return curNode;
+        }
+
+        curNode = curNode.parent;
+    }
+
+    return undefined;
+}
+
 export function getEvaluationNodeForAssignmentExpression(
     node: AssignmentExpressionNode
 ): LambdaNode | FunctionNode | ModuleNode | undefined {
@@ -602,6 +619,42 @@ export function getExecutionScopeNode(node: ParseNode): ExecutionScopeNode {
     }
 
     return evaluationScope;
+}
+
+// PEP 591 spells out certain limited cases where an assignment target
+// can be annotated with a "Final" annotation. This function determines
+// whether Final is allowed for the specified node.
+export function isFinalAllowedForAssignmentTarget(targetNode: ExpressionNode): boolean {
+    // Simple names always support Final.
+    if (targetNode.nodeType === ParseNodeType.Name) {
+        return true;
+    }
+
+    // Member access expressions like "self.x" are permitted only
+    // within __init__ methods.
+    if (targetNode.nodeType === ParseNodeType.MemberAccess) {
+        if (targetNode.leftExpression.nodeType !== ParseNodeType.Name) {
+            return false;
+        }
+
+        const classNode = getEnclosingClass(targetNode);
+        if (!classNode) {
+            return false;
+        }
+
+        const methodNode = getEnclosingFunction(targetNode);
+        if (!methodNode) {
+            return false;
+        }
+
+        if (methodNode.name.value !== '__init__') {
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 export function isNodeContainedWithin(node: ParseNode, potentialContainer: ParseNode): boolean {
