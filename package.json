@@ -15,7 +15,7 @@
     },
     "scripts": {
         "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ../pythia && npm install && cd ../extension && npm install && cd ..",
-        "build": "npm run clean:pyright && npm run build:client && npm run build:server && npm build:extension",
+        "build": "npm run clean:pyright && npm run build:client && npm run build:server && npm run build:extension",
         "build:client": "cd client && npm run build && cd ..",
         "build:extension": "cd extension && npm run build && cd ..",
         "build:server": "cd server && npm run build && cd ..",
