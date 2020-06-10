@@ -13,10 +13,11 @@ out
 server/out/
 client/out/
 client/server/
-client/typeshed-fallback/
+extension/out/
+extension/server/
 pythia/out/
-pythia/src/tests/out
-pythia/src/tests/data
+pythia/src/tests/out/
+pythia/src/tests/data/
 junit.xml
 coverage/
 coverage-merged/

@@ -7,8 +7,8 @@
 const fsExtra = require('fs-extra');
 
 // Production mode
-fsExtra.emptyDirSync('../dist/bundled-stubs');
-fsExtra.copySync('./bundled-stubs', '../dist/bundled-stubs');
+fsExtra.emptyDirSync('../extension/server/bundled-stubs');
+fsExtra.copySync('./bundled-stubs', '../extension/server/bundled-stubs');
 
 // Debug mode
 fsExtra.emptyDirSync('../client/server/bundled-stubs');

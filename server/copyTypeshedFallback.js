@@ -7,8 +7,8 @@
 const fsExtra = require('fs-extra');
 
 // Production mode
-fsExtra.emptyDirSync('../dist/typeshed-fallback');
-fsExtra.copySync('./typeshed-fallback', '../dist/typeshed-fallback');
+fsExtra.emptyDirSync('../extension/server/typeshed-fallback');
+fsExtra.copySync('./typeshed-fallback', '../extension/server/typeshed-fallback');
 
 // Debug mode
 fsExtra.emptyDirSync('../client/server/typeshed-fallback');

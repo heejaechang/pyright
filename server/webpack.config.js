@@ -16,7 +16,7 @@ const nodeModules = 'node_modules';
 const serverFolder = path.resolve(__dirname, '.');
 const serverNodeModules = path.join(serverFolder, nodeModules);
 const onnxBin = path.join(serverNodeModules, 'onnxruntime', 'bin');
-const outputPath = path.resolve(__dirname, path.join(serverFolder, '..', 'dist'));
+const outputPath = path.resolve(__dirname, path.join(serverFolder, '..', 'extension', 'server'));
 const onnxOut = path.join(outputPath, 'native', 'onnxruntime');
 
 module.exports = {
