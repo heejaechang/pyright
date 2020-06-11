@@ -2,7 +2,7 @@
     "name": "mpls-new",
     "displayName": "MPLS_NEW",
     "description": "MPLS_NEW",
-    "version": "0.0.1",
+    "version": "0.0.0",
     "license": "Microsoft",
     "author": {
         "name": "Microsoft Corporation"
@@ -25,6 +25,9 @@
     "icon": "images/icon.png",
     "main": "./out/extension.js",
     "contributes": {},
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "scripts": {
         "vscode:prepublish": "cd .. && npm run package && cd extension && npm run compile",
         "build": "tsc",

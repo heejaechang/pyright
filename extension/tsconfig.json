@@ -11,9 +11,14 @@
 		"sourceMap": true,
 		"outDir": "out",
 		"rootDir": "src",
-		"strict": true
+		"strict": true,
+		"composite": true,
+		"declaration": true,
+		"resolveJsonModule": true
 	},
 	"exclude": [
-		"node_modules"
+		"node_modules",
+		"server",
+		"out"
 	]
 }
