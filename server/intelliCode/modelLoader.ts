@@ -6,14 +6,12 @@
 
 import * as path from 'path';
 
-import { assert } from '../pyright/server/src/common/debug';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { LogLevel, LogService } from '../src/common/logger';
 import {
     ModelFileName,
     ModelMetaDataFileName,
     ModelTokensFileName,
-    ModelZipAcquisitionService,
     ModelZipFileName,
     PythiaModel,
     PythiaModelMetaData,
@@ -29,12 +27,9 @@ export class ModelLoader {
     // 1. *.onnx -- The model file in ONNX format
     // 2. metadata.json -- The metadata file contains PythiaModelMetaData
     // 3. tokens.json -- The model vocabulary
-    async loadModel(
-        modelService: ModelZipAcquisitionService,
-        modelUnpackFolder: string
-    ): Promise<PythiaModel | undefined> {
+    async loadModel(modelZipPath: string, modelUnpackFolder: string): Promise<PythiaModel | undefined> {
         if (!this.isModelUnpacked(modelUnpackFolder)) {
-            if (!(await this.acquireModel(modelService, modelUnpackFolder))) {
+            if (!(await this.unpackModel(modelZipPath, modelUnpackFolder))) {
                 return undefined;
             }
         }
@@ -60,20 +55,9 @@ export class ModelLoader {
         };
     }
 
-    private async acquireModel(modelService: ModelZipAcquisitionService, modelUnpackFolder: string): Promise<boolean> {
+    private async unpackModel(modelZipPath: string, modelUnpackFolder: string): Promise<boolean> {
         if (this._fs.existsSync(path.join(modelUnpackFolder, ModelZipFileName))) {
             return true;
-        }
-        // Get path to the downloaded model zip file.
-        let modelZipFilePath: string;
-        try {
-            this._logger?.log(LogLevel.Info, 'Downloading IntelliCode data...');
-            modelZipFilePath = await modelService.getModel();
-            assert(modelZipFilePath !== undefined);
-            this._logger?.log(LogLevel.Info, 'Successfully downloaded IntelliCode data.');
-        } catch (e) {
-            this._logger?.log(LogLevel.Error, `Failed to download IntelliCode data. Exception: ${e.stack}`);
-            return false;
         }
 
         try {
@@ -89,7 +73,7 @@ export class ModelLoader {
         }
 
         const result = await this.tryExecuteAsync(
-            async () => await this._zip.unzip(modelZipFilePath, modelUnpackFolder!),
+            async () => await this._zip.unzip(modelZipPath, modelUnpackFolder!),
             'Unable to unpack IntelliCode data.'
         );
         if (!result || result === 0) {

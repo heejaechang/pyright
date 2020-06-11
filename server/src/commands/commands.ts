@@ -15,6 +15,7 @@ export enum Commands {
     addImport = 'python.addImport',
     // Command IntelliCode uses to track completion commit in telemetry. Not user-facing.
     intelliCodeCompletionItemCommand = 'python.intellicode.completionItemSelected',
+    intelliCodeLoadExtension = 'python.intellicode.loadLanguageServerExtension',
 }
 
 // We'll use a somewhat-arbitrary cutoff value here to determine

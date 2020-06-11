@@ -7,7 +7,7 @@
 import 'jest-extended';
 
 import * as path from 'path';
-import { instance, mock, when } from 'ts-mockito';
+import { instance, mock } from 'ts-mockito';
 import { CancellationToken } from 'vscode-languageserver';
 
 import { DeepLearning } from '../../../intelliCode/deepLearning';
@@ -17,7 +17,6 @@ import {
     ModelFileName,
     ModelMetaDataFileName,
     ModelTokensFileName,
-    ModelZipAcquisitionService,
     ModelZipFileName,
 } from '../../../intelliCode/models';
 import { Zip } from '../../../intelliCode/zip';
@@ -35,11 +34,10 @@ describe('IntelliCode deep learning', () => {
         const fs = createFromRealFileSystem();
         const mockedZip = mock<Zip>();
         const loader = new ModelLoader(fs, instance(mockedZip));
+        modelZipFolderPath = path.resolve(path.join(__dirname, '../../../intelliCode/model/model.zip'));
 
-        const mas = mock<ModelZipAcquisitionService>();
-        modelZipFolderPath = path.join(__dirname, '../../../intelliCode/model');
-
-        if (!fs.existsSync(path.join(modelZipFolderPath, ModelZipFileName))) {
+        const modelZipPath = path.join(modelZipFolderPath, ModelZipFileName);
+        if (!fs.existsSync(modelZipPath)) {
             modelZipFolderPath = undefined;
             return;
         }
@@ -49,14 +47,12 @@ describe('IntelliCode deep learning', () => {
             return;
         }
 
-        when(mas.getModel()).thenReturn(Promise.resolve(modelZipFolderPath));
-
         const modelUnpackFolder = path.join(__dirname, clientServerModelLocation);
         expect(fs.existsSync(path.join(modelUnpackFolder, ModelFileName)));
         expect(fs.existsSync(path.join(modelUnpackFolder, ModelMetaDataFileName)));
         expect(fs.existsSync(path.join(modelUnpackFolder, ModelTokensFileName)));
 
-        const model = await loader.loadModel(instance(mas), modelUnpackFolder);
+        const model = await loader.loadModel(modelZipPath, modelUnpackFolder);
         expect(model).toBeDefined();
 
         deepLearning = new DeepLearning(model!, platform);

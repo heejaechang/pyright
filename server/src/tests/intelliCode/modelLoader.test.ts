@@ -23,7 +23,7 @@ import { getZip, Zip } from '../../../intelliCode/zip';
 import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
 import { LogService } from '../../common/logger';
 import { TelemetryService } from '../../common/telemetry';
-import { mockModelService, prepareTestModel, verifyErrorLog } from './testUtils';
+import { getTestModel, verifyErrorLog } from './testUtils';
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
@@ -46,12 +46,12 @@ describe('IntelliCode model loader', () => {
 
         try {
             // Copy model zip to a temp folder elsewhere
-            const modelService = prepareTestModel(tmpFolder.name);
+            const modelZipPath = getTestModel();
             const icFolder = path.join(tmpFolder.name, ModelSubFolder);
 
             const vfs = createFromRealFileSystem();
             const ml = new ModelLoader(vfs, getZip(vfs), log);
-            const m = await ml.loadModel(modelService, icFolder);
+            const m = await ml.loadModel(modelZipPath, icFolder);
 
             expect(m).toBeDefined();
             expect(m!.metaData.LicenseTerm.length).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ describe('IntelliCode model loader', () => {
 
         const mockedZip = mock<Zip>();
         const ml = new ModelLoader(fs, instance(mockedZip), log);
-        await ml.loadModel(mockModelService(modelFolder), intelliCodeFolder);
+        await ml.loadModel(getTestModel(), intelliCodeFolder);
 
         verify(mockedFs.existsSync(metadataFile)).once();
         verify(mockedFs.existsSync(tokensFile)).once();
@@ -98,36 +98,36 @@ describe('IntelliCode model loader', () => {
 
         when(mockedZip.unzip(anyString(), anyString())).thenThrow(makeError());
         const ml = new ModelLoader(instance(mockedFs), instance(mockedZip), log);
-        await ml.loadModel(mockModelService(modelFolder), modelFolder);
+        await ml.loadModel(getTestModel(), modelFolder);
 
-        verifyErrorLog(mockedLog, 'Unable to unpack', 3);
+        verifyErrorLog(mockedLog, 'Unable to unpack');
     });
 
     test('no files in folder', async () => {
         when(mockedFs.readdirSync(anyString())).thenReturn([]);
-        await verifyLogOnError(instance(mockedFs), 'Unable to find', 3);
+        await verifyLogOnError(instance(mockedFs), 'Unable to find');
     });
 
     test('unable to read JSON', async () => {
         when(mockedFs.readFileText(anyString(), anyString())).thenThrow(makeError());
         when(mockedFs.readdirSync(anyString())).thenReturn(['1.onnx']);
 
-        await verifyLogOnError(instance(mockedFs), 'Unable to read', 3);
+        await verifyLogOnError(instance(mockedFs), 'Unable to read');
     });
 
     test('unable to parse JSON', async () => {
         when(mockedFs.readFileText(anyString(), anyString())).thenReturn(Promise.resolve('***'));
         when(mockedFs.readdirSync(anyString())).thenReturn(['1.onnx']);
 
-        await verifyLogOnError(instance(mockedFs), 'Unable to parse', 3);
+        await verifyLogOnError(instance(mockedFs), 'Unable to parse');
     });
 });
 
-async function verifyLogOnError(fs: FileSystem, message: string, callNo: number): Promise<void> {
+async function verifyLogOnError(fs: FileSystem, message: string): Promise<void> {
     const mockedZip = mock<Zip>();
     when(mockedZip.unzip(anyString(), anyString())).thenReturn(Promise.resolve(3));
 
     const ml = new ModelLoader(fs, instance(mockedZip), log);
-    await ml.loadModel(mockModelService(modelFolder), modelFolder);
-    verifyErrorLog(mockedLog, message, callNo);
+    await ml.loadModel(getTestModel(), modelFolder);
+    verifyErrorLog(mockedLog, message);
 }

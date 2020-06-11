@@ -8,6 +8,7 @@ import '../pyright/server/src/common/extensions';
 import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
 
 import { ConfigOptions } from '../pyright/server/src/common/configOptions';
+import { assert } from '../pyright/server/src/common/debug';
 import { CompletionListExtension, LanguageServiceExtension } from '../pyright/server/src/common/extensibility';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { Duration } from '../pyright/server/src/common/timing';
@@ -20,7 +21,7 @@ import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
-import { ModelZipAcquisitionService, PythiaModel } from './models';
+import { PythiaModel } from './models';
 import { buildRecommendationsTelemetry } from './telemetry';
 import { IntelliCodeConstants } from './types';
 import { getZip } from './zip';
@@ -39,7 +40,6 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
         telemetry: TelemetryService,
         fs: FileSystem,
         platform: Platform,
-        mas: ModelZipAcquisitionService,
         modelUnpackFolder: string
     ): void {
         this._telemetry = telemetry;
@@ -48,7 +48,6 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
             fs,
             platform,
             telemetry,
-            mas,
             modelUnpackFolder
         );
     }
@@ -71,25 +70,26 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
 }
 
 export class IntelliCodeCompletionListExtension implements CompletionListExtension {
-    private _model: PythiaModel | undefined;
     private _deepLearning: DeepLearning | undefined;
     private _enable = true;
-    private _failedToDownloadModel = false;
+    private _modelZipPath: string;
 
     constructor(
         private readonly _logger: LogService,
         private readonly _fs: FileSystem,
         private readonly _platform: Platform,
         private readonly _telemetry: TelemetryService,
-        private readonly _mas: ModelZipAcquisitionService,
         private readonly _modelUnpackFolder: string
     ) {}
+
+    // Public for test access
+    model: PythiaModel | undefined;
 
     get enabled(): boolean {
         return this._enable;
     }
 
-    async updateSettings(enable: boolean): Promise<boolean> {
+    async updateSettings(enable: boolean): Promise<void> {
         // First 'enable' comes when settings are retrieved after LS initialization.
         // When IntelliCode is not enabled, do nothing. If IntelliCode is enabled,
         // but model has not been downloaded yet or deep learning engine has not been
@@ -108,30 +108,12 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         }
 
         this._enable = enable;
-        if (!enable || this._failedToDownloadModel) {
+        if (enable && this._modelZipPath) {
+            await this.loadModel();
+        } else {
             this._deepLearning = undefined;
-            return true;
+            this.model = undefined;
         }
-
-        const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger);
-        try {
-            if (!this._model) {
-                this._model = await loader.loadModel(this._mas, this._modelUnpackFolder);
-            }
-
-            if (this._model) {
-                if (!this._deepLearning) {
-                    this._deepLearning = new DeepLearning(this._model, this._platform, this._logger);
-                }
-                await this._deepLearning.initialize();
-                return true;
-            }
-        } catch (e) {
-            this._logger.log(LogLevel.Warning, `Failed to start IntelliCode. Exception: ${e.stack}`);
-        }
-
-        this._failedToDownloadModel = true;
-        return false;
     }
 
     async updateCompletionList(
@@ -142,7 +124,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         options: ConfigOptions,
         token: CancellationToken
     ): Promise<CompletionList> {
-        if (!this._enable || !this._model || !this._deepLearning || completionList.items.length === 0) {
+        if (!this._enable || !this.model || !this._deepLearning || completionList.items.length === 0) {
             return completionList;
         }
 
@@ -182,7 +164,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 result.recommendations,
                 applied,
                 result.invocation?.type,
-                this._model.metaData.Version,
+                this.model.metaData.Version,
                 dt.getDurationInMilliseconds(),
                 memoryIncrease
             );
@@ -202,10 +184,31 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
     // Extension executes command attached to commited
     // completion list item, if any.
     async executeCommand(command: string, args: any[] | undefined, token: CancellationToken): Promise<void> {
-        if (command === Commands.intelliCodeCompletionItemCommand && args?.length === 1) {
-            const te = args[0] as TelemetryEvent;
-            this._telemetry.sendTelemetry(te);
-            return Promise.resolve();
+        switch (command) {
+            case Commands.intelliCodeCompletionItemCommand:
+                assert(args?.length === 1);
+                if (args?.length === 1) {
+                    const te = args[0] as TelemetryEvent;
+                    this._telemetry.sendTelemetry(te);
+                    return Promise.resolve();
+                }
+                break;
+            case Commands.intelliCodeLoadExtension:
+                assert(Array.isArray(args));
+                assert(args?.length === 1);
+                if (args?.length === 1) {
+                    assert(args[0]);
+                    const modelZipPath = args[0].modelPath;
+                    assert(typeof modelZipPath === 'string');
+                    if (typeof modelZipPath === 'string') {
+                        this._logger?.log(LogLevel.Trace, `IntelliCode model ${modelZipPath}`);
+                        this._modelZipPath = modelZipPath;
+                        if (this.enabled) {
+                            return this.loadModel();
+                        }
+                    }
+                }
+                break;
         }
     }
 
@@ -247,5 +250,24 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         item.label = `${IntelliCodeConstants.UnicodeStar}${item.label}`;
         item.sortText = `0.${rank}`;
         item.preselect = rank === 0;
+    }
+
+    private async loadModel(): Promise<void> {
+        if (!this.enabled || this.model || !this._modelZipPath) {
+            return;
+        }
+        try {
+            const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger);
+            this.model = await loader.loadModel(this._modelZipPath, this._modelUnpackFolder);
+
+            if (this.model) {
+                if (!this._deepLearning) {
+                    this._deepLearning = new DeepLearning(this.model, this._platform, this._logger);
+                }
+                await this._deepLearning.initialize();
+            }
+        } catch (e) {
+            this._logger.log(LogLevel.Warning, `Failed to load IntelliCode model. Exception: ${e.stack}`);
+        }
     }
 }

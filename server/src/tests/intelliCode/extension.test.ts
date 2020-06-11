@@ -7,111 +7,106 @@ import 'jest-extended';
 
 import * as realFs from 'fs';
 import * as path from 'path';
-import { anyString, anything, instance, mock, verify, when } from 'ts-mockito';
+import { anyString, anything, instance, mock, verify } from 'ts-mockito';
+import { CancellationToken } from 'vscode-languageserver';
 
 import { IntelliCodeCompletionListExtension } from '../../../intelliCode/extension';
-import { ModelZipAcquisionServiceImpl } from '../../../intelliCode/modelAcquisitionService';
-import { ModelFileName, ModelZipAcquisitionService } from '../../../intelliCode/models';
+import { ModelFileName } from '../../../intelliCode/models';
 import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
+import { CommandController } from '../../commands/commandController';
+import { Commands, IntelliCodeCompletionCommandPrefix } from '../../commands/commands';
 import { LogService } from '../../common/logger';
 import { Platform } from '../../common/platform';
 import { TelemetryService } from '../../common/telemetry';
-import { clientServerModelLocation, verifyErrorLog } from './testUtils';
+import { clientServerModelLocation, getTestModel } from './testUtils';
 
 const platform = new Platform();
+const modelUnpackFolder = path.resolve(path.join(__dirname, clientServerModelLocation));
+const modelFile = path.join(modelUnpackFolder, ModelFileName);
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
 let mockedTelemetry: TelemetryService;
 let log: LogService;
-let mas: ModelZipAcquisitionService;
 
 describe('IntelliCode extension', () => {
     beforeEach(() => {
         mockedFs = mock<FileSystem>();
         mockedLog = mock<LogService>();
         mockedTelemetry = mock<TelemetryService>();
-        mas = mock<ModelZipAcquisitionService>();
 
         log = instance(mockedLog);
     });
 
     test('disable', async () => {
-        const ic = new IntelliCodeCompletionListExtension(
-            log,
-            instance(mockedFs),
-            platform,
-            instance(mockedTelemetry),
-            instance(mas),
-            ''
-        );
+        const ic = makeICExtension(createFromRealFileSystem(), modelUnpackFolder);
+        deleteCachedModel();
         await ic.updateSettings(false);
-        // There should not be any exceptions even that fs is just a mock.
+
         verify(mockedTelemetry.sendTelemetry(anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
+        expect(realFs.existsSync(modelFile)).toBeFalse();
     });
 
-    const testModelDownloadFailedName = 'enable, failed to download model';
-    if (platform.isOnnxSupported()) {
-        test(testModelDownloadFailedName, async () => {
-            await testModelDownloadFailed();
-        });
-    } else {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        test.skip(testModelDownloadFailedName, () => {});
-    }
-
-    async function testModelDownloadFailed(): Promise<void> {
-        when(mas.getModel()).thenReject({
-            name: 'Error',
-            message: 'Failed to download',
-        });
-
-        when(mockedFs.getModulePath()).thenReturn('irrelevant');
-        const ic = new IntelliCodeCompletionListExtension(
-            log,
-            instance(mockedFs),
-            platform,
-            instance(mockedTelemetry),
-            instance(mas),
-            ''
-        );
-        await ic.updateSettings(true);
-
-        // Should log errors since we didn't provide model zip.
-        verifyErrorLog(mockedLog, 'Failed to download', 2);
-    }
-
-    const testEnableIntelliCodeExtensionName = 'enable';
-    if (platform.isOnnxSupported()) {
-        test(
-            testEnableIntelliCodeExtensionName,
-            async () => {
-                await testEnableIntelliCodeExtension();
-            },
-            60000 // Long timeout since model has to be downloaded.
-        );
-    } else {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        test.skip(testEnableIntelliCodeExtensionName, () => {});
-    }
-
-    async function testEnableIntelliCodeExtension() {
-        const vfs = createFromRealFileSystem();
-        const mas = new ModelZipAcquisionServiceImpl(vfs);
-
-        const modelUnpackFolder = path.join(__dirname, clientServerModelLocation);
-        const ic = new IntelliCodeCompletionListExtension(
-            log,
-            vfs,
-            platform,
-            instance(mockedTelemetry),
-            mas,
-            modelUnpackFolder
-        );
+    test('enable, no model', async () => {
+        const ic = makeICExtension(createFromRealFileSystem(), modelUnpackFolder);
+        deleteCachedModel();
         await ic.updateSettings(true);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
-        expect(realFs.existsSync(path.join(modelUnpackFolder, ModelFileName))).toBeTrue();
+        verify(mockedLog.log(anything(), anyString())).never();
+        expect(realFs.existsSync(modelFile)).toBeFalse();
+    });
+
+    test('enable, with model', async () => {
+        const ic = makeICExtension(createFromRealFileSystem(), modelUnpackFolder);
+        deleteCachedModel();
+        await executeICCommand(ic, getTestModel());
+        await ic.updateSettings(true);
+
+        verify(mockedTelemetry.sendTelemetry(anything())).never();
+        expect(realFs.existsSync(modelFile)).toBeTrue();
+    });
+
+    test('command prefix', async () => {
+        const ic = makeICExtension(instance(mockedFs), '');
+        // Prefix is hardcoded here. If it changes, IntelliCode extension must be updated.
+        expect(IntelliCodeCompletionCommandPrefix).toEqual('python.intellicode.');
+        expect(ic.commandPrefix).toEqual('python.intellicode.');
+    });
+
+    test('command is supported', async () => {
+        expect(CommandController.supportedCommands()).toContain(Commands.intelliCodeLoadExtension);
+        expect(CommandController.supportedCommands()).toContain(Commands.intelliCodeCompletionItemCommand);
+    });
+
+    test('IC command loads model', async () => {
+        const ic = makeICExtension(createFromRealFileSystem(), modelUnpackFolder);
+        deleteCachedModel();
+        await executeICCommand(ic, getTestModel());
+
+        expect(ic.model).toBeDefined();
+        expect(path.dirname(ic.model!.onnxModelPath)).toEqual(modelUnpackFolder);
+        expect(path.basename(ic.model!.onnxModelPath)).toEqual(ModelFileName);
+    });
+
+    function makeICExtension(fs: FileSystem, modelUnpackFolder: string): IntelliCodeCompletionListExtension {
+        return new IntelliCodeCompletionListExtension(log, fs, platform, instance(mockedTelemetry), modelUnpackFolder);
+    }
+
+    function deleteCachedModel(): void {
+        if (realFs.existsSync(modelFile)) {
+            realFs.unlinkSync(modelFile);
+        }
+    }
+
+    async function executeICCommand(ic: IntelliCodeCompletionListExtension, modelPath: string): Promise<void> {
+        const command = ic.executeCommand(
+            Commands.intelliCodeLoadExtension,
+            [{ modelPath: modelPath }],
+            CancellationToken.None
+        );
+        expect(command).toBeDefined();
+        await command;
     }
 });

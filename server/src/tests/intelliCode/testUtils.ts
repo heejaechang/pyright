@@ -5,13 +5,12 @@
  */
 import 'jest-extended';
 
-import * as realFs from 'fs';
 import * as path from 'path';
-import { anyString, capture, instance, mock, verify, when } from 'ts-mockito';
+import { anyString, capture, verify } from 'ts-mockito';
 
 import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
-import { EditorInvocation, ModelZipAcquisitionService, ModelZipFileName } from '../../../intelliCode/models';
+import { EditorInvocation, ModelZipFileName } from '../../../intelliCode/models';
 import { EditorLookBackTokenGenerator } from '../../../intelliCode/tokens/editorTokenGenerator';
 import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSink';
 import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
@@ -55,35 +54,13 @@ export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]): void {
     expect(keys).toIncludeSameMembers(expected);
 }
 
-// Copy IntelliCode model zip file from test data location to the specified folder (typically temp).
-// Return mock of the ModelZipAcquisitionService that provides path to the 'downloaded' zip file.
-export function prepareTestModel(dstFolderName: string): ModelZipAcquisitionService {
+export function getTestModel(): string {
     const srcFolder = process.cwd();
-    const testModelPath = path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', ModelZipFileName);
-
-    realFs.mkdirSync(dstFolderName, { recursive: true });
-    const modelZip = path.join(dstFolderName, ModelZipFileName);
-    realFs.copyFileSync(testModelPath, modelZip);
-
-    return mockModelService(modelZip);
+    return path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', ModelZipFileName);
 }
 
-export function mockModelService(modelZip: string): ModelZipAcquisitionService {
-    const modelService = mock<ModelZipAcquisitionService>();
-    when(modelService.getModel()).thenReturn(Promise.resolve(modelZip));
-    return instance(modelService);
-}
-
-export function verifyErrorLog(mockedLog: LogService, message: string, callNo?: number): void {
+export function verifyErrorLog(mockedLog: LogService, message: string): void {
     verify(mockedLog.log(LogLevel.Error, anyString())).once();
-    let callArgs: any;
-    if (!callNo || callNo === 1) {
-        callArgs = capture(mockedLog.log).first();
-    } else if (callNo === 2) {
-        callArgs = capture(mockedLog.log).second();
-    } else if (callNo === 3) {
-        callArgs = capture(mockedLog.log).third();
-    }
+    const callArgs = capture(mockedLog.log).first();
     expect(callArgs[0]).toEqual(LogLevel.Error);
-    expect(callArgs[1]).toStartWith(message);
 }

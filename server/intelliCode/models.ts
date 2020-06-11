@@ -53,10 +53,3 @@ export interface PythiaModel {
     tokenIdMap: Map<string, number>;
     tokens: string[];
 }
-
-// TODO: this interface is temporary and will be replaced by the actual
-// acquisition service from an npm module provided by the IntelliCode team.
-export interface ModelZipAcquisitionService {
-    // TODO: provide progress reposting facilities.
-    getModel(): Promise<string>;
-}

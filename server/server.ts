@@ -20,7 +20,6 @@ import { isMainThread } from 'worker_threads';
 
 import { BackgroundAnalysis } from './backgroundAnalysis';
 import { IntelliCodeExtension } from './intelliCode/extension';
-import { ModelZipAcquisionServiceImpl } from './intelliCode/modelAcquisitionService';
 import { ModelSubFolder } from './intelliCode/models';
 import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
@@ -66,6 +65,8 @@ class PyRxServer extends LanguageServerBase {
 
     constructor() {
         const rootDirectory = __dirname;
+        // IntelliCode needs to be passed down as extension to the language server
+        // but it cannot be initialized here as super() was not called yet.
         const intelliCode = new IntelliCodeExtension();
         super({
             productName: 'Python',
@@ -100,15 +101,10 @@ class PyRxServer extends LanguageServerBase {
         // IntelliCode may be enabled or disabled depending on user settings.
         // We don't know the state here since settings haven't been accessed yet.
         this._intelliCode = intelliCode;
+        // Initialize IntelliCode. This does not start it since it needs path
+        // to the model which will come later from the IntelliCode extension.
         const icModelSubfolder = path.join(this.fs.getModulePath(), ModelSubFolder);
-        intelliCode.initialize(
-            this._logger,
-            this._telemetry,
-            this.fs,
-            this._platform,
-            new ModelZipAcquisionServiceImpl(this.fs),
-            icModelSubfolder
-        );
+        this._intelliCode.initialize(this._logger, this._telemetry, this.fs, this._platform, icModelSubfolder);
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
