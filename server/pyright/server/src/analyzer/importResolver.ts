@@ -394,7 +394,7 @@ export class ImportResolver {
             // We get the relative path(s) of the stub to its import root(s),
             // in theory there can be more than one, then look for source
             // files in all the import roots using the same relative path(s).
-            const importRootPaths = this.getImportRoots(execEnv);
+            const importRootPaths = this.getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ true);
 
             const relativeStubPaths: string[] = [];
             for (const importRootPath of importRootPaths) {
@@ -502,13 +502,24 @@ export class ImportResolver {
         return { moduleName: '', importType: ImportType.Local, isLocalTypingsFile };
     }
 
-    getImportRoots(execEnv: ExecutionEnvironment) {
+    getImportRoots(execEnv: ExecutionEnvironment, useTypeshedVersionedFolders: boolean) {
         const importFailureInfo: string[] = [];
         const roots = [];
 
+        const pythonVersion = execEnv.pythonVersion;
+        const minorVersion = pythonVersion & 0xff;
+        const versionFolders = ['2and3', '3'];
+        if (minorVersion > 0) {
+            versionFolders.push(versionToString(0x300 + minorVersion));
+        }
+
         const stdTypesheds = this._getTypeshedPath(true, execEnv, importFailureInfo);
         if (stdTypesheds) {
-            roots.push(stdTypesheds);
+            if (useTypeshedVersionedFolders) {
+                roots.push(...versionFolders.map((vf) => combinePaths(stdTypesheds, vf)));
+            } else {
+                roots.push(stdTypesheds);
+            }
         }
 
         roots.push(execEnv.root);
@@ -520,7 +531,11 @@ export class ImportResolver {
 
         const typesheds = this._getTypeshedPath(false, execEnv, importFailureInfo);
         if (typesheds) {
-            roots.push(typesheds);
+            if (useTypeshedVersionedFolders) {
+                roots.push(...versionFolders.map((vf) => combinePaths(typesheds, vf)));
+            } else {
+                roots.push(typesheds);
+            }
         }
 
         const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
