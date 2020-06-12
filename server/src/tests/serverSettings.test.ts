@@ -23,7 +23,7 @@ test('default stubPath', () => {
 
     const serverSettings: ServerSettings = {};
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert(normalizeSlashes('/typing'), workspace.serviceInstance.test_configOptions.stubPath);
+    assert(normalizeSlashes('/typing'), workspace.serviceInstance.getConfigOptions().stubPath);
 });
 
 test('custom stubPath', () => {
@@ -33,7 +33,7 @@ test('custom stubPath', () => {
         stubPath: normalizeSlashes('/stubs'),
     };
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert(normalizeSlashes('/stubs'), workspace.serviceInstance.test_configOptions.stubPath);
+    assert(normalizeSlashes('/stubs'), workspace.serviceInstance.getConfigOptions().stubPath);
 });
 
 test('duplicated stubPath', () => {
@@ -47,7 +47,7 @@ test('duplicated stubPath', () => {
     fs.writeFileSync(normalizeSlashes('/mspythonconfig.json'), '{ "typingsPath": "/typing" }');
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert(normalizeSlashes('/typing'), workspace.serviceInstance.test_configOptions.stubPath);
+    assert(normalizeSlashes('/typing'), workspace.serviceInstance.getConfigOptions().stubPath);
 });
 
 test('expand workspace folder stubPath', () => {
@@ -58,7 +58,7 @@ test('expand workspace folder stubPath', () => {
     };
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert(normalizeSlashes('/stubs'), workspace.serviceInstance.test_configOptions.stubPath);
+    assert(normalizeSlashes('/stubs'), workspace.serviceInstance.getConfigOptions().stubPath);
 });
 
 test('diagnostic overrides', () => {
@@ -71,7 +71,7 @@ test('diagnostic overrides', () => {
     };
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert('warning', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
+    assert('warning', workspace.serviceInstance.getConfigOptions().diagnosticRuleSet.reportGeneralTypeIssues);
 });
 
 test('diagnostic overrides information', () => {
@@ -84,7 +84,7 @@ test('diagnostic overrides information', () => {
     };
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert('information', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
+    assert('information', workspace.serviceInstance.getConfigOptions().diagnosticRuleSet.reportGeneralTypeIssues);
 });
 
 test('mspythonconfig information support', () => {
@@ -94,7 +94,7 @@ test('mspythonconfig information support', () => {
     fs.writeFileSync(normalizeSlashes('/mspythonconfig.json'), '{ "reportGeneralTypeIssues": "information" }');
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, {});
-    assert('information', workspace.serviceInstance.test_configOptions.diagnosticRuleSet.reportGeneralTypeIssues);
+    assert('information', workspace.serviceInstance.getConfigOptions().diagnosticRuleSet.reportGeneralTypeIssues);
 });
 
 function createWorkspaceInstance(fs?: FileSystem): WorkspaceServiceInstance {

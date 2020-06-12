@@ -466,6 +466,35 @@ export class ImportResolver {
         return { moduleName: '', importType: ImportType.Local, isLocalTypingsFile };
     }
 
+    getImportRoots(execEnv: ExecutionEnvironment) {
+        const importFailureInfo: string[] = [];
+        const roots = [];
+
+        const stdTypesheds = this._getTypeshedPath(true, execEnv, importFailureInfo);
+        if (stdTypesheds) {
+            roots.push(stdTypesheds);
+        }
+
+        roots.push(execEnv.root);
+        roots.push(...execEnv.extraPaths);
+
+        if (this._configOptions.stubPath) {
+            roots.push(this._configOptions.stubPath);
+        }
+
+        const typesheds = this._getTypeshedPath(false, execEnv, importFailureInfo);
+        if (typesheds) {
+            roots.push(typesheds);
+        }
+
+        const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
+        if (pythonSearchPaths.length > 0) {
+            roots.push(...pythonSearchPaths);
+        }
+
+        return roots;
+    }
+
     private _lookUpResultsInCache(
         execEnv: ExecutionEnvironment,
         importName: string,

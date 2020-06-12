@@ -40,6 +40,7 @@ import {
     AutoImporter,
     AutoImportResult,
     buildModuleSymbolsMap,
+    ImportNameMap,
     ModuleSymbolMap,
 } from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
@@ -841,6 +842,7 @@ export class Program {
         range: Range,
         similarityLimit: number,
         nameMap: Map<string, string> | undefined,
+        importMap: ImportNameMap | undefined,
         token: CancellationToken
     ): AutoImportResult[] {
         const sourceFileInfo = this._sourceFileMap.get(filePath);
@@ -876,7 +878,8 @@ export class Program {
                 sourceFile.getFilePath(),
                 this._importResolver,
                 parseTree,
-                map
+                map,
+                importMap
             );
 
             // Filter out any name that is already defined in the current scope.

@@ -7,6 +7,7 @@
 
 import { CancellationToken, CodeAction, CodeActionKind, Command } from 'vscode-languageserver';
 
+import { PackageScanner } from '../../packageScanner';
 import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
@@ -56,6 +57,11 @@ export class CodeActionProvider {
         if (unknownSymbolDiags.length > 0) {
             const diagRange = unknownSymbolDiags[0].range;
 
+            const configOptions = workspace.serviceInstance.getConfigOptions();
+            const importMap = PackageScanner.getScanner(workspace, token).getImportNameMap(
+                configOptions.findExecEnvironment(filePath)
+            );
+
             // This requires binding, but binding doesn't allow cancellation.
             // If that becomes a problem, we need to either make binding cancellable or
             // precalculate all necessary information when diagnostics are generated
@@ -64,6 +70,7 @@ export class CodeActionProvider {
                 diagRange,
                 addImportSimilarityLimit,
                 wellKnownAbbreviationMap,
+                importMap,
                 token
             );
 

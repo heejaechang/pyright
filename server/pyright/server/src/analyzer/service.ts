@@ -40,6 +40,7 @@ import {
 } from '../common/pathUtils';
 import { DocumentRange, Position, Range } from '../common/textRange';
 import { timingStats } from '../common/timing';
+import { ImportNameMap } from '../languageService/autoImporter';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { AnalysisCompleteCallback } from './analysis';
@@ -175,9 +176,10 @@ export class AnalyzerService {
         range: Range,
         similarityLimit: number,
         nameMap: Map<string, string> | undefined,
+        importMap: ImportNameMap | undefined,
         token: CancellationToken
     ) {
-        return this._program.getAutoImports(filePath, range, similarityLimit, nameMap, token);
+        return this._program.getAutoImports(filePath, range, similarityLimit, nameMap, importMap, token);
     }
 
     getDefinitionForPosition(
@@ -264,6 +266,10 @@ export class AnalyzerService {
         return this._backgroundAnalysisProgram.getDiagnosticsForRange(filePath, range, token);
     }
 
+    getConfigOptions() {
+        return this._configOptions;
+    }
+
     getImportResolver(): ImportResolver {
         return this._backgroundAnalysisProgram.importResolver;
     }
@@ -279,10 +285,6 @@ export class AnalyzerService {
     }
 
     // test only APIs
-    get test_configOptions() {
-        return this._configOptions;
-    }
-
     get test_program() {
         return this._program;
     }
