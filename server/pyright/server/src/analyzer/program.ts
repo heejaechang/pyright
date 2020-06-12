@@ -17,7 +17,7 @@ import {
 } from 'vscode-languageserver';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
-import { ConfigOptions } from '../common/configOptions';
+import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
 import { isDebugMode } from '../common/core';
 import { assert } from '../common/debug';
@@ -956,8 +956,9 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             return sourceFileInfo.sourceFile.getDefinitionsForPosition(
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 position,
                 this._evaluator,
                 token
@@ -979,8 +980,9 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             const referencesResult = sourceFileInfo.sourceFile.getDeclarationForPosition(
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 position,
                 this._evaluator,
                 token
@@ -1087,8 +1089,9 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             return sourceFileInfo.sourceFile.getHoverForPosition(
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 position,
                 this._evaluator,
                 token
@@ -1132,6 +1135,7 @@ export class Program {
         let completionList = this._runEvaluatorWithCancellationToken(token, () => {
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             return sourceFileInfo.sourceFile.getCompletionsForPosition(
                 position,
                 workspacePath,
@@ -1139,7 +1143,7 @@ export class Program {
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 token
             );
@@ -1177,12 +1181,13 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             sourceFileInfo.sourceFile.resolveCompletionItem(
                 this._configOptions,
                 this._importResolver,
                 this._lookUpImport,
                 this._evaluator,
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 () => this._buildModuleSymbolsMap(sourceFileInfo, token),
                 completionItem,
                 token
@@ -1204,8 +1209,9 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             const referencesResult = sourceFileInfo.sourceFile.getDeclarationForPosition(
-                this._createSourceMapper(),
+                this._createSourceMapper(execEnv),
                 position,
                 this._evaluator,
                 token
@@ -1421,9 +1427,10 @@ export class Program {
         return false;
     }
 
-    private _createSourceMapper() {
+    private _createSourceMapper(execEnv: ExecutionEnvironment) {
         const sourceMapper = new SourceMapper(
             this._importResolver,
+            execEnv,
             this._evaluator,
             (stubFilePath: string, implFilePath: string) => {
                 const stubFileInfo = this._sourceFileMap.get(stubFilePath);

@@ -93,6 +93,17 @@ export class PyrxImportResolver extends ImportResolver {
         return usage;
     }
 
+    getImportRoots(execEnv: ExecutionEnvironment) {
+        const roots = super.getImportRoots(execEnv);
+
+        const bundled = getBundledTypeStubsPath(this.fileSystem.getModulePath());
+        if (bundled) {
+            roots.push(bundled);
+        }
+
+        return roots;
+    }
+
     protected _addResultsToCache(
         execEnv: ExecutionEnvironment,
         importName: string,

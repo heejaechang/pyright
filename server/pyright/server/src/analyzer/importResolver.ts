@@ -13,14 +13,17 @@ import { FileSystem } from '../common/fileSystem';
 import {
     changeAnyExtension,
     combinePaths,
+    containsPath,
     ensureTrailingDirectorySeparator,
     getDirectoryPath,
     getFileExtension,
     getFileName,
     getFileSystemEntries,
     getPathComponents,
+    getRelativePathFromDirectory,
     isDirectory,
     isFile,
+    resolvePaths,
     stripFileExtension,
     stripTrailingDirectorySeparator,
 } from '../common/pathUtils';
@@ -351,7 +354,7 @@ export class ImportResolver {
     }
 
     // Returns the implementation file(s) for the given stub file.
-    getSourceFilesFromStub(stubFilePath: string): string[] {
+    getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment): string[] {
         const sourceFilePaths: string[] = [];
 
         // When ImportResolver resolves an import to a stub file, a second resolve is done
@@ -381,6 +384,39 @@ export class ImportResolver {
                 sourceFilePaths.push(sourceFilePath);
             }
         }
+
+        if (sourceFilePaths.length === 0) {
+            // The stub and the source file may have the same name, but be located
+            // in different folder hierarchies.
+            // Example:
+            // <stubPath>\package\module.pyi
+            // <site-packages>\package\module.py
+            // We get the relative path(s) of the stub to its import root(s),
+            // in theory there can be more than one, then look for source
+            // files in all the import roots using the same relative path(s).
+            const importRootPaths = this.getImportRoots(execEnv);
+
+            const relativeStubPaths: string[] = [];
+            for (const importRootPath of importRootPaths) {
+                if (containsPath(importRootPath, stubFilePath, true)) {
+                    const relativeStubPath = getRelativePathFromDirectory(importRootPath, stubFilePath, true);
+                    if (relativeStubPath) {
+                        relativeStubPaths.push(relativeStubPath);
+                    }
+                }
+            }
+
+            for (const relativeStubPath of relativeStubPaths) {
+                for (const importRootPath of importRootPaths) {
+                    const absoluteStubPath = resolvePaths(importRootPath, relativeStubPath);
+                    const absoluteSourcePath = changeAnyExtension(absoluteStubPath, '.py');
+                    if (this.fileSystem.existsSync(absoluteSourcePath)) {
+                        sourceFilePaths.push(absoluteSourcePath);
+                    }
+                }
+            }
+        }
+
         return sourceFilePaths;
     }
 
@@ -394,7 +430,7 @@ export class ImportResolver {
 
         const importFailureInfo: string[] = [];
 
-        // Is this ia stdlib typeshed path?
+        // Is this a stdlib typeshed path?
         const stdLibTypeshedPath = this._getTypeshedPath(true, execEnv, importFailureInfo);
         if (stdLibTypeshedPath) {
             moduleName = this._getModuleNameFromPath(stdLibTypeshedPath, filePath, true);
@@ -464,6 +500,35 @@ export class ImportResolver {
 
         // We didn't find any module name.
         return { moduleName: '', importType: ImportType.Local, isLocalTypingsFile };
+    }
+
+    getImportRoots(execEnv: ExecutionEnvironment) {
+        const importFailureInfo: string[] = [];
+        const roots = [];
+
+        const stdTypesheds = this._getTypeshedPath(true, execEnv, importFailureInfo);
+        if (stdTypesheds) {
+            roots.push(stdTypesheds);
+        }
+
+        roots.push(execEnv.root);
+        roots.push(...execEnv.extraPaths);
+
+        if (this._configOptions.stubPath) {
+            roots.push(this._configOptions.stubPath);
+        }
+
+        const typesheds = this._getTypeshedPath(false, execEnv, importFailureInfo);
+        if (typesheds) {
+            roots.push(typesheds);
+        }
+
+        const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
+        if (pythonSearchPaths.length > 0) {
+            roots.push(...pythonSearchPaths);
+        }
+
+        return roots;
     }
 
     private _lookUpResultsInCache(
