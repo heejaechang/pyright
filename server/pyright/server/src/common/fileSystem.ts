@@ -13,6 +13,7 @@
 // * NOTE * except tests, this should be only file that import "fs"
 import * as chokidar from 'chokidar';
 import * as fs from 'fs';
+import * as os from 'os';
 
 import { ConsoleInterface, NullConsole } from './console';
 import { createDeferred } from './deferred';
@@ -63,6 +64,7 @@ export interface FileSystem {
     // Async I/O
     readFile(path: string): Promise<Buffer>;
     readFileText(path: string, encoding?: string): Promise<string>;
+    tmpdir(): string;
 }
 
 export interface FileWatcherProvider {
@@ -175,6 +177,10 @@ class RealFileSystem implements FileSystem {
             }
         });
         return d.promise;
+    }
+
+    tmpdir() {
+        return os.tmpdir();
     }
 }
 

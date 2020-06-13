@@ -5,6 +5,7 @@
  * resolution of additional type stub paths.
  */
 
+import { PackageScanner } from './packageScanner';
 import { ImportedModuleDescriptor, ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
@@ -85,6 +86,9 @@ export class PyrxImportResolver extends ImportResolver {
         }
         this._importMetrics = new ImportMetrics();
         super.invalidateCache();
+
+        // Invalidate PackageScanner cache
+        PackageScanner.invalidateCache();
     }
 
     getAndResetImportMetrics(): ImportMetrics {
