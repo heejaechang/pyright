@@ -410,6 +410,12 @@ test('Function5', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Function6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function6.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
@@ -716,6 +722,12 @@ test('Loops3', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Loops4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Constants1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constants1.py']);
 
@@ -766,6 +778,12 @@ test('ListComprehension3', () => {
 
 test('ListComprehension4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['listComprehension4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('ListComprehension5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['listComprehension5.py']);
 
     validateResults(analysisResults, 0);
 });
@@ -1353,6 +1371,11 @@ test('Import9', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Import10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import10.py']);
+    validateResults(analysisResults, 1);
+});
+
 test('Overload1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload1.py']);
     validateResults(analysisResults, 2);
@@ -1619,6 +1642,12 @@ test('TryExcept2', () => {
 
 test('Decorator1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator1.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Decorator2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator2.py']);
 
     validateResults(analysisResults, 0);
 });
