@@ -34,7 +34,7 @@
         "prettier": "prettier -c ."
     },
     "devDependencies": {
-        "@types/node": "^13.13.9",
+        "@types/node": "^13.13.12",
         "@typescript-eslint/eslint-plugin": "^2.34.0",
         "@typescript-eslint/parser": "^2.34.0",
         "del-cli": "^3.0.1",
@@ -45,7 +45,7 @@
         "nan": "^2.14.1",
         "prettier": "2.0.4",
         "syncpack": "^5.0.1",
-        "typescript": "^3.9.3"
+        "typescript": "^3.9.5"
     },
     "main": "index.js",
     "bin": {
