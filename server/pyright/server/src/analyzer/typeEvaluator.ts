@@ -993,7 +993,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             // because these errors will already be reported as unknown
             // parameters.
             decoratorCall = getTypeFromCallWithBaseType(
-                node.leftExpression,
+                node,
                 argList,
                 decoratorCall,
                 undefined,
@@ -1009,7 +1009,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         ];
 
         return getTypeFromCallWithBaseType(
-            node.leftExpression,
+            node,
             argList,
             decoratorCall,
             undefined,
@@ -1652,38 +1652,47 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     if (variableNameNode && variableTypeEvaluator) {
                         const variableName = variableNameNode.value;
 
-                        // Create a new data class entry, but defer evaluation of the type until
-                        // we've compiled the full list of data class entries for this class. This
-                        // allows us to handle circular references in types.
-                        const dataClassEntry: DataClassEntry = {
-                            name: variableName,
-                            hasDefault: hasDefaultValue,
-                            type: UnknownType.create(),
-                        };
-                        localEntryTypeEvaluator.push({ entry: dataClassEntry, evaluator: variableTypeEvaluator });
+                        // Don't include class vars. PEP 557 indicates that they shouldn't
+                        // be considered data class entries.
+                        const variableSymbol = classType.details.fields.get(variableName);
+                        if (!variableSymbol?.isClassVar()) {
+                            // Create a new data class entry, but defer evaluation of the type until
+                            // we've compiled the full list of data class entries for this class. This
+                            // allows us to handle circular references in types.
+                            const dataClassEntry: DataClassEntry = {
+                                name: variableName,
+                                hasDefault: hasDefaultValue,
+                                type: UnknownType.create(),
+                            };
+                            localEntryTypeEvaluator.push({ entry: dataClassEntry, evaluator: variableTypeEvaluator });
 
-                        // Add the new entry to the local entry list.
-                        let insertIndex = localDataClassEntries.findIndex((e) => e.name === variableName);
-                        if (insertIndex >= 0) {
-                            localDataClassEntries[insertIndex] = dataClassEntry;
-                        } else {
-                            localDataClassEntries.push(dataClassEntry);
-                        }
+                            // Add the new entry to the local entry list.
+                            let insertIndex = localDataClassEntries.findIndex((e) => e.name === variableName);
+                            if (insertIndex >= 0) {
+                                localDataClassEntries[insertIndex] = dataClassEntry;
+                            } else {
+                                localDataClassEntries.push(dataClassEntry);
+                            }
 
-                        // Add the new entry to the full entry list.
-                        insertIndex = fullDataClassEntries.findIndex((p) => p.name === variableName);
-                        if (insertIndex >= 0) {
-                            fullDataClassEntries[insertIndex] = dataClassEntry;
-                        } else {
-                            fullDataClassEntries.push(dataClassEntry);
-                            insertIndex = fullDataClassEntries.length - 1;
-                        }
+                            // Add the new entry to the full entry list.
+                            insertIndex = fullDataClassEntries.findIndex((p) => p.name === variableName);
+                            if (insertIndex >= 0) {
+                                fullDataClassEntries[insertIndex] = dataClassEntry;
+                            } else {
+                                fullDataClassEntries.push(dataClassEntry);
+                                insertIndex = fullDataClassEntries.length - 1;
+                            }
 
-                        // If we've already seen a entry with a default value defined,
-                        // all subsequent entries must also have default values.
-                        const firstDefaultValueIndex = fullDataClassEntries.findIndex((p) => p.hasDefault);
-                        if (!hasDefaultValue && firstDefaultValueIndex >= 0 && firstDefaultValueIndex < insertIndex) {
-                            addError(Localizer.Diagnostic.dataClassFieldWithDefault(), variableNameNode);
+                            // If we've already seen a entry with a default value defined,
+                            // all subsequent entries must also have default values.
+                            const firstDefaultValueIndex = fullDataClassEntries.findIndex((p) => p.hasDefault);
+                            if (
+                                !hasDefaultValue &&
+                                firstDefaultValueIndex >= 0 &&
+                                firstDefaultValueIndex < insertIndex
+                            ) {
+                                addError(Localizer.Diagnostic.dataClassFieldWithDefault(), variableNameNode);
+                            }
                         }
                     }
                 });
@@ -6509,8 +6518,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     function getTypeFromListComprehension(node: ListComprehensionNode): TypeResult {
         const elementType = getElementTypeFromListComprehension(node);
 
+        const isAsync = node.comprehensions.some((comp) => {
+            return comp.nodeType === ParseNodeType.ListComprehensionFor && comp.isAsync;
+        });
         let type: Type = UnknownType.create();
-        const builtInIteratorType = getTypingType(node, 'Generator');
+        const builtInIteratorType = getTypingType(node, isAsync ? 'AsyncGenerator' : 'Generator');
 
         if (builtInIteratorType && builtInIteratorType.category === TypeCategory.Class) {
             type = ObjectType.create(ClassType.cloneForSpecialization(builtInIteratorType, [elementType]));
@@ -9344,8 +9356,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
                             // Set the cache entry to undefined before evaluating the
                             // expression in case it depends on itself. This will prevent
-                            // an infinite loop.
-                            setCacheEntry(curFlowNode, undefined, /* isIncomplete */ false);
+                            // an infinite loop. If there was already a cached entry
+                            // marked as incomplete, mark it as complete; this is needed
+                            // for certain circular cases like "int: int = 4".
+                            setCacheEntry(curFlowNode, undefined, /* isIncomplete */ !cachedEntry?.isIncomplete);
                             const flowType = evaluateAssignmentFlowNode(assignmentFlowNode);
                             return setCacheEntry(curFlowNode, flowType, /* isIncomplete */ false);
                         }
@@ -10820,7 +10834,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     try {
                         let type = getInferredTypeOfDeclaration(decl);
 
-                        popSymbolResolution(symbol);
+                        if (popSymbolResolution(symbol)) {
+                            isResolutionCyclical = true;
+                        }
 
                         if (type) {
                             const isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
