@@ -12,6 +12,7 @@ import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
 import { FileSystem } from '../common/fileSystem';
 import {
     changeAnyExtension,
+    combinePathComponents,
     combinePaths,
     containsPath,
     ensureTrailingDirectorySeparator,
@@ -20,7 +21,7 @@ import {
     getFileName,
     getFileSystemEntries,
     getPathComponents,
-    getRelativePathFromDirectory,
+    getRelativePathComponentsFromDirectory,
     isDirectory,
     isFile,
     resolvePaths,
@@ -399,9 +400,22 @@ export class ImportResolver {
             const relativeStubPaths: string[] = [];
             for (const importRootPath of importRootPaths) {
                 if (containsPath(importRootPath, stubFilePath, true)) {
-                    const relativeStubPath = getRelativePathFromDirectory(importRootPath, stubFilePath, true);
-                    if (relativeStubPath) {
-                        relativeStubPaths.push(relativeStubPath);
+                    const parts = getRelativePathComponentsFromDirectory(importRootPath, stubFilePath, true);
+
+                    // Note that relative paths have an empty parts[0]
+                    if (parts.length > 1) {
+                        // Handle the case where the symbol was resolved to a stubs package
+                        // rather than the real package. We'll strip off the "-stubs" suffix
+                        // in this case.
+                        const stubsSuffix = '-stubs';
+                        if (parts[1].endsWith(stubsSuffix)) {
+                            parts[1] = parts[1].substr(0, parts[1].length - stubsSuffix.length);
+                        }
+
+                        const relativeStubPath = combinePathComponents(parts);
+                        if (relativeStubPath) {
+                            relativeStubPaths.push(relativeStubPath);
+                        }
                     }
                 }
             }
@@ -409,9 +423,28 @@ export class ImportResolver {
             for (const relativeStubPath of relativeStubPaths) {
                 for (const importRootPath of importRootPaths) {
                     const absoluteStubPath = resolvePaths(importRootPath, relativeStubPath);
-                    const absoluteSourcePath = changeAnyExtension(absoluteStubPath, '.py');
+                    let absoluteSourcePath = changeAnyExtension(absoluteStubPath, '.py');
                     if (this.fileSystem.existsSync(absoluteSourcePath)) {
                         sourceFilePaths.push(absoluteSourcePath);
+                    } else {
+                        const filePathWithoutExtension = stripFileExtension(absoluteSourcePath);
+
+                        if (filePathWithoutExtension.endsWith('__init__')) {
+                            // Did not match: <root>/package/__init__.py
+                            // Try equivalent: <root>/package.py
+                            absoluteSourcePath =
+                                filePathWithoutExtension.substr(0, filePathWithoutExtension.length - 9) + '.py';
+                            if (this.fileSystem.existsSync(absoluteSourcePath)) {
+                                sourceFilePaths.push(absoluteSourcePath);
+                            }
+                        } else {
+                            // Did not match: <root>/package.py
+                            // Try equivalent: <root>/package/__init__.py
+                            absoluteSourcePath = combinePaths(filePathWithoutExtension, '__init__.py');
+                            if (this.fileSystem.existsSync(absoluteSourcePath)) {
+                                sourceFilePaths.push(absoluteSourcePath);
+                            }
+                        }
                     }
                 }
             }
