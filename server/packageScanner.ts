@@ -168,7 +168,9 @@ export class PackageScanner {
     }
 
     private _getRoots(execEnv: ExecutionEnvironment): string[] {
-        return this._importResolver.getImportRoots(execEnv).filter((r) => r !== execEnv.root);
+        return this._importResolver
+            .getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ false)
+            .filter((r) => r !== execEnv.root);
     }
 
     private get _fs() {

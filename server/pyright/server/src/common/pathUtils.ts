@@ -452,6 +452,15 @@ export function getRelativePathFromDirectory(
     to: string,
     getCanonicalFileNameOrIgnoreCase: GetCanonicalFileName | boolean
 ) {
+    const pathComponents = getRelativePathComponentsFromDirectory(fromDirectory, to, getCanonicalFileNameOrIgnoreCase);
+    return combinePathComponents(pathComponents);
+}
+
+export function getRelativePathComponentsFromDirectory(
+    fromDirectory: string,
+    to: string,
+    getCanonicalFileNameOrIgnoreCase: GetCanonicalFileName | boolean
+) {
     debug.assert(
         getRootLength(fromDirectory) > 0 === getRootLength(to) > 0,
         'Paths must either both be absolute or both be relative'
@@ -466,7 +475,7 @@ export function getRelativePathFromDirectory(
         getCanonicalFileName
     );
 
-    return combinePathComponents(pathComponents);
+    return pathComponents;
 }
 
 /**
