@@ -12,10 +12,10 @@ import {
     CodeActionParams,
     Command,
     ConfigurationItem,
+    Connection,
     ExecuteCommandParams,
-    IConnection,
     RemoteConsole,
-} from 'vscode-languageserver';
+} from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
 import { BackgroundAnalysis } from './backgroundAnalysis';
@@ -281,7 +281,7 @@ class PyRxServer extends LanguageServerBase {
     }
 }
 
-function reporterFactory(connection: IConnection): ProgressReporter {
+function reporterFactory(connection: Connection): ProgressReporter {
     return {
         isEnabled(data: AnalysisResults): boolean {
             // always enabled

@@ -21,6 +21,7 @@ import {
     Command,
     CompletionTriggerKind,
     ConfigurationItem,
+    Connection,
     ConnectionOptions,
     createConnection,
     Diagnostic,
@@ -30,7 +31,6 @@ import {
     DidChangeWatchedFilesNotification,
     DocumentSymbol,
     ExecuteCommandParams,
-    IConnection,
     InitializeResult,
     Location,
     ParameterInformation,
@@ -42,7 +42,7 @@ import {
     WatchKind,
     WorkDoneProgressReporter,
     WorkspaceEdit,
-} from 'vscode-languageserver';
+} from 'vscode-languageserver/node';
 
 import { AnalysisResults } from './analyzer/analysis';
 import { ImportResolver } from './analyzer/importResolver';
@@ -147,7 +147,7 @@ interface InternalFileWatcher extends FileWatcher {
 
 export abstract class LanguageServerBase implements LanguageServerInterface {
     // Create a connection for the server. The connection type can be changed by the process's arguments
-    protected _connection: IConnection = createConnection(this._GetConnectionOptions());
+    protected _connection: Connection = createConnection(this._GetConnectionOptions());
     protected _workspaceMap: WorkspaceMap;
     protected _hasConfigurationCapability = false;
     protected _hasWatchFileCapability = false;
@@ -507,7 +507,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
                 return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
             } finally {
-                progress.done();
+                progress.reporter.done();
                 source.dispose();
             }
         });
@@ -788,7 +788,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 try {
                     executeCommand(source.token);
                 } finally {
-                    progress.done();
+                    progress.reporter.done();
                     source.dispose();
                 }
             } else {
@@ -848,17 +848,20 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     private async _getProgressReporter(
         workDoneToken: string | number | undefined,
-        reporter: WorkDoneProgressReporter,
+        clientReporter: WorkDoneProgressReporter,
         title: string
     ) {
         if (workDoneToken) {
-            return reporter;
+            return { reporter: clientReporter, token: CancellationToken.None };
         }
 
         const serverInitiatedReporter = await this._connection.window.createWorkDoneProgress();
         serverInitiatedReporter.begin(title, undefined, undefined, true);
 
-        return serverInitiatedReporter;
+        return {
+            reporter: serverInitiatedReporter,
+            token: serverInitiatedReporter.token,
+        };
     }
 
     private _GetConnectionOptions(): ConnectionOptions {
@@ -913,7 +916,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         // Tell all of the services that the user is actively
         // interacting with one or more editors, so they should
         // back off from performing any work.
-        this._workspaceMap.forEach((workspace) => {
+        this._workspaceMap.forEach((workspace: { serviceInstance: { recordUserInteractionTime: () => void } }) => {
             workspace.serviceInstance.recordUserInteractionTime();
         });
     }

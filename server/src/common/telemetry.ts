@@ -4,7 +4,7 @@
  * Definitions of services available.
  */
 
-import { IConnection } from 'vscode-languageserver';
+import { Connection } from 'vscode-languageserver/node';
 
 import { assert } from '../../pyright/server/src/common/debug';
 import { VERSION } from './constants';
@@ -54,11 +54,11 @@ export class TelemetryEvent {
 }
 
 export class TelemetryService {
-    private _connection: IConnection;
+    private _connection: Connection;
 
     constructor(connection: any) {
         assert(connection !== undefined);
-        this._connection = connection as IConnection;
+        this._connection = connection as Connection;
         assert(this._connection !== undefined);
     }
 

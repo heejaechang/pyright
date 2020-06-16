@@ -6,7 +6,7 @@
 
 import * as assert from 'assert';
 import { capture, instance, mock, verify, when } from 'ts-mockito';
-import { IConnection, Telemetry } from 'vscode-languageserver';
+import { Connection, Telemetry } from 'vscode-languageserver/node';
 
 import {
     formatEventName,
@@ -20,7 +20,7 @@ let ts: TelemetryService;
 let mockedTelemetry: Telemetry;
 
 beforeEach(() => {
-    const mockedConnection = mock<IConnection>();
+    const mockedConnection = mock<Connection>();
     mockedTelemetry = mock<Telemetry>();
     const telemetry = instance(mockedTelemetry);
 

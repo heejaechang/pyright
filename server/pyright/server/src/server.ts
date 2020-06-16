@@ -10,9 +10,9 @@ import {
     CodeAction,
     CodeActionParams,
     Command,
+    Connection,
     ExecuteCommandParams,
-    IConnection,
-} from 'vscode-languageserver';
+} from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
 import { AnalysisResults } from './analyzer/analysis';
@@ -150,7 +150,7 @@ class PyrightServer extends LanguageServerBase {
     }
 }
 
-function reporterFactory(connection: IConnection): ProgressReporter {
+function reporterFactory(connection: Connection): ProgressReporter {
     return {
         isEnabled(data: AnalysisResults): boolean {
             return !data.checkingOnlyOpenFiles;
