@@ -13,7 +13,7 @@
         "url": "https://github.com/Microsoft/pyright"
     },
     "engines": {
-        "vscode": "^1.43.0"
+        "vscode": "^1.46.0"
     },
     "keywords": [
         "python"
