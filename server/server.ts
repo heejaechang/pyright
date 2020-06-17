@@ -62,6 +62,7 @@ class PyRxServer extends LanguageServerBase {
     private _logger: LogService;
     private _platform: Platform;
     private _intelliCode: IntelliCodeExtension;
+    private _progressBarEnabled: boolean;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -105,6 +106,27 @@ class PyRxServer extends LanguageServerBase {
         // to the model which will come later from the IntelliCode extension.
         const icModelSubfolder = path.join(this.fs.getModulePath(), ModelSubFolder);
         this._intelliCode.initialize(this._logger, this._telemetry, this.fs, this._platform, icModelSubfolder);
+
+        const server = this;
+        function reporterFactory(connection: Connection): ProgressReporter {
+            return {
+                isEnabled(data: AnalysisResults): boolean {
+                    return server._progressBarEnabled;
+                },
+
+                begin(): void {
+                    connection.sendNotification('python/beginProgress');
+                },
+
+                report(message: string): void {
+                    connection.sendNotification('python/reportProgress', message);
+                },
+
+                end(): void {
+                    connection.sendNotification('python/endProgress');
+                },
+            };
+        }
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -165,6 +187,13 @@ class PyRxServer extends LanguageServerBase {
         } catch (error) {
             this.console.log(`Error reading settings: ${error}`);
         }
+
+        // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then
+        // progress bar is enabled.
+        this._progressBarEnabled =
+            serverSettings.typeCheckingMode !== 'off' ||
+            Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
+
         return serverSettings;
     }
 
@@ -279,27 +308,6 @@ class PyRxServer extends LanguageServerBase {
         this._logger.level = pythonAnalysis?.logLevel ?? LogLevel.Info;
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
-}
-
-function reporterFactory(connection: Connection): ProgressReporter {
-    return {
-        isEnabled(data: AnalysisResults): boolean {
-            // always enabled
-            return true;
-        },
-
-        begin(): void {
-            connection.sendNotification('python/beginProgress');
-        },
-
-        report(message: string): void {
-            connection.sendNotification('python/reportProgress', message);
-        },
-
-        end(): void {
-            connection.sendNotification('python/endProgress');
-        },
-    };
 }
 
 if (isMainThread) {

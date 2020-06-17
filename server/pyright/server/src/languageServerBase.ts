@@ -812,6 +812,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             });
         });
 
+        if (!this._progressReporter.isEnabled(results)) {
+            return;
+        }
+
         // Update progress.
         if (results.filesRequiringAnalysis > 0) {
             this._progressReporter.begin();

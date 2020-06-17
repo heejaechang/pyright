@@ -153,7 +153,7 @@ class PyrightServer extends LanguageServerBase {
 function reporterFactory(connection: Connection): ProgressReporter {
     return {
         isEnabled(data: AnalysisResults): boolean {
-            return !data.checkingOnlyOpenFiles;
+            return true;
         },
 
         begin(): void {
