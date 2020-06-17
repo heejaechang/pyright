@@ -1160,7 +1160,7 @@ export class Program {
         const content = sourceFileInfo.sourceFile.getFileContents();
         if (pr?.parseTree && content) {
             const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
-            if (offset) {
+            if (offset !== undefined) {
                 completionList = await this._extension.completionListExtension.updateCompletionList(
                     completionList,
                     pr.parseTree,
