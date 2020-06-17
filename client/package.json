@@ -73,6 +73,23 @@
                     ],
                     "scope": "resource"
                 },
+                "python.analysis.logLevel": {
+                    "type": "string",
+                    "default": "Info",
+                    "enum": [
+                        "Error",
+                        "Warning",
+                        "Info",
+                        "Trace"
+                    ],
+                    "enumDescriptions": [
+                        "Log only errors.",
+                        "Log errors and warnings.",
+                        "Log everything except trace.",
+                        "Log everything."
+                    ],
+                    "scope": "resource"
+                },
                 "python.analysis.diagnosticSeverityOverrides": {
                     "type": "object",
                     "default": {},

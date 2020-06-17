@@ -27,7 +27,7 @@ export class QuickActionCommand implements ServerCommand {
                 return command.execute(params, token);
             }
             default:
-                this._ls.console.log(`unknown command: ${params.command}`);
+                this._ls.console.info(`unknown command: ${params.command}`);
                 return [];
         }
     }

@@ -404,30 +404,30 @@ export class Program {
         const zeroImportFiles: SourceFile[] = [];
 
         sortedFiles.forEach((sfInfo) => {
-            this._console.log('');
+            this._console.info('');
             let filePath = sfInfo.sourceFile.getFilePath();
             const relPath = getRelativePath(filePath, projectRootDir);
             if (relPath) {
                 filePath = relPath;
             }
 
-            this._console.log(`${filePath}`);
+            this._console.info(`${filePath}`);
 
-            this._console.log(
+            this._console.info(
                 ` Imports     ${sfInfo.imports.length} ` + `file${sfInfo.imports.length === 1 ? '' : 's'}`
             );
             if (verbose) {
                 sfInfo.imports.forEach((importInfo) => {
-                    this._console.log(`    ${importInfo.sourceFile.getFilePath()}`);
+                    this._console.info(`    ${importInfo.sourceFile.getFilePath()}`);
                 });
             }
 
-            this._console.log(
+            this._console.info(
                 ` Imported by ${sfInfo.importedBy.length} ` + `file${sfInfo.importedBy.length === 1 ? '' : 's'}`
             );
             if (verbose) {
                 sfInfo.importedBy.forEach((importInfo) => {
-                    this._console.log(`    ${importInfo.sourceFile.getFilePath()}`);
+                    this._console.info(`    ${importInfo.sourceFile.getFilePath()}`);
                 });
             }
 
@@ -437,12 +437,12 @@ export class Program {
         });
 
         if (zeroImportFiles.length > 0) {
-            this._console.log('');
-            this._console.log(
+            this._console.info('');
+            this._console.info(
                 `${zeroImportFiles.length} file${zeroImportFiles.length === 1 ? '' : 's'}` + ` not explicitly imported`
             );
             zeroImportFiles.forEach((importFile) => {
-                this._console.log(`    ${importFile.getFilePath()}`);
+                this._console.info(`    ${importFile.getFilePath()}`);
             });
         }
     }
@@ -707,7 +707,7 @@ export class Program {
             // Don't allow the heap to get close to the 2GB limit imposed by
             // the OS when running Node in a 32-bit process.
             if (heapSizeInMb > 1536) {
-                this._console.log(`Emptying type cache to avoid heap overflow. Heap size used: ${heapSizeInMb}MB`);
+                this._console.info(`Emptying type cache to avoid heap overflow. Heap size used: ${heapSizeInMb}MB`);
                 this._createNewEvaluator();
             }
         }
@@ -1527,13 +1527,13 @@ export class Program {
                     }
                 });
             } else if (options.verboseOutput) {
-                this._console.log(
+                this._console.info(
                     `Could not import '${importResult.importName}' ` +
                         `in file '${sourceFileInfo.sourceFile.getFilePath()}'`
                 );
                 if (importResult.importFailureInfo) {
                     importResult.importFailureInfo.forEach((diag) => {
-                        this._console.log(`  ${diag}`);
+                        this._console.info(`  ${diag}`);
                     });
                 }
             }

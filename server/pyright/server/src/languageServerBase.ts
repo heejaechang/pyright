@@ -34,7 +34,6 @@ import {
     InitializeResult,
     Location,
     ParameterInformation,
-    RemoteConsole,
     RemoteWindow,
     SignatureInformation,
     SymbolInformation,
@@ -57,7 +56,7 @@ import {
     getDiagnosticSeverityOverrides,
 } from './common/commandLineOptions';
 import { ConfigOptions, getDiagLevelDiagnosticRules } from './common/configOptions';
-import { ConsoleInterface } from './common/console';
+import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from './common/console';
 import { createDeferred, Deferred } from './common/deferred';
 import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/diagnostic';
 import { DiagnosticRule } from './common/diagnosticRules';
@@ -94,6 +93,7 @@ export interface ServerSettings {
     watchForSourceChanges?: boolean;
     watchForLibraryChanges?: boolean;
     diagnosticSeverityOverrides?: DiagnosticSeverityOverridesMap;
+    logLevel?: LogLevel;
 }
 
 export interface WorkspaceServiceInstance {
@@ -170,13 +170,18 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     // File system abstraction.
     fs: FileSystem;
 
+    readonly console: ConsoleInterface;
+
     constructor(private _serverOptions: ServerOptions) {
-        this._connection.console.log(
+        this.console = new ConsoleWithLogLevel(this._connection.console);
+
+        this.console.info(
             `${_serverOptions.productName} language server ${
                 _serverOptions.version && _serverOptions.version + ' '
             }starting`
         );
-        this.fs = createFromRealFileSystem(this._connection.console, this);
+
+        this.fs = createFromRealFileSystem(this.console, this);
 
         // Set the working directory to a known location within
         // the extension directory. Otherwise the execution of
@@ -188,7 +193,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         // Stash the base directory into a global variable.
         (global as any).__rootDirectory = _serverOptions.rootDirectory;
-        this._connection.console.log(`Server root directory: ${_serverOptions.rootDirectory}`);
+        this.console.info(`Server root directory: ${_serverOptions.rootDirectory}`);
 
         // Create workspace map.
         this._workspaceMap = new WorkspaceMap(this);
@@ -271,11 +276,6 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._serverOptions.extension = extension;
     }
 
-    // Provides access to logging to the client output window.
-    get console(): RemoteConsole {
-        return this._connection.console;
-    }
-
     // Provides access to the client's window.
     get window(): RemoteWindow {
         return this._connection.window;
@@ -284,11 +284,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     // Creates a service instance that's used for analyzing a
     // program within a workspace.
     createAnalyzerService(name: string): AnalyzerService {
-        this._connection.console.log(`Starting service instance "${name}"`);
+        this.console.log(`Starting service instance "${name}"`);
         const service = new AnalyzerService(
             name,
             this.fs,
-            this._connection.console,
+            this.console,
             this.createImportResolver.bind(this),
             undefined,
             this._serverOptions.extension,
@@ -435,7 +435,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         );
 
         this._connection.onDidChangeConfiguration((params) => {
-            this._connection.console.log(`Received updated settings`);
+            this.console.log(`Received updated settings`);
             if (params?.settings) {
                 this._defaultClientConfig = params?.settings;
             }
@@ -834,6 +834,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     async updateSettingsForWorkspace(workspace: WorkspaceServiceInstance): Promise<void> {
         const serverSettings = await this.getSettings(workspace);
+
+        // Set logging level first.
+        (this.console as ConsoleWithLogLevel).level = serverSettings.logLevel ?? LogLevel.Info;
+
         this.updateOptionsAndRestartService(workspace, serverSettings);
         workspace.disableLanguageServices = !!serverSettings.disableLanguageServices;
         workspace.disableOrganizeImports = !!serverSettings.disableOrganizeImports;
@@ -848,6 +852,25 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         typeStubTargetImportName?: string
     ) {
         AnalyzerServiceExecutor.runWithOptions(this.rootPath, workspace, serverSettings, typeStubTargetImportName);
+    }
+
+    protected convertLogLevel(logLevel?: string): LogLevel {
+        if (!logLevel) {
+            return LogLevel.Info;
+        }
+
+        switch (logLevel.toLowerCase()) {
+            case 'error':
+                return LogLevel.Error;
+            case 'warning':
+                return LogLevel.Warn;
+            case 'info':
+                return LogLevel.Info;
+            case 'trace':
+                return LogLevel.Log;
+            default:
+                return LogLevel.Info;
+        }
     }
 
     private async _getProgressReporter(

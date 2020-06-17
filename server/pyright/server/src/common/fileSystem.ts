@@ -229,12 +229,12 @@ class ChokidarFileWatcherProvider implements FileWatcherProvider {
 
         const watcher = chokidar.watch(paths, watcherOptions);
         watcher.on('error', (_) => {
-            this._console.log('Error returned from file system watcher.');
+            this._console.error('Error returned from file system watcher.');
         });
 
         // Detect if for some reason the native watcher library fails to load
         if (_isMacintosh && !watcher.options.useFsEvents) {
-            this._console.log('Watcher could not use native fsevents library. File system watcher disabled.');
+            this._console.info('Watcher could not use native fsevents library. File system watcher disabled.');
         }
 
         return watcher;

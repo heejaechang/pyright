@@ -12,10 +12,11 @@ import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
 import { EditorInvocation, ModelZipFileName } from '../../../intelliCode/models';
 import { EditorLookBackTokenGenerator } from '../../../intelliCode/tokens/editorTokenGenerator';
+import { LogLevel } from '../../../pyright/server/src/common/console';
 import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSink';
 import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
 import { ParseOptions, Parser, ParseResults } from '../../../pyright/server/src/parser/parser';
-import { LogLevel, LogService } from '../../common/logger';
+import { LogService } from '../../common/logger';
 
 export const clientServerModelLocation = '../../../../client/server/intelliCode/model';
 

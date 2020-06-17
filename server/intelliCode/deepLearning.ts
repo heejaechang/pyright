@@ -6,9 +6,10 @@
 
 import { CancellationToken } from 'vscode-languageserver';
 
+import { LogLevel } from '../pyright/server/src/common/console';
 import { assert } from '../pyright/server/src/common/debug';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
-import { LogLevel, LogService } from '../src/common/logger';
+import { LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
 import { ExpressionWalker } from './expressionWalker';
 import { EditorInvocation, PythiaModel } from './models';
@@ -35,17 +36,17 @@ export class DeepLearning {
 
     async initialize(): Promise<any> {
         if (!this._platform.isOnnxSupported()) {
-            this._logger?.log(LogLevel.Warning, 'IntelliCode is not supported on this platform.');
+            this._logger?.log(LogLevel.Warn, 'IntelliCode is not supported on this platform.');
             return;
         }
 
         if (!this._onnx) {
-            this._logger?.log(LogLevel.Trace, 'Loading ONNX runtime...');
+            this._logger?.log(LogLevel.Log, 'Loading ONNX runtime...');
             try {
                 this._onnx = require('onnxruntime');
-                this._logger?.log(LogLevel.Trace, 'Loaded ONNX runtime. Creating IntelliCode session...');
+                this._logger?.log(LogLevel.Log, 'Loaded ONNX runtime. Creating IntelliCode session...');
             } catch {
-                this._logger?.log(LogLevel.Trace, 'Failed to load ONNX runtime.');
+                this._logger?.log(LogLevel.Log, 'Failed to load ONNX runtime.');
             }
         }
 
@@ -56,7 +57,7 @@ export class DeepLearning {
         this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
             logSeverityLevel: this.getOnnxLogLevel(),
         });
-        this._logger?.log(LogLevel.Trace, 'Created IntelliCode session.');
+        this._logger?.log(LogLevel.Log, 'Created IntelliCode session.');
     }
 
     async getRecommendations(
@@ -73,7 +74,7 @@ export class DeepLearning {
         const tg = new EditorLookBackTokenGenerator();
         const invocation = tg.generateLookbackTokens(ast, content, expressionWalker, position);
         if (!invocation) {
-            this._logger?.log(LogLevel.Trace, 'IntelliCode: current invocation did not produce any meaningful tokens.');
+            this._logger?.log(LogLevel.Log, 'IntelliCode: current invocation did not produce any meaningful tokens.');
             return EmptyResult;
         }
 
@@ -159,10 +160,10 @@ export class DeepLearning {
         // reduce amount of internal information in the console.
         switch (this._logger?.level) {
             case LogLevel.Error:
-            case LogLevel.Warning:
+            case LogLevel.Warn:
             case LogLevel.Info:
                 return 3;
-            case LogLevel.Trace:
+            case LogLevel.Log:
                 return 0;
         }
         return 1;

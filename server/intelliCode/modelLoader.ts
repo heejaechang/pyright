@@ -6,8 +6,9 @@
 
 import * as path from 'path';
 
+import { LogLevel } from '../pyright/server/src/common/console';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
-import { LogLevel, LogService } from '../src/common/logger';
+import { LogService } from '../src/common/logger';
 import {
     ModelFileName,
     ModelMetaDataFileName,

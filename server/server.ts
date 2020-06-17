@@ -14,7 +14,6 @@ import {
     ConfigurationItem,
     Connection,
     ExecuteCommandParams,
-    RemoteConsole,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
@@ -28,6 +27,7 @@ import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisB
 import { Commands as PyRightCommands } from './pyright/server/src/commands/commands';
 import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
+import { ConsoleWithLogLevel, LogLevel } from './pyright/server/src/common/console';
 import { isString } from './pyright/server/src/common/core';
 import * as debug from './pyright/server/src/common/debug';
 import { createFromRealFileSystem, FileSystem } from './pyright/server/src/common/fileSystem';
@@ -40,7 +40,7 @@ import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolv
 import { CommandController } from './src/commands/commandController';
 import { Commands } from './src/commands/commands';
 import { VERSION } from './src/common/constants';
-import { LogLevel, LogService } from './src/common/logger';
+import { LogService } from './src/common/logger';
 import { Platform } from './src/common/platform';
 import {
     addMeasurementsToEvent,
@@ -96,7 +96,7 @@ class PyRxServer extends LanguageServerBase {
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
-        this._logger = new LogService((this._connection.console as any) as RemoteConsole);
+        this._logger = new LogService(this.console as ConsoleWithLogLevel);
         this._platform = new Platform();
 
         // IntelliCode may be enabled or disabled depending on user settings.
@@ -139,6 +139,7 @@ class PyRxServer extends LanguageServerBase {
             watchForLibraryChanges: true,
             typeCheckingMode: 'off',
             diagnosticSeverityOverrides: {},
+            logLevel: LogLevel.Info,
         };
 
         try {
@@ -171,6 +172,7 @@ class PyRxServer extends LanguageServerBase {
                     }
                 }
 
+                serverSettings.logLevel = this.convertLogLevel(pythonAnalysisSection.logLevel);
                 serverSettings.openFilesOnly = this.isOpenFilesOnly(pythonAnalysisSection.diagnosticMode);
                 serverSettings.useLibraryCodeForTypes =
                     pythonAnalysisSection.useLibraryCodeForTypes ?? serverSettings.useLibraryCodeForTypes;
@@ -185,7 +187,7 @@ class PyRxServer extends LanguageServerBase {
                 }
             }
         } catch (error) {
-            this.console.log(`Error reading settings: ${error}`);
+            this.console.error(`Error reading settings: ${error}`);
         }
 
         // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then
@@ -305,7 +307,6 @@ class PyRxServer extends LanguageServerBase {
             section: pythonAnalysisSectionName,
         };
         const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
-        this._logger.level = pythonAnalysis?.logLevel ?? LogLevel.Info;
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
 }

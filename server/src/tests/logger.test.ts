@@ -6,25 +6,27 @@
 
 import * as assert from 'assert';
 import { anyString, capture, instance, mock, verify } from 'ts-mockito';
-import { RemoteConsole } from 'vscode-languageserver';
 
-import { LogLevel, LogService } from '../common/logger';
+import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from '../../pyright/server/src/common/console';
+import { LogService } from '../common/logger';
 
+let mockedRemoteConsole: ConsoleInterface;
+let con: ConsoleWithLogLevel;
 let ls: LogService;
-let mockedRemoteConsole: RemoteConsole;
 
 describe('Logger', () => {
     beforeEach(() => {
-        mockedRemoteConsole = mock<RemoteConsole>();
-        ls = new LogService(instance(mockedRemoteConsole));
+        mockedRemoteConsole = mock<ConsoleInterface>();
+        con = new ConsoleWithLogLevel(instance(mockedRemoteConsole));
+        ls = new LogService(con);
     });
 
     test('default log level', () => {
         // Default log level
         ls.log(LogLevel.Error, 'error');
-        ls.log(LogLevel.Warning, 'warn');
+        ls.log(LogLevel.Warn, 'warn');
         ls.log(LogLevel.Info, 'info');
-        ls.log(LogLevel.Trace, 'trace');
+        ls.log(LogLevel.Log, 'trace');
 
         const [errorArg] = capture(mockedRemoteConsole.error).first();
         let arg = errorArg as string;
@@ -45,12 +47,12 @@ describe('Logger', () => {
     });
 
     test('error level', () => {
-        ls.level = LogLevel.Error;
+        con.level = LogLevel.Error;
 
         ls.log(LogLevel.Error, 'error');
-        ls.log(LogLevel.Warning, 'warn');
+        ls.log(LogLevel.Warn, 'warn');
         ls.log(LogLevel.Info, 'info');
-        ls.log(LogLevel.Trace, 'trace');
+        ls.log(LogLevel.Log, 'trace');
 
         const [ca] = capture(mockedRemoteConsole.error).first();
 
@@ -64,12 +66,12 @@ describe('Logger', () => {
     });
 
     test('warning level', () => {
-        ls.level = LogLevel.Warning;
+        con.level = LogLevel.Warn;
 
         ls.log(LogLevel.Error, 'error');
-        ls.log(LogLevel.Warning, 'warn');
+        ls.log(LogLevel.Warn, 'warn');
         ls.log(LogLevel.Info, 'info');
-        ls.log(LogLevel.Trace, 'trace');
+        ls.log(LogLevel.Log, 'trace');
 
         const [errorArg] = capture(mockedRemoteConsole.error).first();
         const [warnArg] = capture(mockedRemoteConsole.warn).first();
@@ -87,12 +89,12 @@ describe('Logger', () => {
     });
 
     test('info level', () => {
-        ls.level = LogLevel.Info;
+        con.level = LogLevel.Info;
 
         ls.log(LogLevel.Error, 'error');
-        ls.log(LogLevel.Warning, 'warn');
+        ls.log(LogLevel.Warn, 'warn');
         ls.log(LogLevel.Info, 'info');
-        ls.log(LogLevel.Trace, 'trace');
+        ls.log(LogLevel.Log, 'trace');
 
         const [errorArg] = capture(mockedRemoteConsole.error).first();
         const [warnArg] = capture(mockedRemoteConsole.warn).first();
@@ -114,12 +116,12 @@ describe('Logger', () => {
     });
 
     test('trace level', () => {
-        ls.level = LogLevel.Trace;
+        con.level = LogLevel.Log;
 
         ls.log(LogLevel.Error, 'error');
-        ls.log(LogLevel.Warning, 'warn');
+        ls.log(LogLevel.Warn, 'warn');
         ls.log(LogLevel.Info, 'info');
-        ls.log(LogLevel.Trace, 'trace');
+        ls.log(LogLevel.Log, 'trace');
 
         const [errorArg] = capture(mockedRemoteConsole.error).first();
         const [warnArg] = capture(mockedRemoteConsole.warn).first();
@@ -144,13 +146,13 @@ describe('Logger', () => {
     });
 
     test('get/set', () => {
-        ls.level = LogLevel.Error;
+        con.level = LogLevel.Error;
         expect(ls.level).toEqual(LogLevel.Error);
-        ls.level = LogLevel.Warning;
-        expect(ls.level).toEqual(LogLevel.Warning);
-        ls.level = LogLevel.Info;
+        con.level = LogLevel.Warn;
+        expect(ls.level).toEqual(LogLevel.Warn);
+        con.level = LogLevel.Info;
         expect(ls.level).toEqual(LogLevel.Info);
-        ls.level = LogLevel.Trace;
-        expect(ls.level).toEqual(LogLevel.Trace);
+        con.level = LogLevel.Log;
+        expect(ls.level).toEqual(LogLevel.Log);
     });
 });

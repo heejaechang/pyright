@@ -8,13 +8,14 @@ import '../pyright/server/src/common/extensions';
 import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
 
 import { ConfigOptions } from '../pyright/server/src/common/configOptions';
+import { LogLevel } from '../pyright/server/src/common/console';
 import { assert } from '../pyright/server/src/common/debug';
 import { CompletionListExtension, LanguageServiceExtension } from '../pyright/server/src/common/extensibility';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { Duration } from '../pyright/server/src/common/timing';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../src/commands/commands';
-import { LogLevel, LogService } from '../src/common/logger';
+import { LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
 import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
@@ -140,13 +141,13 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const completionItems = completionList.items;
             const result = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
             if (result.recommendations.length > 0) {
-                this._logger?.log(LogLevel.Trace, `Recommendations: ${result.recommendations.join(', ')}`);
+                this._logger?.log(LogLevel.Log, `Recommendations: ${result.recommendations.join(', ')}`);
             }
 
             const memoryAfter = process.memoryUsage().heapUsed / 1024;
             const memoryIncrease = Math.round(memoryAfter - memoryBefore);
             this._logger?.log(
-                LogLevel.Trace,
+                LogLevel.Log,
                 `Time taken to get recommendations: ${dt.getDurationInMilliseconds()} ms, Memory increase: ${memoryIncrease} KB.`
             );
 
@@ -201,7 +202,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                     const modelZipPath = args[0].modelPath;
                     assert(typeof modelZipPath === 'string');
                     if (typeof modelZipPath === 'string') {
-                        this._logger?.log(LogLevel.Trace, `IntelliCode model ${modelZipPath}`);
+                        this._logger?.log(LogLevel.Log, `IntelliCode model ${modelZipPath}`);
                         this._modelZipPath = modelZipPath;
                         if (this.enabled) {
                             return this.loadModel();
@@ -267,7 +268,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 await this._deepLearning.initialize();
             }
         } catch (e) {
-            this._logger.log(LogLevel.Warning, `Failed to load IntelliCode model. Exception: ${e.stack}`);
+            this._logger.log(LogLevel.Warn, `Failed to load IntelliCode model. Exception: ${e.stack}`);
         }
     }
 }
