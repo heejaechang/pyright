@@ -46,7 +46,7 @@
         "yauzl": "^2.10.0"
     },
     "optionalDependencies": {
-        "onnxruntime": "0.0.1-dev.20200506.1"
+        "onnxruntime": "^1.3.1"
     },
     "devDependencies": {
         "@types/chalk": "^2.2.0",
