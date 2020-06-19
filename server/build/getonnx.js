@@ -24,7 +24,7 @@ const packageJsonPath = path.resolve(path.join(__dirname, '..', 'package.json'))
 const packageJsonString = fs.readFileSync(packageJsonPath, { encoding: 'utf8' });
 const packageJson = JSON.parse(packageJsonString);
 let version = packageJson.optionalDependencies[basePackageName];
-version = version[0] === '^' ? version.substr(1) : version;
+version = version[0] === '^' || version[0] === '~' ? version.substr(1) : version;
 version = `v${version}`;
 
 class Deferred {
