@@ -24,10 +24,81 @@
     ],
     "icon": "images/icon.png",
     "main": "./out/extension.js",
-    "contributes": {},
     "activationEvents": [
         "onStartupFinished"
     ],
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "Pylance Configuration",
+            "properties": {
+                "python.analysis.autoSearchPaths": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically add common search paths like 'src'.",
+                    "scope": "resource"
+                },
+                "python.analysis.stubPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to directory containing custom type stub files.",
+                    "scope": "resource"
+                },
+                "python.analysis.diagnosticMode": {
+                    "type": "string",
+                    "default": "openFilesOnly",
+                    "description": "Analysis mode for diagnostics.",
+                    "enum": [
+                        "openFilesOnly",
+                        "workspace"
+                    ],
+                    "enumDescriptions": [
+                        "Analyzes and reports errors on only open files.",
+                        "Analyzes and reports errors on all files in the workspace."
+                    ],
+                    "scope": "resource"
+                },
+                "python.analysis.diagnosticSeverityOverrides": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Allows a user to override the severity levels for individual diagnostics.",
+                    "scope": "resource"
+                },
+                "python.analysis.extraPaths": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Additional import search resolution paths",
+                    "scope": "resource"
+                },
+                "python.pythonPath": {
+                    "type": "string",
+                    "default": "python",
+                    "description": "Path to Python, you can use a custom version of Python.",
+                    "scope": "resource"
+                },
+                "python.analysis.useLibraryCodeForTypes": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use library implementations to extract type information when type stub is not present.",
+                    "scope": "resource"
+                },
+                "python.analysis.typeCheckingMode": {
+                    "type": "string",
+                    "default": "off",
+                    "enum": [
+                        "off",
+                        "basic",
+                        "strict"
+                    ],
+                    "description": "Defines the default rule set for type checking.",
+                    "scope": "resource"
+                }
+            }
+        }
+    },
     "scripts": {
         "vscode:prepublish": "cd .. && npm run package && cd extension && npm run compile",
         "build": "tsc",

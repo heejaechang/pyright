@@ -416,6 +416,12 @@ test('Function6', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Function7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function7.py']);
+
+    validateResults(analysisResults, 4);
+});
+
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
@@ -516,6 +522,18 @@ test('Operators2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators2.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('Operators3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Operators4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators4.py']);
+
+    validateResults(analysisResults, 0);
 });
 
 test('Optional1', () => {
