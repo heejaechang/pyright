@@ -23,7 +23,9 @@ const tmpFolderName = 'onnxruntime';
 const packageJsonPath = path.resolve(path.join(__dirname, '..', 'package.json'));
 const packageJsonString = fs.readFileSync(packageJsonPath, { encoding: 'utf8' });
 const packageJson = JSON.parse(packageJsonString);
-const version = `v${packageJson.optionalDependencies[basePackageName]}`;
+let version = packageJson.optionalDependencies[basePackageName];
+version = version[0] === '^' ? version.substr(1) : version;
+version = `v${version}`;
 
 class Deferred {
     constructor() {
