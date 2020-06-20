@@ -20,10 +20,12 @@ const basePackageName = 'onnxruntime';
 const platforms = ['win32', 'darwin', 'linux'];
 const tmpFolderName = 'onnxruntime';
 
-const packageJsonPath = path.resolve(path.join(__dirname, '..', 'package.json'));
+const packageJsonPath = path.resolve(path.join(__dirname, '..', 'package-lock.json'));
 const packageJsonString = fs.readFileSync(packageJsonPath, { encoding: 'utf8' });
 const packageJson = JSON.parse(packageJsonString);
-const version = `v${packageJson.optionalDependencies[basePackageName]}`;
+let version = packageJson.dependencies[basePackageName].version;
+console.log(`ONNX runtime version: ${version}`);
+version = `v${version}`;
 
 class Deferred {
     constructor() {
