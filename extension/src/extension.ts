@@ -1,4 +1,3 @@
-// The module 'vscode' contains the VS Code extensibility API
 import * as path from 'path';
 import * as vscode from 'vscode';
 

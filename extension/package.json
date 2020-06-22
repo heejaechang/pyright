@@ -1,17 +1,18 @@
 {
-    "name": "mpls-new",
-    "displayName": "MPLS_NEW",
-    "description": "MPLS_NEW",
+    "name": "pylance-vscode",
+    "displayName": "Pylance",
+    "description": "A performant, feature-rich language server for Python in VS Code",
     "version": "0.0.0",
-    "license": "Microsoft",
+    "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
         "name": "Microsoft Corporation"
     },
     "publisher": "ms-python",
     "preview": true,
+    "private": true,
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/MPLS_NEW"
+        "url": "https://github.com/microsoft/pylance"
     },
     "engines": {
         "vscode": "^1.46.0"
@@ -23,9 +24,10 @@
         "Programming Languages"
     ],
     "icon": "images/icon.png",
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "activationEvents": [
-        "onStartupFinished"
+        "onStartupFinished",
+        "onLanguage:python"
     ],
     "contributes": {
         "configuration": {
@@ -73,12 +75,6 @@
                     "description": "Additional import search resolution paths",
                     "scope": "resource"
                 },
-                "python.pythonPath": {
-                    "type": "string",
-                    "default": "python",
-                    "description": "Path to Python, you can use a custom version of Python.",
-                    "scope": "resource"
-                },
                 "python.analysis.useLibraryCodeForTypes": {
                     "type": "boolean",
                     "default": true,
@@ -100,11 +96,11 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "cd .. && npm run package && cd extension && npm run compile",
         "build": "tsc",
-        "compile": "tsc -p ./",
-        "watch": "tsc --watch",
-        "eslint": "eslint ./**/*.ts",
+        "vscode:prepublish": "cd .. && npm run package && cd extension && webpack --mode production",
+        "webpack": "webpack --mode development",
+        "webpack-dev": "webpack --mode development --watch",
+        "test-compile": "tsc -p ./",
         "test": "jest --detectOpenHandles --forceExit",
         "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json"
     },
@@ -116,8 +112,12 @@
         "jest-extended": "^0.11.5",
         "jest-junit": "^11.0.0",
         "ts-jest": "^26.1.0",
+        "ts-loader": "^7.0.5",
         "ts-mockito": "^2.6.1",
         "typescript": "^3.9.5",
-        "vsce": "^1.77.0"
+        "vsce": "^1.77.0",
+        "webpack": "^4.43.0",
+        "webpack-cli": "^3.3.12",
+        "webpack-obfuscator": "^1.1.0"
     }
 }
