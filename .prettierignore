@@ -3,6 +3,6 @@
 **/dist/**
 **/out/**
 **/client/server/**
-**/client/server/**
+**/extension/server/**
 **/typeshed-fallback/**
 **/bundled-stubs/**

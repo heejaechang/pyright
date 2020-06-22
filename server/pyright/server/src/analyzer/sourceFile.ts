@@ -36,6 +36,7 @@ import { HoverProvider, HoverResults } from '../languageService/hoverProvider';
 import { performQuickAction } from '../languageService/quickActions';
 import { ReferencesProvider, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpProvider, SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { Localizer } from '../localization/localize';
 import { ModuleNode } from '../parser/parseNodes';
 import { ModuleImport, ParseOptions, Parser, ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
@@ -225,7 +226,8 @@ export class SourceFile {
                 diagList.push(
                     new Diagnostic(
                         category,
-                        'Cycle detected in import chain\n' +
+                        Localizer.Diagnostic.importCycleDetected() +
+                            '\n' +
                             cirDep
                                 .getPaths()
                                 .map((path) => '  ' + path)
@@ -240,7 +242,7 @@ export class SourceFile {
             diagList.push(
                 new Diagnostic(
                     DiagnosticCategory.Error,
-                    `Import chain depth exceeded ${this._hitMaxImportDepth}`,
+                    Localizer.Diagnostic.importDepthExceeded().format({ depth: this._hitMaxImportDepth }),
                     getEmptyRange()
                 )
             );
