@@ -1,0 +1,6 @@
+{
+    "LanguageServer.installedButInactive": "Вы хотите сделать Pylance языковым сервером для Python?",
+    "LanguageServer.turnItOn": "Да, и перезагрузить окно",
+    "LanguageServer.noThanks": "Нет, спасибо",
+    "LanguageServer.remindMeLater": "Напомните мне позже"
+}

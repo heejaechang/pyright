@@ -211,6 +211,26 @@
             "windows": {
                 "program": "${workspaceFolder}/pythia/node_modules/jest/bin/jest"
             }
-        },   
+        },
+        {
+            "name": "LS Extension tests",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--disable-extensions",
+                "--extensionDevelopmentPath=${workspaceFolder}/extension",
+                "--extensionTestsPath=${workspaceFolder}/extension/out/tests/jest/jest-test-runner"
+            ],
+            "stopOnEntry": false,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/extension/out/**/*.js"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "preLaunchTask": "npm: build:extension",
+        }
     ]
 }

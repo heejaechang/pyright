@@ -15,6 +15,7 @@ client/out/
 client/server/
 extension/out/
 extension/server/
+extension/.vscode-test/
 pythia/out/
 pythia/src/tests/out/
 pythia/src/tests/data/

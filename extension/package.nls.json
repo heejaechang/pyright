@@ -1,0 +1,6 @@
+{
+    "LanguageServer.installedButInactive": "Would you like to make Pylance your default language server for Python?",
+    "LanguageServer.turnItOn": "Yes, and reload",
+    "LanguageServer.noThanks": "No thanks",
+    "LanguageServer.remindMeLater": "Remind me later"
+}
