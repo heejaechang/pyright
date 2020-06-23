@@ -70,7 +70,7 @@ class PyRxServer extends LanguageServerBase {
         // but it cannot be initialized here as super() was not called yet.
         const intelliCode = new IntelliCodeExtension();
         super({
-            productName: 'Python',
+            productName: 'Pylance',
             rootDirectory,
             version: VERSION,
             extension: intelliCode,

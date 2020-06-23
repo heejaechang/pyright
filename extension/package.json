@@ -29,6 +29,9 @@
         "onStartupFinished",
         "onLanguage:python"
     ],
+    "extensionDependencies": [
+        "ms-python.python"
+    ],
     "contributes": {
         "configuration": {
             "type": "object",
