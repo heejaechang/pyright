@@ -28,11 +28,6 @@ abstract class BannerBase {
 export class ActivatePylanceBanner extends BannerBase {
     static readonly SettingKey = 'RequestSwitchToPylance';
 
-    static readonly Message = localize.LanguageServer.installedButInactive();
-    static readonly LabelYes = localize.LanguageServer.turnItOn();
-    static readonly LabelNo = localize.LanguageServer.noThanks();
-    static readonly LabelLater = localize.LanguageServer.remindMeLater();
-
     // TODO: Replace by Pylance
     static readonly ExpectedLanguageServer = 'Node';
 
@@ -51,17 +46,17 @@ export class ActivatePylanceBanner extends BannerBase {
         }
 
         const response = await this.appShell.showInformationMessage(
-            ActivatePylanceBanner.Message,
-            ActivatePylanceBanner.LabelYes,
-            ActivatePylanceBanner.LabelNo,
-            ActivatePylanceBanner.LabelLater
+            localize.LanguageServer.installedButInactive(),
+            localize.LanguageServer.turnItOn(),
+            localize.LanguageServer.noThanks(),
+            localize.LanguageServer.remindMeLater()
         );
 
-        if (response === ActivatePylanceBanner.LabelLater) {
+        if (response === localize.LanguageServer.remindMeLater()) {
             this.disabledInCurrentSession = true;
             return;
         }
-        if (response === ActivatePylanceBanner.LabelYes) {
+        if (response === localize.LanguageServer.turnItOn()) {
             await this.disable(); // Disable first since next call causes reload.
             await this.enableLanguageServer();
         }

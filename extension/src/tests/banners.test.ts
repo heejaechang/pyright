@@ -2,6 +2,7 @@ import { anyString, anything, capture, instance, mock, verify, when } from 'ts-m
 import { Memento } from 'vscode';
 
 import { ActivatePylanceBanner } from '../banners';
+import * as localize from '../common/localize';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
 import { CommandManager } from '../types/commandManager';
@@ -46,7 +47,7 @@ describe('Banners', () => {
     test('Selecting No disables banner forever', async () => {
         setUpSettingStorage(ActivatePylanceBanner.SettingKey);
         when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
-            Promise.resolve(ActivatePylanceBanner.LabelNo)
+            Promise.resolve(localize.LanguageServer.noThanks())
         );
 
         const banner = makeBanner();
@@ -58,7 +59,7 @@ describe('Banners', () => {
     test('Selecting Later disables banner in session', async () => {
         setUpSettingStorage(ActivatePylanceBanner.SettingKey);
         when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
-            Promise.resolve(ActivatePylanceBanner.LabelLater)
+            Promise.resolve(localize.LanguageServer.remindMeLater())
         );
 
         const banner = makeBanner();
@@ -69,7 +70,7 @@ describe('Banners', () => {
     test('Selecting Yes changes python.languageServer setting and reloads window', async () => {
         setUpSettingStorage(ActivatePylanceBanner.SettingKey);
         when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
-            Promise.resolve(ActivatePylanceBanner.LabelYes)
+            Promise.resolve(localize.LanguageServer.turnItOn())
         );
 
         const banner = makeBanner();
@@ -83,7 +84,7 @@ describe('Banners', () => {
     test('Banner not shown when python.languageServer setting is Pylance', async () => {
         setUpSettingStorage(ActivatePylanceBanner.SettingKey);
         when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
-            Promise.resolve(ActivatePylanceBanner.LabelLater)
+            Promise.resolve(localize.LanguageServer.remindMeLater())
         );
 
         const banner = makeBanner(ActivatePylanceBanner.ExpectedLanguageServer);
