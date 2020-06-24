@@ -129,7 +129,7 @@ export class Program {
         private _extension?: LanguageServiceExtension
     ) {
         this._console = console || new StandardConsole();
-        this._logTracker = new LogTracker(this._console, isMainThread ? 'FG' : 'BG');
+        this._logTracker = new LogTracker(console, isMainThread ? 'FG' : 'BG');
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
         this._createNewEvaluator();

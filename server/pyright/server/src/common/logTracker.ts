@@ -14,9 +14,14 @@ export class LogTracker {
     private _indentation = '';
     private _previousTitles: string[] = [];
 
-    constructor(private _console: ConsoleInterface, private _prefix: string) {}
+    constructor(private _console: ConsoleInterface | undefined, private _prefix: string) {}
 
     log<T>(title: string, callback: (state: LogState) => T) {
+        // If no console is given, don't do anything.
+        if (this._console === undefined) {
+            return callback(this._dummyState);
+        }
+
         // This only get enabled when level is LogLevel.Log or not exist
         const level = (this._console as any).level;
         if (level !== undefined && level !== LogLevel.Log) {
@@ -56,7 +61,7 @@ export class LogTracker {
         }
 
         for (const previousTitle of this._previousTitles) {
-            this._console.log(`[${this._prefix}] ${previousTitle}`);
+            this._console!.log(`[${this._prefix}] ${previousTitle}`);
         }
 
         this._previousTitles.length = 0;

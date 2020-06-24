@@ -181,7 +181,7 @@ export class SourceFile {
         }
 
         // 'FG' or 'BG' based on current thread.
-        this._logTracker = logTracker ?? new LogTracker(this._console, isMainThread ? 'FG' : 'BG');
+        this._logTracker = logTracker ?? new LogTracker(console, isMainThread ? 'FG' : 'BG');
     }
 
     getFilePath(): string {
