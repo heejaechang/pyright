@@ -833,7 +833,13 @@ test('Literals3', () => {
 test('Literals4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals4.py']);
 
-    validateResults(analysisResults, 1);
+    validateResults(analysisResults, 0);
+});
+
+test('Literals5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals5.py']);
+
+    validateResults(analysisResults, 2);
 });
 
 test('TypeAlias1', () => {
@@ -859,11 +865,17 @@ test('TypeAlias4', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V38;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
-    validateResults(analysisResults38, 8);
+    validateResults(analysisResults38, 1);
 
     configOptions.defaultPythonVersion = PythonVersion.V39;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
-    validateResults(analysisResults39, 8);
+    validateResults(analysisResults39, 6);
+});
+
+test('TypeAlias5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['TypeAlias5.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Dictionary1', () => {
@@ -889,6 +901,12 @@ test('Classes2', () => {
     configOptions.diagnosticRuleSet.reportIncompatibleMethodOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes2.py'], configOptions);
     validateResults(analysisResults, 2);
+});
+
+test('Classes3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes3.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Mro1', () => {
@@ -1347,7 +1365,7 @@ test('AssignmentExpr2', () => {
 
 test('AssignmentExpr3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr3.py']);
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 4);
 });
 
 test('AssignmentExpr4', () => {
