@@ -14,6 +14,8 @@ export enum TelemetryEventName {
     ANALYSIS_COMPLETE = 'analysis_complete',
     INTELLICODE_ENABLED = 'intellicode_enabled',
     INTELLICODE_COMPLETION_ITEM_SELECTED = 'intellicode_completion_item_selected',
+    INTELLICODE_MODEL_LOAD_FAILED = 'intellicode_model_load_failed',
+    INTELLICODE_ONNX_LOAD_FAILED = 'intellicode_onnx_load_failed',
 }
 
 const languageServerEventPrefix = 'language_server/';

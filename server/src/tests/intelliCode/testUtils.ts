@@ -6,17 +6,14 @@
 import 'jest-extended';
 
 import * as path from 'path';
-import { anyString, capture, verify } from 'ts-mockito';
 
 import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
 import { EditorInvocation, ModelZipFileName } from '../../../intelliCode/models';
 import { EditorLookBackTokenGenerator } from '../../../intelliCode/tokens/editorTokenGenerator';
-import { LogLevel } from '../../../pyright/server/src/common/console';
 import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSink';
 import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
 import { ParseOptions, Parser, ParseResults } from '../../../pyright/server/src/parser/parser';
-import { LogService } from '../../common/logger';
 
 export const clientServerModelLocation = '../../../../client/server/intelliCode/model';
 
@@ -58,10 +55,4 @@ export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]): void {
 export function getTestModel(): string {
     const srcFolder = process.cwd();
     return path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', ModelZipFileName);
-}
-
-export function verifyErrorLog(mockedLog: LogService, message: string): void {
-    verify(mockedLog.log(LogLevel.Error, anyString())).once();
-    const callArgs = capture(mockedLog.log).first();
-    expect(callArgs[0]).toEqual(LogLevel.Error);
 }

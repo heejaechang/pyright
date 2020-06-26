@@ -7,13 +7,14 @@
 import { CancellationToken } from 'vscode-languageserver';
 
 import { LogLevel } from '../pyright/server/src/common/console';
-import { assert } from '../pyright/server/src/common/debug';
 import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
 import { LogService } from '../src/common/logger';
 import { Platform } from '../src/common/platform';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
 import { EditorInvocation, PythiaModel } from './models';
 import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';
+import { getExceptionMessage } from './types';
 
 const LookbackTokenLength = 100;
 
@@ -31,7 +32,8 @@ export class DeepLearning {
     constructor(
         private readonly _model: PythiaModel,
         private readonly _platform: Platform,
-        private readonly _logger?: LogService
+        private readonly _logger?: LogService,
+        private readonly _telemetry?: TelemetryService
     ) {}
 
     async initialize(): Promise<any> {
@@ -45,19 +47,21 @@ export class DeepLearning {
             try {
                 this._onnx = require('onnxruntime');
                 this._logger?.log(LogLevel.Log, 'Loaded ONNX runtime. Creating IntelliCode session...');
-            } catch {
-                this._logger?.log(LogLevel.Log, 'Failed to load ONNX runtime.');
+            } catch (e) {
+                this.logError('Failed to load ONNX runtime', e);
             }
         }
 
-        assert(this._onnx);
-        assert(this._onnx.InferenceSession);
-        assert(this._onnx.InferenceSession.create);
-
-        this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
-            logSeverityLevel: this.getOnnxLogLevel(),
-        });
-        this._logger?.log(LogLevel.Log, 'Created IntelliCode session.');
+        if (this._onnx && this._onnx.InferenceSession && this._onnx.InferenceSession.create) {
+            try {
+                this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
+                    logSeverityLevel: this.getOnnxLogLevel(),
+                });
+                this._logger?.log(LogLevel.Log, 'Created IntelliCode session.');
+            } catch (e) {
+                this.logError('Failed to create IntelliCode session', e);
+            }
+        }
     }
 
     async getRecommendations(
@@ -105,7 +109,7 @@ export class DeepLearning {
                 }
             }
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `IntelliCode exception: ${e.stack}`);
+            this._logger?.log(LogLevel.Error, `IntelliCode exception: ${getExceptionMessage(e)}`);
         }
         return { recommendations, invocation };
     }
@@ -167,5 +171,12 @@ export class DeepLearning {
                 return 0;
         }
         return 1;
+    }
+
+    private logError(reason: string, e?: Error): void {
+        this._logger?.log(LogLevel.Error, e ? `${reason}. Exception ${getExceptionMessage(e)}` : reason);
+        const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED);
+        te.Properties['Reason'] = reason;
+        this._telemetry?.sendTelemetry(te);
     }
 }

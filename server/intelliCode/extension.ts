@@ -24,7 +24,7 @@ import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
 import { PythiaModel } from './models';
 import { buildRecommendationsTelemetry } from './telemetry';
-import { IntelliCodeConstants } from './types';
+import { getExceptionMessage, IntelliCodeConstants } from './types';
 import { getZip } from './zip';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
@@ -258,17 +258,17 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             return;
         }
         try {
-            const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger);
+            const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger, this._telemetry);
             this.model = await loader.loadModel(this._modelZipPath, this._modelUnpackFolder);
 
             if (this.model) {
                 if (!this._deepLearning) {
-                    this._deepLearning = new DeepLearning(this.model, this._platform, this._logger);
+                    this._deepLearning = new DeepLearning(this.model, this._platform, this._logger, this._telemetry);
                 }
                 await this._deepLearning.initialize();
             }
         } catch (e) {
-            this._logger.log(LogLevel.Warn, `Failed to load IntelliCode model. Exception: ${e.stack}`);
+            this._logger.log(LogLevel.Warn, `Failed to load IntelliCode model. Exception: ${getExceptionMessage(e)}`);
         }
     }
 }

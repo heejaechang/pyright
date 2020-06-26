@@ -7,7 +7,7 @@ import 'jest-extended';
 
 import * as realFs from 'fs';
 import * as path from 'path';
-import { anyString, anything, instance, mock, verify } from 'ts-mockito';
+import { anyString, anything, capture, instance, mock, verify } from 'ts-mockito';
 import { CancellationToken } from 'vscode-languageserver';
 
 import { IntelliCodeCompletionListExtension } from '../../../intelliCode/extension';
@@ -64,8 +64,11 @@ describe('IntelliCode extension', () => {
         await executeICCommand(ic, getTestModel());
         await ic.updateSettings(true);
 
-        verify(mockedTelemetry.sendTelemetry(anything())).never();
         expect(realFs.existsSync(modelFile)).toBeTrue();
+
+        // Test model is not loadable into ONNX, so exception is expected.
+        const [te] = capture(mockedTelemetry.sendTelemetry).first();
+        expect(te.Properties['Reason']).toStartWith('Failed to create IntelliCode session');
     });
 
     test('command prefix', async () => {

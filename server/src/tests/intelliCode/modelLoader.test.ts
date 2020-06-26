@@ -9,7 +9,7 @@ import 'jest-extended';
 import * as realFs from 'fs';
 import * as path from 'path';
 import { dirSync } from 'tmp';
-import { anyString, anything, instance, mock, verify, when } from 'ts-mockito';
+import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
 
 import { ModelLoader } from '../../../intelliCode/modelLoader';
 import {
@@ -20,15 +20,17 @@ import {
     ModelTokensFileName,
 } from '../../../intelliCode/models';
 import { getZip, Zip } from '../../../intelliCode/zip';
+import { LogLevel } from '../../../pyright/server/src/common/console';
 import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
 import { LogService } from '../../common/logger';
-import { TelemetryService } from '../../common/telemetry';
-import { getTestModel, verifyErrorLog } from './testUtils';
+import { formatEventName, TelemetryEventName, TelemetryService } from '../../common/telemetry';
+import { getTestModel } from './testUtils';
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
 let log: LogService;
 let mockedTelemetry: TelemetryService;
+let telemetry: TelemetryService;
 
 const modelFolder = 'modelFolder';
 const intelliCodeFolder = path.join(modelFolder, IntelliCodeFolderName);
@@ -39,6 +41,7 @@ describe('IntelliCode model loader', () => {
         mockedLog = mock<LogService>();
         log = instance(mockedLog);
         mockedTelemetry = mock<TelemetryService>();
+        telemetry = instance(mockedTelemetry);
     });
 
     test('unpack model', async () => {
@@ -50,7 +53,7 @@ describe('IntelliCode model loader', () => {
             const icFolder = path.join(tmpFolder.name, ModelSubFolder);
 
             const vfs = createFromRealFileSystem();
-            const ml = new ModelLoader(vfs, getZip(vfs), log);
+            const ml = new ModelLoader(vfs, getZip(vfs), log, telemetry);
             const m = await ml.loadModel(modelZipPath, icFolder);
 
             expect(m).toBeDefined();
@@ -85,7 +88,7 @@ describe('IntelliCode model loader', () => {
         const fs = instance(mockedFs);
 
         const mockedZip = mock<Zip>();
-        const ml = new ModelLoader(fs, instance(mockedZip), log);
+        const ml = new ModelLoader(fs, instance(mockedZip), log, telemetry);
         await ml.loadModel(getTestModel(), intelliCodeFolder);
 
         verify(mockedFs.existsSync(metadataFile)).once();
@@ -97,10 +100,10 @@ describe('IntelliCode model loader', () => {
         const mockedZip = mock<Zip>();
 
         when(mockedZip.unzip(anyString(), anyString())).thenThrow(makeError());
-        const ml = new ModelLoader(instance(mockedFs), instance(mockedZip), log);
+        const ml = new ModelLoader(instance(mockedFs), instance(mockedZip), log, telemetry);
         await ml.loadModel(getTestModel(), modelFolder);
 
-        verifyErrorLog(mockedLog, 'Unable to unpack');
+        verifyErrorLog('Unable to unpack');
     });
 
     test('no files in folder', async () => {
@@ -121,13 +124,25 @@ describe('IntelliCode model loader', () => {
 
         await verifyLogOnError(instance(mockedFs), 'Unable to parse');
     });
+
+    async function verifyLogOnError(fs: FileSystem, message: string): Promise<void> {
+        const mockedZip = mock<Zip>();
+        when(mockedZip.unzip(anyString(), anyString())).thenReturn(Promise.resolve(3));
+
+        const ml = new ModelLoader(fs, instance(mockedZip), log, telemetry);
+        await ml.loadModel(getTestModel(), modelFolder);
+        verifyErrorLog(message);
+    }
+
+    function verifyErrorLog(message: string): void {
+        verify(mockedLog.log(LogLevel.Error, anyString())).once();
+
+        const callArgs = capture(mockedLog.log).first();
+        expect(callArgs[0]).toEqual(LogLevel.Error);
+        expect(callArgs[1]).toStartWith(message);
+
+        const [te] = capture(mockedTelemetry.sendTelemetry).first();
+        expect(te.EventName).toEqual(formatEventName(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED));
+        expect(te.Properties['Reason']).toStartWith(message);
+    }
 });
-
-async function verifyLogOnError(fs: FileSystem, message: string): Promise<void> {
-    const mockedZip = mock<Zip>();
-    when(mockedZip.unzip(anyString(), anyString())).thenReturn(Promise.resolve(3));
-
-    const ml = new ModelLoader(fs, instance(mockedZip), log);
-    await ml.loadModel(getTestModel(), modelFolder);
-    verifyErrorLog(mockedLog, message);
-}

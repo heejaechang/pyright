@@ -9,6 +9,7 @@ import * as path from 'path';
 import { LogLevel } from '../pyright/server/src/common/console';
 import { FileSystem } from '../pyright/server/src/common/fileSystem';
 import { LogService } from '../src/common/logger';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
 import {
     ModelFileName,
     ModelMetaDataFileName,
@@ -17,12 +18,18 @@ import {
     PythiaModel,
     PythiaModelMetaData,
 } from './models';
+import { getExceptionMessage } from './types';
 import { Zip } from './zip';
 
 const modelFilesExt = '.onnx';
 
 export class ModelLoader {
-    constructor(private _fs: FileSystem, private _zip: Zip, private _logger?: LogService) {}
+    constructor(
+        private readonly _fs: FileSystem,
+        private readonly _zip: Zip,
+        private readonly _logger?: LogService,
+        private readonly _telemetry?: TelemetryService
+    ) {}
 
     // Load deep learning model from a model zip file containing three files:
     // 1. *.onnx -- The model file in ONNX format
@@ -68,7 +75,9 @@ export class ModelLoader {
             }
         } catch (error) {
             if (error.code !== 'EEXIST') {
-                this._logger?.log(LogLevel.Error, `Unable to create folder ${modelUnpackFolder}: ${error.code}`);
+                const message = 'Unable to create model folder';
+                this._logger?.log(LogLevel.Error, `${message} ${modelUnpackFolder}, error ${error.code}`);
+                this.sendTelemetry(`${message}, error ${error.code}`);
                 return false;
             }
         }
@@ -91,7 +100,9 @@ export class ModelLoader {
         }
 
         if (modelFiles.length === 0) {
-            this._logger?.log(LogLevel.Error, `Unable to find any IntelliCode data in ${modelUnpackFolder}.`);
+            const message = 'Unable to find any IntelliCode data';
+            this._logger?.log(LogLevel.Error, `${message} in ${modelUnpackFolder}.`);
+            this.sendTelemetry(message);
             return false;
         }
 
@@ -104,10 +115,10 @@ export class ModelLoader {
             try {
                 return JSON.parse(content);
             } catch (e) {
-                this._logger?.log(LogLevel.Error, `Unable to parse ${what}. Exception ${e.message} in ${e.stack}`);
+                this.logError(`Unable to parse ${what}`, e);
             }
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `Unable to read ${what}. Exception ${e.message} in ${e.stack}`);
+            this.logError(`Unable to read ${what}`, e);
         }
         return undefined;
     }
@@ -124,7 +135,7 @@ export class ModelLoader {
         try {
             return callback();
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `${message} Exception ${e.message} in ${e.stack}`);
+            this.logError(message, e);
             return undefined;
         }
     }
@@ -133,8 +144,19 @@ export class ModelLoader {
         try {
             return await callback();
         } catch (e) {
-            this._logger?.log(LogLevel.Error, `${message} Exception ${e.message} in ${e.stack}`);
+            this.logError(message, e);
             return undefined;
         }
+    }
+
+    private logError(reason: string, e?: Error): void {
+        this._logger?.log(LogLevel.Error, e ? `${reason}. Exception ${getExceptionMessage(e)}` : reason);
+        this.sendTelemetry(reason);
+    }
+
+    private sendTelemetry(reason: string): void {
+        const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED);
+        te.Properties['Reason'] = reason;
+        this._telemetry?.sendTelemetry(te);
     }
 }
