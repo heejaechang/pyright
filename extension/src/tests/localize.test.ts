@@ -62,17 +62,17 @@ describe('Localization', () => {
 
     test('key found for locale', () => {
         addLocale('spam', {
-            'LanguageServer.remindMeLater': '???',
+            'Common.remindMeLater': '???',
         });
         setLocale('spam');
 
-        const msg = localize.LanguageServer.remindMeLater();
+        const msg = localize.Common.remindMeLater();
         assert.equal(msg, '???', `key not found for locale, found '${msg}' instead`);
     });
 
     test('key not found for locale (default used)', () => {
         addLocale('spam', {
-            'LanguageServer.remindMeLater': '???',
+            'Common.remindMeLater': '???',
         });
         setLocale('spam');
 

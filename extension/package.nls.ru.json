@@ -1,6 +1,9 @@
 {
+    "Common.Yes": "Да",
+    "Common.No": "Нет",
+    "Common.remindMeLater": "Напомните мне позже",
     "LanguageServer.installedButInactive": "Вы хотите сделать Pylance языковым сервером для Python?",
     "LanguageServer.turnItOn": "Да, и перезагрузить окно",
     "LanguageServer.noThanks": "Нет, спасибо",
-    "LanguageServer.remindMeLater": "Напомните мне позже"
+    "LanguageServer.surveyMessage": "Не могли бы вы потратить пару минут и ответить на несколько вопросов о языковом сервере Pylance?"
 }

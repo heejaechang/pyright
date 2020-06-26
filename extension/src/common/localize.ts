@@ -3,6 +3,12 @@ import * as path from 'path';
 
 import { getExtensionRoot } from './utils';
 
+export namespace Common {
+    export const yes = localize('Common.Yes', 'Yes');
+    export const no = localize('Common.No', 'No');
+    export const remindMeLater = localize('Common.remindMeLater', 'Remind me later');
+}
+
 export namespace LanguageServer {
     export const installedButInactive = localize(
         'LanguageServer.installedButInactive',
@@ -10,7 +16,10 @@ export namespace LanguageServer {
     );
     export const turnItOn = localize('LanguageServer.turnItOn', 'Yes, and reload');
     export const noThanks = localize('LanguageServer.noThanks', 'No thanks');
-    export const remindMeLater = localize('LanguageServer.remindMeLater', 'Remind me later');
+    export const surveyMessage = localize(
+        'LanguageServer.surveyMessage',
+        'Can you please take 2 minutes to tell us how Pylance language server is working for you?'
+    );
 }
 
 // Skip using vscode-nls and instead just compute our strings based on key values.

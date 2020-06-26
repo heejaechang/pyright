@@ -2,12 +2,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { LSExtensionApi } from './api';
-import { ActivatePylanceBanner } from './banners';
+import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
 import { loadLocalizedStrings } from './common/localize';
 import { setExtensionRoot } from './common/utils';
 import { AppConfigurationImpl } from './types/appConfig';
+import { BrowserServiceImpl } from './types/browser';
 import { CommandManagerImpl } from './types/commandManager';
+
+const extensionId = 'vscode-pylance';
 
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
     checkHostApp();
@@ -20,6 +23,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     const version = require('../package.json').version; // TODO: Get version from somewhere else?
 
     await showActivatePylanceBanner(context);
+    await showPylanceSurveyBanner(context);
+
     return {
         languageServerFolder: async () => ({
             path: serverPath,
@@ -59,5 +64,16 @@ async function showActivatePylanceBanner(context: vscode.ExtensionContext): Prom
         new CommandManagerImpl(),
         context.globalState
     );
-    return switchToPylance.showBanner();
+    return switchToPylance.show();
+}
+
+async function showPylanceSurveyBanner(context: vscode.ExtensionContext): Promise<void> {
+    const extension = vscode.extensions.getExtension(extensionId);
+    const survey = new PylanceSurveyBanner(
+        new ApplicationShellImpl(),
+        new BrowserServiceImpl(),
+        context.globalState,
+        extension?.packageJSON.version
+    );
+    return survey.show();
 }
