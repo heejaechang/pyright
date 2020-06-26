@@ -16,7 +16,6 @@ import {
     SymbolInformation,
 } from 'vscode-languageserver';
 import { CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageserver-types';
-import { isMainThread } from 'worker_threads';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
@@ -126,10 +125,11 @@ export class Program {
         initialImportResolver: ImportResolver,
         initialConfigOptions: ConfigOptions,
         console?: ConsoleInterface,
-        private _extension?: LanguageServiceExtension
+        private _extension?: LanguageServiceExtension,
+        logPrefix = 'FG'
     ) {
         this._console = console || new StandardConsole();
-        this._logTracker = new LogTracker(console, isMainThread ? 'FG' : 'BG');
+        this._logTracker = new LogTracker(console, logPrefix);
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
         this._createNewEvaluator();
