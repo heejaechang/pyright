@@ -8,6 +8,16 @@
 
 From the `server` folder of the repo run `npx webpack`.
 
+## Setting the version
+
+To set the version in all of the required places, run:
+
+```
+npm run setVersion -- --to 2020.6.1
+```
+
+Note that this does not commit anything, it just aids in setting it in the right places.
+
 ## Running
 
 ### Using PyRx test extension

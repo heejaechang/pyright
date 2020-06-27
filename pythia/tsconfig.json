@@ -26,7 +26,8 @@
 		"../server/intelliCode/**/*",
 		"../server/*.ts",
 		"../server/pyright/server/src/**/*",
-		"../server/pyright/server/src/localization/*.json"
+		"../server/pyright/server/src/localization/*.json",
+		"../server/src/common/version.json"
 	],
 	"files":[
         "./src/pythia.ts"

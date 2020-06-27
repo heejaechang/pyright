@@ -4,7 +4,7 @@
     "description": "PyRx extension to VS Code (FOR DEBUGGING ONLY)",
     "version": "0.0.0",
     "private": true,
-    "license": "MIT",
+    "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
         "name": "Microsoft Corporation"
     },

@@ -10,7 +10,6 @@
 		"lib": [ "es2019" ],
 		"sourceMap": true,
 		"outDir": "out",
-		"rootDir": "src",
 		"strict": true,
 		"composite": true,
 		"declaration": true,
@@ -20,5 +19,9 @@
 		"node_modules",
 		"server",
 		"out"
+	],
+	"include": [
+		"./src/**/*",
+		"./package.json"
 	]
 }

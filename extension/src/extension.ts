@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { version } from '../package.json';
 import { LSExtensionApi } from './api';
 import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
@@ -19,8 +20,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     loadLocalizedStrings();
 
     const serverPath = path.join(context.extensionPath, 'server');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const version = require('../package.json').version; // TODO: Get version from somewhere else?
 
     await showActivatePylanceBanner(context);
     await showPylanceSurveyBanner(context);
