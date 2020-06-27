@@ -1,4 +1,4 @@
-# PyRx: PyRight Language Service Extension
+# Pylance
 
 ## To Build
 
@@ -20,14 +20,14 @@ Note that this does not commit anything, it just aids in setting it in the right
 
 ## Running
 
-### Using PyRx test extension
+### Using Pylance test extension
 
 -   If you have Python extension installed, change `python.languageServer` to `None`.
 -   Do a production build from the command-line (`npm run package`). This will ensure that all of the npm dependencies are downloaded and the project builds.
--   Within VS Code, open the PyRx folder.
--   In the debugger panel make sure `PyRx Debug Client` is selected.
+-   Within VS Code, open the Pylance folder.
+-   In the debugger panel make sure `Pylance Debug Client` is selected.
 -   Press F5 to start. This will launch a second instance of VS Code.
--   Go back to the first instance and switch the menu in the debugger panel to `PyRx Attach Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
+-   Go back to the first instance and switch the menu in the debugger panel to `Pylance Attach Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
 
 ### In VS Code Python extension
 
@@ -44,17 +44,17 @@ Note that this does not commit anything, it just aids in setting it in the right
 "python.packageName": "Python-Language-Server",
 ```
 
--   Launch the extension and open a Python file. The extension should then start PyRx language server.
+-   Launch the extension and open a Python file. The extension should then start Pylance language server.
 
 ## Debugging in VS Code Python extension
 
--   Modify `tsconfig.json` in `server` folder by adding `sourceRoot` pointing where PyRx Server soources are. For example:`"sourceRoot": "e:/pyrx/server",`. This will generate source maps with absolute paths.
--   Build PyRx by running `npm run package` .
+-   Modify `tsconfig.json` in `server` folder by adding `sourceRoot` pointing where Pylance Server soources are. For example:`"sourceRoot": "e:/pyrx/server",`. This will generate source maps with absolute paths.
+-   Build Pylance by running `npm run package` .
 -   Copy `client\server` folder to `nodeLanguageServer` subfolder in the Python extension.
 -   Run Python extension (in debugger or otherwise).
--   When PyRx loads, switch to VS Code instance with PyRx.
--   `Debug` => `PyRx Attach Server`
--   You should be able to set breakpoints in PyRx or PyRight and hit them.
+-   When Pylance loads, switch to VS Code instance with Pylance.
+-   `Debug` => `Pylance Attach Server`
+-   You should be able to set breakpoints in Pylance or Pyright and hit them.
 
 ## Debugging server startup code
 
@@ -68,7 +68,7 @@ const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', '--inspect-brk']
 
 -   [Jest](https://jestjs.io/) is the test runner.
 -   Use [ts-mockito](https://www.npmjs.com/package/ts-mockito) for mocking.
--   To run or debug tests in current file use `PyRx jest current file` task.
+-   To run or debug tests in current file use `Pylance jest current file` task.
 -   To run all tests from command line use `npm run test:all`.
 -   Useful extensions: `Jest` (from Orta)
 

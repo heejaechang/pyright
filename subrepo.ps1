@@ -98,7 +98,7 @@ switch ($subcommand) {
         Invoke-Call { git reset --soft $currentCommit }
         # Commit changes with a new message.
         Invoke-Call { git commit -m `"$m`" }
-        # Return to pyrx.
+        # Return to repo root.
         Pop-Location
         break
     }

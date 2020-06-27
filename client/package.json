@@ -1,17 +1,17 @@
 {
-    "name": "pyrx",
-    "displayName": "PyRx",
-    "description": "PyRx extension to VS Code (FOR DEBUGGING ONLY)",
+    "name": "pylance-client",
+    "displayName": "Pylance",
+    "description": "Pylance extension to VS Code (FOR DEBUGGING ONLY)",
     "version": "0.0.0",
     "private": true,
     "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
         "name": "Microsoft Corporation"
     },
-    "publisher": "ms-pyrx",
+    "publisher": "ms-python",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/pyrx"
+        "url": "https://github.com/microsoft/pyrx"
     },
     "engines": {
         "vscode": "^1.46.0"
@@ -26,7 +26,7 @@
         "onLanguage:python",
         "workspaceContains:**/pyrightconfig.json"
     ],
-    "icon": "images/pyrx-icon.png",
+    "icon": "images/icon.png",
     "main": "./out/src/extension",
     "contributes": {
         "languages": [
@@ -43,7 +43,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "PyRx Configuration",
+            "title": "Pylance Configuration",
             "properties": {
                 "python.analysis.typeshedPaths": {
                     "type": "array",

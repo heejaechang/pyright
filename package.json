@@ -1,7 +1,7 @@
 {
-    "name": "pyrx",
-    "displayName": "PyRx",
-    "description": "Python language server",
+    "name": "pylance",
+    "displayName": "Pylance",
+    "description": "Pylance language server",
     "version": "0.0.0",
     "private": true,
     "license": "MIT",
@@ -11,7 +11,7 @@
     "publisher": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/pyrx"
+        "url": "https://github.com/microsoft/pyrx"
     },
     "scripts": {
         "install:all": "npm install && cd server && npm run install:all && cd ../client && npm install && cd ../pythia && npm install && cd ../extension && npm install && cd ..",
@@ -58,6 +58,6 @@
     },
     "main": "index.js",
     "bin": {
-        "pyrx": "index.js"
+        "pylance": "index.js"
     }
 }

@@ -8,6 +8,7 @@
 
 import { isMainThread, Worker } from 'worker_threads';
 
+import { createPylanceImportResolver } from './pylanceImportResolver';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import {
     BackgroundAnalysisBase,
@@ -18,7 +19,6 @@ import { getCancellationFolderName } from './pyright/server/src/common/cancellat
 import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import { ConsoleInterface } from './pyright/server/src/common/console';
 import { FileSystem } from './pyright/server/src/common/fileSystem';
-import { createPyrxImportResolver } from './pyrxImportResolver';
 
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
     constructor(console: ConsoleInterface) {
@@ -41,7 +41,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        return createPyrxImportResolver(fs, options);
+        return createPylanceImportResolver(fs, options);
     }
 }
 

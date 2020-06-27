@@ -1,7 +1,7 @@
 /*
  * server.ts
  *
- * Implements PyRx language server.
+ * Implements Pylance language server.
  */
 
 import * as path from 'path';
@@ -21,6 +21,7 @@ import { BackgroundAnalysis } from './backgroundAnalysis';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelSubFolder } from './intelliCode/models';
 import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
+import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
 import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
@@ -36,7 +37,6 @@ import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/
 import { ProgressReporter } from './pyright/server/src/common/progressReporter';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
-import { createPyrxImportResolver, PyrxImportResolver } from './pyrxImportResolver';
 import { CommandController } from './src/commands/commandController';
 import { Commands } from './src/commands/commands';
 import { VERSION } from './src/common/constants';
@@ -49,13 +49,13 @@ import {
     TelemetryEventName,
     TelemetryService,
 } from './src/common/telemetry';
-import { CodeActionProvider as PyrxCodeActionProvider } from './src/languageService/codeActionProvider';
+import { CodeActionProvider as PylanceCodeActionProvider } from './src/languageService/codeActionProvider';
 import { AnalysisTracker } from './src/services/analysisTracker';
 
 const pythonSectionName = 'python';
 const pythonAnalysisSectionName = 'python.analysis';
 
-class PyRxServer extends LanguageServerBase {
+class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
     private _telemetry: TelemetryService;
@@ -78,9 +78,9 @@ class PyRxServer extends LanguageServerBase {
             progressReporterFactory: reporterFactory,
         });
 
-        // pyrx has "typeshed-fallback" under "client/server" rather than "client" as pyright does
+        // Pylance has "typeshed-fallback" under "client/server" rather than "client" as pyright does
         // but __dirname points to "client/server" same as pyright.
-        // the difference comes from the fact that pyright deploy everything under client but pyrx
+        // the difference comes from the fact that pyright deploy everything under client but pylance
         // let users to download only server part.
         //
         // make sure root directory points to __dirname which is "client/server" where we can discover
@@ -233,7 +233,7 @@ class PyRxServer extends LanguageServerBase {
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        const resolver = createPyrxImportResolver(fs, options);
+        const resolver = createPylanceImportResolver(fs, options);
 
         resolver.setStubUsageCallback((importMetrics) => {
             if (!importMetrics.isEmpty()) {
@@ -259,7 +259,7 @@ class PyRxServer extends LanguageServerBase {
             token
         );
 
-        const actions2 = await PyrxCodeActionProvider.getCodeActionsForPosition(
+        const actions2 = await PylanceCodeActionProvider.getCodeActionsForPosition(
             workspace,
             filePath,
             params.range,
@@ -286,7 +286,7 @@ class PyRxServer extends LanguageServerBase {
             const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
             this._workspaceMap.forEach((workspace) => {
                 const resolver = workspace.serviceInstance.getImportResolver();
-                if (resolver instanceof PyrxImportResolver) {
+                if (resolver instanceof PylanceImportResolver) {
                     const importMetrics = resolver.getAndResetImportMetrics();
                     if (!importMetrics.isEmpty()) {
                         addMeasurementsToEvent(importEvent, importMetrics);
@@ -313,5 +313,5 @@ class PyRxServer extends LanguageServerBase {
 
 if (isMainThread) {
     prepareNativesForCurrentPlatform(createFromRealFileSystem(), new Platform());
-    new PyRxServer();
+    new PylanceServer();
 }

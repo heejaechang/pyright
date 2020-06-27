@@ -19,7 +19,7 @@ export interface ServerCommand {
 }
 
 export class CommandController extends PyrightCommandController {
-    private _pyrxQuickAction: QuickActionCommand;
+    private _pylanceQuickAction: QuickActionCommand;
     private _pyrightCommandMap = new Map<string, string>([
         [Commands.createTypeStub, PyrightCommands.createTypeStub],
         [Commands.orderImports, PyrightCommands.orderImports],
@@ -32,7 +32,7 @@ export class CommandController extends PyrightCommandController {
     constructor(ls: LanguageServerInterface) {
         super(ls);
 
-        this._pyrxQuickAction = new QuickActionCommand(ls);
+        this._pylanceQuickAction = new QuickActionCommand(ls);
     }
 
     static supportedCommands() {
@@ -54,7 +54,7 @@ export class CommandController extends PyrightCommandController {
         switch (cmdParams.command) {
             case Commands.removeUnusedImport:
             case Commands.addImport:
-                return await this._pyrxQuickAction.execute(cmdParams, token);
+                return await this._pylanceQuickAction.execute(cmdParams, token);
         }
 
         const pyrightCommand = this._pyrightCommandMap.get(cmdParams.command);

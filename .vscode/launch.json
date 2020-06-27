@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "PyRx Tests",
+            "name": "Pylance Tests",
             "type": "node",
             "request": "launch",
             "args": [
@@ -17,7 +17,7 @@
             "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
         },
         {
-            "name": "PyRx Debug Client",
+            "name": "Pylance Debug Client",
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${workspaceRoot}/client/out/src/extension.js",
@@ -33,7 +33,7 @@
             ]
         },
         {
-            "name": "PyRx Attach Server",
+            "name": "Pylance Attach Server",
             "type": "node",
             "request": "attach",
             "protocol": "inspector",
@@ -47,7 +47,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "PyRx Launch Server",
+            "name": "Pylance Launch Server",
             "program": "${workspaceRoot}/dist/server.bundle.js",
             "skipFiles": [
                 "<node_internals>/**"
@@ -59,7 +59,7 @@
             "stopOnEntry": true
         },
         {
-            "name": "PyRx jest current file",
+            "name": "Pylance jest current file",
             "type": "node",
             "request": "launch",
             "args": [
@@ -77,11 +77,11 @@
             }
         },
         {
-            "name": "PyRx fourslash current file",
+            "name": "Pylance fourslash current file",
             "type": "node",
             "request": "launch",
             "args": [
-                "pyrxFourSlashRunner.test.ts",
+                "pylanceFourSlashRunner.test.ts",
                 "-t ${fileBasenameNoExtension}",
                 "--config",
                 "${workspaceRoot}/server/jest.config.js"
@@ -139,7 +139,7 @@
             ]
         },
         {
-            // we have pyright and pyrx since jest.config.js is different.
+            // we have pyright and Pylance since jest.config.js is different.
             "name": "PyRight jest current file",
             "type": "node",
             "request": "launch",

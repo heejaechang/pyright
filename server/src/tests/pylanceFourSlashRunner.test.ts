@@ -1,5 +1,5 @@
 /*
- * fourslashrunner.test.ts
+ * pylanceFourSlashRunner.test.ts
  * Copyright (c) Microsoft Corporation.
  *
  * Entry point that will read all *.fourslash.ts files and
@@ -9,6 +9,7 @@
 import * as path from 'path';
 import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-languageserver';
 
+import { createPylanceImportResolver } from '../../pylanceImportResolver';
 import { ImportResolverFactory } from '../../pyright/server/src/analyzer/importResolver';
 import * as consts from '../../pyright/server/src/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
@@ -19,12 +20,11 @@ import { HostSpecificFeatures } from '../../pyright/server/src/tests/harness/fou
 import * as host from '../../pyright/server/src/tests/harness/host';
 import { typeshedFolder } from '../../pyright/server/src/tests/harness/vfs/factory';
 import { MODULE_PATH } from '../../pyright/server/src/tests/harness/vfs/filesystem';
-import { createPyrxImportResolver } from '../../pyrxImportResolver';
 import { CommandController } from '../commands/commandController';
 import { CodeActionProvider } from '../languageService/codeActionProvider';
 
-class PyrxFeatures implements HostSpecificFeatures {
-    importResolverFactory: ImportResolverFactory = createPyrxImportResolver;
+class PylanceFeatures implements HostSpecificFeatures {
+    importResolverFactory: ImportResolverFactory = createPylanceImportResolver;
     getCodeActionsForPosition(
         workspace: WorkspaceServiceInstance,
         filePath: string,
@@ -39,7 +39,7 @@ class PyrxFeatures implements HostSpecificFeatures {
     }
 }
 
-describe('pyrx fourslash tests', () => {
+describe('pylance fourslash tests', () => {
     const testFiles: string[] = [];
 
     const basePath = path.resolve(path.dirname(module.filename), 'fourslash/');
@@ -62,7 +62,7 @@ describe('pyrx fourslash tests', () => {
     mountedPaths.set(bundledStubsFolder, bundledStubsFolderPath);
     mountedPaths.set(typeshedFolder, typeshedFolderPath);
 
-    const pyrxFeatures = new PyrxFeatures();
+    const pylanceFeatures = new PylanceFeatures();
 
     testFiles.forEach((file) => {
         describe(file, () => {
@@ -70,7 +70,7 @@ describe('pyrx fourslash tests', () => {
             const justName = fn.replace(/^.*[\\/]/, '');
 
             it('fourslash test ' + justName + ' run', (cb) => {
-                runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, pyrxFeatures);
+                runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, pylanceFeatures);
             });
         });
     });

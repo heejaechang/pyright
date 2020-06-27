@@ -1,7 +1,7 @@
 {
-    "name": "pyrx-server",
-    "displayName": "PyRx",
-    "description": "Python language server",
+    "name": "pylance-server",
+    "displayName": "Pylance",
+    "description": "Pylance language server",
     "version": "0.0.0",
     "private": true,
     "license": "SEE LICENSE IN LICENSE.txt",
@@ -11,7 +11,7 @@
     "publisher": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/pyrx"
+        "url": "https://github.com/microsoft/pyrx"
     },
     "scripts": {
         "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && npm run build:getonnx && cd pyright && npm run install:all && cd ..",
@@ -30,7 +30,7 @@
         "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json",
         "test:all:pipeline": "npm run test:pipeline && cd pyright/server && npm run test:pipeline && cd ../..",
         "posttest:all:pipeline": "npm run combine:coverage",
-        "precombine:coverage": "shx mkdir -p reports .nyc_output && shx cp coverage/coverage-final.json reports/coverage-pyrx.json && shx cp pyright/server/coverage/coverage-final.json reports/coverage-pyright.json",
+        "precombine:coverage": "shx mkdir -p reports .nyc_output && shx cp coverage/coverage-final.json reports/coverage-pylance.json && shx cp pyright/server/coverage/coverage-final.json reports/coverage-pyright.json",
         "combine:coverage": "nyc merge reports .nyc_output/out.json && nyc report --reporter html --reporter cobertura  --exclude-after-remap=false --report-dir coverage-merged"
     },
     "dependencies": {

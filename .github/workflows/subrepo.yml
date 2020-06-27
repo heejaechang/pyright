@@ -19,7 +19,7 @@ jobs:
 
       # Check that the parent commit of the most recent subrepo pull exists in the history.
       # Without it, git-subrepo does not have a reference point to produce its diffs.
-      - name: Check pyrx parent
+      - name: Check parent
         run: git merge-base --is-ancestor $(git config --file server/pyright/.gitrepo subrepo.parent) HEAD
 
       # On PR, if the changes include .gitrepo, warn the user to not squash commits.

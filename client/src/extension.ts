@@ -4,7 +4,7 @@
  * Copyright (c) Microsoft Corporation.
  * Licensed under the MIT license.
  *
- * Provides client for PyRx Python language server. This portion runs
+ * Provides client for Pylance Python language server. This portion runs
  * in the context of the VS Code process and talks to the server, which
  * runs in another process. FOR DEBUGGING ONLY.
  */
@@ -56,7 +56,7 @@ export function activate(context: ExtensionContext) {
     };
 
     // Create the language client and start the client.
-    const languageClient = new LanguageClient('python', 'PyRx', serverOptions, clientOptions);
+    const languageClient = new LanguageClient('python', 'Pylance', serverOptions, clientOptions);
     const disposable = languageClient.start();
 
     // Push the disposable to the context's subscriptions so that the

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// This script helps build the command-line version of pyrx
+// This script helps build the command-line version of pylance
 // by copying the typeshed-fallback directory to the dist directory.
 
 /* eslint-disable @typescript-eslint/no-var-requires */

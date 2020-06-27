@@ -1,5 +1,5 @@
 /*
- * pyrxImportResolver.ts
+ * pylanceImportResolver.ts
  *
  * Extends the base import functionality provided by pyright to provide
  * resolution of additional type stub paths.
@@ -48,7 +48,7 @@ export class ImportMetrics {
 
 export type ImportMetricsCallback = (results: ImportMetrics) => void;
 
-export class PyrxImportResolver extends ImportResolver {
+export class PylanceImportResolver extends ImportResolver {
     private _importMetrics = new ImportMetrics();
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
 
@@ -146,6 +146,6 @@ export class PyrxImportResolver extends ImportResolver {
     }
 }
 
-export function createPyrxImportResolver(fs: FileSystem, options: ConfigOptions): PyrxImportResolver {
-    return new PyrxImportResolver(fs, options);
+export function createPylanceImportResolver(fs: FileSystem, options: ConfigOptions): PylanceImportResolver {
+    return new PylanceImportResolver(fs, options);
 }

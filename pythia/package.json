@@ -1,5 +1,5 @@
 {
-    "name": "pythia",
+    "name": "pylance-pythia",
     "displayName": "Pythia",
     "description": "Pythia for Python repo analysis utility",
     "version": "0.0.0",
@@ -11,7 +11,7 @@
     "publisher": "Microsoft Corporation",
     "repository": {
         "type": "git",
-        "url": "https://github.com/Microsoft/PyRx"
+        "url": "https://github.com/microsoft/pyrx"
     },
     "scripts": {
         "build": "npm install && tsc --project tsconfig.json",

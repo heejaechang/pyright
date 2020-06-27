@@ -3,7 +3,7 @@
  * Copyright: Microsoft 2019
  *
  * Configuration for webpack to bundle the javascript into a single file
- * for the PyRx language server.
+ * for the Pylance language server.
  */
 
 /* eslint-disable @typescript-eslint/no-var-requires */
