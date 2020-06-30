@@ -34,8 +34,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
 
 function checkHostApp() {
     const appName = 'Visual Studio Code';
+    const insiderAppName = 'Visual Studio Code - Insiders';
 
-    if (vscode.env.appName !== appName) {
+    if (vscode.env.appName !== appName && vscode.env.appName !== insiderAppName) {
         const licenseErrorText = [
             'You may only use the Pylance extension with Visual Studio Code, Visual Studio or Xamarin Studio software',
             'to help you develop and test your applications.',
