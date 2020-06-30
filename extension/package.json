@@ -10,6 +10,9 @@
     "publisher": "ms-python",
     "preview": true,
     "private": true,
+    "bugs": {
+        "url": "https://github.com/microsoft/pylance-release/issues"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/microsoft/pylance-release"
