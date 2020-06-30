@@ -1,4 +1,4 @@
-This license applies to the Pylance Extension for Visual Studio Code product.  This downloadable extension includes open source code available at the https://github.com/microsoft/pyright in addition to other packages and features added by Microsoft as described in README.md.
+﻿This license applies to the Pylance Extension for Visual Studio Code product.  This downloadable extension includes open source code available at the https://github.com/microsoft/pyright in addition to other packages and features added by Microsoft as described in README.md.
 
 MICROSOFT PRE-RELEASE SOFTWARE LICENSE TERMS
 MICROSOFT PYLANCE EXTENSION FOR VISUAL STUDIO CODE 
