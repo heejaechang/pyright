@@ -35,8 +35,7 @@ export class ActivatePylanceBanner extends BannerBase {
     readonly LabelNo = localize.LanguageServer.noThanks();
     readonly LabelLater = localize.Common.remindMeLater();
 
-    // TODO: Replace by Pylance
-    static readonly ExpectedLanguageServer = 'Node';
+    static readonly ExpectedLanguageServer = 'Pylance';
 
     constructor(
         private readonly appShell: ApplicationShell,
@@ -75,7 +74,7 @@ export class ActivatePylanceBanner extends BannerBase {
             return false;
         }
         const ls = this.appConfig.getSetting<string>('languageServer');
-        return ls !== ActivatePylanceBanner.ExpectedLanguageServer && ls !== 'Node';
+        return ls !== ActivatePylanceBanner.ExpectedLanguageServer;
     }
 
     private async enableLanguageServer(): Promise<void> {
