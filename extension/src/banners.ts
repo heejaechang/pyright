@@ -28,7 +28,7 @@ abstract class BannerBase {
 
 // Prompt for Pylance when extension is installed.
 export class ActivatePylanceBanner extends BannerBase {
-    readonly SettingKey = 'ActivatePylanceBanner';
+    public static readonly SettingKey = 'ActivatePylanceBanner2';
 
     readonly Message = localize.LanguageServer.installedButInactive();
     readonly LabelYes = localize.LanguageServer.turnItOn();
@@ -43,7 +43,7 @@ export class ActivatePylanceBanner extends BannerBase {
         private readonly cmdManager: CommandManager,
         memento: Memento
     ) {
-        super('ActivatePylanceBanner', memento);
+        super(ActivatePylanceBanner.SettingKey, memento);
     }
 
     async show(): Promise<void> {
@@ -63,10 +63,10 @@ export class ActivatePylanceBanner extends BannerBase {
             return;
         }
         if (response === this.LabelYes) {
-            await this.disable(); // Disable first since next call causes reload.
             await this.enableLanguageServer();
+        } else {
+            await this.disable();
         }
-        await this.disable();
     }
 
     private shouldShowBanner(): boolean {
@@ -89,10 +89,11 @@ export class ActivatePylanceBanner extends BannerBase {
 
 // Prompt for Pylance surve.
 export class PylanceSurveyBanner extends BannerBase {
+    public static readonly SettingKey = 'PylanceSurveyBanner';
+
     private readonly ShowAfterCountKey = 'PylanceSurveyShowAfterCount';
     private readonly LaunchCounterKey = 'PylanceLaunchCounter';
 
-    readonly SettingKey = 'PylanceSurveyBanner';
     readonly Message = localize.LanguageServer.surveyMessage();
     readonly LabelYes = localize.Common.yes();
     readonly LabelNo = localize.Common.no();
@@ -106,7 +107,7 @@ export class PylanceSurveyBanner extends BannerBase {
         private readonly minEventBeforeShow = 20,
         private readonly maxEventBeforeShow = 50
     ) {
-        super('PylanceSurveyBanner', memento);
+        super(PylanceSurveyBanner.SettingKey, memento);
     }
 
     async show(): Promise<void> {

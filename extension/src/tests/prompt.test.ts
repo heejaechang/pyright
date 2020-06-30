@@ -31,7 +31,7 @@ describe('Prompt to use Pylance', () => {
     test('Disable banner', async () => {
         const banner = makeBanner();
         await banner.disable();
-        expect(settings.get(banner.SettingKey)).toEqual(false);
+        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
 
         await banner.show();
@@ -45,7 +45,7 @@ describe('Prompt to use Pylance', () => {
         );
 
         await banner.show();
-        expect(settings.get(banner.SettingKey)).toEqual(false);
+        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
     });
 
@@ -66,6 +66,7 @@ describe('Prompt to use Pylance', () => {
         );
 
         await banner.show();
+        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(true);
         const [setting, value] = capture(appConfigMock.updateSetting).first();
         expect(setting).toEqual('languageServer');
         expect(value).toEqual(ActivatePylanceBanner.ExpectedLanguageServer);

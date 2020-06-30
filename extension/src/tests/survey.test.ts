@@ -30,7 +30,7 @@ describe('Pylance survey', () => {
     test('Disable banner', async () => {
         const banner = makeBanner();
         await banner.disable();
-        expect(settings.get(banner.SettingKey)).toEqual(false);
+        expect(settings.get(PylanceSurveyBanner.SettingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
 
         await banner.show();
@@ -44,7 +44,7 @@ describe('Pylance survey', () => {
         );
 
         await banner.show();
-        expect(settings.get(banner.SettingKey)).toEqual(false);
+        expect(settings.get(PylanceSurveyBanner.SettingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
     });
 
@@ -68,7 +68,7 @@ describe('Pylance survey', () => {
         const [url] = capture(browserMock.launch).first();
         expect(url).toEqual(banner.getSurverUrl(1, version));
         expect(banner.enabled).toEqual(false);
-        expect(settings.get(banner.SettingKey)).toEqual(false);
+        expect(settings.get(PylanceSurveyBanner.SettingKey)).toEqual(false);
     });
 
     test('Banner not shown before threshold', async () => {
