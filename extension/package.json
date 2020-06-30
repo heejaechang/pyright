@@ -29,8 +29,8 @@
     "icon": "images/icon.png",
     "main": "./dist/extension.js",
     "activationEvents": [
-        "onStartupFinished",
-        "onLanguage:python"
+        "onLanguage:python",
+        "workspaceContains:mspythonconfig.json"
     ],
     "extensionDependencies": [
         "ms-python.python"
