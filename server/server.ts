@@ -9,6 +9,7 @@ import { isArray } from 'util';
 import {
     CancellationToken,
     CodeAction,
+    CodeActionKind,
     CodeActionParams,
     Command,
     ConfigurationItem,
@@ -76,6 +77,7 @@ class PylanceServer extends LanguageServerBase {
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
             progressReporterFactory: reporterFactory,
+            supportedCodeActions: [CodeActionKind.QuickFix],
         });
 
         // Pylance has "typeshed-fallback" under "client/server" rather than "client" as pyright does
