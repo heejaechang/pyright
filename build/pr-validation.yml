@@ -48,8 +48,15 @@ jobs:
       - script: npm run install:all
         displayName: npm run install:all
 
+      - bash: |
+          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & echo ">>> Started xvfb"
+        displayName: Start xvfb
+        condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+
       - script: npm run test:all:pipeline
         displayName: npm run test:all:pipeline
+        env:
+          DISPLAY: ':99.0'
 
       - task: PublishPipelineArtifact@1
         displayName: Publish Istanbul report as artifact

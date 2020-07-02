@@ -9,6 +9,11 @@ import * as sourceMapSupport from 'source-map-support';
 const rootDir = path.resolve(__dirname, '../../../');
 const fromRoot = (...subPaths: string[]): string => path.resolve(rootDir, ...subPaths);
 const srcRoot = fromRoot('src');
+const outDir = fromRoot('out');
+const testEnvDir = path.join(outDir, 'tests');
+
+console.log(`Extension src root: ${srcRoot}`);
+console.log(`Extension out dir: ${outDir}`);
 
 export async function run(_testRoot: string, callback: TestRunnerCallback): Promise<void> {
     // Enable source map support. This is done in the original Mocha test runner,
@@ -26,12 +31,12 @@ export async function run(_testRoot: string, callback: TestRunnerCallback): Prom
             transform: JSON.stringify({ '^.+\\.ts$': 'ts-jest' }),
             runInBand: true, // Required due to the way the "vscode" module is injected.
             testRegex: '\\.(test)\\.ts$',
-            testEnvironment: fromRoot('out/tests/jest/jest-vscode-env.js'),
-            setupTestFrameworkScriptFile: fromRoot('out/tests/jest/jest-vscode-setup.js'),
+            testEnvironment: path.join(testEnvDir, 'jest', 'jest-vscode-env.js'),
+            setupTestFrameworkScriptFile: path.join(testEnvDir, 'jest', 'jest-vscode-setup.js'),
             moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
             globals: JSON.stringify({
                 'ts-jest': {
-                    tsConfig: path.resolve(rootDir, './tsconfig.json'),
+                    tsConfig: path.join(rootDir, 'tsconfig.json'),
                 },
             }),
             forceExit: true,

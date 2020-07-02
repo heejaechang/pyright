@@ -1,7 +1,7 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { version } from '../package.json';
 import { LSExtensionApi } from './api';
 import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
@@ -11,18 +11,16 @@ import { AppConfigurationImpl } from './types/appConfig';
 import { BrowserServiceImpl } from './types/browser';
 import { CommandManagerImpl } from './types/commandManager';
 
-const extensionId = 'vscode-pylance';
-
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
     checkHostApp();
+    const version = getExtensionVersion(context);
 
     setExtensionRoot(context.extensionPath);
     loadLocalizedStrings();
 
     const serverPath = path.join(context.extensionPath, 'server');
-
     await showActivatePylanceBanner(context);
-    await showPylanceSurveyBanner(context);
+    await showPylanceSurveyBanner(context, version);
 
     return {
         languageServerFolder: async () => ({
@@ -30,6 +28,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
             version,
         }),
     };
+}
+
+function getExtensionVersion(context: vscode.ExtensionContext): string {
+    const packageJsonPath = path.join(context.extensionPath, 'package.json');
+    const packageJson = fs.readFileSync(packageJsonPath, 'utf8');
+    return JSON.parse(packageJson).version;
 }
 
 function checkHostApp() {
@@ -67,13 +71,12 @@ async function showActivatePylanceBanner(context: vscode.ExtensionContext): Prom
     return switchToPylance.show();
 }
 
-async function showPylanceSurveyBanner(context: vscode.ExtensionContext): Promise<void> {
-    const extension = vscode.extensions.getExtension(extensionId);
+async function showPylanceSurveyBanner(context: vscode.ExtensionContext, version: string): Promise<void> {
     const survey = new PylanceSurveyBanner(
         new ApplicationShellImpl(),
         new BrowserServiceImpl(),
         context.globalState,
-        extension?.packageJSON.version
+        version
     );
     return survey.show();
 }

@@ -111,13 +111,11 @@
         }
     },
     "scripts": {
-        "build": "tsc",
+        "build": "tsc -p ./",
         "vscode:prepublish": "cd .. && npm run package && cd extension && webpack --mode production",
         "webpack": "webpack --mode development",
         "webpack-dev": "webpack --mode development --watch",
-        "test-compile": "tsc -p ./",
-        "test": "node ./src/tests/runTests.js",
-        "test:pipeline": "jest --detectOpenHandles --forceExit --reporters=jest-junit --reporters=default --coverage --coverageReporters=cobertura --coverageReporters=html --coverageReporters=json"
+        "test": "npm run build && node ./src/tests/runTests.js"
     },
     "devDependencies": {
         "@types/jest": "^26.0.0",
