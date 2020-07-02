@@ -32,4 +32,6 @@ export const wellKnownAbbreviationMap = new Map<string, string>([
     ['m', 'math'],
     ['spio', 'scipy.io'],
     ['sp', 'scipy'],
+    ['pn', 'panel'],
+    ['hv', 'holoviews'],
 ]);

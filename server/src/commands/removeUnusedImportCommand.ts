@@ -17,7 +17,7 @@ import { throwIfCancellationRequested } from '../../pyright/server/src/common/ca
 import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
 import { convertOffsetsToRange } from '../../pyright/server/src/common/positionUtils';
 import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
-import { doRangesOverlap, Range, TextRange } from '../../pyright/server/src/common/textRange';
+import { doRangesIntersect, doRangesOverlap, Range, TextRange } from '../../pyright/server/src/common/textRange';
 import { TextRangeCollection } from '../../pyright/server/src/common/textRangeCollection';
 import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
 import { ServerCommand } from './commandController';
@@ -94,7 +94,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
 
         // 2. some of modules in the import statement is used.
         const index = nameNodes.findIndex((n: TextRange) =>
-            doRangesOverlap(convertOffsetsToRange(n.start, TextRange.getEnd(n), lines), range)
+            doRangesIntersect(convertOffsetsToRange(n.start, TextRange.getEnd(n), lines), range)
         );
 
         if (index < 0) {
