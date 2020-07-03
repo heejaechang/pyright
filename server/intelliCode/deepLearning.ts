@@ -4,6 +4,7 @@
  * IntelliCode core.
  */
 
+import type { InferenceSession } from 'onnxruntime';
 import { CancellationToken } from 'vscode-languageserver';
 
 import { LogLevel } from '../pyright/server/src/common/console';
@@ -26,8 +27,8 @@ export interface DeepLearningResult {
 const EmptyResult = { recommendations: [], invocation: undefined };
 
 export class DeepLearning {
-    private _onnx: any; // require('onnxruntime')
-    private _session: any; // InferenceSession;
+    private _onnx?: typeof import('onnxruntime');
+    private _session?: InferenceSession;
 
     constructor(
         private readonly _model: PythiaModel,
@@ -36,7 +37,7 @@ export class DeepLearning {
         private readonly _telemetry?: TelemetryService
     ) {}
 
-    async initialize(): Promise<any> {
+    async initialize(): Promise<void> {
         if (!this._platform.isOnnxSupported()) {
             this._logger?.log(LogLevel.Warn, 'IntelliCode is not supported on this platform.');
             return;
@@ -52,7 +53,7 @@ export class DeepLearning {
             }
         }
 
-        if (this._onnx && this._onnx.InferenceSession && this._onnx.InferenceSession.create) {
+        if (this._onnx) {
             try {
                 this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
                     logSeverityLevel: this.getOnnxLogLevel(),
@@ -71,7 +72,7 @@ export class DeepLearning {
         position: number,
         token: CancellationToken
     ): Promise<DeepLearningResult> {
-        if (!this._onnx) {
+        if (!this._onnx || !this._session) {
             return EmptyResult; // Unsupported platform
         }
 
@@ -147,7 +148,7 @@ export class DeepLearning {
         return result;
     }
 
-    private getOnnxLogLevel(): number {
+    private getOnnxLogLevel(): 0 | 1 | 2 | 3 | 4 {
         // ONNX log severity level. See
         // https://github.com/microsoft/onnxruntime/blob/master/include/onnxruntime/core/common/logging/severity.h
         //
