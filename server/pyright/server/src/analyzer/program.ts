@@ -21,7 +21,6 @@ import {
     CallHierarchyOutgoingCall,
     DocumentHighlight,
 } from 'vscode-languageserver-types';
-import { isMainThread } from 'worker_threads';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
