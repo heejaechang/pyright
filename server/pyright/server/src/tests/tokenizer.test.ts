@@ -839,15 +839,15 @@ test('Strings: bad hex escapes', () => {
 
 test('Strings: good name escapes', () => {
     const t = new Tokenizer();
-    const results = t.tokenize('"\\N{caret}" "a\\N{A9}a"');
+    const results = t.tokenize('"\\N{caret escape blah}" "a\\N{A9}a"');
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
     const unescapedValue0 = StringTokenUtils.getUnescapedString(stringToken0);
     assert.equal(stringToken0.type, TokenType.String);
     assert.equal(stringToken0.flags, StringTokenFlags.DoubleQuote);
-    assert.equal(stringToken0.length, 11);
-    assert.equal(stringToken0.escapedValue, '\\N{caret}');
+    assert.equal(stringToken0.length, 23);
+    assert.equal(stringToken0.escapedValue, '\\N{caret escape blah}');
     assert.equal(unescapedValue0.value, '-');
 
     const stringToken1 = results.tokens.getItemAt(1) as StringToken;
@@ -861,7 +861,7 @@ test('Strings: good name escapes', () => {
 
 test('Strings: bad name escapes', () => {
     const t = new Tokenizer();
-    const results = t.tokenize('"\\N{caret" "\\N{ A9}"');
+    const results = t.tokenize('"\\N{caret" "\\N{.A9}"');
     assert.equal(results.tokens.count, 2 + _implicitTokenCount);
 
     const stringToken0 = results.tokens.getItemAt(0) as StringToken;
@@ -879,8 +879,8 @@ test('Strings: bad name escapes', () => {
     assert.equal(stringToken1.flags, StringTokenFlags.DoubleQuote);
     assert.equal(unescapedValue1.unescapeErrors.length, 1);
     assert.equal(stringToken1.length, 9);
-    assert.equal(stringToken1.escapedValue, '\\N{ A9}');
-    assert.equal(unescapedValue1.value, '\\N{ A9}');
+    assert.equal(stringToken1.escapedValue, '\\N{.A9}');
+    assert.equal(unescapedValue1.value, '\\N{.A9}');
 });
 
 test('Comments', () => {
@@ -1259,9 +1259,9 @@ test('Operators', () => {
         '* ** / // /= //=' +
         '*= += -= %= **= ' +
         '& &= | |= ^ ^= ' +
-        ':=';
+        ':= <>';
     const results = new Tokenizer().tokenize(text);
-    const lengths = [1, 2, 3, 2, 2, 1, 2, 3, 2, 2, 1, 1, 1, 1, 1, 2, 1, 2, 2, 3, 2, 2, 2, 2, 3, 1, 2, 1, 2, 1, 2, 2];
+    const lengths = [1, 2, 3, 2, 2, 1, 2, 3, 2, 2, 1, 1, 1, 1, 1, 2, 1, 2, 2, 3, 2, 2, 2, 2, 3, 1, 2, 1, 2, 1, 2, 2, 2];
     const operatorTypes = [
         OperatorType.LessThan,
         OperatorType.LeftShift,
@@ -1295,6 +1295,7 @@ test('Operators', () => {
         OperatorType.BitwiseXor,
         OperatorType.BitwiseXorEqual,
         OperatorType.Walrus,
+        OperatorType.LessOrGreaterThan,
     ];
     assert.equal(results.tokens.count - _implicitTokenCount, lengths.length);
     assert.equal(results.tokens.count - _implicitTokenCount, operatorTypes.length);

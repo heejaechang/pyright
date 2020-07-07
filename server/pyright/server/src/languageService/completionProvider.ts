@@ -37,7 +37,7 @@ import {
 } from '../analyzer/typeDocStringUtils';
 import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
 import { ClassType, FunctionType, ObjectType, Type, TypeCategory } from '../analyzer/types';
-import { doForSubtypes, getMembersForClass, getMembersForModule } from '../analyzer/typeUtils';
+import { doForSubtypes, getMembersForClass, getMembersForModule, specializeType } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
 import { TextEditAction } from '../common/editAction';
@@ -302,7 +302,7 @@ export class CompletionProvider {
                 return this._getImportFromCompletions(curNode, priorWord);
             }
 
-            if (isExpressionNode(curNode) || curNode.nodeType === ParseNodeType.Decorator) {
+            if (isExpressionNode(curNode)) {
                 return this._getExpressionCompletions(curNode, priorWord, priorText, postText);
             }
 
@@ -514,12 +514,17 @@ export class CompletionProvider {
 
         if (leftType) {
             doForSubtypes(leftType, (subtype) => {
-                if (subtype.category === TypeCategory.Object) {
-                    getMembersForClass(subtype.classType, symbolTable, true);
-                } else if (subtype.category === TypeCategory.Class) {
-                    getMembersForClass(subtype, symbolTable, false);
-                } else if (subtype.category === TypeCategory.Module) {
-                    getMembersForModule(subtype, symbolTable);
+                let specializedSubtype = subtype;
+                if (subtype.category === TypeCategory.TypeVar) {
+                    specializedSubtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
+                }
+
+                if (specializedSubtype.category === TypeCategory.Object) {
+                    getMembersForClass(specializedSubtype.classType, symbolTable, true);
+                } else if (specializedSubtype.category === TypeCategory.Class) {
+                    getMembersForClass(specializedSubtype, symbolTable, false);
+                } else if (specializedSubtype.category === TypeCategory.Module) {
+                    getMembersForModule(specializedSubtype, symbolTable);
                 }
 
                 return undefined;
@@ -1059,7 +1064,8 @@ export class CompletionProvider {
                                 case DeclarationType.Intrinsic:
                                 case DeclarationType.Variable:
                                 case DeclarationType.Parameter:
-                                    typeDetail = name + ': ' + this._evaluator.printType(type);
+                                    typeDetail =
+                                        name + ': ' + this._evaluator.printType(type, /* expandTypeAlias */ false);
                                     break;
 
                                 case DeclarationType.Function: {
@@ -1068,10 +1074,17 @@ export class CompletionProvider {
                                         : type;
                                     if (functionType.category === TypeCategory.OverloadedFunction) {
                                         typeDetail = functionType.overloads
-                                            .map((overload) => name + this._evaluator.printType(overload))
+                                            .map(
+                                                (overload) =>
+                                                    name +
+                                                    this._evaluator.printType(overload, /* expandTypeAlias */ false)
+                                            )
                                             .join('\n');
                                     } else {
-                                        typeDetail = name + ': ' + this._evaluator.printType(functionType);
+                                        typeDetail =
+                                            name +
+                                            ': ' +
+                                            this._evaluator.printType(functionType, /* expandTypeAlias */ false);
                                     }
                                     break;
                                 }

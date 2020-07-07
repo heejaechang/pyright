@@ -2,7 +2,7 @@
     "name": "pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.45",
+    "version": "1.1.51",
     "license": "MIT",
     "author": {
         "name": "Microsoft Corporation"
@@ -23,7 +23,8 @@
     ],
     "activationEvents": [
         "onLanguage:python",
-        "workspaceContains:**/pyrightconfig.json"
+        "workspaceContains:pyrightconfig.json",
+        "workspaceContains:mspythonconfig.json"
     ],
     "icon": "images/pyright-icon.png",
     "main": "./out/src/extension",
@@ -95,7 +96,16 @@
                     "type": "object",
                     "default": {},
                     "description": "Allows a user to override the severity levels for individual diagnostics.",
-                    "scope": "resource"
+                    "scope": "resource",
+                    "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "warning",
+                            "information",
+                            "error"
+                        ]
+                    }
                 },
                 "python.analysis.logLevel": {
                     "type": "string",
@@ -107,6 +117,17 @@
                         "info",
                         "trace"
                     ]
+                },
+                "python.analysis.typeCheckingMode": {
+                    "type": "string",
+                    "default": "basic",
+                    "enum": [
+                        "off",
+                        "basic",
+                        "strict"
+                    ],
+                    "description": "Defines the default rule set for type checking.",
+                    "scope": "resource"
                 },
                 "python.analysis.typeshedPaths": {
                     "type": "array",
@@ -133,17 +154,6 @@
                     "type": "string",
                     "default": "python",
                     "description": "Path to Python, you can use a custom version of Python.",
-                    "scope": "resource"
-                },
-                "pyright.typeCheckingMode": {
-                    "type": "string",
-                    "default": "basic",
-                    "enum": [
-                        "off",
-                        "basic",
-                        "strict"
-                    ],
-                    "description": "Defines the default rule set for type checking.",
                     "scope": "resource"
                 },
                 "pyright.useLibraryCodeForTypes": {
