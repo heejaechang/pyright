@@ -91,9 +91,16 @@ export const maxTypeRecursionCount = 16;
 
 export type InheritanceChain = (ClassType | UnknownType)[];
 
+interface TypeAliasInfo {
+    aliasName: string;
+    typeParameters?: TypeVarType[];
+    typeArguments?: Type[];
+}
+
 interface TypeBase {
     category: TypeCategory;
     flags: TypeFlags;
+    typeAliasInfo?: TypeAliasInfo;
 }
 
 export namespace TypeBase {
@@ -103,6 +110,18 @@ export namespace TypeBase {
 
     export function isInstance(type: TypeBase) {
         return (type.flags & TypeFlags.Instance) !== 0;
+    }
+
+    export function cloneForTypeAlias(type: Type, name: string, typeParams?: TypeVarType[], typeArgs?: Type[]): Type {
+        const typeClone = { ...type };
+
+        typeClone.typeAliasInfo = {
+            aliasName: name,
+            typeParameters: typeParams,
+            typeArguments: typeArgs,
+        };
+
+        return typeClone;
     }
 }
 
@@ -242,6 +261,9 @@ export const enum ClassTypeFlags {
     // A protocol class that is "runtime checkable" can be used
     // in an isinstance call.
     RuntimeCheckable = 1 << 13,
+
+    // The type is defined in the typing_extensions.pyi file.
+    TypingExtensionClass = 1 << 14,
 }
 
 interface ClassDetails {
@@ -307,6 +329,9 @@ export namespace ClassType {
         if (classType.literalValue !== undefined) {
             newClassType.literalValue = classType.literalValue;
         }
+        if (classType.typeAliasInfo !== undefined) {
+            newClassType.typeAliasInfo = classType.typeAliasInfo;
+        }
         if (skipAbstractClassTest) {
             newClassType.skipAbstractClassTest = true;
         }
@@ -321,6 +346,9 @@ export namespace ClassType {
         }
         if (value !== undefined) {
             newClassType.literalValue = value;
+        }
+        if (classType.typeAliasInfo !== undefined) {
+            newClassType.typeAliasInfo = classType.typeAliasInfo;
         }
         if (classType.skipAbstractClassTest) {
             newClassType.skipAbstractClassTest = true;
@@ -425,6 +453,10 @@ export namespace ClassType {
 
     export function isRuntimeCheckable(classType: ClassType) {
         return !!(classType.details.flags & ClassTypeFlags.RuntimeCheckable);
+    }
+
+    export function isTypingExtensionClass(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.TypingExtensionClass);
     }
 
     export function getTypeParameters(classType: ClassType) {
@@ -757,6 +789,10 @@ export namespace FunctionType {
             newFunction.details.flags &= ~(FunctionTypeFlags.ConstructorMethod | FunctionTypeFlags.ClassMethod);
             newFunction.details.flags |= FunctionTypeFlags.StaticMethod;
             newFunction.ignoreFirstParamOfDeclaration = true;
+        }
+
+        if (type.typeAliasInfo !== undefined) {
+            newFunction.typeAliasInfo = type.typeAliasInfo;
         }
 
         if (type.specializedTypes) {

@@ -21,6 +21,7 @@ import { DiagnosticLevel } from '../common/configOptions';
 import { assert, assertNever, fail } from '../common/debug';
 import { CreateTypeStubFileAction, Diagnostic } from '../common/diagnostic';
 import { DiagnosticRule } from '../common/diagnosticRules';
+import { getFileName, stripFileExtension } from '../common/pathUtils';
 import { convertOffsetsToRange } from '../common/positionUtils';
 import { PythonVersion } from '../common/pythonVersion';
 import { getEmptyRange } from '../common/textRange';
@@ -209,6 +210,7 @@ export class Binder extends ParseTreeWalker {
             this._fileInfo.builtinsScope,
             () => {
                 AnalyzerNodeInfo.setScope(node, this._currentScope);
+                AnalyzerNodeInfo.setFlowNode(node, this._currentFlowNode);
 
                 // Bind implicit names.
                 // List taken from https://docs.python.org/3/reference/import.html#__name__
@@ -228,6 +230,9 @@ export class Binder extends ParseTreeWalker {
                 this._walkStatementsAndReportUnreachable(node.statements);
 
                 AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentExecutionScopeReferenceMap);
+
+                // Associate the code flow node at the end of the module with the module.
+                AnalyzerNodeInfo.setAfterFlowNode(node, this._currentFlowNode);
             }
         );
 
@@ -637,6 +642,18 @@ export class Binder extends ParseTreeWalker {
 
         this._bindPossibleTupleNamedTarget(node.valueExpression);
         this._addTypeDeclarationForVariable(node.valueExpression, node.typeAnnotation);
+
+        // For type annotations that are not part of assignments (e.g. simple variable
+        // annotations), we need to populate the reference map. Otherwise the type
+        // analyzer's code flow engine won't run and detect cases where the variable
+        // is unbound.
+        const expressionList: NarrowingExpressionNode[] = [];
+        if (this._isNarrowingExpression(node.valueExpression, expressionList)) {
+            expressionList.forEach((expr) => {
+                const referenceKey = createKeyForReference(expr);
+                this._currentExecutionScopeReferenceMap.set(referenceKey, referenceKey);
+            });
+        }
         return true;
     }
 
@@ -1131,91 +1148,8 @@ export class Binder extends ParseTreeWalker {
             const importInfo = AnalyzerNodeInfo.getImportInfo(node.module);
             assert(importInfo !== undefined);
 
-            if (
-                importInfo &&
-                importInfo.isImportFound &&
-                !importInfo.isNativeLib &&
-                importInfo.resolvedPaths.length > 0 &&
-                symbol
-            ) {
-                // See if there's already a matching alias declaration for this import.
-                // if so, we'll update it rather than creating a new one. This is required
-                // to handle cases where multiple import statements target the same
-                // starting symbol such as "import a.b.c" and "import a.d". In this case,
-                // we'll build a single declaration that describes the combined actions
-                // of both import statements, thus reflecting the behavior of the
-                // python module loader.
-                const existingDecl = symbol
-                    .getDeclarations()
-                    .find((decl) => decl.type === DeclarationType.Alias && decl.firstNamePart === firstNamePartValue);
-
-                const newDecl: AliasDeclaration = (existingDecl as AliasDeclaration) || {
-                    type: DeclarationType.Alias,
-                    node,
-                    path: '',
-                    range: getEmptyRange(),
-                    firstNamePart: firstNamePartValue,
-                    usesLocalName: !!node.alias,
-                };
-
-                // Add the implicit imports for this module if it's the last
-                // name part we're resolving.
-                if (node.alias || node.module.nameParts.length === 1) {
-                    newDecl.path = importInfo.resolvedPaths[importInfo.resolvedPaths.length - 1];
-                    this._addImplicitImportsToLoaderActions(importInfo, newDecl);
-                } else {
-                    // Fill in the remaining name parts.
-                    let curLoaderActions: ModuleLoaderActions = newDecl;
-
-                    for (let i = 1; i < node.module.nameParts.length; i++) {
-                        if (i >= importInfo.resolvedPaths.length) {
-                            break;
-                        }
-
-                        const namePartValue = node.module.nameParts[i].value;
-
-                        // Is there an existing loader action for this name?
-                        let loaderActions = curLoaderActions.implicitImports
-                            ? curLoaderActions.implicitImports.get(namePartValue)
-                            : undefined;
-                        if (!loaderActions) {
-                            // Allocate a new loader action.
-                            loaderActions = {
-                                path: '',
-                                implicitImports: new Map<string, ModuleLoaderActions>(),
-                            };
-                            if (!curLoaderActions.implicitImports) {
-                                curLoaderActions.implicitImports = new Map<string, ModuleLoaderActions>();
-                            }
-                            curLoaderActions.implicitImports.set(namePartValue, loaderActions);
-                        }
-
-                        // If this is the last name part we're resolving, add in the
-                        // implicit imports as well.
-                        if (i === node.module.nameParts.length - 1) {
-                            loaderActions.path = importInfo.resolvedPaths[i];
-                            this._addImplicitImportsToLoaderActions(importInfo, loaderActions);
-                        }
-
-                        curLoaderActions = loaderActions;
-                    }
-                }
-
-                if (!existingDecl) {
-                    symbol.addDeclaration(newDecl);
-                }
-            } else if (symbol) {
-                // If we couldn't resolve the import, create a dummy declaration with a
-                // bogus path so it gets an unknown type (rather than an unbound type) at
-                // analysis time.
-                const newDecl: AliasDeclaration = {
-                    type: DeclarationType.Alias,
-                    node,
-                    path: '*** unresolved ***',
-                    range: getEmptyRange(),
-                    usesLocalName: !!node.alias,
-                };
-                symbol.addDeclaration(newDecl);
+            if (symbol) {
+                this._createAliasDeclarationForMultipartImportName(node, node.alias, importInfo, symbol);
             }
 
             this._createFlowAssignment(node.alias ? node.alias : node.module.nameParts[0]);
@@ -1350,6 +1284,20 @@ export class Binder extends ParseTreeWalker {
                     this._createFlowAssignment(importSymbolNode.alias || importSymbolNode.name);
                 }
             });
+
+            // If this file is a module __init__.py(i), relative imports of submodules
+            // using the syntax "from .x import y" also introduce a symbol x into the
+            // module namespace.
+            const fileName = stripFileExtension(getFileName(this._fileInfo.filePath));
+            if (fileName === '__init__' && node.module.leadingDots === 1 && node.module.nameParts.length > 0) {
+                const symbolName = node.module.nameParts[0].value;
+                const symbol = this._bindNameToScope(this._currentScope, symbolName);
+                if (symbol) {
+                    this._createAliasDeclarationForMultipartImportName(node, undefined, importInfo, symbol);
+                }
+
+                this._createFlowAssignment(node.module.nameParts[0]);
+            }
         }
 
         return true;
@@ -1516,6 +1464,96 @@ export class Binder extends ParseTreeWalker {
         return false;
     }
 
+    private _createAliasDeclarationForMultipartImportName(
+        node: ImportAsNode | ImportFromNode,
+        importAlias: NameNode | undefined,
+        importInfo: ImportResult | undefined,
+        symbol: Symbol
+    ) {
+        const firstNamePartValue = node.module.nameParts[0].value;
+
+        if (importInfo && importInfo.isImportFound && !importInfo.isNativeLib && importInfo.resolvedPaths.length > 0) {
+            // See if there's already a matching alias declaration for this import.
+            // if so, we'll update it rather than creating a new one. This is required
+            // to handle cases where multiple import statements target the same
+            // starting symbol such as "import a.b.c" and "import a.d". In this case,
+            // we'll build a single declaration that describes the combined actions
+            // of both import statements, thus reflecting the behavior of the
+            // python module loader.
+            const existingDecl = symbol
+                .getDeclarations()
+                .find((decl) => decl.type === DeclarationType.Alias && decl.firstNamePart === firstNamePartValue);
+
+            const newDecl: AliasDeclaration = (existingDecl as AliasDeclaration) || {
+                type: DeclarationType.Alias,
+                node,
+                path: '',
+                range: getEmptyRange(),
+                firstNamePart: firstNamePartValue,
+                usesLocalName: !!importAlias,
+            };
+
+            // Add the implicit imports for this module if it's the last
+            // name part we're resolving.
+            if (importAlias || node.module.nameParts.length === 1) {
+                newDecl.path = importInfo.resolvedPaths[importInfo.resolvedPaths.length - 1];
+                this._addImplicitImportsToLoaderActions(importInfo, newDecl);
+            } else {
+                // Fill in the remaining name parts.
+                let curLoaderActions: ModuleLoaderActions = newDecl;
+
+                for (let i = 1; i < node.module.nameParts.length; i++) {
+                    if (i >= importInfo.resolvedPaths.length) {
+                        break;
+                    }
+
+                    const namePartValue = node.module.nameParts[i].value;
+
+                    // Is there an existing loader action for this name?
+                    let loaderActions = curLoaderActions.implicitImports
+                        ? curLoaderActions.implicitImports.get(namePartValue)
+                        : undefined;
+                    if (!loaderActions) {
+                        // Allocate a new loader action.
+                        loaderActions = {
+                            path: '',
+                            implicitImports: new Map<string, ModuleLoaderActions>(),
+                        };
+                        if (!curLoaderActions.implicitImports) {
+                            curLoaderActions.implicitImports = new Map<string, ModuleLoaderActions>();
+                        }
+                        curLoaderActions.implicitImports.set(namePartValue, loaderActions);
+                    }
+
+                    // If this is the last name part we're resolving, add in the
+                    // implicit imports as well.
+                    if (i === node.module.nameParts.length - 1) {
+                        loaderActions.path = importInfo.resolvedPaths[i];
+                        this._addImplicitImportsToLoaderActions(importInfo, loaderActions);
+                    }
+
+                    curLoaderActions = loaderActions;
+                }
+            }
+
+            if (!existingDecl) {
+                symbol.addDeclaration(newDecl);
+            }
+        } else {
+            // If we couldn't resolve the import, create a dummy declaration with a
+            // bogus path so it gets an unknown type (rather than an unbound type) at
+            // analysis time.
+            const newDecl: AliasDeclaration = {
+                type: DeclarationType.Alias,
+                node,
+                path: '*** unresolved ***',
+                range: getEmptyRange(),
+                usesLocalName: !!importAlias,
+            };
+            symbol.addDeclaration(newDecl);
+        }
+    }
+
     private _getWildcardImportNames(lookupInfo: ImportLookupResult): string[] {
         const namesToImport: string[] = [];
 
@@ -1564,24 +1602,16 @@ export class Binder extends ParseTreeWalker {
     }
 
     private _walkStatementsAndReportUnreachable(statements: StatementNode[]) {
-        let reportedUnreachable = false;
+        let foundUnreachableStatement = false;
 
         for (const statement of statements) {
             AnalyzerNodeInfo.setFlowNode(statement, this._currentFlowNode);
 
-            if (this._isCodeUnreachable() && !reportedUnreachable) {
-                // Create a text range that covers the next statement through
-                // the end of the suite.
-                const start = statement.start;
-                const lastStatement = statements[statements.length - 1];
-                const end = TextRange.getEnd(lastStatement);
-                this._addUnusedCode({ start, length: end - start });
-
-                // Don't report it multiple times.
-                reportedUnreachable = true;
+            if (!foundUnreachableStatement) {
+                foundUnreachableStatement = this._isCodeUnreachable();
             }
 
-            if (!reportedUnreachable) {
+            if (!foundUnreachableStatement) {
                 this.walk(statement);
             } else {
                 // If we're within a function, we need to look for unreachable yield
@@ -1763,15 +1793,26 @@ export class Binder extends ParseTreeWalker {
                         );
                     }
 
+                    const isLeftNarrowing = this._isNarrowingExpression(expression.leftExpression, expressionList);
+
+                    // Look for "X is Y" or "X is not Y".
+                    if (isOrIsNotOperator) {
+                        return isLeftNarrowing;
+                    }
+
                     // Look for X == <literal>, X != <literal> or <literal> == X, <literal> != X
                     if (equalsOrNotEqualsOperator) {
-                        const isLeftNarrowing = this._isNarrowingExpression(expression.leftExpression, expressionList);
                         const isRightNarrowing = this._isNarrowingExpression(
                             expression.rightExpression,
                             expressionList
                         );
                         return isLeftNarrowing || isRightNarrowing;
                     }
+                }
+
+                // Look for "X in Y".
+                if (expression.operator === OperatorType.In) {
+                    return this._isNarrowingExpression(expression.leftExpression, expressionList);
                 }
 
                 return false;
@@ -1871,6 +1912,8 @@ export class Binder extends ParseTreeWalker {
 
             this._currentFlowNode = flowNode;
         }
+
+        AnalyzerNodeInfo.setFlowNode(node, this._currentFlowNode);
     }
 
     private _createAssignmentAliasFlowNode(targetSymbolId: number, aliasSymbolId: number) {
@@ -2145,7 +2188,18 @@ export class Binder extends ParseTreeWalker {
                     }
 
                     if (memberAccessInfo.isInstanceMember) {
-                        symbol.setIsInstanceMember();
+                        // If a method (which has a declared type) is being overwritten
+                        // by an expression with no declared type, don't mark it as
+                        // an instance member because the type evaluator will think
+                        // that it doesn't need to perform object binding.
+                        if (
+                            !symbol.isClassMember() ||
+                            !symbol
+                                .getDeclarations()
+                                .some((decl) => decl.type === DeclarationType.Function && decl.isMethod)
+                        ) {
+                            symbol.setIsInstanceMember();
+                        }
                     } else {
                         symbol.setIsClassMember();
                     }
@@ -2238,6 +2292,8 @@ export class Binder extends ParseTreeWalker {
 
                     if (isClassVar) {
                         symbolWithScope.symbol.setIsClassVar();
+                    } else {
+                        symbolWithScope.symbol.setIsInstanceMember();
                     }
                 }
 
@@ -2591,13 +2647,6 @@ export class Binder extends ParseTreeWalker {
         }
 
         return diagnostic;
-    }
-
-    private _addUnusedCode(textRange: TextRange) {
-        return this._fileInfo.diagnosticSink.addUnusedCodeWithTextRange(
-            Localizer.Diagnostic.unreachableCode(),
-            textRange
-        );
     }
 
     private _addError(message: string, textRange: TextRange) {

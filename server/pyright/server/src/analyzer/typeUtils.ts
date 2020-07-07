@@ -295,7 +295,11 @@ export function transformTypeObjectToClass(type: Type): Type {
 // None is always falsy. All other types are generally truthy
 // unless they are objects that support the __bool__ or __len__
 // methods.
-export function canBeFalsy(type: Type): boolean {
+export function canBeFalsy(type: Type, recursionLevel = 0): boolean {
+    if (recursionLevel > maxTypeRecursionCount) {
+        return true;
+    }
+
     switch (type.category) {
         case TypeCategory.Unbound:
         case TypeCategory.Unknown:
@@ -305,16 +309,33 @@ export function canBeFalsy(type: Type): boolean {
             return true;
         }
 
+        case TypeCategory.Union: {
+            return type.subtypes.some((t) => canBeFalsy(t, recursionLevel + 1));
+        }
+
         case TypeCategory.Function:
         case TypeCategory.OverloadedFunction:
         case TypeCategory.Class:
         case TypeCategory.Module:
-        case TypeCategory.Union:
         case TypeCategory.TypeVar: {
             return false;
         }
 
         case TypeCategory.Object: {
+            // Handle tuples specially.
+            if (ClassType.isBuiltIn(type.classType, 'Tuple') && type.classType.typeArguments) {
+                if (type.classType.typeArguments.length === 0) {
+                    return true;
+                }
+
+                const lastTypeArg = type.classType.typeArguments[type.classType.typeArguments.length - 1];
+                if (isEllipsisType(lastTypeArg)) {
+                    return true;
+                }
+
+                return false;
+            }
+
             const lenMethod = lookUpObjectMember(type, '__len__');
             if (lenMethod) {
                 return true;
@@ -337,17 +358,24 @@ export function canBeFalsy(type: Type): boolean {
     }
 }
 
-export function canBeTruthy(type: Type): boolean {
+export function canBeTruthy(type: Type, recursionLevel = 0): boolean {
+    if (recursionLevel > maxTypeRecursionCount) {
+        return true;
+    }
+
     switch (type.category) {
         case TypeCategory.Unknown:
         case TypeCategory.Function:
         case TypeCategory.OverloadedFunction:
         case TypeCategory.Class:
         case TypeCategory.Module:
-        case TypeCategory.Union:
         case TypeCategory.TypeVar:
         case TypeCategory.Any: {
             return true;
+        }
+
+        case TypeCategory.Union: {
+            return type.subtypes.some((t) => canBeTruthy(t, recursionLevel + 1));
         }
 
         case TypeCategory.Never:
@@ -439,6 +467,31 @@ export function partiallySpecializeType(type: Type, contextClassType: ClassType)
     return specializeType(type, typeVarMap, false);
 }
 
+// Replaces all of the top-level TypeVars (as opposed to TypeVars
+// used as type arguments in other types) with their concrete form.
+// Unlikely typical TypeVar specialization, this method specializes
+// constrained TypeVars as a union of the constrained types.
+export function makeTypeVarsConcrete(type: Type): Type {
+    return doForSubtypes(type, (subtype) => {
+        if (subtype.category === TypeCategory.TypeVar) {
+            if (subtype.boundType) {
+                return subtype.boundType;
+            }
+            if (subtype.constraints.length > 0) {
+                return combineTypes(subtype.constraints);
+            }
+
+            // Normally, we would use UnknownType here, but we need
+            // to use Any because unknown types will generate diagnostics
+            // in strictly-typed files that cannot be suppressed in
+            // any reasonable manner.
+            return AnyType.create();
+        }
+
+        return subtype;
+    });
+}
+
 // Specializes a (potentially generic) type by substituting
 // type variables with specified types. If typeVarMap is not
 // provided or makeConcrete is true, type variables are replaced
@@ -450,9 +503,8 @@ export function specializeType(
     makeConcrete = false,
     recursionLevel = 0
 ): Type {
-    // Prevent infinite recursion in case a type refers to itself.
-    if (recursionLevel > 100) {
-        return AnyType.create();
+    if (recursionLevel > maxTypeRecursionCount) {
+        return type;
     }
 
     // Shortcut the operation if possible.
@@ -486,11 +538,9 @@ export function specializeType(
                 }
                 return replacementType;
             }
-        }
-
-        if (!typeVarMap) {
+        } else {
             if (type.boundType) {
-                return specializeType(type.boundType, undefined, false, recursionLevel + 1);
+                return specializeType(type.boundType, undefined, /* makeConcrete */ false, recursionLevel + 1);
             }
 
             return makeConcrete ? UnknownType.create() : type;
@@ -608,7 +658,7 @@ export function lookUpClassMember(
             ) {
                 const memberFields = specializedMroClass.details.fields;
 
-                // Look in the instance members first if requested.
+                // Look at instance members first if requested.
                 if ((flags & ClassMemberLookupFlags.SkipInstanceVariables) === 0) {
                     const symbol = memberFields.get(memberName);
                     if (symbol && symbol.isInstanceMember()) {
@@ -622,7 +672,7 @@ export function lookUpClassMember(
                     }
                 }
 
-                // Next look in the class members.
+                // Next look at class members.
                 const symbol = memberFields.get(memberName);
                 if (symbol && symbol.isClassMember()) {
                     if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
@@ -1048,7 +1098,7 @@ export function getDeclaredGeneratorReturnType(functionType: FunctionType): Type
 }
 
 export function convertToInstance(type: Type): Type {
-    return doForSubtypes(type, (subtype) => {
+    let result = doForSubtypes(type, (subtype) => {
         switch (subtype.category) {
             case TypeCategory.Class: {
                 return ObjectType.create(subtype);
@@ -1071,10 +1121,22 @@ export function convertToInstance(type: Type): Type {
 
         return subtype;
     });
+
+    // Copy over any type alias information.
+    if (type.typeAliasInfo && type !== result) {
+        result = TypeBase.cloneForTypeAlias(
+            result,
+            type.typeAliasInfo.aliasName,
+            type.typeAliasInfo.typeParameters,
+            type.typeAliasInfo.typeArguments
+        );
+    }
+
+    return result;
 }
 
 export function convertToInstantiable(type: Type): Type {
-    return doForSubtypes(type, (subtype) => {
+    let result = doForSubtypes(type, (subtype) => {
         switch (subtype.category) {
             case TypeCategory.Object: {
                 return subtype.classType;
@@ -1097,6 +1159,18 @@ export function convertToInstantiable(type: Type): Type {
 
         return subtype;
     });
+
+    // Copy over any type alias information.
+    if (type.typeAliasInfo && type !== result) {
+        result = TypeBase.cloneForTypeAlias(
+            result,
+            type.typeAliasInfo.aliasName,
+            type.typeAliasInfo.typeParameters,
+            type.typeAliasInfo.typeArguments
+        );
+    }
+
+    return result;
 }
 
 export function getMembersForClass(classType: ClassType, symbolTable: SymbolTable, includeInstanceVars: boolean) {
@@ -1113,6 +1187,18 @@ export function getMembersForClass(classType: ClassType, symbolTable: SymbolTabl
                             symbolTable.set(name, symbol);
                         }
                     }
+                }
+            });
+        }
+    }
+
+    // If the class has a metaclass, add its members as well.
+    if (!includeInstanceVars) {
+        const metaclass = getMetaclass(classType);
+        if (metaclass && metaclass.category === TypeCategory.Class) {
+            metaclass.details.fields.forEach((symbol, name) => {
+                if (!symbolTable.get(name)) {
+                    symbolTable.set(name, symbol);
                 }
             });
         }
@@ -1495,7 +1581,9 @@ export function computeMroLinearization(classType: ClassType): boolean {
         let foundValidHead = false;
         let nonEmptyList: Type[] | undefined = undefined;
 
-        for (const classList of classListsToMerge) {
+        for (let i = 0; i < classListsToMerge.length; i++) {
+            const classList = classListsToMerge[i];
+
             if (classList.length > 0) {
                 if (nonEmptyList === undefined) {
                     nonEmptyList = classList;
@@ -1505,12 +1593,12 @@ export function computeMroLinearization(classType: ClassType): boolean {
                     foundValidHead = true;
                     classType.details.mro.push(classList[0]);
                     classList.shift();
-                    continue;
+                    break;
                 } else if (!isInTail(classList[0], classListsToMerge)) {
                     foundValidHead = true;
                     classType.details.mro.push(classList[0]);
                     filterClass(classList[0], classListsToMerge);
-                    continue;
+                    break;
                 }
             }
         }

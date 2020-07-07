@@ -306,6 +306,30 @@ test('TypeConstraint12', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TypeConstraint13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint13.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('TypeConstraint14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint14.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('TypeConstraint15', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint15.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('TypeConstraint16', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint16.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -348,6 +372,12 @@ test('Expressions3', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Expressions4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['expressions4.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('Unpack1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unpack1.py']);
 
@@ -358,6 +388,20 @@ test('Unpack2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unpack2.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('Unpack3', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // Analyze with Python 3.7 settings.
+    configOptions.defaultPythonVersion = PythonVersion.V37;
+    const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['unpack3.py'], configOptions);
+    validateResults(analysisResults37, 1);
+
+    // Analyze with Python 3.8 settings.
+    configOptions.defaultPythonVersion = PythonVersion.V38;
+    const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unpack3.py'], configOptions);
+    validateResults(analysisResults38, 0);
 });
 
 test('Lambda1', () => {
@@ -422,6 +466,12 @@ test('Function7', () => {
     validateResults(analysisResults, 4);
 });
 
+test('Function8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function8.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
@@ -474,6 +524,12 @@ test('AnnotatedVar5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotatedVar5.py']);
 
     validateResults(analysisResults, 5);
+});
+
+test('AnnotatedVar6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotatedVar6.py']);
+
+    validateResults(analysisResults, 0);
 });
 
 test('Execution1', () => {
@@ -534,6 +590,12 @@ test('Operators4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators4.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('Operators5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators5.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Optional1', () => {
@@ -921,6 +983,12 @@ test('Mro2', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Mro3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro3.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -1054,6 +1122,18 @@ test('Unbound1', () => {
     validateResults(analysisResults, 1);
 });
 
+test('Unbound2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Unbound3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('UnnecessaryCast', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1071,12 +1151,12 @@ test('AssertAlwaysTrue', () => {
 
     // By default, this is reported as a warning.
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['assert1.py'], configOptions);
-    validateResults(analysisResults, 0, 1);
+    validateResults(analysisResults, 0, 2);
 
     // Enable it as an error.
     configOptions.diagnosticRuleSet.reportAssertAlwaysTrue = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['assert1.py'], configOptions);
-    validateResults(analysisResults, 1, 0);
+    validateResults(analysisResults, 2, 0);
 
     // Turn off the diagnostic.
     configOptions.diagnosticRuleSet.reportAssertAlwaysTrue = 'none';
@@ -1222,6 +1302,12 @@ test('GenericTypes21', () => {
     validateResults(analysisResults, 1);
 });
 
+test('GenericTypes22', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes22.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1353,6 +1439,11 @@ test('Metaclass1', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Metaclass2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass2.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('AssignmentExpr1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr1.py']);
     validateResults(analysisResults, 4);
@@ -1381,6 +1472,11 @@ test('AssignmentExpr5', () => {
 test('AssignmentExpr6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr6.py']);
     validateResults(analysisResults, 0);
+});
+
+test('AssignmentExpr7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr7.py']);
+    validateResults(analysisResults, 1);
 });
 
 test('Import1', () => {
@@ -1416,6 +1512,11 @@ test('Import9', () => {
 test('Import10', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import10.py']);
     validateResults(analysisResults, 1);
+});
+
+test('Import11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import11.py']);
+    validateResults(analysisResults, 0);
 });
 
 test('Overload1', () => {
@@ -1486,6 +1587,11 @@ test('FString3', () => {
     validateResults(analysisResults, 0);
 });
 
+test('FString4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['fstring4.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('MemberAccess1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess1.py']);
     validateResults(analysisResults, 0);
@@ -1494,6 +1600,11 @@ test('MemberAccess1', () => {
 test('MemberAccess2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess2.py']);
     validateResults(analysisResults, 0);
+});
+
+test('MemberAccess3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess3.py']);
+    validateResults(analysisResults, 3);
 });
 
 test('ParamName1', () => {
@@ -1562,7 +1673,7 @@ test('DataClass9', () => {
 test('DataClass10', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass10.py']);
 
-    validateResults(analysisResults, 0);
+    validateResults(analysisResults, 1);
 });
 
 test('Python2', () => {

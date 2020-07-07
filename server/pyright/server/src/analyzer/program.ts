@@ -15,7 +15,13 @@ import {
     DocumentSymbol,
     SymbolInformation,
 } from 'vscode-languageserver';
-import { CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageserver-types';
+import {
+    CallHierarchyIncomingCall,
+    CallHierarchyItem,
+    CallHierarchyOutgoingCall,
+    DocumentHighlight,
+} from 'vscode-languageserver-types';
+import { isMainThread } from 'worker_threads';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
@@ -935,6 +941,18 @@ export class Program {
                     // whether there are any updates next time we call getDiagnostics.
                     sourceFileInfo.diagnosticsVersion = sourceFileInfo.sourceFile.getDiagnosticVersion();
                 }
+            } else if (
+                !sourceFileInfo.isOpenByClient &&
+                options.checkOnlyOpenFiles &&
+                sourceFileInfo.diagnosticsVersion !== undefined
+            ) {
+                // This condition occurs when the user switches from workspace to
+                // "open files only" mode. Clear all diagnostics for this file.
+                fileDiagnostics.push({
+                    filePath: sourceFileInfo.sourceFile.getFilePath(),
+                    diagnostics: [],
+                });
+                sourceFileInfo.diagnosticsVersion = undefined;
             }
         });
 
@@ -1105,6 +1123,29 @@ export class Program {
 
             const execEnv = this._configOptions.findExecEnvironment(filePath);
             return sourceFileInfo.sourceFile.getHoverForPosition(
+                this._createSourceMapper(execEnv),
+                position,
+                this._evaluator,
+                token
+            );
+        });
+    }
+
+    getDocumentHighlight(
+        filePath: string,
+        position: Position,
+        token: CancellationToken
+    ): DocumentHighlight[] | undefined {
+        return this._runEvaluatorWithCancellationToken(token, () => {
+            const sourceFileInfo = this._sourceFileMap.get(filePath);
+            if (!sourceFileInfo) {
+                return undefined;
+            }
+
+            this._bindFile(sourceFileInfo);
+
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
+            return sourceFileInfo.sourceFile.getDocumentHighlight(
                 this._createSourceMapper(execEnv),
                 position,
                 this._evaluator,

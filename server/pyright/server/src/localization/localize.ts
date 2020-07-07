@@ -398,6 +398,7 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredParameterDeclaration'));
         export const obscuredVariableDeclaration = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredVariableDeclaration'));
+        export const operatorLessOrGreaterDeprecated = () => getRawString('Diagnostic.operatorLessOrGreaterDeprecated');
         export const optionalExtraArgs = () => getRawString('Diagnostic.optionalExtraArgs');
         export const paramAfterKwargsParam = () => getRawString('Diagnostic.paramAfterKwargsParam');
         export const paramAlreadyAssigned = () =>
@@ -647,6 +648,8 @@ export namespace Localizer {
             );
         export const noOverloadAssignable = () =>
             new ParameterizedString<{ type: string }>(getRawString('DiagnosticAddendum.noOverloadAssignable'));
+        export const overloadCallName = () =>
+            new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.overloadCallName'));
         export const overriddenMethod = () => getRawString('DiagnosticAddendum.overriddenMethod');
         export const overrideParamCount = () =>
             new ParameterizedString<{ baseCount: number; overrideCount: number }>(

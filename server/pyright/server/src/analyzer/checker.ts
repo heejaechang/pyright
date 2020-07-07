@@ -38,6 +38,7 @@ import {
     ImportFromAsNode,
     ImportFromNode,
     IndexNode,
+    isExpressionNode,
     LambdaNode,
     ListComprehensionNode,
     MemberAccessNode,
@@ -49,6 +50,8 @@ import {
     RaiseNode,
     ReturnNode,
     SliceNode,
+    StatementListNode,
+    StatementNode,
     StringListNode,
     SuiteNode,
     TernaryNode,
@@ -95,6 +98,7 @@ import {
     doForSubtypes,
     getDeclaredGeneratorReturnType,
     getDeclaredGeneratorYieldType,
+    isEllipsisType,
     isNoReturnType,
     isProperty,
     lookUpClassMember,
@@ -135,6 +139,29 @@ export class Checker extends ParseTreeWalker {
         if (!AnalyzerNodeInfo.isCodeUnreachable(node)) {
             super.walk(node);
         }
+    }
+
+    visitModule(node: ModuleNode): boolean {
+        this._walkStatementsAndReportUnreachable(node.statements);
+        return false;
+    }
+
+    visitSuite(node: SuiteNode): boolean {
+        this._walkStatementsAndReportUnreachable(node.statements);
+        return false;
+    }
+
+    visitStatementList(node: StatementListNode) {
+        node.statements.forEach((statement) => {
+            if (isExpressionNode(statement) && !AnalyzerNodeInfo.isCodeUnreachable(statement)) {
+                // Evaluate the expression in case it wasn't otherwise evaluated
+                // through lazy analysis. This will mark referenced symbols as
+                // accessed and report any errors associated with it.
+                this._evaluator.getType(statement);
+            }
+        });
+
+        return true;
     }
 
     visitClass(node: ClassNode): boolean {
@@ -183,7 +210,7 @@ export class Checker extends ParseTreeWalker {
                         const diagAddendum = new DiagnosticAddendum();
                         diagAddendum.addMessage(
                             Localizer.DiagnosticAddendum.paramType().format({
-                                paramType: this._evaluator.printType(paramType),
+                                paramType: this._evaluator.printType(paramType, /* expandTypeAlias */ false),
                             })
                         );
                         this._evaluator.addDiagnostic(
@@ -279,7 +306,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownLambdaType,
                     DiagnosticRule.reportUnknownLambdaType,
                     Localizer.Diagnostic.lambdaReturnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(returnType),
+                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ false),
                     }),
                     node.expression
                 );
@@ -292,8 +319,6 @@ export class Checker extends ParseTreeWalker {
     }
 
     visitCall(node: CallNode): boolean {
-        const returnType = this._evaluator.getType(node);
-
         this._validateIsInstanceCallNecessary(node);
 
         if (ParseTreeUtils.isWithinDefaultParamInitializer(node) && !this._fileInfo.isStubFile) {
@@ -303,19 +328,6 @@ export class Checker extends ParseTreeWalker {
                 Localizer.Diagnostic.defaultValueContainsCall(),
                 node
             );
-        }
-
-        // Is this calling a "NoReturn" function? If so, mark the remainder
-        // of the suite as unreachable.
-        if (returnType) {
-            if (isNoReturnType(returnType)) {
-                const suiteOrModule = ParseTreeUtils.getEnclosingSuiteOrModule(node);
-                if (suiteOrModule) {
-                    const start = node.start + node.length;
-                    const length = suiteOrModule.start + suiteOrModule.length - start;
-                    this._evaluator.addUnusedCode(suiteOrModule, { start, length });
-                }
-            }
         }
 
         return true;
@@ -384,8 +396,11 @@ export class Checker extends ParseTreeWalker {
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
                             Localizer.Diagnostic.returnTypeMismatch().format({
-                                exprType: this._evaluator.printType(returnType),
-                                returnType: this._evaluator.printType(specializedDeclaredType),
+                                exprType: this._evaluator.printType(returnType, /* expandTypeAlias */ false),
+                                returnType: this._evaluator.printType(
+                                    specializedDeclaredType,
+                                    /* expandTypeAlias */ false
+                                ),
                             }) + diagAddendum.getString(),
                             node.returnExpression ? node.returnExpression : node
                         );
@@ -405,7 +420,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownVariableType,
                     DiagnosticRule.reportUnknownVariableType,
                     Localizer.Diagnostic.returnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(returnType),
+                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ false),
                     }),
                     node.returnExpression!
                 );
@@ -457,7 +472,7 @@ export class Checker extends ParseTreeWalker {
                             if (!derivesFromClassRecursive(subtype, baseExceptionType, /* ignoreUnknown */ false)) {
                                 diagAddendum.addMessage(
                                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                        type: this._evaluator.printType(subtype),
+                                        type: this._evaluator.printType(subtype, /* expandTypeAlias */ false),
                                     })
                                 );
                             }
@@ -471,14 +486,14 @@ export class Checker extends ParseTreeWalker {
                             ) {
                                 diagAddendum.addMessage(
                                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                        type: this._evaluator.printType(subtype),
+                                        type: this._evaluator.printType(subtype, /* expandTypeAlias */ false),
                                     })
                                 );
                             }
                         } else {
                             diagAddendum.addMessage(
                                 Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                    type: this._evaluator.printType(subtype),
+                                    type: this._evaluator.printType(subtype, /* expandTypeAlias */ false),
                                 })
                             );
                         }
@@ -517,14 +532,14 @@ export class Checker extends ParseTreeWalker {
                             ) {
                                 diagAddendum.addMessage(
                                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                        type: this._evaluator.printType(subtype),
+                                        type: this._evaluator.printType(subtype, /* expandTypeAlias */ false),
                                     })
                                 );
                             }
                         } else {
                             diagAddendum.addMessage(
                                 Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                    type: this._evaluator.printType(subtype),
+                                    type: this._evaluator.printType(subtype, /* expandTypeAlias */ false),
                                 })
                             );
                         }
@@ -563,17 +578,23 @@ export class Checker extends ParseTreeWalker {
             this._evaluator.getType(node.exceptionExpression);
         }
 
+        // Specifically look for a common programming error where the two arguments
+        // to an assert are enclosed in parens and interpreted as a two-element tuple.
+        //   assert (x > 3, "bad value x")
         const type = this._evaluator.getType(node.testExpression);
         if (type && type.category === TypeCategory.Object) {
             if (ClassType.isBuiltIn(type.classType, 'Tuple') && type.classType.typeArguments) {
                 if (type.classType.typeArguments.length > 0) {
-                    this._evaluator.addDiagnosticForTextRange(
-                        this._fileInfo,
-                        this._fileInfo.diagnosticRuleSet.reportAssertAlwaysTrue,
-                        DiagnosticRule.reportAssertAlwaysTrue,
-                        Localizer.Diagnostic.assertAlwaysTrue(),
-                        node.testExpression
-                    );
+                    const lastTypeArg = type.classType.typeArguments[type.classType.typeArguments.length - 1];
+                    if (!isEllipsisType(lastTypeArg)) {
+                        this._evaluator.addDiagnosticForTextRange(
+                            this._fileInfo,
+                            this._fileInfo.diagnosticRuleSet.reportAssertAlwaysTrue,
+                            DiagnosticRule.reportAssertAlwaysTrue,
+                            Localizer.Diagnostic.assertAlwaysTrue(),
+                            node.testExpression
+                        );
+                    }
                 }
             }
         }
@@ -716,6 +737,29 @@ export class Checker extends ParseTreeWalker {
         return false;
     }
 
+    private _walkStatementsAndReportUnreachable(statements: StatementNode[]) {
+        let reportedUnreachable = false;
+
+        for (const statement of statements) {
+            // No need to report unreachable more than once since the first time
+            // covers all remaining statements in the statement list.
+            if (!reportedUnreachable) {
+                if (!this._evaluator.isNodeReachable(statement)) {
+                    // Create a text range that covers the next statement through
+                    // the end of the statement list.
+                    const start = statement.start;
+                    const lastStatement = statements[statements.length - 1];
+                    const end = TextRange.getEnd(lastStatement);
+                    this._evaluator.addUnusedCode(statement, { start, length: end - start });
+
+                    reportedUnreachable = true;
+                }
+            }
+
+            this.walk(statement);
+        }
+    }
+
     private _validateExceptionType(exceptionType: Type, errorNode: ParseNode) {
         const baseExceptionType = this._evaluator.getBuiltInType(errorNode, 'BaseException');
         const derivesFromBaseException = (classType: ClassType) => {
@@ -735,7 +779,7 @@ export class Checker extends ParseTreeWalker {
             if (!derivesFromBaseException(exceptionType)) {
                 diagAddendum.addMessage(
                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                        type: this._evaluator.printType(exceptionType),
+                        type: this._evaluator.printType(exceptionType, /* expandTypeAlias */ false),
                     })
                 );
             }
@@ -758,7 +802,7 @@ export class Checker extends ParseTreeWalker {
                     if (!derivesFromBaseException(transformedSubtype)) {
                         diagAddendum.addMessage(
                             Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                                type: this._evaluator.printType(exceptionType),
+                                type: this._evaluator.printType(exceptionType, /* expandTypeAlias */ false),
                             })
                         );
                     }
@@ -768,7 +812,7 @@ export class Checker extends ParseTreeWalker {
 
                 diagAddendum.addMessage(
                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
-                        type: this._evaluator.printType(exceptionType),
+                        type: this._evaluator.printType(exceptionType, /* expandTypeAlias */ false),
                     })
                 );
                 return UnknownType.create();
@@ -777,7 +821,9 @@ export class Checker extends ParseTreeWalker {
 
         if (!diagAddendum.isEmpty()) {
             this._evaluator.addError(
-                Localizer.Diagnostic.exceptionTypeNotClass().format({ type: this._evaluator.printType(exceptionType) }),
+                Localizer.Diagnostic.exceptionTypeNotClass().format({
+                    type: this._evaluator.printType(exceptionType, /* expandTypeAlias */ false),
+                }),
                 errorNode
             );
         }
@@ -1066,9 +1112,19 @@ export class Checker extends ParseTreeWalker {
                 if (!isPrivate) {
                     return;
                 }
+
                 diagnosticLevel = this._fileInfo.diagnosticRuleSet.reportUnusedVariable;
+
                 if (decl.node.nodeType === ParseNodeType.Name) {
                     nameNode = decl.node;
+                } else if (decl.node.nodeType === ParseNodeType.Parameter) {
+                    nameNode = decl.node.name;
+
+                    // Don't emit a diagnostic for unused parameters.
+                    diagnosticLevel = 'none';
+                }
+
+                if (nameNode) {
                     rule = DiagnosticRule.reportUnusedVariable;
                     message = Localizer.Diagnostic.unaccessedVariable().format({ name: nameNode.value });
                 }
@@ -1275,12 +1331,12 @@ export class Checker extends ParseTreeWalker {
                 DiagnosticRule.reportUnnecessaryIsInstance,
                 isInstanceCheck
                     ? Localizer.Diagnostic.unnecessaryIsInstanceNever().format({
-                          testType: this._evaluator.printType(arg0Type),
-                          classType: this._evaluator.printType(getTestType()),
+                          testType: this._evaluator.printType(arg0Type, /* expandTypeAlias */ false),
+                          classType: this._evaluator.printType(getTestType(), /* expandTypeAlias */ false),
                       })
                     : Localizer.Diagnostic.unnecessaryIsSubclassNever().format({
-                          testType: this._evaluator.printType(arg0Type),
-                          classType: this._evaluator.printType(getTestType()),
+                          testType: this._evaluator.printType(arg0Type, /* expandTypeAlias */ false),
+                          classType: this._evaluator.printType(getTestType(), /* expandTypeAlias */ false),
                       }),
                 node
             );
@@ -1290,12 +1346,12 @@ export class Checker extends ParseTreeWalker {
                 DiagnosticRule.reportUnnecessaryIsInstance,
                 isInstanceCheck
                     ? Localizer.Diagnostic.unnecessaryIsInstanceAlways().format({
-                          testType: this._evaluator.printType(arg0Type),
-                          classType: this._evaluator.printType(getTestType()),
+                          testType: this._evaluator.printType(arg0Type, /* expandTypeAlias */ false),
+                          classType: this._evaluator.printType(getTestType(), /* expandTypeAlias */ false),
                       })
                     : Localizer.Diagnostic.unnecessaryIsSubclassAlways().format({
-                          testType: this._evaluator.printType(arg0Type),
-                          classType: this._evaluator.printType(getTestType()),
+                          testType: this._evaluator.printType(arg0Type, /* expandTypeAlias */ false),
+                          classType: this._evaluator.printType(getTestType(), /* expandTypeAlias */ false),
                       }),
                 node
             );
@@ -1482,7 +1538,7 @@ export class Checker extends ParseTreeWalker {
                         this._fileInfo.diagnosticRuleSet.reportUnknownVariableType,
                         DiagnosticRule.reportUnknownVariableType,
                         Localizer.Diagnostic.declaredReturnTypePartiallyUnknown().format({
-                            returnType: this._evaluator.printType(declaredReturnType),
+                            returnType: this._evaluator.printType(declaredReturnType, /* expandTypeAlias */ false),
                         }),
                         node.returnTypeAnnotation
                     );
@@ -1525,7 +1581,10 @@ export class Checker extends ParseTreeWalker {
                                 this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                                 DiagnosticRule.reportGeneralTypeIssues,
                                 Localizer.Diagnostic.returnMissing().format({
-                                    returnType: this._evaluator.printType(declaredReturnType),
+                                    returnType: this._evaluator.printType(
+                                        declaredReturnType,
+                                        /* expandTypeAlias */ false
+                                    ),
                                 }) + diagAddendum.getString(),
                                 node.returnTypeAnnotation
                             );
@@ -1547,7 +1606,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownParameterType,
                     DiagnosticRule.reportUnknownParameterType,
                     Localizer.Diagnostic.returnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(inferredReturnType),
+                        returnType: this._evaluator.printType(inferredReturnType, /* expandTypeAlias */ false),
                     }),
                     node.name
                 );
@@ -1794,8 +1853,8 @@ export class Checker extends ParseTreeWalker {
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
                             Localizer.Diagnostic.yieldTypeMismatch().format({
-                                exprType: this._evaluator.printType(adjustedYieldType),
-                                yieldType: this._evaluator.printType(declaredYieldType),
+                                exprType: this._evaluator.printType(adjustedYieldType, /* expandTypeAlias */ false),
+                                yieldType: this._evaluator.printType(declaredYieldType, /* expandTypeAlias */ false),
                             }) + diagAddendum.getString(),
                             node.expression || node
                         );

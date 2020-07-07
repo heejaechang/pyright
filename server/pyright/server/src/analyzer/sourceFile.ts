@@ -11,6 +11,7 @@ import {
     CancellationToken,
     CompletionItem,
     CompletionList,
+    DocumentHighlight,
     DocumentSymbol,
     SymbolInformation,
 } from 'vscode-languageserver';
@@ -33,6 +34,7 @@ import { timingStats } from '../common/timing';
 import { ModuleSymbolMap } from '../languageService/autoImporter';
 import { CompletionItemData, CompletionProvider } from '../languageService/completionProvider';
 import { DefinitionProvider } from '../languageService/definitionProvider';
+import { DocumentHighlightProvider } from '../languageService/documentHighlightProvider';
 import { DocumentSymbolProvider } from '../languageService/documentSymbolProvider';
 import { HoverProvider, HoverResults } from '../languageService/hoverProvider';
 import { performQuickAction } from '../languageService/quickActions';
@@ -76,6 +78,10 @@ export class SourceFile {
     // True if the file is the "typing.pyi" file, which needs
     // special-case handling.
     private readonly _isTypingStubFile: boolean;
+
+    // True if the file is the "typing_extensions.pyi" file, which needs
+    // special-case handling.
+    private readonly _isTypingExtensionsStubFile: boolean;
 
     // True if the file one of the other built-in stub files
     // that require special-case handling: "collections.pyi",
@@ -164,6 +170,7 @@ export class SourceFile {
         const fileName = getFileName(filePath);
         this._isTypingStubFile =
             this._isStubFile && (fileName === 'typing.pyi' || fileName === 'typing_extensions.pyi');
+        this._isTypingExtensionsStubFile = this._isStubFile && fileName === 'typing_extensions.pyi';
 
         this._isBuiltInStubFile = false;
         if (this._isStubFile) {
@@ -668,6 +675,20 @@ export class SourceFile {
         return HoverProvider.getHoverForPosition(sourceMapper, this._parseResults, position, evaluator, token);
     }
 
+    getDocumentHighlight(
+        sourceMapper: SourceMapper,
+        position: Position,
+        evaluator: TypeEvaluator,
+        token: CancellationToken
+    ): DocumentHighlight[] | undefined {
+        // If this file hasn't been bound, no hover info is available.
+        if (this._isBindingNeeded || !this._parseResults) {
+            return undefined;
+        }
+
+        return DocumentHighlightProvider.getDocumentHighlight(this._parseResults, position, evaluator, token);
+    }
+
     getSignatureHelpForPosition(
         position: Position,
         importLookup: ImportLookup,
@@ -903,6 +924,7 @@ export class SourceFile {
             filePath: this._filePath,
             isStubFile: this._isStubFile,
             isTypingStubFile: this._isTypingStubFile,
+            isTypingExtensionsStubFile: this._isTypingExtensionsStubFile,
             isBuiltInStubFile: this._isBuiltInStubFile,
             accessedSymbolMap: new Map<number, true>(),
         };
