@@ -1082,7 +1082,9 @@ export class CompletionProvider {
                                             .join('\n');
                                     } else {
                                         typeDetail =
-                                            name + ': ' + this._evaluator.printType(type, /* expandTypeAlias */ false);
+                                            name +
+                                            ': ' +
+                                            this._evaluator.printType(functionType, /* expandTypeAlias */ false);
                                     }
                                     break;
                                 }
