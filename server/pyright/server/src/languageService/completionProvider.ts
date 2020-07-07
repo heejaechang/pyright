@@ -1074,10 +1074,15 @@ export class CompletionProvider {
                                         : type;
                                     if (functionType.category === TypeCategory.OverloadedFunction) {
                                         typeDetail = functionType.overloads
-                                            .map((overload) => name + this._evaluator.printType(overload, /* expandTypeAlias */ false))
+                                            .map(
+                                                (overload) =>
+                                                    name +
+                                                    this._evaluator.printType(overload, /* expandTypeAlias */ false)
+                                            )
                                             .join('\n');
                                     } else {
-                                        typeDetail = name + ': ' + this._evaluator.printType(type, /* expandTypeAlias */ false);
+                                        typeDetail =
+                                            name + ': ' + this._evaluator.printType(type, /* expandTypeAlias */ false);
                                     }
                                     break;
                                 }
