@@ -25,12 +25,14 @@ from typing import (
     Union,
     overload,
 )
+
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol
 else:
     from typing_extensions import Literal, Protocol
 
 import numpy as _np
+import datetime as _dt
 from pathlib import Path
 import matplotlib
 
@@ -47,7 +49,7 @@ _DTypeNp = TypeVar("_DTypeNp", bound=_np.dtype)
 _StrLike = Union[str, _np.str_]
 _Path_or_Buf = Union[str, Path, IO]
 _LevelType = Union[int, str]
-_Scalar = Any  # What should this be?
+_Scalar = Union[str, bytes, _dt.date, _dt.datetime, _dt.timedelta, bool, int, float, complex]
 # Refine the next 3 in 3.9 to use the specialized type.
 _np_ndarray_int64 = NewType('_np_ndarray_int64', _np.ndarray)
 _np_ndarray_bool = NewType('_np_ndarray_bool', _np.ndarray)
@@ -2571,11 +2573,11 @@ Returns
     def expanding(self, min_periods: int = ..., center: _bool = ..., axis: _AxisType = ...) -> Any: ... # for now
     def explode(self, column: Union[str, Tuple]) -> DataFrame: ...
     @overload
-    def ffill(self, value: Optional[Union[float, Dict, Series[_DType], DataFrame]] = ..., axis: Optional[_AxisType] = ..., inplace: Optional[Literal[False]] = ..., limit: int = ..., downcast: Optional[Dict] = ...) -> DataFrame: ...
+    def ffill(self, value: Optional[Union[_Scalar, Dict, Series[_DType], DataFrame]] = ..., axis: Optional[_AxisType] = ..., inplace: Optional[Literal[False]] = ..., limit: int = ..., downcast: Optional[Dict] = ...) -> DataFrame: ...
     @overload
-    def ffill(self, value: Optional[Union[float, Dict, Series, DataFrame]] = ..., axis: Optional[_AxisType ]= ..., limit: int = ..., downcast: Optional[Dict] = ..., *, inplace: Literal[True]) -> None: ...
+    def ffill(self, value: Optional[Union[_Scalar, Dict, Series, DataFrame]] = ..., axis: Optional[_AxisType ]= ..., limit: int = ..., downcast: Optional[Dict] = ..., *, inplace: Literal[True]) -> None: ...
     @overload
-    def fillna(self, value: Optional[Union[float, Dict, Series, DataFrame]] = ..., method: Optional[Literal['backfill', 'bfill', 'ffill', 'pad']] = ..., axis: Optional[_AxisType] = ..., inplace: Optional[Literal[False]] = ..., limit: int = ..., downcast: Optional[Dict] = ...) -> DataFrame:
+    def fillna(self, value: Optional[Union[_Scalar, Dict, Series, DataFrame]] = ..., method: Optional[Literal['backfill', 'bfill', 'ffill', 'pad']] = ..., axis: Optional[_AxisType] = ..., inplace: Optional[Literal[False]] = ..., limit: int = ..., downcast: Optional[Dict] = ...) -> DataFrame:
         '''Fill NA/NaN values using the specified method.
 
 Parameters
@@ -2673,7 +2675,7 @@ Only replace the first NaN element.
 '''
         pass
     @overload
-    def fillna(self, value: Optional[Union[float, Dict, Series, DataFrame]] = ..., method: Optional[Literal['backfill', 'bfill', 'ffill', 'pad']] = ..., axis: Optional[_AxisType ]= ..., limit: int = ..., downcast: Optional[Dict] = ..., *, inplace: Literal[True]) -> None: ...
+    def fillna(self, value: Optional[Union[_Scalar, Dict, Series, DataFrame]] = ..., method: Optional[Literal['backfill', 'bfill', 'ffill', 'pad']] = ..., axis: Optional[_AxisType ]= ..., limit: int = ..., downcast: Optional[Dict] = ..., *, inplace: Literal[True]) -> None: ...
     def filter(self , items: Optional[List] = ..., like: Optional[_str] = ..., regex: Optional[_str] = ..., axis: Optional[_AxisType] = ...) -> DataFrame: ...
     def first(self, offset: Any) -> DataFrame: ...
     def first_valid_index(self) -> _Scalar: ...
@@ -2683,8 +2685,7 @@ Only replace the first NaN element.
     def fulldiv(self, other: Union[num, _ListLike, DataFrame], axis: Optional[_AxisType] = ..., level: Optional[_LevelType] = ..., fill_value: Optional[float] = ...) -> DataFrame: ...
     def ge(self, other: Any, axis: _AxisType = ..., level: Optional[_LevelType] = ...) -> DataFrame: ...
     # def get
-    @overload
-    def groupby(self, by: Optional[List[_str]], axis: _AxisType = ..., level: Optional[_LevelType] = ..., as_index: _bool = ..., sort: _bool = ..., group_keys: _bool = ..., squeeze: _bool = ..., observed: _bool = ...) -> DataFrameGroupBy:
+    def groupby(self, by: Optional[Union[List[_str], _str]], axis: _AxisType = ..., level: Optional[_LevelType] = ..., as_index: _bool = ..., sort: _bool = ..., group_keys: _bool = ..., squeeze: _bool = ..., observed: _bool = ...) -> DataFrameGroupBy:
         '''Group DataFrame using a mapper or by a Series of columns.
 
 A groupby operation involves some combination of splitting the
@@ -2789,8 +2790,6 @@ Captive      210.0
 Wild         185.0
 '''
         pass
-    @overload
-    def groupby(self, by: Optional[_str], axis: _AxisType = ..., level: Optional[_LevelType] = ..., as_index: _bool = ..., sort: _bool = ..., group_keys: _bool = ..., squeeze: _bool = ..., observed: _bool = ...) -> SeriesGroupBy: ...
     def gt(self, other: Any, axis: _AxisType = ..., level: Optional[_LevelType] = ...) -> DataFrame: ...
     def head(self, n: int = ...) -> DataFrame: ...
     def hist(data, column: Optional[Union[_str, List[_str]]] = ..., by: Optional[Union[_str, _ListLike]] = ..., grid: _bool = ..., xlabelsize: Optional[int] = ..., xrot: Optional[float] = ..., ylabelsize: Optional[int] = ..., yrot: Optional[float] = ..., ax: Optional[matplotlib.axes.Axes] = ..., sharex: _bool = ..., sharey: _bool = ..., figsize: Optional[Tuple[float, float]] = ..., layout: Optional[Tuple[int, int]] = ..., bins: Union[int, List] = ..., backend: Optional[_str] = ..., **kwargs) -> Any: ...
