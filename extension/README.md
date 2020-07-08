@@ -15,6 +15,8 @@ Features
 =========
 ![ screencast ](screencap.gif)
 
+Pylance provides some awesome features for Python 3, including:
+
 * Docstrings
 * Signature help, with type information
 * Parameter suggestions
