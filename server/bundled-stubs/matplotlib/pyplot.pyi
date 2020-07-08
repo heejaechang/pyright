@@ -729,8 +729,8 @@ def subplot2grid(shape: Sequence[int], loc: Sequence[int], rowspan: int = ..., c
 def subplot_tool(targetfig: Optional[Figure]) -> SubplotTool: ...
 
 def subplots(
-    nrows: int,
-    ncols: int,
+    nrows: int = ...,
+    ncols: int = ...,
     sharex: Union[bool, Literal["none", "all", "row", "col"]] = ...,
     sharey: Union[bool, Literal["none", "all", "row", "col"]] = ...,
     squeeze: bool = ...,
