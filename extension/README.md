@@ -15,6 +15,8 @@ Features
 =========
 ![ screencast ](screencap.gif)
 
+Pylance provides some awesome features for Python 3, including:
+
 * Docstrings
 * Signature help, with type information
 * Parameter suggestions
@@ -58,6 +60,10 @@ Pylance provides users with the ability to customize their Python language suppo
     - Available values:
         - `true` (default)
         - `false`
+
+- `python.analysis.extraPaths`
+    - Used to specify extra search paths for import resolution. This replaces the old `python.autoComplete.extraPaths` setting.
+    - Default value: empty array
 
 - `python.analysis.diagnosticSeverityOverrides`
     - Used to allow a user to override the severity levels for individual diagnostics should they desire
