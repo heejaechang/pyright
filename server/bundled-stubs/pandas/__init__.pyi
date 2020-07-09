@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as _np
 import datetime as _dt
 from . import testing
-from .core import DataFrame, Series, Index, DatetimeIndex, PeriodIndex, TimedeltaIndex, _DType
+from .core import DataFrame as DataFrame, Series as Series, Index as Index, DatetimeIndex as DatetimeIndex, PeriodIndex as PeriodIndex, TimedeltaIndex as TimeDeltaIndex, _DType
 
 _AxisType = Literal["columns", "index"]
 _Path_or_Buf = Union[str, Path, IO]
