@@ -16,6 +16,12 @@ Ensure you have a clean copy of the repo by cloning from origin (not your fork).
 git clone https://www.github.com/microsoft/pyrx
 ```
 
+If it's not a fresh checkout, do a clean.
+
+```
+git clean -fdx
+```
+
 Create a tag for this version. The format is YYYY.M.B where B starts at 0 for the first release of the month, and is incremented for each release during that month.
 
 ```
@@ -52,7 +58,7 @@ Publish the extension using the command line (TO BE DOCUMENTED) or upload using 
 Push the tag to the origin repo.
 
 ```
-git push 2020.7.0
+git push --tags
 ```
 
 ## Running
