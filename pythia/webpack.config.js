@@ -7,9 +7,12 @@
  */
 
 /* eslint-disable @typescript-eslint/no-var-requires */
+//@ts-check
+
 const path = require('path');
 const webpack = require('webpack');
 
+/**@type {import('webpack').Configuration}*/
 module.exports = {
     context: path.resolve(__dirname),
     entry: './src/pythia.ts',
@@ -42,10 +45,5 @@ module.exports = {
                 use: 'node-loader',
             },
         ],
-    },
-    node: {
-        fs: 'empty',
-        __dirname: false,
-        __filename: false,
     },
 };

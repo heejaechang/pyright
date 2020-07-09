@@ -28,6 +28,6 @@ export class Platform {
     }
 
     isBundle(): boolean {
-        return path.basename(__filename) === 'server.bundle.js';
+        return path.basename(__filename).endsWith('.bundle.js');
     }
 }
