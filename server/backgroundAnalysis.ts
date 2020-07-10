@@ -20,6 +20,9 @@ import { ConfigOptions } from './pyright/server/src/common/configOptions';
 import { ConsoleInterface } from './pyright/server/src/common/console';
 import { FileSystem } from './pyright/server/src/common/fileSystem';
 
+// process.mainModule is "doc-only deprecated" in Node v14+.
+const mainFilename: string = (process as any).mainModule.filename;
+
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
     constructor(console: ConsoleInterface) {
         super();
@@ -30,7 +33,8 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         };
 
         // this will load this same file in BG thread and start listener
-        const worker = new Worker(__filename, { workerData: initialData });
+        // Use the main module's path, in case we're in a split bundle (where the main bundle is the entrypoint).
+        const worker = new Worker(mainFilename, { workerData: initialData });
         this.setup(worker, console);
     }
 }
