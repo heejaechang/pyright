@@ -8,15 +8,58 @@
 
 From the `server` folder of the repo run `npx webpack`.
 
-## Setting the version
+## Releasing the extension
 
-To set the version in all of the required places, run:
+Ensure you have a clean copy of the repo by cloning from origin (not your fork).
+
+```
+git clone https://www.github.com/microsoft/pyrx
+```
+
+If it's not a fresh checkout, do a clean.
+
+```
+git clean -fdx
+```
+
+Create a tag for this version. The format is YYYY.M.B where B starts at 0 for the first release of the month, and is incremented for each release during that month.
+
+```
+git tag 2020.6.1
+```
+
+Install the dependencies.
+
+```
+npm run install:all
+```
+
+Set the version in all of the required places.
 
 ```
 npm run setVersion -- --to 2020.6.1
 ```
 
 Note that this does not commit anything, it just aids in setting it in the right places.
+
+Build the extension.
+
+```
+cd extension
+npx vsce package
+```
+
+Do some sanity check on the built .vsix in the extension directory. Open as a zip file and look at the contents.
+
+Side-load the .vsix into VS Code and test.
+
+Publish the extension using the command line (TO BE DOCUMENTED) or upload using drag & drop at the [extension management site](https://marketplace.visualstudio.com/manage/publishers/ms-python/).
+
+Push the tag to the origin repo.
+
+```
+git push --tags
+```
 
 ## Running
 
@@ -48,7 +91,7 @@ Note that this does not commit anything, it just aids in setting it in the right
 
 ## Debugging in VS Code Python extension
 
--   Modify `tsconfig.json` in `server` folder by adding `sourceRoot` pointing where Pylance Server soources are. For example:`"sourceRoot": "e:/pyrx/server",`. This will generate source maps with absolute paths.
+-   Modify `tsconfig.json` in `server` folder by adding `sourceRoot` pointing where Pylance Server sources are. For example:`"sourceRoot": "e:/pyrx/server",`. This will generate source maps with absolute paths.
 -   Build Pylance by running `npm run package` .
 -   Copy `client\server` folder to `nodeLanguageServer` subfolder in the Python extension.
 -   Run Python extension (in debugger or otherwise).
