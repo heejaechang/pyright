@@ -27,6 +27,7 @@
         "package": "npm run install:all && npm run clean:pyright && cd server && npm run build && npx webpack && cd ../extension && npm run build && cd ..",
         "test:all": "cd server && npm run test:all && cd ../extension && npm run test && cd ..",
         "test:all:pipeline": "cd server && npm run test:all:pipeline && cd ../extension && npm run test && cd ..",
+        "test:all-except-extension:pipeline": "cd server && npm run test:all:pipeline && cd ..",
         "syncpack:list": "syncpack list --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
         "syncpack:check": "syncpack list-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\"",
         "syncpack:fix": "syncpack fix-mismatches --source \"{,*/,server/pyright/,server/pyright/*/}package.json\" --indent \"    \"",
