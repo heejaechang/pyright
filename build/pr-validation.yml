@@ -55,6 +55,13 @@ jobs:
 
       - script: npm run test:all:pipeline
         displayName: npm run test:all:pipeline
+        condition: ne(variables['Agent.OS'], 'Windows_NT')
+        env:
+          DISPLAY: ':99.0'
+
+      - script: npm run test:all-except-extension:pipeline
+        displayName: npm run test:all-except-extension:pipeline
+        condition: eq(variables['Agent.OS'], 'Windows_NT')
         env:
           DISPLAY: ':99.0'
 
