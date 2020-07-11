@@ -2,8 +2,9 @@
 
 ## 2020.7.1 (10 July 2020)
 
--   Fix background analysis thread, which prevented diagnostics (syntax checks, import warnings, etc) from working.
+-   Fixed background analysis thread, which prevented diagnostics (syntax checks, import warnings, etc) from working.
     ([pylance-release#86](https://github.com/microsoft/pylance-release/issues/86))
+-   Fixed setting and survey banners blocking startup.
 
 ## 2020.7.0 (9 July 2020)
 

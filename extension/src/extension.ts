@@ -1,3 +1,5 @@
+import './extensions';
+
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -19,8 +21,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     loadLocalizedStrings();
 
     const serverPath = path.join(context.extensionPath, 'server');
-    await showActivatePylanceBanner(context);
-    await showPylanceSurveyBanner(context, version);
+    showActivatePylanceBanner(context).ignoreErrors();
+    showPylanceSurveyBanner(context, version).ignoreErrors();
 
     return {
         languageServerFolder: async () => ({
