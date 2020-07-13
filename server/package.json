@@ -80,7 +80,7 @@
         "typescript": "^3.9.5",
         "webpack": "^5.0.0-beta.22",
         "webpack-cli": "^3.3.12",
-        "webpack-obfuscator": "^1.1.0"
+        "webpack-obfuscator": "^1.6.0"
     },
     "types": "out/main.d.ts",
     "main": "out/main.js"

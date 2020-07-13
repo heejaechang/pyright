@@ -69,6 +69,7 @@ module.exports = {
         new CopyPlugin({ patterns: [{ from: onnxBin, to: onnxOut }] }),
         new JavaScriptObfuscator(
             {
+                seed: 258096062,
                 rotateStringArray: true,
                 shuffleStringArray: true,
                 splitStrings: true,

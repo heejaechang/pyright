@@ -42,6 +42,7 @@ const config = {
     plugins: [
         new JavaScriptObfuscator(
             {
+                seed: 258096062,
                 rotateStringArray: true,
                 shuffleStringArray: true,
                 splitStrings: true,

@@ -136,6 +136,6 @@
         "vscode-test": "^1.4.0",
         "webpack": "^5.0.0-beta.22",
         "webpack-cli": "^3.3.12",
-        "webpack-obfuscator": "^1.1.0"
+        "webpack-obfuscator": "^1.6.0"
     }
 }
