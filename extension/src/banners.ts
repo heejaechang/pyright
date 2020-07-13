@@ -26,14 +26,18 @@ abstract class BannerBase {
     abstract async show(): Promise<void>;
 }
 
+function getActivatePylanceBannerSettingKey(version: string): string {
+    return `ActivatePylanceBanner2-${version}`;
+}
+
 // Prompt for Pylance when extension is installed.
 export class ActivatePylanceBanner extends BannerBase {
-    public static readonly SettingKey = 'ActivatePylanceBanner2';
-
     readonly Message = localize.LanguageServer.installedButInactive();
     readonly LabelYes = localize.LanguageServer.turnItOn();
     readonly LabelNo = localize.LanguageServer.noThanks();
     readonly LabelLater = localize.Common.remindMeLater();
+
+    readonly settingKey: string;
 
     static readonly ExpectedLanguageServer = 'Pylance';
 
@@ -41,9 +45,11 @@ export class ActivatePylanceBanner extends BannerBase {
         private readonly appShell: ApplicationShell,
         private readonly appConfig: AppConfiguration,
         private readonly cmdManager: CommandManager,
-        memento: Memento
+        memento: Memento,
+        version: string
     ) {
-        super(ActivatePylanceBanner.SettingKey, memento);
+        super(getActivatePylanceBannerSettingKey(version), memento);
+        this.settingKey = getActivatePylanceBannerSettingKey(version);
     }
 
     async show(): Promise<void> {

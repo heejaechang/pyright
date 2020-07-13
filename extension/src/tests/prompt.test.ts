@@ -31,7 +31,7 @@ describe('Prompt to use Pylance', () => {
     test('Disable banner', async () => {
         const banner = makeBanner();
         await banner.disable();
-        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(false);
+        expect(settings.get(banner.settingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
 
         await banner.show();
@@ -45,7 +45,7 @@ describe('Prompt to use Pylance', () => {
         );
 
         await banner.show();
-        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(false);
+        expect(settings.get(banner.settingKey)).toEqual(false);
         expect(banner.enabled).toEqual(false);
     });
 
@@ -66,7 +66,6 @@ describe('Prompt to use Pylance', () => {
         );
 
         await banner.show();
-        expect(settings.get(ActivatePylanceBanner.SettingKey)).toEqual(true);
         const [setting, value] = capture(appConfigMock.updateSetting).first();
         expect(setting).toEqual('languageServer');
         expect(value).toEqual(ActivatePylanceBanner.ExpectedLanguageServer);
@@ -86,6 +85,12 @@ describe('Prompt to use Pylance', () => {
     function makeBanner(lsType?: string): ActivatePylanceBanner {
         when(appConfigMock.getSetting<string>('languageServer')).thenReturn(lsType ?? 'Jedi');
         when(appConfigMock.updateSetting(anyString(), anything())).thenReturn(Promise.resolve());
-        return new ActivatePylanceBanner(instance(appShellMock), instance(appConfigMock), instance(cmdMock), settings);
+        return new ActivatePylanceBanner(
+            instance(appShellMock),
+            instance(appConfigMock),
+            instance(cmdMock),
+            settings,
+            '0.0.0'
+        );
     }
 });

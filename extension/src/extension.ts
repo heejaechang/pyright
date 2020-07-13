@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     loadLocalizedStrings();
 
     const serverPath = path.join(context.extensionPath, 'server');
-    showActivatePylanceBanner(context).ignoreErrors();
+    showActivatePylanceBanner(context, version).ignoreErrors();
     showPylanceSurveyBanner(context, version).ignoreErrors();
 
     return {
@@ -63,12 +63,13 @@ function checkHostApp() {
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivate() {}
 
-async function showActivatePylanceBanner(context: vscode.ExtensionContext): Promise<void> {
+async function showActivatePylanceBanner(context: vscode.ExtensionContext, version: string): Promise<void> {
     const switchToPylance = new ActivatePylanceBanner(
         new ApplicationShellImpl(),
         new AppConfigurationImpl(),
         new CommandManagerImpl(),
-        context.globalState
+        context.globalState,
+        version
     );
     return switchToPylance.show();
 }
