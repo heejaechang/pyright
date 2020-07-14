@@ -216,6 +216,7 @@
             "name": "LS Extension tests",
             "type": "extensionHost",
             "request": "launch",
+            "preLaunchTask": "npm: build:extension",
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--disable-extensions",
@@ -229,8 +230,26 @@
             ],
             "skipFiles": [
                 "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "LS Extension startup",
+            "type": "extensionHost",
+            "request": "launch",
+            "preLaunchTask": "npm: pack:extension-debug",
+            "runtimeExecutable": "${workspaceRoot}/extension/dist/extension.js",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/extension",
             ],
-            "preLaunchTask": "npm: build:extension",
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/extension/out/**/*.js"
+            ],
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         }
     ]
 }

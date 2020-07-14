@@ -25,6 +25,8 @@
         "clean:pyright": "cd server/pyright && npm run clean && cd ../..",
         "clean:all": "npm run clean && npm run clean:pyright",
         "package": "npm run install:all && npm run clean:pyright && cd server && npm run build && npx webpack && cd ../extension && npm run build && cd ..",
+        "pack:extension-debug": "cd extension && npm run webpack-debug && cd ..",
+        "pack:extension": "cd extension && npm run webpack && cd ..",
         "test:all": "cd server && npm run test:all && cd ../extension && npm run test && cd ..",
         "test:all:pipeline": "cd server && npm run test:all:pipeline && cd ../extension && npm run test && cd ..",
         "test:all-except-extension:pipeline": "cd server && npm run test:all:pipeline && cd ..",

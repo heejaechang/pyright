@@ -113,8 +113,8 @@
     "scripts": {
         "build": "tsc -p ./",
         "vscode:prepublish": "cd .. && npm run package && cd extension && webpack --mode production",
-        "webpack": "webpack --mode development",
-        "webpack-dev": "webpack --mode development --watch",
+        "webpack": "webpack --config webpack.config.js",
+        "webpack-debug": "webpack --config webpack.debug.config.js",
         "test": "npm run build && node ./src/tests/runTests.js"
     },
     "devDependencies": {

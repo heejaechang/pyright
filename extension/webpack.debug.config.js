@@ -4,7 +4,6 @@
 'use strict';
 
 const path = require('path');
-const JavaScriptObfuscator = require('webpack-obfuscator');
 
 /**@type {import('webpack').Configuration}*/
 const config = {
@@ -19,6 +18,7 @@ const config = {
         devtoolModuleFilenameTemplate: '../[resource-path]',
     },
     mode: 'development',
+    devtool: 'source-map',
     externals: {
         vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
     },
@@ -39,20 +39,5 @@ const config = {
             },
         ],
     },
-    plugins: [
-        new JavaScriptObfuscator(
-            {
-                seed: 258096062,
-                rotateStringArray: true,
-                shuffleStringArray: true,
-                splitStrings: true,
-                splitStringsChunkLength: 10,
-                stringArray: true,
-                stringArrayEncoding: 'base64',
-                stringArrayThreshold: 0.75,
-            },
-            []
-        ),
-    ],
 };
 module.exports = config;

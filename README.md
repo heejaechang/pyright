@@ -77,14 +77,14 @@ git push --tags
 -   Clone [Python Extension](https://github.com/Microsoft/vscode-python)
 -   Create `nodeLanguageServer` subfolder
 -   Copy contents of `dist` folder to `nodeLanguageServer` subfolder in the Python extension.
--   Set these attributes in settings.json:
+-   Set these attributes in `settings.json`:
 
-```
-"python.languageServer": "Node"
+```json
+"python.languageServer": "Pylance"
 "python.downloadLanguageServer": false,
 "python.blobName": "d67e4491-7116-42e0-8d18-5394f74187ce",
 "python.analysis.downloadChannel": "daily",
-"python.packageName": "Python-Language-Server",
+"python.packageName": "Python-Language-Server"
 ```
 
 -   Launch the extension and open a Python file. The extension should then start Pylance language server.
@@ -106,6 +106,10 @@ Add `--inspect-brk` to `debugOptions` in `activate(context: ExtensionContext)`, 
 ```ts
 const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', '--inspect-brk'] };
 ```
+
+## Debugging Pylance extension startup code
+
+Pylance extension does not launch language server on its own. However, you may need to debug code that determines extension version or verifies host handshake. Use `LS Extension startup` launch task. You may need to delete `dist` folder content since task packages the extension for debugging rather than for the release.
 
 ## Tests
 
