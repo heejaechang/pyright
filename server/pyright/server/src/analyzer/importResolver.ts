@@ -139,7 +139,7 @@ export class ImportResolver {
         const importName = this._formatImportName(moduleDescriptor);
         const importFailureInfo: string[] = [];
 
-        // First check for a typeshed file.
+        // First check for a stdlib typeshed file.
         if (allowPyi && moduleDescriptor.nameParts.length > 0) {
             const builtInImport = this._findTypeshedPath(
                 execEnv,
@@ -151,6 +151,26 @@ export class ImportResolver {
             if (builtInImport) {
                 builtInImport.isTypeshedFile = true;
                 return builtInImport;
+            }
+        }
+
+        if (allowPyi) {
+            // Check for a local stub file using stubPath.
+            if (this._configOptions.stubPath) {
+                importFailureInfo.push(`Looking in stubPath '${this._configOptions.stubPath}'`);
+                const typingsImport = this.resolveAbsoluteImport(
+                    this._configOptions.stubPath,
+                    moduleDescriptor,
+                    importName,
+                    importFailureInfo
+                );
+
+                if (typingsImport && typingsImport.isImportFound) {
+                    // We will treat typings files as "local" rather than "third party".
+                    typingsImport.importType = ImportType.Local;
+                    typingsImport.isLocalTypingsFile = true;
+                    return typingsImport;
+                }
             }
         }
 
@@ -200,39 +220,6 @@ export class ImportResolver {
             }
         }
 
-        if (allowPyi) {
-            // Check for a stub file.
-            if (this._configOptions.stubPath) {
-                importFailureInfo.push(`Looking in stubPath '${this._configOptions.stubPath}'`);
-                const typingsImport = this.resolveAbsoluteImport(
-                    this._configOptions.stubPath,
-                    moduleDescriptor,
-                    importName,
-                    importFailureInfo
-                );
-                if (typingsImport && typingsImport.isImportFound) {
-                    // We will treat typings files as "local" rather than "third party".
-                    typingsImport.importType = ImportType.Local;
-                    typingsImport.isLocalTypingsFile = true;
-                    return typingsImport;
-                }
-            }
-
-            // Check for a typeshed file.
-            importFailureInfo.push(`Looking for typeshed path`);
-            const typeshedImport = this._findTypeshedPath(
-                execEnv,
-                moduleDescriptor,
-                importName,
-                /* isStdLib */ false,
-                importFailureInfo
-            );
-            if (typeshedImport) {
-                typeshedImport.isTypeshedFile = true;
-                return typeshedImport;
-            }
-        }
-
         // Look for the import in the list of third-party packages.
         const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
         if (pythonSearchPaths.length > 0) {
@@ -247,9 +234,10 @@ export class ImportResolver {
                     importFailureInfo,
                     /* allowPartial */ true,
                     /* allowNativeLib */ true,
-                    /* allowStubsFolder */ true,
+                    /* allowStubPackages */ true,
                     allowPyi
                 );
+
                 if (thirdPartyImport) {
                     thirdPartyImport.importType = ImportType.ThirdParty;
 
@@ -284,6 +272,22 @@ export class ImportResolver {
         );
         if (extraResults !== undefined) {
             return extraResults;
+        }
+
+        if (allowPyi) {
+            // Check for a third-party typeshed file.
+            importFailureInfo.push(`Looking for typeshed path`);
+            const typeshedImport = this._findTypeshedPath(
+                execEnv,
+                moduleDescriptor,
+                importName,
+                /* isStdLib */ false,
+                importFailureInfo
+            );
+            if (typeshedImport) {
+                typeshedImport.isTypeshedFile = true;
+                return typeshedImport;
+            }
         }
 
         // We weren't able to find an exact match, so return the best
@@ -400,7 +404,7 @@ export class ImportResolver {
             // We get the relative path(s) of the stub to its import root(s),
             // in theory there can be more than one, then look for source
             // files in all the import roots using the same relative path(s).
-            const importRootPaths = this.getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ true);
+            const importRootPaths = this.getImportRoots(execEnv, /* useTypeshedVersionedFolders */ true);
 
             const relativeStubPaths: string[] = [];
             for (const importRootPath of importRootPaths) {
@@ -873,7 +877,7 @@ export class ImportResolver {
         importFailureInfo: string[],
         allowPartial = false,
         allowNativeLib = false,
-        allowStubsFolder = false,
+        allowStubPackages = false,
         allowPyi = true
     ): ImportResult | undefined {
         importFailureInfo.push(`Attempting to resolve using root path '${rootPath}'`);
@@ -913,7 +917,7 @@ export class ImportResolver {
                 dirPath = combinePaths(dirPath, moduleDescriptor.nameParts[i]);
                 let foundDirectory = false;
 
-                if (allowPyi && allowStubsFolder) {
+                if (allowPyi && allowStubPackages) {
                     // PEP 561 indicates that package authors can ship their stubs
                     // separately from their package implementation by appending
                     // the string '-stubs' to its top-level directory name. We'll

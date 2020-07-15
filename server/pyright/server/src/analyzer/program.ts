@@ -205,7 +205,7 @@ export class Program {
             isOpenByClient: false,
             isTypeshedFile: false,
             isThirdPartyImport: false,
-            diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+            diagnosticsVersion: undefined,
             imports: [],
             importedBy: [],
             shadows: [],
@@ -225,7 +225,7 @@ export class Program {
                 isOpenByClient: true,
                 isTypeshedFile: false,
                 isThirdPartyImport: false,
-                diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+                diagnosticsVersion: undefined,
                 imports: [],
                 importedBy: [],
                 shadows: [],
@@ -238,7 +238,7 @@ export class Program {
             // Reset the diagnostic version so we force an update
             // to the diagnostics, which can change based on whether
             // the file is open.
-            sourceFileInfo.diagnosticsVersion = -1;
+            sourceFileInfo.diagnosticsVersion = undefined;
         }
 
         sourceFileInfo.sourceFile.setClientVersion(version, contents);
@@ -249,11 +249,6 @@ export class Program {
         if (sourceFileInfo) {
             sourceFileInfo.isOpenByClient = false;
             sourceFileInfo.sourceFile.setClientVersion(null, '');
-
-            // Set the diagnostic version to an invalid value so we force an
-            // update to the diagnostics, which can change based on whether
-            // the file is open.
-            sourceFileInfo.diagnosticsVersion = -1;
         }
 
         return this._removeUnneededFiles();
@@ -509,6 +504,10 @@ export class Program {
             flags |= PrintTypeFlags.OmitTypeArgumentsIfAny;
         }
 
+        if (configOptions.diagnosticRuleSet.omitUnannotatedParamType) {
+            flags |= PrintTypeFlags.OmitUnannotatedParamType;
+        }
+
         if (configOptions.diagnosticRuleSet.pep604Printing) {
             flags |= PrintTypeFlags.PEP604;
         }
@@ -540,7 +539,7 @@ export class Program {
             isOpenByClient: false,
             isTypeshedFile: false,
             isThirdPartyImport: false,
-            diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+            diagnosticsVersion: undefined,
             imports: [],
             importedBy: [],
             shadows: [],
@@ -565,7 +564,7 @@ export class Program {
                 isOpenByClient: false,
                 isTypeshedFile: false,
                 isThirdPartyImport: false,
-                diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+                diagnosticsVersion: undefined,
                 imports: [],
                 importedBy: [],
                 shadows: [],
@@ -1538,16 +1537,16 @@ export class Program {
                     !this._shouldCheckFile(fileInfo) &&
                     fileInfo.diagnosticsVersion !== fileInfo.sourceFile.getDiagnosticVersion()
                 ) {
-                    // If the old diagnostic version was undefined or zero, we haven't
+                    // If the old diagnostic version was undefined, we haven't
                     // reported any diagnostics for this file, so no need to clear them.
-                    if (fileInfo.diagnosticsVersion !== undefined && fileInfo.diagnosticsVersion !== 0) {
+                    if (fileInfo.diagnosticsVersion !== undefined) {
                         fileDiagnostics.push({
                             filePath: fileInfo.sourceFile.getFilePath(),
                             diagnostics: [],
                         });
                     }
 
-                    fileInfo.diagnosticsVersion = fileInfo.sourceFile.getDiagnosticVersion();
+                    fileInfo.diagnosticsVersion = undefined;
                 }
 
                 i++;
@@ -1749,7 +1748,7 @@ export class Program {
                         isOpenByClient: false,
                         isTypeshedFile: importInfo.isTypeshedFile,
                         isThirdPartyImport: importInfo.isThirdPartyImport,
-                        diagnosticsVersion: sourceFile.getDiagnosticVersion(),
+                        diagnosticsVersion: undefined,
                         imports: [],
                         importedBy: [],
                         shadows: [],
