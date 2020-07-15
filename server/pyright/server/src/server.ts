@@ -36,9 +36,14 @@ class PyrightServer extends LanguageServerBase {
     constructor() {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const version = require('../package.json').version || '';
+
+        // When executed from CLI command (pyright-langserver), __rootDirectory is
+        // already defined. When executed from VSCode extension, rootDirectory should
+        // be the parent directory of __dirname.
+        const rootDirectory = (global as any).__rootDirectory || getDirectoryPath(__dirname);
         super({
             productName: 'Pyright',
-            rootDirectory: getDirectoryPath(__dirname),
+            rootDirectory,
             version,
             maxAnalysisTimeInForeground,
             progressReporterFactory: reporterFactory,

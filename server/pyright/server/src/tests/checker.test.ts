@@ -472,6 +472,12 @@ test('Function8', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Function9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function9.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
@@ -1086,6 +1092,30 @@ test('NewType2', () => {
     validateResults(analysisResults, 1);
 });
 
+test('NewType3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType3.py']);
+
+    validateResults(analysisResults, 4);
+});
+
+test('isInstance2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance2.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('isInstance3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance3.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('isInstance4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('UnnecessaryIsInstance1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1096,12 +1126,6 @@ test('UnnecessaryIsInstance1', () => {
     configOptions.diagnosticRuleSet.reportUnnecessaryIsInstance = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance1.py'], configOptions);
     validateResults(analysisResults, 4);
-});
-
-test('UnnecessaryIsInstance2', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unnecessaryIsInstance2.py']);
-
-    validateResults(analysisResults, 1);
 });
 
 test('UnnecessaryIsSubclass1', () => {
@@ -1308,6 +1332,24 @@ test('GenericTypes22', () => {
     validateResults(analysisResults, 0);
 });
 
+test('GenericTypes23', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes23.py']);
+
+    validateResults(analysisResults, 2);
+});
+
+test('GenericTypes24', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes24.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('GenericTypes25', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes25.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1431,6 +1473,18 @@ test('TypeIgnore2', () => {
     // Disable type ignore
     configOptions.diagnosticRuleSet.enableTypeIgnoreComments = false;
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeIgnore2.py'], configOptions);
+    validateResults(analysisResults, 3);
+});
+
+test('TypeIgnore3', () => {
+    const configOptions = new ConfigOptions('.');
+
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeIgnore3.py'], configOptions);
+    validateResults(analysisResults, 0);
+
+    // Disable type ignore
+    configOptions.diagnosticRuleSet.enableTypeIgnoreComments = false;
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeIgnore3.py'], configOptions);
     validateResults(analysisResults, 3);
 });
 
@@ -1728,7 +1782,7 @@ test('ParamSpec1', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V39;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec1.py'], configOptions);
-    validateResults(results, 7);
+    validateResults(results, 8);
 });
 
 test('ParamSpec2', () => {
@@ -1795,6 +1849,12 @@ test('Circular1', () => {
 
 test('TryExcept2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept2.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('TryExcept3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept3.py']);
 
     validateResults(analysisResults, 0);
 });

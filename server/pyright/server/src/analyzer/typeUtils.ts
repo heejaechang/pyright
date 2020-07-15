@@ -90,8 +90,8 @@ export interface TypedDictEntry {
     isProvided: boolean;
 }
 
-const SingleTickRegEx = /'/g;
-const TripleTickRegEx = /'''/g;
+const singleTickRegEx = /'/g;
+const tripleTickRegEx = /'''/g;
 
 export function isOptionalType(type: Type): boolean {
     if (type.category === TypeCategory.Union) {
@@ -469,16 +469,11 @@ export function partiallySpecializeType(type: Type, contextClassType: ClassType)
 
 // Replaces all of the top-level TypeVars (as opposed to TypeVars
 // used as type arguments in other types) with their concrete form.
-// Unlikely typical TypeVar specialization, this method specializes
-// constrained TypeVars as a union of the constrained types.
 export function makeTypeVarsConcrete(type: Type): Type {
     return doForSubtypes(type, (subtype) => {
         if (subtype.category === TypeCategory.TypeVar) {
             if (subtype.boundType) {
                 return subtype.boundType;
-            }
-            if (subtype.constraints.length > 0) {
-                return combineTypes(subtype.constraints);
             }
 
             // Normally, we would use UnknownType here, but we need
@@ -1050,7 +1045,13 @@ export function getDeclaredGeneratorYieldType(functionType: FunctionType, iterat
 
         if (generatorTypeArgs && generatorTypeArgs.length >= 1 && iteratorType.category === TypeCategory.Class) {
             // The yield type is the first type arg. Wrap it in an iterator.
-            return ObjectType.create(ClassType.cloneForSpecialization(iteratorType, [generatorTypeArgs[0]]));
+            return ObjectType.create(
+                ClassType.cloneForSpecialization(
+                    iteratorType,
+                    [generatorTypeArgs[0]],
+                    /* isTypeArgumentExplicit */ false
+                )
+            );
         }
 
         // If the return type isn't a Generator, assume that it's the
@@ -1335,7 +1336,7 @@ function _specializeClassType(
         return classType;
     }
 
-    return ClassType.cloneForSpecialization(classType, newTypeArgs);
+    return ClassType.cloneForSpecialization(classType, newTypeArgs, /* isTypeArgumentExplicit */ false);
 }
 
 // Converts a type var type into the most specific type
@@ -1640,9 +1641,9 @@ export function printLiteralValue(type: ObjectType): string {
         const prefix = type.classType.details.name === 'bytes' ? 'b' : '';
         literalStr = literalValue.toString();
         if (literalStr.indexOf('\n') >= 0) {
-            literalStr = `${prefix}'''${literalStr.replace(TripleTickRegEx, "\\'\\'\\'")}'''`;
+            literalStr = `${prefix}'''${literalStr.replace(tripleTickRegEx, "\\'\\'\\'")}'''`;
         } else {
-            literalStr = `${prefix}'${literalStr.replace(SingleTickRegEx, "\\'")}'`;
+            literalStr = `${prefix}'${literalStr.replace(singleTickRegEx, "\\'")}'`;
         }
     } else if (typeof literalValue === 'boolean') {
         literalStr = literalValue ? 'True' : 'False';
