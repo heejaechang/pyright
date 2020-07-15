@@ -6,6 +6,8 @@
 
 In addition, Pylance's copy of Pyright has been updated from 1.1.51 to 1.1.53, including the following changes:
 
+-   Unreleased in Pyright, but included in Pylance:
+    -   Bug Fix: Updated config file watcher logic so it can detect when a new config file is added to a workspace.
 -   [1.1.53](https://github.com/microsoft/pyright/releases/tag/1.1.53)
     -   Bug Fix: Fixed bug in parser where it was emitting a spurious error about function return type annotations being a tuple when it was simply enclosed in parentheses.
     -   Bug Fix: Fixed a bug that caused completion suggestions not to work for the LHS of a member access expression (e.g. the "a" in "a.b").
