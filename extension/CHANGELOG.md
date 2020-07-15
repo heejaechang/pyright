@@ -27,14 +27,14 @@ In addition, Pylance's copy of Pyright has been updated from 1.1.51 to 1.1.53, i
     -   Enhancement: When hovering over class name that is used in a constructor call, display the `__init__` method signature rather than the class.
     -   Bug Fix: Fixed recent regression in unreachable code reporting at the module level.
         ([pylance-release#107](https://github.com/microsoft/pylance-release/issues/107))
-    -   Bug Fix: Removed error message for unexpected dynamic argument types to type initializer.
+    -   Bug Fix: Removed error message for unexpected dynamic argument types to `type` initializer.
         ([pylance-release#114](https://github.com/microsoft/pylance-release/issues/114))
-    -   Bug Fix: Fixed a bug in the code that validates an exception type in an "except" clause. It was not properly handling the case where the type of the exception was specified as a Type[X] object.
+    -   Bug Fix: Fixed a bug in the code that validates an exception type in an "except" clause. It was not properly handling the case where the type of the exception was specified as a `Type[X]` object.
     -   Bug Fix: Reverted part of a previous change where constrained type vars were specialized as a union of the constrained types. Changed logic to use first constrained type only.
     -   Bug Fix: Fixed bug in logic that detects assignment compatibility for function types. It wasn't properly handling generic parameters, including synthesized TypeVar types used for "self" parameters.
     -   Bug Fix: Added diagnostic for TypeVar or generic class with type args being used as a second argument for isinstance or issubclass. These will raise a TypeError exception at runtime.
     -   Enhancement: Changed Pyright import resolution order to match that described in PEP 561. In particular, stubs in stubPath are now searched prior to user code, and third-party typeshed stubs are searched only after installed packages are searched for stub packages and inline stubs. There is one place where Pyright's import resolution still differs from a strict interpretation of PEP 561: it searches stdlib typeshed stubs first (unless typeshedPath is defined, in which case it searches there). This is more consistent with the way the Python interpreter resolves stdlib types.
-    -   Bug Fix: Fixed bug in handling of constructor that uses a specialized class (e.g. MyClass[int]()). The previous code was inappropriate overriding the provided type arguments as part of bidirectional inference logic.
+    -   Bug Fix: Fixed bug in handling of constructor that uses a specialized class (e.g. `MyClass[int]()`). The previous code was inappropriate overriding the provided type arguments as part of bidirectional inference logic.
     -   Bug Fix: Fixed bug that caused spurious errors when assigning a specialized object/class to a variable whose type is a specialized base class of the specialized object/class.
 
 ## 2020.7.1 (10 July 2020)
