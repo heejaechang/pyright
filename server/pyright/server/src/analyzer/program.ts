@@ -1009,6 +1009,7 @@ export class Program {
                 return undefined;
             }
 
+            const invokedFromUserFile = this._isUserCode(sourceFileInfo);
             this._bindFile(sourceFileInfo);
 
             const execEnv = this._configOptions.findExecEnvironment(filePath);
@@ -1029,8 +1030,12 @@ export class Program {
                     throwIfCancellationRequested(token);
 
                     // "Find all references" will only include references from user code
-                    // unless the file is explicitly opened in the editor.
-                    if (curSourceFileInfo.isOpenByClient || this._isUserCode(curSourceFileInfo)) {
+                    // unless the file is explicitly opened in the editor or it is invoked from non user files.
+                    if (
+                        curSourceFileInfo.isOpenByClient ||
+                        !invokedFromUserFile ||
+                        this._isUserCode(curSourceFileInfo)
+                    ) {
                         this._bindFile(curSourceFileInfo);
 
                         curSourceFileInfo.sourceFile.addReferences(
