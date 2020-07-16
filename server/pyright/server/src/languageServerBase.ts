@@ -150,6 +150,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _connection: Connection = createConnection(this._GetConnectionOptions());
     protected _workspaceMap: WorkspaceMap;
     protected _hasConfigurationCapability = false;
+    protected _hasVisualStudioExtensionsCapability = false;
+    protected _hasWorkspaceFoldersCapability = false;
     protected _hasWatchFileCapability = false;
     protected _defaultClientConfig: any;
 
@@ -374,6 +376,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 const capabilities = params.capabilities;
                 this._hasConfigurationCapability = !!capabilities.workspace?.configuration;
                 this._hasWatchFileCapability = !!capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration;
+                this._hasWorkspaceFoldersCapability = !!capabilities.workspace?.workspaceFolders;
+                this._hasVisualStudioExtensionsCapability = !!(capabilities as any).supportsVisualStudioExtensions;
 
                 // Create a service instance for each of the workspace folders.
                 if (params.workspaceFolders) {
@@ -401,7 +405,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                     });
                 }
 
-                return {
+                const result: InitializeResult = {
                     capabilities: {
                         // Tell the client that the server works in FULL text document
                         // sync mode (as opposed to incremental).
@@ -433,6 +437,20 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                         callHierarchyProvider: true,
                     },
                 };
+
+                if (this._hasVisualStudioExtensionsCapability) {
+                    // Temporary workaround until VS internal issue 1155697 is fixed
+                    // VS protocol type definitions are not up to date with current LSP spec
+                    // and only expects booleans for these.
+                    // TODO: remove this when the above issue is fixed
+                    result.capabilities.definitionProvider = true;
+                    result.capabilities.referencesProvider = true;
+                    result.capabilities.documentSymbolProvider = true;
+                    result.capabilities.workspaceSymbolProvider = true;
+                    result.capabilities.documentHighlightProvider = true;
+                }
+
+                return result;
             }
         );
 
@@ -809,27 +827,29 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onInitialized(() => {
-            this._connection.workspace.onDidChangeWorkspaceFolders((event) => {
-                event.removed.forEach((workspace) => {
-                    const rootPath = convertUriToPath(workspace.uri);
-                    this._workspaceMap.delete(rootPath);
-                });
+            if (this._hasWorkspaceFoldersCapability) {
+                this._connection.workspace.onDidChangeWorkspaceFolders((event) => {
+                    event.removed.forEach((workspace) => {
+                        const rootPath = convertUriToPath(workspace.uri);
+                        this._workspaceMap.delete(rootPath);
+                    });
 
-                event.added.forEach(async (workspace) => {
-                    const rootPath = convertUriToPath(workspace.uri);
-                    const newWorkspace: WorkspaceServiceInstance = {
-                        workspaceName: workspace.name,
-                        rootPath,
-                        rootUri: workspace.uri,
-                        serviceInstance: this.createAnalyzerService(workspace.name),
-                        disableLanguageServices: false,
-                        disableOrganizeImports: false,
-                        isInitialized: createDeferred<boolean>(),
-                    };
-                    this._workspaceMap.set(rootPath, newWorkspace);
-                    await this.updateSettingsForWorkspace(newWorkspace);
+                    event.added.forEach(async (workspace) => {
+                        const rootPath = convertUriToPath(workspace.uri);
+                        const newWorkspace: WorkspaceServiceInstance = {
+                            workspaceName: workspace.name,
+                            rootPath,
+                            rootUri: workspace.uri,
+                            serviceInstance: this.createAnalyzerService(workspace.name),
+                            disableLanguageServices: false,
+                            disableOrganizeImports: false,
+                            isInitialized: createDeferred<boolean>(),
+                        };
+                        this._workspaceMap.set(rootPath, newWorkspace);
+                        await this.updateSettingsForWorkspace(newWorkspace);
+                    });
                 });
-            });
+            }
 
             // Set up our file watchers.
             if (this._hasWatchFileCapability) {
