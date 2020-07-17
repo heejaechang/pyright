@@ -15,6 +15,8 @@ import {
     ConfigurationItem,
     Connection,
     ExecuteCommandParams,
+    InitializeParams,
+    InitializeResult,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
@@ -213,6 +215,28 @@ class PylanceServer extends LanguageServerBase {
     updateSettingsForAllWorkspaces(): void {
         this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
+    }
+
+    protected initialize(
+        params: InitializeParams,
+        supportedCommands: string[],
+        supportedCodeActions: string[]
+    ): InitializeResult {
+        const result = super.initialize(params, supportedCommands, supportedCodeActions);
+
+        // Temporary workaround until VS internal issue 1155697 is fixed
+        // VS protocol type definitions are not up to date with current LSP spec
+        // and only expects booleans for these.
+        // TODO: remove this when the above issue is fixed
+        if (this._hasVisualStudioExtensionsCapability) {
+            result.capabilities.definitionProvider = true;
+            result.capabilities.referencesProvider = true;
+            result.capabilities.documentSymbolProvider = true;
+            result.capabilities.workspaceSymbolProvider = true;
+            result.capabilities.documentHighlightProvider = true;
+        }
+
+        return result;
     }
 
     protected isLongRunningCommand(command: string): boolean {
