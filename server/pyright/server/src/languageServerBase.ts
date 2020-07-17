@@ -30,6 +30,7 @@ import {
     DidChangeWatchedFilesNotification,
     DocumentSymbol,
     ExecuteCommandParams,
+    InitializeParams,
     InitializeResult,
     Location,
     ParameterInformation,
@@ -150,6 +151,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _connection: Connection = createConnection(this._GetConnectionOptions());
     protected _workspaceMap: WorkspaceMap;
     protected _hasConfigurationCapability = false;
+    protected _hasVisualStudioExtensionsCapability = false;
+    protected _hasWorkspaceFoldersCapability = false;
     protected _hasWatchFileCapability = false;
     protected _defaultClientConfig: any;
 
@@ -366,75 +369,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     private _setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
         // After the server has started the client sends an initialize request. The server receives
         // in the passed params the rootPath of the workspace plus the client capabilities.
-        this._connection.onInitialize(
-            (params): InitializeResult => {
-                this.rootPath = params.rootPath || '';
-
-                // Does the client support the `workspace/configuration` request?
-                const capabilities = params.capabilities;
-                this._hasConfigurationCapability = !!capabilities.workspace?.configuration;
-                this._hasWatchFileCapability = !!capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration;
-
-                // Create a service instance for each of the workspace folders.
-                if (params.workspaceFolders) {
-                    params.workspaceFolders.forEach((folder) => {
-                        const path = convertUriToPath(folder.uri);
-                        this._workspaceMap.set(path, {
-                            workspaceName: folder.name,
-                            rootPath: path,
-                            rootUri: folder.uri,
-                            serviceInstance: this.createAnalyzerService(folder.name),
-                            disableLanguageServices: false,
-                            disableOrganizeImports: false,
-                            isInitialized: createDeferred<boolean>(),
-                        });
-                    });
-                } else if (params.rootPath) {
-                    this._workspaceMap.set(params.rootPath, {
-                        workspaceName: '',
-                        rootPath: params.rootPath,
-                        rootUri: '',
-                        serviceInstance: this.createAnalyzerService(params.rootPath),
-                        disableLanguageServices: false,
-                        disableOrganizeImports: false,
-                        isInitialized: createDeferred<boolean>(),
-                    });
-                }
-
-                return {
-                    capabilities: {
-                        // Tell the client that the server works in FULL text document
-                        // sync mode (as opposed to incremental).
-                        textDocumentSync: TextDocumentSyncKind.Full,
-                        definitionProvider: { workDoneProgress: true },
-                        referencesProvider: { workDoneProgress: true },
-                        documentSymbolProvider: { workDoneProgress: true },
-                        workspaceSymbolProvider: { workDoneProgress: true },
-                        hoverProvider: { workDoneProgress: true },
-                        documentHighlightProvider: { workDoneProgress: true },
-                        renameProvider: { workDoneProgress: true },
-                        completionProvider: {
-                            triggerCharacters: ['.', '['],
-                            resolveProvider: true,
-                            workDoneProgress: true,
-                        },
-                        signatureHelpProvider: {
-                            triggerCharacters: ['(', ',', ')'],
-                            workDoneProgress: true,
-                        },
-                        codeActionProvider: {
-                            codeActionKinds: supportedCodeActions,
-                            workDoneProgress: true,
-                        },
-                        executeCommandProvider: {
-                            commands: supportedCommands,
-                            workDoneProgress: true,
-                        },
-                        callHierarchyProvider: true,
-                    },
-                };
-            }
-        );
+        this._connection.onInitialize((params) => this.initialize(params, supportedCommands, supportedCodeActions));
 
         this._connection.onDidChangeConfiguration((params) => {
             this.console.log(`Received updated settings`);
@@ -809,27 +744,29 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onInitialized(() => {
-            this._connection.workspace.onDidChangeWorkspaceFolders((event) => {
-                event.removed.forEach((workspace) => {
-                    const rootPath = convertUriToPath(workspace.uri);
-                    this._workspaceMap.delete(rootPath);
-                });
+            if (this._hasWorkspaceFoldersCapability) {
+                this._connection.workspace.onDidChangeWorkspaceFolders((event) => {
+                    event.removed.forEach((workspace) => {
+                        const rootPath = convertUriToPath(workspace.uri);
+                        this._workspaceMap.delete(rootPath);
+                    });
 
-                event.added.forEach(async (workspace) => {
-                    const rootPath = convertUriToPath(workspace.uri);
-                    const newWorkspace: WorkspaceServiceInstance = {
-                        workspaceName: workspace.name,
-                        rootPath,
-                        rootUri: workspace.uri,
-                        serviceInstance: this.createAnalyzerService(workspace.name),
-                        disableLanguageServices: false,
-                        disableOrganizeImports: false,
-                        isInitialized: createDeferred<boolean>(),
-                    };
-                    this._workspaceMap.set(rootPath, newWorkspace);
-                    await this.updateSettingsForWorkspace(newWorkspace);
+                    event.added.forEach(async (workspace) => {
+                        const rootPath = convertUriToPath(workspace.uri);
+                        const newWorkspace: WorkspaceServiceInstance = {
+                            workspaceName: workspace.name,
+                            rootPath,
+                            rootUri: workspace.uri,
+                            serviceInstance: this.createAnalyzerService(workspace.name),
+                            disableLanguageServices: false,
+                            disableOrganizeImports: false,
+                            isInitialized: createDeferred<boolean>(),
+                        };
+                        this._workspaceMap.set(rootPath, newWorkspace);
+                        await this.updateSettingsForWorkspace(newWorkspace);
+                    });
                 });
-            });
+            }
 
             // Set up our file watchers.
             if (this._hasWatchFileCapability) {
@@ -891,6 +828,81 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._workspaceMap.forEach((workspace) => {
             this.updateSettingsForWorkspace(workspace).ignoreErrors();
         });
+    }
+
+    protected initialize(
+        params: InitializeParams,
+        supportedCommands: string[],
+        supportedCodeActions: string[]
+    ): InitializeResult {
+        this.rootPath = params.rootPath || '';
+
+        const capabilities = params.capabilities;
+        this._hasConfigurationCapability = !!capabilities.workspace?.configuration;
+        this._hasWatchFileCapability = !!capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration;
+        this._hasWorkspaceFoldersCapability = !!capabilities.workspace?.workspaceFolders;
+        this._hasVisualStudioExtensionsCapability = !!(capabilities as any).supportsVisualStudioExtensions;
+
+        // Create a service instance for each of the workspace folders.
+        if (params.workspaceFolders) {
+            params.workspaceFolders.forEach((folder) => {
+                const path = convertUriToPath(folder.uri);
+                this._workspaceMap.set(path, {
+                    workspaceName: folder.name,
+                    rootPath: path,
+                    rootUri: folder.uri,
+                    serviceInstance: this.createAnalyzerService(folder.name),
+                    disableLanguageServices: false,
+                    disableOrganizeImports: false,
+                    isInitialized: createDeferred<boolean>(),
+                });
+            });
+        } else if (params.rootPath) {
+            this._workspaceMap.set(params.rootPath, {
+                workspaceName: '',
+                rootPath: params.rootPath,
+                rootUri: '',
+                serviceInstance: this.createAnalyzerService(params.rootPath),
+                disableLanguageServices: false,
+                disableOrganizeImports: false,
+                isInitialized: createDeferred<boolean>(),
+            });
+        }
+
+        const result: InitializeResult = {
+            capabilities: {
+                // Tell the client that the server works in FULL text document
+                // sync mode (as opposed to incremental).
+                textDocumentSync: TextDocumentSyncKind.Full,
+                definitionProvider: { workDoneProgress: true },
+                referencesProvider: { workDoneProgress: true },
+                documentSymbolProvider: { workDoneProgress: true },
+                workspaceSymbolProvider: { workDoneProgress: true },
+                hoverProvider: { workDoneProgress: true },
+                documentHighlightProvider: { workDoneProgress: true },
+                renameProvider: { workDoneProgress: true },
+                completionProvider: {
+                    triggerCharacters: ['.', '['],
+                    resolveProvider: true,
+                    workDoneProgress: true,
+                },
+                signatureHelpProvider: {
+                    triggerCharacters: ['(', ',', ')'],
+                    workDoneProgress: true,
+                },
+                codeActionProvider: {
+                    codeActionKinds: supportedCodeActions,
+                    workDoneProgress: true,
+                },
+                executeCommandProvider: {
+                    commands: supportedCommands,
+                    workDoneProgress: true,
+                },
+                callHierarchyProvider: true,
+            },
+        };
+
+        return result;
     }
 
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
