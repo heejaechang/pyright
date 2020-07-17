@@ -837,7 +837,6 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     ): InitializeResult {
         this.rootPath = params.rootPath || '';
 
-        // Does the client support the `workspace/configuration` request?
         const capabilities = params.capabilities;
         this._hasConfigurationCapability = !!capabilities.workspace?.configuration;
         this._hasWatchFileCapability = !!capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration;
