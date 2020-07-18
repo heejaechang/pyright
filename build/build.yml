@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+      - master
+      - refs/tags/*
+
+pr:
+  autoCancel: true
+  branches:
+    include: ['master']
+
+variables:
+  - template: templates/globals.yml
+
+jobs:
+  - job: build
+    displayName: Build
+
+    pool:
+      vmImage: 'ubuntu-18.04'
+
+    steps:
+      - template: templates/node.yml
+
+      - script: npx gulp setVersion
+        displayName: npx gulp setVersion
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+
+      - script: npx gulp setVersion --prBuildId $(Build.BuildId)
+        displayName: npx gulp setVersion --prBuildId $(Build.BuildId)
+        condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+
+      - script: npx vsce package -o vscode-pylance.vsix
+        displayName: npx vsce package -o vscode-pylance.vsix
+        workingDirectory: extension
+
+      - script: npm run build:pythia
+        displayName: npm run build:pythia
+
+      - publish: extension/vscode-pylance.vsix
+        artifact: VSIX
+
+      - publish: pythia/dist/pythia.js
+        artifact: pythia

@@ -14,7 +14,7 @@
         "url": "https://github.com/microsoft/pyrx"
     },
     "scripts": {
-        "build": "npm install && tsc --project tsconfig.json",
+        "build": "tsc --project tsconfig.json",
         "package": "npm run build && npx webpack"
     },
     "dependencies": {

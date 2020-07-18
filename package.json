@@ -24,7 +24,7 @@
         "clean": "del-cli \"./client/server\" && del-cli \"./client/out\" && del-cli \"./dist\"",
         "clean:pyright": "cd server/pyright && npm run clean && cd ../..",
         "clean:all": "npm run clean && npm run clean:pyright",
-        "package": "npm run install:all && npm run clean:pyright && cd server && npm run build && npx webpack && cd ../extension && npm run build && cd ..",
+        "package": "npm run clean:all && cd server && npm run build && npx webpack && cd ../extension && npm run build && cd ..",
         "pack:extension-debug": "cd extension && npm run webpack-debug && cd ..",
         "pack:extension": "cd extension && npm run webpack && cd ..",
         "test:all": "cd server && npm run test:all && cd ../extension && npm run test && cd ..",
@@ -51,6 +51,7 @@
         "eslint-config-prettier": "^6.11.0",
         "eslint-plugin-simple-import-sort": "^5.0.3",
         "fs-extra": "^9.0.1",
+        "git-describe": "^4.0.4",
         "gulp": "^4.0.2",
         "nan": "^2.14.1",
         "prettier": "2.0.5",
@@ -58,9 +59,5 @@
         "syncpack": "^5.0.1",
         "ts-node": "^8.10.2",
         "typescript": "^3.9.5"
-    },
-    "main": "index.js",
-    "bin": {
-        "pylance": "index.js"
     }
 }

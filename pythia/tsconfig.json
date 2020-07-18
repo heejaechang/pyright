@@ -27,7 +27,7 @@
 		"../server/*.ts",
 		"../server/pyright/server/src/**/*",
 		"../server/pyright/server/src/localization/*.json",
-		"../server/src/common/version.json"
+		"../server/src/common/metadata.json"
 	],
 	"files":[
         "./src/pythia.ts"

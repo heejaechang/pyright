@@ -1,0 +1,21 @@
+parameters:
+  installAll: 'true'
+
+steps:
+  - task: NodeTool@0
+    displayName: Use Node $(nodeVersion)
+    inputs:
+      versionSpec: $(nodeVersion)
+      checkLatest: true
+
+  - task: Cache@2
+    displayName: Cache npm
+    inputs:
+      key: 'npm | "$(Agent.OS)" | **/package-lock.json, !**/node_modules/**'
+      restoreKeys: |
+        npm | "$(Agent.OS)"
+      path: $(npm_config_cache)
+
+  - script: npm run install:all
+    displayName: npm run install:all
+    condition: and(succeeded(), eq('${{ parameters.installAll }}', 'true'))

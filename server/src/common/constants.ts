@@ -1,5 +1,7 @@
 // Not using package.json, as it may contain sensitive info.
-import { version } from './version.json';
+import { pyrightCommit, version } from './metadata.json';
 
 const _VERSION = process.env.NUGETPACKAGEVERSION || version || '';
-export { _VERSION as VERSION };
+const _PYRIGHT_COMMIT = pyrightCommit || 'unknown';
+
+export { _VERSION as VERSION, _PYRIGHT_COMMIT as PYRIGHT_COMMIT };

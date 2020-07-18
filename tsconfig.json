@@ -1,0 +1,9 @@
+{
+    // This file is intended to typecheck gulpfile.ts; if more code needs this tsconfig, reconsider these values.
+    "compilerOptions": {
+        "strict": true,
+        "noImplicitAny": false, // Workaround for gulp's ts-node loader not loading d.ts files.
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+    }
+}

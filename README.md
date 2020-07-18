@@ -2,7 +2,9 @@
 
 ## To Build
 
--   `npm run package` to run complete build and install of latest npm dependencies
+-   `npm run install:all` to install all dependencies
+-   `npm run package` to build the server
+-   `npx vsce package` in the `extension` directory to build the extension VSIX
 
 ## Packaging
 
@@ -37,7 +39,9 @@ npm run install:all
 Set the version in all of the required places.
 
 ```
-npm run setVersion -- --to 2020.6.1
+npx gulp setVersion --to 2020.6.1
+# OR, auto-generated from git tags
+npx gulp setVersion
 ```
 
 Note that this does not commit anything, it just aids in setting it in the right places.

@@ -42,7 +42,7 @@ import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { CommandController } from './src/commands/commandController';
 import { Commands } from './src/commands/commands';
-import { VERSION } from './src/common/constants';
+import { PYRIGHT_COMMIT, VERSION } from './src/common/constants';
 import { LogService } from './src/common/logger';
 import { Platform } from './src/common/platform';
 import {
@@ -75,7 +75,7 @@ class PylanceServer extends LanguageServerBase {
         super({
             productName: 'Pylance',
             rootDirectory,
-            version: VERSION,
+            version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
             progressReporterFactory: reporterFactory,

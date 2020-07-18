@@ -22,7 +22,7 @@
 		"./*.ts",
 		"./pyright/server/src/**/*",
 		"./pyright/server/src/localization/*.json",
-		"./src/common/version.json"
+		"./src/common/metadata.json"
 	],
 	"exclude": [
 		"node_modules"
