@@ -1,11 +1,12 @@
-node_modules
-.vscode/**
-.vscode-test/**
-out/**
-src/**
-.gitignore
-**/tsconfig.json
-**/.eslintrc.json
-**/*.map
-webpack.config.js
-**/*.tsbuildinfo
+# Ignore everything
+*
+
+# Unignore required files
+!README.md
+!CHANGELOG.md
+!LICENSE.txt
+!NOTICE.txt
+!package*.json
+!dist/
+!images/
+!server/
