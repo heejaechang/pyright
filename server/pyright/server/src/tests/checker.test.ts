@@ -416,6 +416,12 @@ test('Lambda2', () => {
     validateResults(analysisResults, 4);
 });
 
+test('Lambda3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['lambda3.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('Function1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function1.py']);
 
@@ -1350,6 +1356,12 @@ test('GenericTypes25', () => {
     validateResults(analysisResults, 0);
 });
 
+test('GenericTypes26', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes26.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1388,6 +1400,12 @@ test('Protocol6', () => {
 
 test('Protocol7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol7.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Protocol8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol8.py']);
 
     validateResults(analysisResults, 1);
 });
