@@ -5056,7 +5056,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     paramMap.get(paramName)!.argsReceived++;
                 }
 
-                if (advanceToNextArg) {
+                if (advanceToNextArg || typeParams[paramIndex].category === ParameterCategory.VarArgList) {
                     argIndex++;
                 }
                 paramIndex++;
@@ -6992,6 +6992,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 writeTypeCache(param.name, paramType);
             }
 
+            if (param.defaultValue) {
+                // Evaluate the default value if it's present.
+                getTypeOfExpression(param.defaultValue, undefined, EvaluatorFlags.ConvertEllipsisToAny);
+            }
+
             const functionParam: FunctionParameter = {
                 category: param.category,
                 name: param.name ? param.name.value : undefined,
@@ -7649,6 +7654,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             FrozenSet: { alias: 'frozenset', module: 'builtins' },
             Deque: { alias: 'deque', module: 'collections' },
             ChainMap: { alias: 'ChainMap', module: 'collections' },
+            OrderedDict: { alias: 'OrderedDict', module: 'collections' },
         };
 
         const aliasMapEntry = specialTypes[assignedName];
@@ -8034,13 +8040,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             synthesizeTypedDictClassMethods(node, classType);
         }
 
-        // Determine if the class is abstract.
-        if (ClassType.supportsAbstractMethods(classType)) {
-            if (getAbstractMethods(classType).length > 0) {
-                classType.details.flags |= ClassTypeFlags.HasAbstractMethods;
-            }
-        }
-
         // Determine if the class should be a "pseudo-generic" class, characterized
         // by having an __init__ method with parameters that lack type annotations.
         // For such classes, we'll treat them as generic, with the type arguments provided
@@ -8072,6 +8071,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         }
                     }
                 }
+            }
+        }
+
+        // Determine if the class is abstract.
+        if (ClassType.supportsAbstractMethods(classType)) {
+            if (getAbstractMethods(classType).length > 0) {
+                classType.details.flags |= ClassTypeFlags.HasAbstractMethods;
             }
         }
 
@@ -9550,7 +9556,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         // We weren't able to infer the input parameter type. Set its
         // type to unknown.
-        writeTypeCache(node.name!, UnknownType.create());
+        writeTypeCache(node.name!, transformVariadicParamType(node, node.category, UnknownType.create()));
     }
 
     // Evaluates the types that are assigned within the statement that contains
@@ -11636,10 +11642,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             type = stripLiteralTypeArgsValue(type);
 
                             if (decl.type === DeclarationType.Variable) {
+                                const isEnum =
+                                    type.category === TypeCategory.Object && ClassType.isEnumClass(type.classType);
+
                                 // If the symbol is private or constant, we can retain the literal
                                 // value. Otherwise, strip them off to make the type less specific,
                                 // allowing other values to be assigned to it in subclasses.
-                                if (!isPrivate && !isConstant && !isFinalVar) {
+                                if (!isPrivate && !isConstant && !isEnum && !isFinalVar) {
                                     type = stripLiteralValue(type);
                                 }
                             }
@@ -12340,6 +12349,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // of type arguments, but there are a few special cases where this
                     // isn't true (e.g. assigning a Tuple[X, Y, Z] to a tuple[W]).
                     const destArgIndex = srcArgIndex >= destTypeArgs.length ? destTypeArgs.length - 1 : srcArgIndex;
+                    assert(destArgIndex >= 0);
                     const destTypeArg = destTypeArgs[destArgIndex];
                     const destTypeParam =
                         destArgIndex < destTypeParams.length ? destTypeParams[destArgIndex] : undefined;
@@ -12604,6 +12614,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         flags = CanAssignFlags.Default,
         recursionCount = 0
     ): boolean {
+        let checkNamedParams = false;
+
         if (recursionCount > maxTypeRecursionCount) {
             return true;
         }
@@ -12918,6 +12930,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     }
                 }
             }
+
+            // See if the destType is an instantiation of a Protocol
+            // class that is effectively a function.
+            const callbackType = getCallbackProtocolType(destType);
+            if (callbackType) {
+                destType = callbackType;
+                checkNamedParams = true;
+            }
         }
 
         if (destType.category === TypeCategory.Function) {
@@ -12959,22 +12979,31 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             } else if (srcType.category === TypeCategory.Class) {
                 // Synthesize a function that represents the constructor for this class.
                 const constructorFunction = FunctionType.createInstance(
-                    '__new__',
+                    '__init__',
                     FunctionTypeFlags.StaticMethod |
                         FunctionTypeFlags.ConstructorMethod |
                         FunctionTypeFlags.SynthesizedMethod
                 );
                 constructorFunction.details.declaredReturnType = ObjectType.create(srcType);
 
-                const newMemberInfo = lookUpClassMember(
+                let constructorInfo = lookUpClassMember(
                     srcType,
-                    '__new__',
+                    '__init__',
                     ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.SkipObjectBaseClass
                 );
-                const memberType = newMemberInfo ? getTypeOfMember(newMemberInfo) : undefined;
-                if (memberType && memberType.category === TypeCategory.Function) {
-                    memberType.details.parameters.forEach((param, index) => {
-                        // Skip the 'cls' parameter.
+
+                if (!constructorInfo) {
+                    constructorInfo = lookUpClassMember(
+                        srcType,
+                        '__new__',
+                        ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.SkipObjectBaseClass
+                    );
+                }
+
+                const constructorType = constructorInfo ? getTypeOfMember(constructorInfo) : undefined;
+                if (constructorType && constructorType.category === TypeCategory.Function) {
+                    constructorType.details.parameters.forEach((param, index) => {
+                        // Skip the 'cls' or 'self' parameter.
                         if (index > 0) {
                             FunctionType.addParameter(constructorFunction, param);
                         }
@@ -12993,7 +13022,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     diag.createAddendum(),
                     typeVarMap,
                     recursionCount + 1,
-                    false
+                    checkNamedParams
                 );
             }
         }
@@ -13381,14 +13410,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         let effectiveSrcType = srcType;
 
-        // If the source type is a type var itself, convert it to a concrete
-        // type to see if it is compatible with the dest type.
         if (srcType.category === TypeCategory.TypeVar) {
             if (isTypeSame(srcType, destType)) {
                 return true;
             }
 
-            effectiveSrcType = getConcreteTypeFromTypeVar(srcType, recursionCount + 1);
+            if (srcType.boundType) {
+                // If the source type is a type var itself and has a bound type,
+                // convert it to that bound type.
+                effectiveSrcType = getConcreteTypeFromTypeVar(srcType, recursionCount + 1);
+            } else if (srcType.constraints) {
+                effectiveSrcType = combineTypes(srcType.constraints);
+            } else {
+                effectiveSrcType = AnyType.create();
+            }
         }
 
         // If there's a bound type, make sure the source is derived from it.
