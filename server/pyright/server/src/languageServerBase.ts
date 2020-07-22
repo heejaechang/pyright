@@ -915,6 +915,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         if (!this._progressReporter.isEnabled(results)) {
+            // Make sure to disable progress bar if it is currently active.
+            // This can happen if a user changes typeCheckingMode in the middle
+            // of analysis.
+            // end() is noop if there is no active progress bar.
+            this._progressReporter.end();
             return;
         }
 
