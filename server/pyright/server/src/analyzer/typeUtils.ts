@@ -18,7 +18,7 @@ import {
     EnumLiteral,
     FunctionType,
     isAnyOrUnknown,
-    isNoneOrNever,
+    isNone,
     isTypeSame,
     maxTypeRecursionCount,
     ModuleType,
@@ -65,10 +65,15 @@ export const enum ClassMemberLookupFlags {
     // If this flag is set, the instance variables are skipped.
     SkipInstanceVariables = 1 << 3,
 
+    // Most class variables are accessible to instances of the
+    // class, but a few are not. If this is set, these attributes
+    // are invisible.
+    SkipIfInaccessibleToInstance = 1 << 4,
+
     // By default, the first symbol is returned even if it has only
     // an inferred type associated with it. If this flag is set,
     // the search looks only for symbols with declared types.
-    DeclaredTypesOnly = 1 << 4,
+    DeclaredTypesOnly = 1 << 5,
 }
 
 export const enum CanAssignFlags {
@@ -95,7 +100,7 @@ const tripleTickRegEx = /'''/g;
 
 export function isOptionalType(type: Type): boolean {
     if (type.category === TypeCategory.Union) {
-        return type.subtypes.some((t) => isNoneOrNever(t));
+        return type.subtypes.some((t) => isNone(t));
     }
 
     return false;
@@ -222,7 +227,12 @@ export function stripLiteralTypeArgsValue(type: Type, recursionCount = 0): Type 
             const strippedTypeArgs = type.typeArguments.map((t) =>
                 stripLiteralTypeArgsValue(stripLiteralValue(t), recursionCount + 1)
             );
-            return ClassType.cloneForSpecialization(type, strippedTypeArgs, type.skipAbstractClassTest);
+            return ClassType.cloneForSpecialization(
+                type,
+                strippedTypeArgs,
+                !!type.isTypeArgumentExplicit,
+                type.skipAbstractClassTest
+            );
         }
     }
 
@@ -370,6 +380,7 @@ export function canBeTruthy(type: Type, recursionLevel = 0): boolean {
         case TypeCategory.Class:
         case TypeCategory.Module:
         case TypeCategory.TypeVar:
+        case TypeCategory.Never:
         case TypeCategory.Any: {
             return true;
         }
@@ -378,7 +389,6 @@ export function canBeTruthy(type: Type, recursionLevel = 0): boolean {
             return type.subtypes.some((t) => canBeTruthy(t, recursionLevel + 1));
         }
 
-        case TypeCategory.Never:
         case TypeCategory.Unbound:
         case TypeCategory.None: {
             return false;
@@ -441,12 +451,12 @@ export function isNoReturnType(type: Type): boolean {
     return false;
 }
 
-export function isParameterSpecificationType(type: Type): boolean {
+export function isParamSpecType(type: Type): boolean {
     if (type.category !== TypeCategory.TypeVar) {
         return false;
     }
 
-    return type.isParameterSpec;
+    return type.isParamSpec;
 }
 
 export function isProperty(type: Type): boolean {
@@ -516,7 +526,7 @@ export function specializeType(
         return type;
     }
 
-    if (isNoneOrNever(type)) {
+    if (isNone(type)) {
         return type;
     }
 
@@ -603,7 +613,11 @@ export function lookUpObjectMember(
     flags = ClassMemberLookupFlags.Default
 ): ClassMember | undefined {
     if (objectType.category === TypeCategory.Object) {
-        return lookUpClassMember(objectType.classType, memberName, flags);
+        return lookUpClassMember(
+            objectType.classType,
+            memberName,
+            flags | ClassMemberLookupFlags.SkipIfInaccessibleToInstance
+        );
     }
 
     return undefined;
@@ -670,29 +684,34 @@ export function lookUpClassMember(
                 // Next look at class members.
                 const symbol = memberFields.get(memberName);
                 if (symbol && symbol.isClassMember()) {
-                    if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
-                        let isInstanceMember = false;
+                    if (
+                        (flags & ClassMemberLookupFlags.SkipIfInaccessibleToInstance) === 0 ||
+                        !symbol.isInaccessibleToInstance()
+                    ) {
+                        if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
+                            let isInstanceMember = false;
 
-                        // For data classes and typed dicts, variables that are declared
-                        // within the class are treated as instance variables. This distinction
-                        // is important in cases where a variable is a callable type because
-                        // we don't want to bind it to the instance like we would for a
-                        // class member.
-                        if (
-                            ClassType.isDataClass(specializedMroClass) ||
-                            ClassType.isTypedDictClass(specializedMroClass)
-                        ) {
-                            const decls = symbol.getDeclarations();
-                            if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
-                                isInstanceMember = true;
+                            // For data classes and typed dicts, variables that are declared
+                            // within the class are treated as instance variables. This distinction
+                            // is important in cases where a variable is a callable type because
+                            // we don't want to bind it to the instance like we would for a
+                            // class member.
+                            if (
+                                ClassType.isDataClass(specializedMroClass) ||
+                                ClassType.isTypedDictClass(specializedMroClass)
+                            ) {
+                                const decls = symbol.getDeclarations();
+                                if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
+                                    isInstanceMember = true;
+                                }
                             }
-                        }
 
-                        return {
-                            symbol,
-                            isInstanceMember,
-                            classType: specializedMroClass,
-                        };
+                            return {
+                                symbol,
+                                isInstanceMember,
+                                classType: specializedMroClass,
+                            };
+                        }
                     }
                 }
             }
@@ -821,7 +840,12 @@ export function selfSpecializeClassType(type: ClassType, setSkipAbstractClassTes
     }
 
     const typeArgs = ClassType.getTypeParameters(type);
-    return ClassType.cloneForSpecialization(type, typeArgs, setSkipAbstractClassTest);
+    return ClassType.cloneForSpecialization(
+        type,
+        typeArgs,
+        /* isTypeArgumentExplicit */ false,
+        setSkipAbstractClassTest
+    );
 }
 
 // Removes the first parameter of the function and returns a new function.
@@ -1382,9 +1406,9 @@ function _specializeFunctionType(
     let functionType = sourceType;
 
     // Handle functions with a parameter specification in a special manner.
-    if (functionType.details.parameterSpecification) {
-        const paramSpec = typeVarMap?.getParameterSpecification(functionType.details.parameterSpecification.name);
-        functionType = FunctionType.cloneForParameterSpecification(functionType, paramSpec);
+    if (functionType.details.paramSpec) {
+        const paramSpec = typeVarMap?.getParamSpec(functionType.details.paramSpec.name);
+        functionType = FunctionType.cloneForParamSpec(functionType, paramSpec);
     }
 
     const declaredReturnType =
