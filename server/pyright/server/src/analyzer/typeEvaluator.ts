@@ -122,7 +122,7 @@ import {
     InheritanceChain,
     isAnyOrUnknown,
     isNever,
-    isNoneOrNever,
+    isNone,
     isPossiblyUnbound,
     isSameWithoutLiteralValue,
     isTypeSame,
@@ -169,7 +169,7 @@ import {
     isEllipsisType,
     isNoReturnType,
     isOptionalType,
-    isParameterSpecificationType,
+    isParamSpecType,
     isProperty,
     lookUpClassMember,
     lookUpObjectMember,
@@ -264,8 +264,8 @@ export const enum EvaluatorFlags {
     // 'Final' is not allowed in this context.
     FinalDisallowed = 1 << 6,
 
-    // A ParameterSpecification isn't allowed
-    ParameterSpecificationDisallowed = 1 << 7,
+    // A ParamSpec isn't allowed
+    ParamSpecDisallowed = 1 << 7,
 
     // Expression is expected to be a type (class) rather
     // than an instance (object)
@@ -311,6 +311,9 @@ export const enum MemberAccessFlags {
 
     // Consider writes to symbols flagged as ClassVars as an error.
     DisallowClassVarWrites = 1 << 4,
+
+    // Don't allow access to attributes that are accessible only through the class.
+    SkipIfInaccessibleToInstance = 1 << 5,
 
     // This set of flags is appropriate for looking up methods.
     SkipForMethodLookup = SkipInstanceMembers | SkipGetAttributeCheck,
@@ -914,7 +917,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     node.typeAnnotation,
                     undefined,
                     EvaluatorFlags.EvaluateStringLiteralAsType |
-                        EvaluatorFlags.ParameterSpecificationDisallowed |
+                        EvaluatorFlags.ParamSpecDisallowed |
                         EvaluatorFlags.ExpectingType
                 );
                 break;
@@ -978,7 +981,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             EvaluatorFlags.ExpectingType |
             EvaluatorFlags.ConvertEllipsisToAny |
             EvaluatorFlags.EvaluateStringLiteralAsType |
-            EvaluatorFlags.ParameterSpecificationDisallowed;
+            EvaluatorFlags.ParamSpecDisallowed;
 
         const isAnnotationEvaluationPostponed =
             fileInfo.futureImports.get('annotations') !== undefined || fileInfo.isStubFile;
@@ -1066,7 +1069,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             memberName,
             usage,
             diag,
-            memberAccessFlags | MemberAccessFlags.DisallowClassVarWrites
+            memberAccessFlags |
+                MemberAccessFlags.DisallowClassVarWrites |
+                MemberAccessFlags.SkipIfInaccessibleToInstance
         );
 
         let resultType = memberInfo ? memberInfo.type : undefined;
@@ -1532,7 +1537,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         type = makeTypeVarsConcrete(type);
 
-        if (type.category === TypeCategory.Union && type.subtypes.some((t) => isNoneOrNever(t))) {
+        if (type.category === TypeCategory.Union && type.subtypes.some((t) => isNone(t))) {
             if (errorNode) {
                 addDiagnostic(
                     getFileInfo(errorNode).diagnosticRuleSet.reportOptionalIterable,
@@ -1771,6 +1776,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 (p) => p.hasDefault && p.includeInInit
                             );
                             if (
+                                includeInInit &&
                                 !hasDefaultValue &&
                                 firstDefaultValueIndex >= 0 &&
                                 firstDefaultValueIndex < insertIndex
@@ -2433,12 +2439,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 const callType = getTypeOfExpression(srcExpr.leftExpression).type;
                 if (
                     callType.category === TypeCategory.Class &&
-                    (ClassType.isBuiltIn(callType, 'TypeVar') ||
-                        ClassType.isBuiltIn(callType, 'ParameterSpecification'))
+                    (ClassType.isBuiltIn(callType, 'TypeVar') || ClassType.isBuiltIn(callType, 'ParamSpec'))
                 ) {
                     if (target.nodeType !== ParseNodeType.Name || target.value !== type.name) {
                         addError(
-                            type.isParameterSpec
+                            type.isParamSpec
                                 ? Localizer.Diagnostic.paramSpecAssignedName().format({ name: type.name })
                                 : Localizer.Diagnostic.typeVarAssignedName().format({ name: type.name }),
                             target
@@ -2859,8 +2864,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             type = UnknownType.create();
         }
 
-        if (type.category === TypeCategory.TypeVar && type.isParameterSpec) {
-            if (flags & EvaluatorFlags.ParameterSpecificationDisallowed) {
+        if (type.category === TypeCategory.TypeVar && type.isParamSpec) {
+            if (flags & EvaluatorFlags.ParamSpecDisallowed) {
                 addError(Localizer.Diagnostic.paramSpecContext(), node);
             }
         }
@@ -2941,7 +2946,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case TypeCategory.TypeVar: {
-                if (baseType.isParameterSpec) {
+                if (baseType.isParamSpec) {
                     if (memberName === 'args' || memberName === 'kwargs') {
                         return { type: AnyType.create(), node };
                     }
@@ -3030,7 +3035,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
             case TypeCategory.Union: {
                 type = doForSubtypes(baseType, (subtype) => {
-                    if (isNoneOrNever(subtype)) {
+                    if (isNone(subtype)) {
                         addDiagnostic(
                             getFileInfo(node).diagnosticRuleSet.reportOptionalMemberAccess,
                             DiagnosticRule.reportOptionalMemberAccess,
@@ -3166,6 +3171,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
         if (flags & MemberAccessFlags.SkipObjectBaseClass) {
             classLookupFlags |= ClassMemberLookupFlags.SkipObjectBaseClass;
+        }
+        if (flags & MemberAccessFlags.SkipIfInaccessibleToInstance) {
+            classLookupFlags |= ClassMemberLookupFlags.SkipIfInaccessibleToInstance;
         }
 
         // Always look for a member with a declared type first.
@@ -3601,7 +3609,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 return getTypeFromIndexedObject(node, subtype, usage);
             }
 
-            if (isNoneOrNever(subtype)) {
+            if (isNever(subtype)) {
+                return UnknownType.create();
+            }
+
+            if (isNone(subtype)) {
                 addDiagnostic(
                     getFileInfo(node).diagnosticRuleSet.reportOptionalSubscript,
                     DiagnosticRule.reportOptionalSubscript,
@@ -3628,7 +3640,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // In case we didn't walk the list items above, do so now.
         // If we have, this information will be cached.
         node.items.items.forEach((item) => {
-            getTypeOfExpression(item);
+            getTypeOfExpression(item, /* expectedType */ undefined, flags & EvaluatorFlags.AllowForwardReferences);
         });
 
         return { type, node };
@@ -3835,7 +3847,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
     function getTypeArgs(node: IndexItemsNode, flags: EvaluatorFlags): TypeResult[] {
         const typeArgs: TypeResult[] = [];
-        const adjFlags = flags & ~EvaluatorFlags.ParameterSpecificationDisallowed;
+        const adjFlags = flags & ~EvaluatorFlags.ParamSpecDisallowed;
 
         node.items.forEach((expr) => {
             typeArgs.push(getTypeArg(expr, adjFlags));
@@ -4116,7 +4128,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         }
                     } else if (className === 'TypeVar') {
                         type = createTypeVarType(errorNode, argList, /* isParamSpec */ false);
-                    } else if (className === 'ParameterSpecification') {
+                    } else if (className === 'ParamSpec') {
                         type = createTypeVarType(errorNode, argList, /* isParamSpec */ true);
                     } else if (className === 'NamedTuple') {
                         type = createNamedTupleType(errorNode, argList, true);
@@ -4357,7 +4369,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             case TypeCategory.Union: {
                 const returnTypes: Type[] = [];
                 callType.subtypes.forEach((typeEntry) => {
-                    if (isNoneOrNever(typeEntry)) {
+                    if (isNone(typeEntry)) {
                         addDiagnostic(
                             getFileInfo(errorNode).diagnosticRuleSet.reportOptionalCall,
                             DiagnosticRule.reportOptionalCall,
@@ -4818,7 +4830,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 const returnTypes: Type[] = [];
 
                 for (const type of callType.subtypes) {
-                    if (isNoneOrNever(type)) {
+                    if (isNone(type)) {
                         addDiagnostic(
                             getFileInfo(errorNode).diagnosticRuleSet.reportOptionalCall,
                             DiagnosticRule.reportOptionalCall,
@@ -5059,7 +5071,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (advanceToNextArg || typeParams[paramIndex].category === ParameterCategory.VarArgList) {
                     argIndex++;
                 }
-                paramIndex++;
+
+                if (typeParams[paramIndex].category !== ParameterCategory.VarArgList) {
+                    paramIndex++;
+                }
             } else if (typeParams[paramIndex].category === ParameterCategory.VarArgList) {
                 validateArgTypeParams.push({
                     paramType,
@@ -5418,7 +5433,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (isParamSpec) {
             const fileInfo = getFileInfo(errorNode);
-            if (!fileInfo.isStubFile && fileInfo.executionEnvironment.pythonVersion < PythonVersion.V39) {
+            if (!fileInfo.isStubFile && fileInfo.executionEnvironment.pythonVersion < PythonVersion.V3_9) {
                 addError(Localizer.Diagnostic.paramSpecIllegal(), errorNode);
             }
         }
@@ -5996,7 +6011,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                         undefined,
                                         EvaluatorFlags.ExpectingType |
                                             EvaluatorFlags.EvaluateStringLiteralAsType |
-                                            EvaluatorFlags.ParameterSpecificationDisallowed
+                                            EvaluatorFlags.ParamSpecDisallowed
                                     );
                                     if (entryTypeInfo) {
                                         entryType = convertToInstance(entryTypeInfo.type);
@@ -6240,7 +6255,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             if (isUnionableType([leftType, rightType])) {
                 const fileInfo = getFileInfo(node);
                 const unionNotationSupported =
-                    fileInfo.isStubFile || fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V39;
+                    fileInfo.isStubFile || fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_10;
                 if (!unionNotationSupported) {
                     addError(Localizer.Diagnostic.unionSyntaxIllegal(), node, node.operatorToken);
                 }
@@ -6593,7 +6608,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (metaclass && metaclass.category === TypeCategory.Class) {
                     return handleObjectSubtype(ObjectType.create(metaclass), subtype);
                 }
-            } else if (isNoneOrNever(subtype)) {
+            } else if (isNone(subtype)) {
                 // NoneType derives from 'object', so do the lookup on 'object'
                 // in this case.
                 const obj = getBuiltInObject(errorNode, 'object');
@@ -7145,7 +7160,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         addError(Localizer.Diagnostic.ellipsisContext(), entry.node);
                     } else if (entry.type.category === TypeCategory.Module) {
                         addError(Localizer.Diagnostic.moduleContext(), entry.node);
-                    } else if (isParameterSpecificationType(entry.type)) {
+                    } else if (isParamSpecType(entry.type)) {
                         addError(Localizer.Diagnostic.paramSpecContext(), entry.node);
                     }
 
@@ -7159,9 +7174,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 });
             } else if (isEllipsisType(typeArgs[0].type)) {
                 FunctionType.addDefaultParameters(functionType);
-            } else if (isParameterSpecificationType(typeArgs[0].type)) {
+            } else if (isParamSpecType(typeArgs[0].type)) {
                 FunctionType.addDefaultParameters(functionType);
-                functionType.details.parameterSpecification = typeArgs[0].type as TypeVarType;
+                functionType.details.paramSpec = typeArgs[0].type as TypeVarType;
             } else {
                 addError(Localizer.Diagnostic.callableFirstArg(), typeArgs[0].node);
             }
@@ -7174,7 +7189,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[1].node);
             } else if (typeArgs[1].type.category === TypeCategory.Module) {
                 addError(Localizer.Diagnostic.moduleContext(), typeArgs[1].node);
-            } else if (isParameterSpecificationType(typeArgs[1].type)) {
+            } else if (isParamSpecType(typeArgs[1].type)) {
                 addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[1].node);
             }
             functionType.details.declaredReturnType = convertToInstance(typeArgs[1].type);
@@ -7200,7 +7215,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[0].node);
         } else if (typeArgs[0].type.category === TypeCategory.Module) {
             addError(Localizer.Diagnostic.moduleContext(), typeArgs[0].node);
-        } else if (isParameterSpecificationType(typeArgs[0].type)) {
+        } else if (isParamSpecType(typeArgs[0].type)) {
             addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[0].node);
         } else if (!TypeBase.isInstantiable(typeArgs[0].type)) {
             addExpectedClassDiagnostic(typeArgs[0].type, typeArgs[0].node);
@@ -7359,7 +7374,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[0].node);
         } else if (typeArgs[0].type.category === TypeCategory.Module) {
             addError(Localizer.Diagnostic.moduleContext(), typeArgs[0].node);
-        } else if (isParameterSpecificationType(typeArgs[0].type)) {
+        } else if (isParamSpecType(typeArgs[0].type)) {
             addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[1].node);
         }
 
@@ -7387,7 +7402,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     }
                 } else if (typeArg.type.category === TypeCategory.Module) {
                     addError(Localizer.Diagnostic.moduleContext(), typeArg.node);
-                } else if (!allowParamSpec && isParameterSpecificationType(typeArg.type)) {
+                } else if (!allowParamSpec && isParamSpecType(typeArg.type)) {
                     addError(Localizer.Diagnostic.paramSpecContext(), typeArg.node);
                 }
             });
@@ -7455,7 +7470,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     addError(Localizer.Diagnostic.ellipsisContext(), typeArg.node);
                 } else if (typeArg.type.category === TypeCategory.Module) {
                     addError(Localizer.Diagnostic.moduleContext(), typeArg.node);
-                } else if (isParameterSpecificationType(typeArg.type)) {
+                } else if (isParamSpecType(typeArg.type)) {
                     addError(Localizer.Diagnostic.paramSpecContext(), typeArg.node);
                 } else if (!TypeBase.isInstantiable(typeArg.type)) {
                     addExpectedClassDiagnostic(typeArg.type, typeArg.node);
@@ -7707,7 +7722,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     flags |=
                         EvaluatorFlags.ExpectingType |
                         EvaluatorFlags.EvaluateStringLiteralAsType |
-                        EvaluatorFlags.ParameterSpecificationDisallowed;
+                        EvaluatorFlags.ParamSpecDisallowed;
 
                     typeAliasNameNode = (node.leftExpression as TypeAnnotationNode).valueExpression as NameNode;
                 } else {
@@ -7897,7 +7912,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             if (
                                 !fileInfo.isStubFile &&
                                 !ClassType.isTypingExtensionClass(argType) &&
-                                fileInfo.executionEnvironment.pythonVersion < PythonVersion.V37
+                                fileInfo.executionEnvironment.pythonVersion < PythonVersion.V3_7
                             ) {
                                 addError(Localizer.Diagnostic.protocolIllegal(), arg.valueExpression);
                             }
@@ -7910,7 +7925,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
                         // If the class directly derives from NamedTuple (in Python 3.6 or
                         // newer), it's considered a dataclass.
-                        if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V36) {
+                        if (fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_6) {
                             if (ClassType.isBuiltIn(argType, 'NamedTuple')) {
                                 classType.details.flags |= ClassTypeFlags.DataClass;
                             }
@@ -8064,7 +8079,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             classType.details.typeParameters = genericParams.map((param) =>
                                 TypeVarType.createInstance(
                                     `__type_of_${param.name!.value}`,
-                                    /* isParameterSpec */ false,
+                                    /* isParamSpec */ false,
                                     /* isSynthesized */ true
                                 )
                             );
@@ -8452,7 +8467,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // in a non-abstract subclass.
                     const clsType = TypeVarType.createInstance(
                         `__type_of_cls_${containingClassType.details.name}`,
-                        /* isParameterSpec */ false,
+                        /* isParamSpec */ false,
                         /* isSynthesized */ true
                     );
                     clsType.boundType = selfSpecializeClassType(
@@ -8463,7 +8478,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 } else if ((flags & FunctionTypeFlags.StaticMethod) === 0) {
                     const selfType = TypeVarType.createInstance(
                         `__type_of_self_${containingClassType.details.name}`,
-                        /* isParameterSpec */ false,
+                        /* isParamSpec */ false,
                         /* isSynthesized */ true
                     );
                     selfType.boundType = ObjectType.create(
@@ -9303,7 +9318,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // Handle PEP 562 support for module-level __getattr__ function,
                     // introduced in Python 3.7.
                     if (
-                        fileInfo.executionEnvironment.pythonVersion < PythonVersion.V37 ||
+                        fileInfo.executionEnvironment.pythonVersion < PythonVersion.V3_7 ||
                         !importLookupInfo.symbolTable.get('__getattr__')
                     ) {
                         reportError = true;
@@ -10445,11 +10460,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                     }
 
                                     // See if it's a match for None.
-                                    return isNoneOrNever(t) === adjIsPositiveTest;
+                                    return isNone(t) === adjIsPositiveTest;
                                 });
 
                                 return combineTypes(remainingTypes);
-                            } else if (isNoneOrNever(type)) {
+                            } else if (isNone(type)) {
                                 if (!adjIsPositiveTest) {
                                     // Use a "Never" type (which is a special form
                                     // of None) to indicate that the condition will
@@ -10486,7 +10501,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                             } else {
                                                 return matches ? undefined : subtype;
                                             }
-                                        } else if (isNoneOrNever(subtype)) {
+                                        } else if (isNone(subtype)) {
                                             return adjIsPositiveTest ? undefined : subtype;
                                         }
 
@@ -10573,7 +10588,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         const arg1Type = getTypeOfExpression(
                             arg1Expr,
                             undefined,
-                            EvaluatorFlags.EvaluateStringLiteralAsType | EvaluatorFlags.ParameterSpecificationDisallowed
+                            EvaluatorFlags.EvaluateStringLiteralAsType | EvaluatorFlags.ParamSpecDisallowed
                         ).type;
                         const classTypeList = getIsInstanceClassTypes(arg1Type);
                         if (classTypeList) {
@@ -11042,7 +11057,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             expectingType
                 ? EvaluatorFlags.ExpectingType |
                       EvaluatorFlags.EvaluateStringLiteralAsType |
-                      EvaluatorFlags.ParameterSpecificationDisallowed
+                      EvaluatorFlags.ParamSpecDisallowed
                 : EvaluatorFlags.None
         ).type;
     }
@@ -12442,7 +12457,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     ): boolean {
         const curTypeVarMapping = typeVarMap.getTypeVar(destType.name);
 
-        if (destType.isParameterSpec) {
+        if (destType.isParamSpec) {
             diag.addMessage(
                 Localizer.DiagnosticAddendum.typeParamSpec().format({
                     type: printType(srcType),
@@ -12469,7 +12484,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 return false;
             }
 
-            if (curTypeVarMapping) {
+            if (curTypeVarMapping && !isAnyOrUnknown(curTypeVarMapping)) {
                 if (!isTypeSame(curTypeVarMapping, constrainedType)) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.typeConstraint().format({
@@ -12661,6 +12676,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 // better in the text representation.
                 const typeVarSubstitution = isEllipsisType(srcType) ? AnyType.create() : srcType;
                 setTypeArgumentsRecursive(destType, typeVarSubstitution, typeVarMap);
+            }
+            return true;
+        }
+
+        if (isNever(srcType)) {
+            if (typeVarMap) {
+                setTypeArgumentsRecursive(destType, UnknownType.create(), typeVarMap);
             }
             return true;
         }
@@ -13028,7 +13050,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
 
         // NoneType and ModuleType derive from object.
-        if (isNoneOrNever(srcType) || srcType.category === TypeCategory.Module) {
+        if (isNone(srcType) || srcType.category === TypeCategory.Module) {
             if (destType.category === TypeCategory.Object) {
                 const destClassType = destType.classType;
                 if (ClassType.isBuiltIn(destClassType, 'object')) {
@@ -13037,15 +13059,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
         }
 
-        if (srcType.category === TypeCategory.Never) {
-            // We'll allow "Never" to be assigned to a "NoReturn" type. This is
-            // the recommended way to handle exhausted matching of enums.
-            if (destType.category === TypeCategory.Object && ClassType.isBuiltIn(destType.classType, 'NoReturn')) {
-                return true;
-            }
-        }
-
-        if (isNoneOrNever(destType)) {
+        if (isNone(destType)) {
             diag.addMessage(Localizer.DiagnosticAddendum.assignToNone());
             return false;
         }
@@ -13279,9 +13293,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
         }
 
-        // Are we assigning to a function with a ParameterSpecification?
-        if (destType.details.parameterSpecification && typeVarMap && !typeVarMap.isLocked()) {
-            typeVarMap.setParameterSpecification(destType.details.parameterSpecification.name, srcType);
+        // Are we assigning to a function with a ParamSpec?
+        if (destType.details.paramSpec && typeVarMap && !typeVarMap.isLocked()) {
+            typeVarMap.setParamSpec(destType.details.paramSpec.name, srcType);
         }
 
         return canAssign;
@@ -13489,12 +13503,22 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // We do a quick-and-dirty evaluation of methods based on
                     // decorators to determine which ones are abstract. This allows
                     // us to avoid evaluating the full function types.
-                    const decl = getLastTypedDeclaredForSymbol(symbol);
-                    if (symbol.isClassMember() && decl && decl.type === DeclarationType.Function) {
-                        const functionFlags = getFunctionFlagsFromDecorators(decl.node, true);
+                    if (symbol.isClassMember()) {
+                        let isAbstract: boolean;
+
+                        const decl = getLastTypedDeclaredForSymbol(symbol);
+                        if (decl && decl.type === DeclarationType.Function) {
+                            const functionFlags = getFunctionFlagsFromDecorators(decl.node, true);
+                            isAbstract = !!(functionFlags & FunctionTypeFlags.AbstractMethod);
+                        } else {
+                            // If a symbol is overridden by a non-function, it is no longer
+                            // considered abstract. This can happen in some code, for example,
+                            // when a base class declares an abstract property and a subclass
+                            // "overrides" it with an instance variable.
+                            isAbstract = false;
+                        }
 
                         if (!symbolTable.has(symbolName)) {
-                            const isAbstract = !!(functionFlags & FunctionTypeFlags.AbstractMethod);
                             symbolTable.set(symbolName, {
                                 symbol,
                                 symbolName,
@@ -13896,11 +13920,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             case TypeCategory.Function: {
-                // If it's a Callable with a ParameterSpecification, use the
+                // If it's a Callable with a ParamSpec, use the
                 // Callable notation.
                 const parts = printFunctionParts(type, recursionCount);
-                if (type.details.parameterSpecification) {
-                    return `Callable[${type.details.parameterSpecification.name}, ${parts[1]}]`;
+                if (type.details.paramSpec) {
+                    return `Callable[${type.details.paramSpec.name}, ${parts[1]}]`;
                 }
                 return `(${parts[0].join(', ')}) -> ${parts[1]}`;
             }
@@ -14024,8 +14048,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     return (printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0 ? 'Any' : 'Unknown';
                 }
 
-                if (type.isParameterSpec) {
-                    return `ParameterSpecification('${type.name}')`;
+                if (type.isParamSpec) {
+                    return `ParamSpec('${type.name}')`;
                 }
 
                 return `TypeVar('${type.name}')`;

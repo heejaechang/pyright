@@ -394,12 +394,12 @@ test('Unpack3', () => {
     const configOptions = new ConfigOptions('.');
 
     // Analyze with Python 3.7 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V37;
+    configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['unpack3.py'], configOptions);
     validateResults(analysisResults37, 1);
 
     // Analyze with Python 3.8 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unpack3.py'], configOptions);
     validateResults(analysisResults38, 0);
 });
@@ -438,12 +438,12 @@ test('Function3', () => {
     const configOptions = new ConfigOptions('.');
 
     // Analyze with Python 3.7 settings. This will generate more errors.
-    configOptions.defaultPythonVersion = PythonVersion.V37;
+    configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
     validateResults(analysisResults37, 18);
 
     // Analyze with Python 3.8 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
     validateResults(analysisResults38, 11);
 });
@@ -480,6 +480,12 @@ test('Function8', () => {
 
 test('Function9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function9.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('Function10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function10.py']);
 
     validateResults(analysisResults, 1);
 });
@@ -937,11 +943,11 @@ test('TypeAlias3', () => {
 test('TypeAlias4', () => {
     const configOptions = new ConfigOptions('.');
 
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
     validateResults(analysisResults38, 1);
 
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
     validateResults(analysisResults39, 6);
 });
@@ -980,7 +986,7 @@ test('Classes2', () => {
 test('Classes3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes3.py']);
 
-    validateResults(analysisResults, 1);
+    validateResults(analysisResults, 2);
 });
 
 test('Mro1', () => {
@@ -1776,12 +1782,12 @@ test('Unions1', () => {
     const configOptions = new ConfigOptions('.');
 
     // Analyze with Python 3.8 settings. This will generate errors.
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
     validateResults(analysisResults38, 7);
 
     // Analyze with Python 3.9 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
     validateResults(analysisResults39, 0);
 });
@@ -1790,15 +1796,18 @@ test('Unions2', () => {
     const configOptions = new ConfigOptions('.');
 
     // Analyze with Python 3.8 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['unions2.py'], configOptions);
     validateResults(analysisResults38, 0);
 });
 
+// Skip ParamSpec tests until they are added back in to the
+// specification.
+/*
 test('ParamSpec1', () => {
     const configOptions = new ConfigOptions('.');
 
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec1.py'], configOptions);
     validateResults(results, 8);
 });
@@ -1806,11 +1815,11 @@ test('ParamSpec1', () => {
 test('ParamSpec2', () => {
     const configOptions = new ConfigOptions('.');
 
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
     validateResults(analysisResults38, 6);
 
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['paramSpec2.py'], configOptions);
     validateResults(analysisResults39, 0);
 });
@@ -1818,10 +1827,11 @@ test('ParamSpec2', () => {
 test('ParamSpec3', () => {
     const configOptions = new ConfigOptions('.');
 
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec3.py'], configOptions);
     validateResults(results, 1);
 });
+*/
 
 test('ClassVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar1.py']);
@@ -1850,11 +1860,11 @@ test('TypeVar2', () => {
 test('Annotated1', () => {
     const configOptions = new ConfigOptions('.');
 
-    configOptions.defaultPythonVersion = PythonVersion.V38;
+    configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
     validateResults(analysisResults38, 1);
 
-    configOptions.defaultPythonVersion = PythonVersion.V39;
+    configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
     validateResults(analysisResults39, 0);
 });

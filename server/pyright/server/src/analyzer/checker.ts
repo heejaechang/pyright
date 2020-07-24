@@ -82,7 +82,7 @@ import {
     FunctionType,
     isAnyOrUnknown,
     isNever,
-    isNoneOrNever,
+    isNone,
     isTypeSame,
     NoneType,
     ObjectType,
@@ -102,6 +102,7 @@ import {
     isNoReturnType,
     isProperty,
     lookUpClassMember,
+    makeTypeVarsConcrete,
     specializeType,
     transformTypeObjectToClass,
 } from './typeUtils';
@@ -518,7 +519,7 @@ export class Checker extends ParseTreeWalker {
                 const diagAddendum = new DiagnosticAddendum();
 
                 doForSubtypes(exceptionType, (subtype) => {
-                    if (!isAnyOrUnknown(subtype) && !isNoneOrNever(subtype)) {
+                    if (!isAnyOrUnknown(subtype) && !isNone(subtype)) {
                         if (subtype.category === TypeCategory.Object) {
                             if (
                                 !derivesFromClassRecursive(
@@ -1207,6 +1208,8 @@ export class Checker extends ParseTreeWalker {
             let isSupported = true;
 
             doForSubtypes(type, (subtype) => {
+                subtype = makeTypeVarsConcrete(subtype);
+
                 switch (subtype.category) {
                     case TypeCategory.Any:
                     case TypeCategory.Unknown:

@@ -348,8 +348,8 @@ export class Binder extends ParseTreeWalker {
             this._addBuiltInSymbolToCurrentScope('__itemsize__', node, 'int');
             this._addBuiltInSymbolToCurrentScope('__module__', node, 'str');
             this._addBuiltInSymbolToCurrentScope('__mro__', node, 'Any');
-            this._addBuiltInSymbolToCurrentScope('__name__', node, 'str');
-            if (this._fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V30) {
+            this._addBuiltInSymbolToCurrentScope('__name__', node, 'str', /* isInaccessibleToInstance */ true);
+            if (this._fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_0) {
                 this._addBuiltInSymbolToCurrentScope('__qualname__', node, 'str');
                 this._addBuiltInSymbolToCurrentScope('__text_signature__', node, 'str');
             }
@@ -428,7 +428,7 @@ export class Binder extends ParseTreeWalker {
             // List taken from https://docs.python.org/3/reference/datamodel.html
             this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str');
             this._addBuiltInSymbolToCurrentScope('__name__', node, 'str');
-            if (this._fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V33) {
+            if (this._fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_3) {
                 this._addBuiltInSymbolToCurrentScope('__qualname__', node, 'str');
             }
             this._addBuiltInSymbolToCurrentScope('__module__', node, 'str');
@@ -1169,6 +1169,23 @@ export class Binder extends ParseTreeWalker {
             resolvedPath = importInfo.resolvedPaths[importInfo.resolvedPaths.length - 1];
         }
 
+        // If this file is a module __init__.py(i), relative imports of submodules
+        // using the syntax "from .x import y" introduce a symbol x into the
+        // module namespace. We do this first (before adding the individual imported
+        // symbols below) in case one of the imported symbols is the same name as the
+        // submodule. In that case, we want to the symbol to appear later in the
+        // declaration list because it should "win" when resolving the alias.
+        const fileName = stripFileExtension(getFileName(this._fileInfo.filePath));
+        if (fileName === '__init__' && node.module.leadingDots === 1 && node.module.nameParts.length > 0) {
+            const symbolName = node.module.nameParts[0].value;
+            const symbol = this._bindNameToScope(this._currentScope, symbolName);
+            if (symbol) {
+                this._createAliasDeclarationForMultipartImportName(node, undefined, importInfo, symbol);
+            }
+
+            this._createFlowAssignment(node.module.nameParts[0]);
+        }
+
         if (node.isWildcardImport) {
             if (ParseTreeUtils.getEnclosingClass(node) || ParseTreeUtils.getEnclosingFunction(node)) {
                 this._addError(Localizer.Diagnostic.wildcardInFunction(), node);
@@ -1201,37 +1218,6 @@ export class Binder extends ParseTreeWalker {
                         }
                     });
                 }
-
-                // Also add all of the implicitly-imported modules for
-                // the import module.
-                importInfo.implicitImports.forEach((implicitImport) => {
-                    // Don't overwrite a symbol that was imported from the module.
-                    if (!names.some((name) => name === implicitImport.name)) {
-                        const symbol = this._bindNameToScope(this._currentScope, implicitImport.name);
-                        if (symbol) {
-                            const submoduleFallback: AliasDeclaration = {
-                                type: DeclarationType.Alias,
-                                node,
-                                path: implicitImport.path,
-                                range: getEmptyRange(),
-                                usesLocalName: false,
-                            };
-
-                            const aliasDecl: AliasDeclaration = {
-                                type: DeclarationType.Alias,
-                                node,
-                                path: resolvedPath,
-                                usesLocalName: false,
-                                symbolName: implicitImport.name,
-                                submoduleFallback,
-                                range: getEmptyRange(),
-                            };
-
-                            symbol.addDeclaration(aliasDecl);
-                            names.push(implicitImport.name);
-                        }
-                    }
-                });
 
                 this._createFlowWildcardImport(node, names);
             }
@@ -2095,9 +2081,14 @@ export class Binder extends ParseTreeWalker {
     private _addBuiltInSymbolToCurrentScope(
         nameValue: string,
         node: ModuleNode | ClassNode | FunctionNode,
-        type: IntrinsicType
+        type: IntrinsicType,
+        isInaccessibleToInstance = false
     ) {
-        const symbol = this._addSymbolToCurrentScope(nameValue, /* isInitiallyUnbound */ false);
+        const symbol = this._addSymbolToCurrentScope(
+            nameValue,
+            /* isInitiallyUnbound */ false,
+            isInaccessibleToInstance
+        );
         if (symbol) {
             symbol.addDeclaration({
                 type: DeclarationType.Intrinsic,
@@ -2111,7 +2102,7 @@ export class Binder extends ParseTreeWalker {
     }
 
     // Adds a new symbol with the specified name if it doesn't already exist.
-    private _addSymbolToCurrentScope(nameValue: string, isInitiallyUnbound: boolean) {
+    private _addSymbolToCurrentScope(nameValue: string, isInitiallyUnbound: boolean, isInaccessibleToInstance = false) {
         let symbol = this._currentScope.lookUpSymbol(nameValue);
 
         if (!symbol) {
@@ -2123,6 +2114,10 @@ export class Binder extends ParseTreeWalker {
 
             if (this._currentScope.type === ScopeType.Class) {
                 symbolFlags |= SymbolFlags.ClassMember;
+            }
+
+            if (isInaccessibleToInstance) {
+                symbolFlags |= SymbolFlags.InaccessibleToInstance;
             }
 
             if (this._fileInfo.isStubFile && isPrivateOrProtectedName(nameValue)) {
@@ -2412,7 +2407,7 @@ export class Binder extends ParseTreeWalker {
             return false;
         }
 
-        if (this._fileInfo.executionEnvironment.pythonVersion < PythonVersion.V39 && !this._fileInfo.isStubFile) {
+        if (this._fileInfo.executionEnvironment.pythonVersion < PythonVersion.V3_9 && !this._fileInfo.isStubFile) {
             return false;
         }
 
