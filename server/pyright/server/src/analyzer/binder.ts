@@ -2210,6 +2210,7 @@ export class Binder extends ParseTreeWalker {
                         node: target.memberName,
                         isConstant: isConstantName(name.value),
                         inferredTypeSource: source,
+                        isDefinedByMemberAccess: true,
                         path: this._fileInfo.filePath,
                         range: convertOffsetsToRange(
                             target.memberName.start,
@@ -2335,6 +2336,7 @@ export class Binder extends ParseTreeWalker {
                         type: DeclarationType.Variable,
                         node: target.memberName,
                         isConstant: isConstantName(name.value),
+                        isDefinedByMemberAccess: true,
                         isFinal: finalInfo.isFinal,
                         path: this._fileInfo.filePath,
                         typeAnnotationNode: finalInfo.isFinal ? finalInfo.finalTypeNode : typeAnnotation,

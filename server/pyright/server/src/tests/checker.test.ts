@@ -550,10 +550,16 @@ test('AnnotatedVar6', () => {
     validateResults(analysisResults, 0);
 });
 
-test('Execution1', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['execution1.py']);
+test('CodeFlow1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow1.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('CodeFlow2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow2.py']);
+
+    validateResults(analysisResults, 0);
 });
 
 test('Properties1', () => {
@@ -980,13 +986,32 @@ test('Classes2', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleMethodOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes2.py'], configOptions);
-    validateResults(analysisResults, 2);
+    validateResults(analysisResults, 10);
 });
 
 test('Classes3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes3.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('Classes4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes4.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('Classes5', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // By default, optional diagnostics are ignored.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes5.py'], configOptions);
+    validateResults(analysisResults, 0);
+
+    // Turn on errors.
+    configOptions.diagnosticRuleSet.reportIncompatibleVariableOverride = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes5.py'], configOptions);
+    validateResults(analysisResults, 4);
 });
 
 test('Mro1', () => {
@@ -1366,6 +1391,18 @@ test('GenericTypes26', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes26.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('GenericTypes27', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes27.py']);
+
+    validateResults(analysisResults, 0);
+});
+
+test('GenericTypes28', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes28.py']);
+
+    validateResults(analysisResults, 1);
 });
 
 test('Protocol1', () => {
