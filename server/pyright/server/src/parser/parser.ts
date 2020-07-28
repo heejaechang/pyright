@@ -2363,6 +2363,13 @@ export class Parser {
                 diag.addMessage(Localizer.DiagnosticAddendum.useTupleInstead());
                 this._addError(Localizer.Diagnostic.tupleInAnnotation() + diag.getString(), possibleTupleNode);
             }
+
+            if (possibleTupleNode.nodeType === ParseNodeType.BinaryOperation) {
+                // Mark the binary expression as parenthesized so we don't attempt
+                // to use comparison chaining, which isn't appropriate when the
+                // expression is parenthesized.
+                possibleTupleNode.parenthesized = true;
+            }
             return possibleTupleNode;
         } else if (nextToken.type === TokenType.OpenBracket) {
             const listNode = this._parseListAtom();
@@ -2995,7 +3002,7 @@ export class Parser {
             if (segment.isExpression) {
                 // Determine if we need to truncate the expression because it
                 // contains formatting directives that start with a ! or :.
-                const segmentExprLength = this._getFormatStringExpressionLength(segment.value);
+                const segmentExprLength = this._getFormatStringExpressionLength(segment.value.trimEnd());
                 const parseTree = this._parseFormatStringSegment(stringToken, segment, 0, segmentExprLength);
                 if (parseTree) {
                     formatExpressions.push(parseTree);
