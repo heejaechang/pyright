@@ -11440,7 +11440,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
         } else {
             let allowForwardReferences = false;
-            
+
             // Determine if this node is within a quoted type annotation.
             if (ParseTreeUtils.isWithinTypeAnnotation(node, !isAnnotationEvaluationPostponed(getFileInfo(node)))) {
                 allowForwardReferences = true;
