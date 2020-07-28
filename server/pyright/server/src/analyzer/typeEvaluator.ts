@@ -702,6 +702,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         checkForCancellation();
 
         let typeResult: TypeResult | undefined;
+        let reportExpectingTypeErrors = (flags & EvaluatorFlags.ExpectingType) !== 0;
 
         switch (node.nodeType) {
             case ParseNodeType.Name: {
@@ -769,6 +770,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         );
                         typeResult = { node, type: UnknownType.create() };
                     }
+
+                    // Don't report expecting type errors again. We will have already
+                    // reported them when analyzing the contents of the string.
+                    reportExpectingTypeErrors = false;
                 } else {
                     // Evaluate the format string expressions in this context.
                     node.strings.forEach((str) => {
@@ -941,7 +946,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             fail(`Unhandled expression type '${ParseTreeUtils.printExpression(node)}'`);
         }
 
-        if (flags & EvaluatorFlags.ExpectingType) {
+        if (reportExpectingTypeErrors) {
             const resultType = transformTypeObjectToClass(typeResult.type);
             if (!TypeBase.isInstantiable(resultType)) {
                 const isEmptyTuple =
@@ -6282,6 +6287,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         if (comparisonOperatorMap[node.operator]) {
             if (
                 node.leftExpression.nodeType === ParseNodeType.BinaryOperation &&
+                !node.leftExpression.parenthesized &&
                 comparisonOperatorMap[node.leftExpression.operator]
             ) {
                 // Evaluate the left expression so it is type checked.
@@ -8328,6 +8334,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // walk the contents of the function, return statements can be
         // validated against this type.
         if (node.returnTypeAnnotation) {
+            // Temporarily set the return type to unknown in case of recursion.
+            functionType.details.declaredReturnType = UnknownType.create();
+
             const returnType = getTypeOfAnnotation(node.returnTypeAnnotation);
             functionType.details.declaredReturnType = returnType;
         } else {
@@ -11179,9 +11188,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (decl.type !== DeclarationType.Alias) {
                     // Is the declaration in the same execution scope as the "usageNode" node?
                     const usageScope = ParseTreeUtils.getExecutionScopeNode(node);
-                    const declScope = ParseTreeUtils.getExecutionScopeNode(decl.node);
+                    const declNode =
+                        decl.type === DeclarationType.Class || decl.type === DeclarationType.Function
+                            ? decl.node.name
+                            : decl.node;
+                    const declScope = ParseTreeUtils.getExecutionScopeNode(declNode);
                     if (usageScope === declScope) {
-                        if (!isFlowPathBetweenNodes(decl.node, node)) {
+                        if (!isFlowPathBetweenNodes(declNode, node)) {
                             return false;
                         }
                     }
@@ -11426,7 +11439,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 }
             }
         } else {
-            const symbolWithScope = lookUpSymbolRecursive(node, node.value, /* honorCodeFlow */ true);
+            let allowForwardReferences = false;
+            
+            // Determine if this node is within a quoted type annotation.
+            if (ParseTreeUtils.isWithinTypeAnnotation(node, !isAnnotationEvaluationPostponed(getFileInfo(node)))) {
+                allowForwardReferences = true;
+            }
+
+            const symbolWithScope = lookUpSymbolRecursive(node, node.value, !allowForwardReferences);
             if (symbolWithScope) {
                 declarations.push(...symbolWithScope.symbol.getDeclarations());
             }
