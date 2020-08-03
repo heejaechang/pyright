@@ -21,7 +21,7 @@ import * as DeclarationUtils from '../analyzer/declarationUtils';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { ParseTreeWalker } from '../analyzer/parseTreeWalker';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
-import { ClassType, TypeCategory } from '../analyzer/types';
+import { ClassType, isClass, isObject, isTypeVar, TypeCategory } from '../analyzer/types';
 import { specializeType } from '../analyzer/typeUtils';
 import {
     ClassMemberLookupFlags,
@@ -99,7 +99,7 @@ export class CallHierarchyProvider {
         } else if (declaration.type === DeclarationType.Class) {
             // Look up the __init__ method for this class.
             const classType = evaluator.getTypeForDeclaration(declaration);
-            if (classType?.category === TypeCategory.Class) {
+            if (classType && isClass(classType)) {
                 // Don't perform a recursive search of parent classes in this
                 // case because we don't want to find an inherited __init__
                 // method defined in a different module.
@@ -215,11 +215,11 @@ class FindOutgoingCallTreeWalker extends ParseTreeWalker {
                 let baseType = subtype;
 
                 // This could be a bound TypeVar (e.g. used for "self" and "cls").
-                if (baseType.category === TypeCategory.TypeVar) {
+                if (isTypeVar(baseType)) {
                     baseType = specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true);
                 }
 
-                if (baseType.category !== TypeCategory.Object) {
+                if (!isObject(baseType)) {
                     return undefined;
                 }
 
@@ -235,7 +235,7 @@ class FindOutgoingCallTreeWalker extends ParseTreeWalker {
                     return undefined;
                 }
 
-                if (memberType.category === TypeCategory.Object && ClassType.isPropertyClass(memberType.classType)) {
+                if (isObject(memberType) && ClassType.isPropertyClass(memberType.classType)) {
                     propertyDecls.forEach((decl) => {
                         this._addOutgoingCallForDeclaration(node.memberName, decl);
                     });
@@ -351,11 +351,11 @@ class FindIncomingCallTreeWalker extends ParseTreeWalker {
                     let baseType = subtype;
 
                     // This could be a bound TypeVar (e.g. used for "self" and "cls").
-                    if (baseType.category === TypeCategory.TypeVar) {
+                    if (isTypeVar(baseType)) {
                         baseType = specializeType(baseType, /* typeVarMap */ undefined, /* makeConcrete */ true);
                     }
 
-                    if (baseType.category !== TypeCategory.Object) {
+                    if (!isObject(baseType)) {
                         return undefined;
                     }
 

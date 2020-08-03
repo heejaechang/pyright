@@ -23,7 +23,7 @@ import {
     getOverloadedFunctionDocStrings,
 } from '../analyzer/typeDocStringUtils';
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
-import { Type, TypeCategory, UnknownType } from '../analyzer/types';
+import { isClass, isModule, isObject, Type, TypeCategory, UnknownType } from '../analyzer/types';
 import { ClassMemberLookupFlags, isProperty, lookUpClassMember } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
@@ -83,7 +83,7 @@ export class HoverProvider {
                     const type = evaluator.getType(node) || UnknownType.create();
 
                     let typeText = '';
-                    if (type.category === TypeCategory.Module) {
+                    if (isModule(type)) {
                         // Handle modules specially because submodules aren't associated with
                         // declarations, but we want them to be presented in the same way as
                         // the top-level module, which does have a declaration.
@@ -237,7 +237,7 @@ export class HoverProvider {
 
         // Get the init method for this class.
         const classType = evaluator.getType(node);
-        if (!classType || classType.category !== TypeCategory.Class) {
+        if (!classType || !isClass(classType)) {
             return false;
         }
 
@@ -254,7 +254,7 @@ export class HoverProvider {
         const instanceType = evaluator.getType(callLeftNode.parent);
         const functionType = evaluator.getTypeOfMember(initMethodMember);
 
-        if (!instanceType || !functionType || instanceType.category !== TypeCategory.Object) {
+        if (!instanceType || !functionType || !isObject(instanceType)) {
             return false;
         }
 
@@ -298,9 +298,9 @@ export class HoverProvider {
     ) {
         const docStrings: (string | undefined)[] = [];
 
-        if (type.category === TypeCategory.Module) {
+        if (isModule(type)) {
             docStrings.push(getModuleDocString(type, resolvedDecl, sourceMapper));
-        } else if (type.category === TypeCategory.Class) {
+        } else if (isClass(type)) {
             docStrings.push(getClassDocString(type, resolvedDecl, sourceMapper));
         } else if (type.category === TypeCategory.Function) {
             docStrings.push(getFunctionDocStringFromType(type, sourceMapper));

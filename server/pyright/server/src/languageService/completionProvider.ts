@@ -36,7 +36,17 @@ import {
     getOverloadedFunctionDocStrings,
 } from '../analyzer/typeDocStringUtils';
 import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
-import { ClassType, FunctionType, ObjectType, Type, TypeCategory } from '../analyzer/types';
+import {
+    ClassType,
+    FunctionType,
+    isClass,
+    isModule,
+    isObject,
+    isTypeVar,
+    ObjectType,
+    Type,
+    TypeCategory,
+} from '../analyzer/types';
 import { doForSubtypes, getMembersForClass, getMembersForModule, specializeType } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
@@ -454,7 +464,7 @@ export class CompletionProvider {
         const symbolTable = new Map<string, Symbol>();
         for (let i = classResults.classType.details.mro.length - 1; i > 0; i--) {
             const mroClass = classResults.classType.details.mro[i];
-            if (mroClass.category === TypeCategory.Class) {
+            if (isClass(mroClass)) {
                 getMembersForClass(mroClass, symbolTable, false);
             }
         }
@@ -519,15 +529,15 @@ export class CompletionProvider {
         if (leftType) {
             doForSubtypes(leftType, (subtype) => {
                 let specializedSubtype = subtype;
-                if (subtype.category === TypeCategory.TypeVar) {
+                if (isTypeVar(subtype)) {
                     specializedSubtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
                 }
 
-                if (specializedSubtype.category === TypeCategory.Object) {
+                if (isObject(specializedSubtype)) {
                     getMembersForClass(specializedSubtype.classType, symbolTable, true);
-                } else if (specializedSubtype.category === TypeCategory.Class) {
+                } else if (isClass(specializedSubtype)) {
                     getMembersForClass(specializedSubtype, symbolTable, false);
-                } else if (specializedSubtype.category === TypeCategory.Module) {
+                } else if (isModule(specializedSubtype)) {
                     getMembersForModule(specializedSubtype, symbolTable);
                 }
 
@@ -536,7 +546,7 @@ export class CompletionProvider {
         }
 
         const completionList = CompletionList.create();
-        const objectThrough: ObjectType | undefined = leftType?.category === TypeCategory.Object ? leftType : undefined;
+        const objectThrough: ObjectType | undefined = leftType && isObject(leftType) ? leftType : undefined;
         this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
 
         return completionList;
@@ -669,7 +679,7 @@ export class CompletionProvider {
     ) {
         const quoteValue = this._getQuoteValueFromPriorText(priorText);
         doForSubtypes(type, (subtype) => {
-            if (subtype.category === TypeCategory.Object) {
+            if (isObject(subtype)) {
                 if (ClassType.isBuiltIn(subtype.classType, 'str')) {
                     if (subtype.classType.literalValue !== undefined) {
                         this._addStringLiteralToCompletionList(
@@ -712,7 +722,7 @@ export class CompletionProvider {
             }
 
             const baseType = this._evaluator.getType(parentNode.baseExpression);
-            if (!baseType || baseType.category !== TypeCategory.Object) {
+            if (!baseType || !isObject(baseType)) {
                 return undefined;
             }
 
@@ -780,7 +790,7 @@ export class CompletionProvider {
         }
 
         const baseType = this._evaluator.getType(parentNode.parent.baseExpression);
-        if (!baseType || baseType.category !== TypeCategory.Object) {
+        if (!baseType || !isObject(baseType)) {
             return;
         }
 
@@ -1115,9 +1125,9 @@ export class CompletionProvider {
                                 }
                             }
 
-                            if (type.category === TypeCategory.Module) {
+                            if (isModule(type)) {
                                 documentation = getModuleDocString(type, primaryDecl, this._sourceMapper);
-                            } else if (type.category === TypeCategory.Class) {
+                            } else if (isClass(type)) {
                                 documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
                             } else if (type.category === TypeCategory.Function) {
                                 documentation = getFunctionDocStringFromType(type, this._sourceMapper);
