@@ -440,7 +440,7 @@ test('Function3', () => {
     // Analyze with Python 3.7 settings. This will generate more errors.
     configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
-    validateResults(analysisResults37, 18);
+    validateResults(analysisResults37, 19);
 
     // Analyze with Python 3.8 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_8;
@@ -808,10 +808,22 @@ test('Generators7', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Generators8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators8.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Coroutines1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines1.py']);
 
     validateResults(analysisResults, 3);
+});
+
+test('Coroutines2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines2.py']);
+
+    validateResults(analysisResults, 0);
 });
 
 test('Loops1', () => {
@@ -1415,6 +1427,12 @@ test('GenericTypes29', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes29.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('GenericTypes30', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes30.py']);
+
+    validateResults(analysisResults, 3);
 });
 
 test('Protocol1', () => {

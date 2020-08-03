@@ -620,7 +620,7 @@ export namespace ClassType {
 
         const aliasedSubclass = subclassType.details.aliasClass || subclassType;
         for (const baseClass of aliasedSubclass.details.baseClasses) {
-            if (baseClass.category === TypeCategory.Class) {
+            if (isClass(baseClass)) {
                 if (isDerivedFrom(baseClass, parentClassType, inheritanceChain)) {
                     if (inheritanceChain) {
                         inheritanceChain.push(subclassType);
@@ -1147,15 +1147,19 @@ export namespace TypeVarType {
     }
 }
 
-export function isNever(type: Type): boolean {
+export function isNever(type: Type): type is NeverType {
     return type.category === TypeCategory.Never;
 }
 
-export function isNone(type: Type): boolean {
+export function isNone(type: Type): type is NoneType {
     return type.category === TypeCategory.None;
 }
 
-export function isAnyOrUnknown(type: Type): boolean {
+export function isUnknown(type: Type): type is UnknownType {
+    return type.category === TypeCategory.Unknown;
+}
+
+export function isAnyOrUnknown(type: Type): type is AnyType | UnknownType {
     if (type.category === TypeCategory.Any || type.category === TypeCategory.Unknown) {
         return true;
     }
@@ -1167,7 +1171,7 @@ export function isAnyOrUnknown(type: Type): boolean {
     return false;
 }
 
-export function isUnbound(type: Type): boolean {
+export function isUnbound(type: Type): type is UnboundType {
     return type.category === TypeCategory.Unbound;
 }
 
@@ -1181,6 +1185,22 @@ export function isPossiblyUnbound(type: Type): boolean {
     }
 
     return false;
+}
+
+export function isClass(type: Type): type is ClassType {
+    return type.category === TypeCategory.Class;
+}
+
+export function isObject(type: Type): type is ObjectType {
+    return type.category === TypeCategory.Object;
+}
+
+export function isModule(type: Type): type is ModuleType {
+    return type.category === TypeCategory.Module;
+}
+
+export function isTypeVar(type: Type): type is TypeVarType {
+    return type.category === TypeCategory.TypeVar;
 }
 
 export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolean {
@@ -1392,7 +1412,7 @@ export function removeUnknownFromUnion(type: Type): Type {
 // If the type is a union, remove an "unbound" type from the union,
 // returning only the known types.
 export function removeUnboundFromUnion(type: Type): Type {
-    return removeFromUnion(type, (t: Type) => t.category === TypeCategory.Unbound);
+    return removeFromUnion(type, (t: Type) => isUnbound(t));
 }
 
 // If the type is a union, remove an "None" type from the union,
@@ -1457,13 +1477,13 @@ export function combineTypes(types: Type[]): Type {
     // Sort all of the literal types to the end.
     expandedTypes = expandedTypes.sort((type1, type2) => {
         if (
-            (type1.category === TypeCategory.Object && type1.classType.literalValue !== undefined) ||
-            (type1.category === TypeCategory.Class && type1.literalValue !== undefined)
+            (isObject(type1) && type1.classType.literalValue !== undefined) ||
+            (isClass(type1) && type1.literalValue !== undefined)
         ) {
             return 1;
         } else if (
-            (type2.category === TypeCategory.Object && type2.classType.literalValue !== undefined) ||
-            (type2.category === TypeCategory.Class && type2.literalValue !== undefined)
+            (isObject(type2) && type2.classType.literalValue !== undefined) ||
+            (isClass(type2) && type2.literalValue !== undefined)
         ) {
             return -1;
         }
@@ -1472,7 +1492,7 @@ export function combineTypes(types: Type[]): Type {
 
     // If the union contains a NoReturn, remove it. NoReturn should
     // be used only when it's by itself.
-    const isNoReturn = (t: Type) => t.category === TypeCategory.Object && ClassType.isBuiltIn(t.classType, 'NoReturn');
+    const isNoReturn = (t: Type) => isObject(t) && ClassType.isBuiltIn(t.classType, 'NoReturn');
     if (expandedTypes.find((t) => isNoReturn(t))) {
         expandedTypes = expandedTypes.filter((t) => !isNoReturn(t));
     }
@@ -1509,13 +1529,13 @@ export function isSameWithoutLiteralValue(destType: Type, srcType: Type): boolea
         return true;
     }
 
-    if (srcType.category === TypeCategory.Class && srcType.literalValue !== undefined) {
+    if (isClass(srcType) && srcType.literalValue !== undefined) {
         // Strip the literal.
         srcType = ClassType.cloneWithLiteral(srcType, undefined);
         return isTypeSame(destType, srcType);
     }
 
-    if (srcType.category === TypeCategory.Object && srcType.classType.literalValue !== undefined) {
+    if (isObject(srcType) && srcType.classType.literalValue !== undefined) {
         // Strip the literal.
         srcType = ObjectType.create(ClassType.cloneWithLiteral(srcType.classType, undefined));
         return isTypeSame(destType, srcType);
@@ -1535,7 +1555,7 @@ function _addTypeIfUnique(types: Type[], typeToAdd: Type) {
 
         // If the typeToAdd is a literal value and there's already
         // a non-literal type that matches, don't add the literal value.
-        if (type.category === TypeCategory.Object && typeToAdd.category === TypeCategory.Object) {
+        if (isObject(type) && isObject(typeToAdd)) {
             if (isSameWithoutLiteralValue(type, typeToAdd)) {
                 if (type.classType.literalValue === undefined) {
                     return;
