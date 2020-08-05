@@ -72,6 +72,7 @@ import { getTopLevelImports } from './importStatementUtils';
 import * as ParseTreeUtils from './parseTreeUtils';
 import { ParseTreeWalker } from './parseTreeWalker';
 import { ScopeType } from './scope';
+import { getScopeForNode } from './scopeUtils';
 import { Symbol } from './symbol';
 import * as SymbolNameUtils from './symbolNameUtils';
 import { getLastTypedDeclaredForSymbol, isFinalVariable } from './symbolUtils';
@@ -143,6 +144,10 @@ export class Checker extends ParseTreeWalker {
     walk(node: ParseNode) {
         if (!AnalyzerNodeInfo.isCodeUnreachable(node)) {
             super.walk(node);
+        } else {
+            this._evaluator.suppressDiagnostics(() => {
+                super.walk(node);
+            });
         }
     }
 
@@ -268,6 +273,21 @@ export class Checker extends ParseTreeWalker {
         if (functionTypeResult) {
             // Validate that the function returns the declared type.
             this._validateFunctionReturn(node, functionTypeResult.functionType);
+        }
+
+        // If we're at the module level within a stub file, report a diagnostic
+        // if there is a '__getattr__' function defined when in strict mode.
+        // This signifies an incomplete stub file that obscures type errors.
+        if (this._fileInfo.isStubFile && node.name.value === '__getattr__') {
+            const scope = getScopeForNode(node);
+            if (scope?.type === ScopeType.Module) {
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportUnknownMemberType,
+                    DiagnosticRule.reportUnknownMemberType,
+                    Localizer.Diagnostic.stubUsesGetAttr(),
+                    node.name
+                );
+            }
         }
 
         this._scopedNodes.push(node);
@@ -770,7 +790,84 @@ export class Checker extends ParseTreeWalker {
                 }
             }
 
+            if (!reportedUnreachable && this._fileInfo.isStubFile) {
+                this._validateStubStatement(statement);
+            }
+
             this.walk(statement);
+        }
+    }
+
+    private _validateStubStatement(statement: StatementNode) {
+        switch (statement.nodeType) {
+            case ParseNodeType.If:
+            case ParseNodeType.Function:
+            case ParseNodeType.Class:
+            case ParseNodeType.Error: {
+                // These are allowed in a stub file.
+                break;
+            }
+
+            case ParseNodeType.While:
+            case ParseNodeType.For:
+            case ParseNodeType.Try:
+            case ParseNodeType.With: {
+                // These are not allowed.
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportInvalidStubStatement,
+                    DiagnosticRule.reportInvalidStubStatement,
+                    Localizer.Diagnostic.invalidStubStatement(),
+                    statement
+                );
+                break;
+            }
+
+            case ParseNodeType.StatementList: {
+                for (const substatement of statement.statements) {
+                    switch (substatement.nodeType) {
+                        case ParseNodeType.Assert:
+                        case ParseNodeType.AssignmentExpression:
+                        case ParseNodeType.AugmentedAssignment:
+                        case ParseNodeType.Await:
+                        case ParseNodeType.BinaryOperation:
+                        case ParseNodeType.Call:
+                        case ParseNodeType.Constant:
+                        case ParseNodeType.Del:
+                        case ParseNodeType.Dictionary:
+                        case ParseNodeType.Index:
+                        case ParseNodeType.For:
+                        case ParseNodeType.FormatString:
+                        case ParseNodeType.Global:
+                        case ParseNodeType.Lambda:
+                        case ParseNodeType.List:
+                        case ParseNodeType.MemberAccess:
+                        case ParseNodeType.Name:
+                        case ParseNodeType.Nonlocal:
+                        case ParseNodeType.Number:
+                        case ParseNodeType.Raise:
+                        case ParseNodeType.Return:
+                        case ParseNodeType.Set:
+                        case ParseNodeType.Slice:
+                        case ParseNodeType.Ternary:
+                        case ParseNodeType.Tuple:
+                        case ParseNodeType.Try:
+                        case ParseNodeType.UnaryOperation:
+                        case ParseNodeType.Unpack:
+                        case ParseNodeType.While:
+                        case ParseNodeType.With:
+                        case ParseNodeType.WithItem:
+                        case ParseNodeType.Yield:
+                        case ParseNodeType.YieldFrom: {
+                            this._evaluator.addDiagnostic(
+                                this._fileInfo.diagnosticRuleSet.reportInvalidStubStatement,
+                                DiagnosticRule.reportInvalidStubStatement,
+                                Localizer.Diagnostic.invalidStubStatement(),
+                                substatement
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -854,17 +951,19 @@ export class Checker extends ParseTreeWalker {
 
     private _validateSymbolTables() {
         for (const scopedNode of this._scopedNodes) {
-            const scope = AnalyzerNodeInfo.getScope(scopedNode)!;
+            const scope = AnalyzerNodeInfo.getScope(scopedNode);
 
-            scope.symbolTable.forEach((symbol, name) => {
-                this._conditionallyReportUnusedSymbol(name, symbol, scope.type);
+            if (scope) {
+                scope.symbolTable.forEach((symbol, name) => {
+                    this._conditionallyReportUnusedSymbol(name, symbol, scope.type);
 
-                this._reportIncompatibleDeclarations(name, symbol);
+                    this._reportIncompatibleDeclarations(name, symbol);
 
-                this._reportMultipleFinalDeclarations(name, symbol);
+                    this._reportMultipleFinalDeclarations(name, symbol);
 
-                this._reportMultipleTypeAliasDeclarations(name, symbol);
-            });
+                    this._reportMultipleTypeAliasDeclarations(name, symbol);
+                });
+            }
         }
     }
 
@@ -1162,6 +1261,13 @@ export class Checker extends ParseTreeWalker {
                 if (!isPrivate) {
                     return;
                 }
+
+                // If a stub is exporting a private type, we'll assume that the author
+                // knows what he or she is doing.
+                if (this._fileInfo.isStubFile) {
+                    return;
+                }
+
                 diagnosticLevel = this._fileInfo.diagnosticRuleSet.reportUnusedClass;
                 nameNode = decl.node.name;
                 rule = DiagnosticRule.reportUnusedClass;
@@ -1172,6 +1278,13 @@ export class Checker extends ParseTreeWalker {
                 if (!isPrivate) {
                     return;
                 }
+
+                // If a stub is exporting a private type, we'll assume that the author
+                // knows what he or she is doing.
+                if (this._fileInfo.isStubFile) {
+                    return;
+                }
+
                 diagnosticLevel = this._fileInfo.diagnosticRuleSet.reportUnusedFunction;
                 nameNode = decl.node.name;
                 rule = DiagnosticRule.reportUnusedFunction;
