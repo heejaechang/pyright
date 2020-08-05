@@ -4,7 +4,7 @@
 
 -   Added `python.analysis.autoImportCompletions` setting (`true` by default), which allows auto-import completions to be disabled.
     ([pylance-release#64](https://github.com/microsoft/pylance-release/issues/64))
--   Fixed the "make Pylance your default language server" prompt to set the setting in the correct location.
+-   Fixed the "make Pylance your default language server" prompt when language server setting was previously set outside of the user settings.
 
 In addition, Pylance's copy of Pyright has been updated from 1.1.58 to 1.1.60, including the following changes:
 
