@@ -144,6 +144,7 @@ class PylanceServer extends LanguageServerBase {
             typeCheckingMode: 'off',
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
+            autoImportCompletions: true,
         };
 
         try {
@@ -189,6 +190,9 @@ class PylanceServer extends LanguageServerBase {
                 if (extraPaths && isArray(extraPaths) && extraPaths.length > 0) {
                     serverSettings.extraPaths = extraPaths.map((p) => normalizeSlashes(p));
                 }
+
+                serverSettings.autoImportCompletions =
+                    pythonAnalysisSection.autoImportCompletions ?? serverSettings.autoImportCompletions;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
