@@ -1,5 +1,5 @@
 import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
-import { Memento } from 'vscode';
+import { ConfigurationTarget, Memento } from 'vscode';
 
 import { ActivatePylanceBanner } from '../banners';
 import { AppConfiguration } from '../types/appConfig';
@@ -59,17 +59,64 @@ describe('Prompt to use Pylance', () => {
         expect(banner.enabled).toEqual(false);
     });
 
-    test('Selecting Yes changes python.languageServer setting and reloads window', async () => {
-        const banner = makeBanner();
-        when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
-            Promise.resolve(banner.LabelYes)
-        );
+    interface TestData {
+        globalValue?: string;
+        workspaceValue?: string;
+        expectedTarget: ConfigurationTarget;
+        location: string;
+        targetName: string;
+    }
+    const testData: TestData[] = [
+        {
+            globalValue: undefined,
+            workspaceValue: undefined,
+            expectedTarget: ConfigurationTarget.Global,
+            location: 'not specified',
+            targetName: 'global',
+        },
+        {
+            globalValue: 'Microsoft',
+            workspaceValue: undefined,
+            expectedTarget: ConfigurationTarget.Global,
+            location: 'specified in global',
+            targetName: 'global',
+        },
+        {
+            globalValue: undefined,
+            workspaceValue: 'Microsoft',
+            expectedTarget: ConfigurationTarget.Workspace,
+            location: 'specified in workspace',
+            targetName: 'workspace',
+        },
+        {
+            globalValue: 'Microsoft',
+            workspaceValue: 'Microsoft',
+            expectedTarget: ConfigurationTarget.Workspace,
+            location: 'specified in both global and workspace',
+            targetName: 'workspace',
+        },
+    ];
 
-        await banner.show();
-        const [setting, value] = capture(appConfigMock.updateSetting).first();
-        expect(setting).toEqual('languageServer');
-        expect(value).toEqual(ActivatePylanceBanner.ExpectedLanguageServer);
-        verify(cmdMock.executeCommand('workbench.action.reloadWindow')).once();
+    testData.forEach((s) => {
+        test(`Selecting Yes when python.languageServer ${s.location} changes setting in ${s.targetName} and reloads window`, async () => {
+            const banner = makeBanner();
+            when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
+                Promise.resolve(banner.LabelYes)
+            );
+
+            when(appConfigMock.inspect<string | undefined>('languageServer')).thenReturn({
+                key: 'languageServer',
+                globalValue: s.globalValue,
+                workspaceValue: s.workspaceValue,
+            });
+
+            await banner.show();
+            const [setting, value, target] = capture(appConfigMock.updateSetting).first();
+            expect(setting).toEqual('languageServer');
+            expect(value).toEqual(ActivatePylanceBanner.ExpectedLanguageServer);
+            expect(target).toEqual(s.expectedTarget);
+            verify(cmdMock.executeCommand('workbench.action.reloadWindow')).once();
+        });
     });
 
     test('Banner not shown when python.languageServer setting is Pylance', async () => {

@@ -10,6 +10,8 @@ import { ApplicationShell } from './types/appShell';
 import { BrowserService } from './types/browser';
 import { CommandManager } from './types/commandManager';
 
+const lsSettingName = 'languageServer';
+
 abstract class BannerBase {
     protected disabledInCurrentSession = false;
 
@@ -79,21 +81,35 @@ export class ActivatePylanceBanner extends BannerBase {
         if (!this.enabled) {
             return false;
         }
-        const ls = this.appConfig.getSetting<string>('languageServer');
+        // This check effective setting, we don't knoe where it is specified yet.
+        const ls = this.appConfig.getSetting<string>(lsSettingName);
         return ls !== ActivatePylanceBanner.ExpectedLanguageServer;
     }
 
     private async enableLanguageServer(): Promise<void> {
-        await this.appConfig.updateSetting(
-            'languageServer',
-            ActivatePylanceBanner.ExpectedLanguageServer,
-            ConfigurationTarget.Global
-        );
+        // Figure out which one to set.
+        const inspect = this.appConfig.inspect<string>(lsSettingName);
+        // If setting is specified per folder, we leave it alone. Scope of the setting is `window`.
+        // If LS is specified in both workspace and global, we change nearest one, i.e. the workspace.
+        if (inspect?.workspaceValue) {
+            await this.appConfig.updateSetting(
+                lsSettingName,
+                ActivatePylanceBanner.ExpectedLanguageServer,
+                ConfigurationTarget.Workspace
+            );
+        } else {
+            // Global or not specified. Apply new value in the global scope.
+            await this.appConfig.updateSetting(
+                lsSettingName,
+                ActivatePylanceBanner.ExpectedLanguageServer,
+                ConfigurationTarget.Global
+            );
+        }
         await this.cmdManager.executeCommand('workbench.action.reloadWindow');
     }
 }
 
-// Prompt for Pylance surve.
+// Prompt for Pylance survey.
 export class PylanceSurveyBanner extends BannerBase {
     public static readonly SettingKey = 'PylanceSurveyBanner';
 
