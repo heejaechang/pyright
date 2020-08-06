@@ -14,7 +14,7 @@
         "url": "https://github.com/microsoft/pyrx"
     },
     "engines": {
-        "vscode": "^1.46.0"
+        "vscode": "^1.47.0"
     },
     "keywords": [
         "python"
@@ -158,7 +158,7 @@
         "build": "tsc -p ./"
     },
     "devDependencies": {
-        "@types/vscode": "^1.46.0",
+        "@types/vscode": "^1.47.0",
         "typescript": "^3.9.5",
         "vsce": "^1.77.0"
     },
