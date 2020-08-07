@@ -43,7 +43,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "Pylance Configuration",
+            "title": "Pylance",
             "properties": {
                 "python.analysis.typeshedPaths": {
                     "type": "array",
