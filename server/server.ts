@@ -12,7 +12,6 @@ import {
     CodeActionKind,
     CodeActionParams,
     Command,
-    ConfigurationItem,
     Connection,
     ExecuteCommandParams,
     InitializeParams,
@@ -148,13 +147,13 @@ class PylanceServer extends LanguageServerBase {
         };
 
         try {
-            const pythonSection = await this.getConfiguration(workspace, pythonSectionName);
+            const pythonSection = await this.getConfiguration(workspace.rootUri, pythonSectionName);
             if (pythonSection) {
                 serverSettings.pythonPath = normalizeSlashes(pythonSection.pythonPath);
                 serverSettings.venvPath = normalizeSlashes(pythonSection.venvPath);
             }
 
-            const pythonAnalysisSection = await this.getConfiguration(workspace, pythonAnalysisSectionName);
+            const pythonAnalysisSection = await this.getConfiguration(workspace.rootUri, pythonAnalysisSectionName);
             if (pythonAnalysisSection) {
                 const typeshedPaths = pythonAnalysisSection.typeshedPaths;
                 if (typeshedPaths && isArray(typeshedPaths) && typeshedPaths.length > 0) {
@@ -332,11 +331,7 @@ class PylanceServer extends LanguageServerBase {
     }
 
     private async _updateGlobalSettings(): Promise<void> {
-        const item: ConfigurationItem = {
-            scopeUri: undefined,
-            section: pythonAnalysisSectionName,
-        };
-        const pythonAnalysis = await this._connection.workspace.getConfiguration(item);
+        const pythonAnalysis = await this.getConfiguration(undefined, pythonAnalysisSectionName);
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
 }
