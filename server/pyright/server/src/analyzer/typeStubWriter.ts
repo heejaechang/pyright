@@ -41,6 +41,7 @@ import { getScopeForNode } from './scopeUtils';
 import { SourceFile } from './sourceFile';
 import { Symbol } from './symbol';
 import * as SymbolNameUtils from './symbolNameUtils';
+import { TypeEvaluator } from './typeEvaluator';
 
 class TrackedImport {
     constructor(public importName: string) {}
@@ -124,7 +125,7 @@ export class TypeStubWriter extends ParseTreeWalker {
     private _trackedImportFrom = new Map<string, TrackedImportFrom>();
     private _accessedImportedSymbols = new Map<string, boolean>();
 
-    constructor(private _stubPath: string, private _sourceFile: SourceFile) {
+    constructor(private _stubPath: string, private _sourceFile: SourceFile, private _evaluator: TypeEvaluator) {
         super();
 
         // As a heuristic, we'll include all of the import statements
@@ -195,11 +196,13 @@ export class TypeStubWriter extends ParseTreeWalker {
             this._emitDecorators(node.decorators);
             let line = node.isAsync ? 'async ' : '';
             line += `def ${functionName}`;
-            line += `(${node.parameters.map((param) => this._printParameter(param)).join(', ')})`;
+            line += `(${node.parameters.map((param, index) => this._printParameter(param, node, index)).join(', ')})`;
 
             let returnAnnotation: string | undefined;
             if (node.returnTypeAnnotation) {
                 returnAnnotation = this._printExpression(node.returnTypeAnnotation, true);
+            } else if (node.functionAnnotationComment) {
+                returnAnnotation = this._printExpression(node.functionAnnotationComment.returnTypeAnnotation, true);
             } else {
                 // Handle a few common cases where we always know the answer.
                 if (node.name.value === '__init__') {
@@ -296,24 +299,13 @@ export class TypeStubWriter extends ParseTreeWalker {
         let line = '';
 
         if (node.leftExpression.nodeType === ParseNodeType.Name) {
-            // Handle "__all__" assignments specially.
+            // Strip out "__all__" assignments.
             if (node.leftExpression.value === '__all__') {
-                this._emitLine(this._printExpression(node, false, true));
                 return false;
             }
 
             if (this._functionNestCount === 0) {
                 line = this._printExpression(node.leftExpression);
-            }
-        } else if (node.leftExpression.nodeType === ParseNodeType.MemberAccess) {
-            const baseExpression = node.leftExpression.leftExpression;
-            if (baseExpression.nodeType === ParseNodeType.Name) {
-                if (baseExpression.value === 'self') {
-                    const memberName = node.leftExpression.memberName.value;
-                    if (!SymbolNameUtils.isPrivateOrProtectedName(memberName)) {
-                        line = this._printExpression(node.leftExpression);
-                    }
-                }
             }
         }
 
@@ -339,14 +331,6 @@ export class TypeStubWriter extends ParseTreeWalker {
     }
 
     visitAugmentedAssignment(node: AugmentedAssignmentNode) {
-        if (this._classNestCount === 0 && this._functionNestCount === 0) {
-            if (node.leftExpression.nodeType === ParseNodeType.Name) {
-                if (node.leftExpression.value === '__all__') {
-                    this._emitLine(this._printExpression(node, false, true));
-                }
-            }
-        }
-
         return false;
     }
 
@@ -516,28 +500,29 @@ export class TypeStubWriter extends ParseTreeWalker {
         return line;
     }
 
-    private _printParameter(node: ParameterNode): string {
+    private _printParameter(paramNode: ParameterNode, functionNode: FunctionNode, paramIndex: number): string {
         let line = '';
-        if (node.category === ParameterCategory.VarArgList) {
+        if (paramNode.category === ParameterCategory.VarArgList) {
             line += '*';
-        } else if (node.category === ParameterCategory.VarArgDictionary) {
+        } else if (paramNode.category === ParameterCategory.VarArgDictionary) {
             line += '**';
         }
 
-        if (node.name) {
-            line += node.name.value;
+        if (paramNode.name) {
+            line += paramNode.name.value;
         }
 
+        const paramTypeAnnotation = this._evaluator.getTypeAnnotationForParameter(functionNode, paramIndex);
         let paramType = '';
-        if (node.typeAnnotation) {
-            paramType = this._printExpression(node.typeAnnotation, true);
+        if (paramTypeAnnotation) {
+            paramType = this._printExpression(paramTypeAnnotation, true);
         }
 
         if (paramType) {
             line += ': ' + paramType;
         }
 
-        if (node.defaultValue) {
+        if (paramNode.defaultValue) {
             // Follow PEP8 spacing rules. Include spaces if type
             // annotation is present, no space otherwise.
             if (paramType) {
