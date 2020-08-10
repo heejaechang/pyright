@@ -502,7 +502,7 @@
                         },
                         "reportInvalidStubStatement": {
                             "type": "string",
-                            "description": "Diagnostics for statements that have no semantic meaning within a type stub.",
+                            "description": "Diagnostics for type stub statements that do not conform to PEP 484.",
                             "default": "warning",
                             "enum": [
                                 "none",
