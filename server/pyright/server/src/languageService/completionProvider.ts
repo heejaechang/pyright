@@ -41,10 +41,12 @@ import {
     FunctionType,
     isClass,
     isModule,
+    isNone,
     isObject,
     isTypeVar,
     ObjectType,
     Type,
+    TypeBase,
     TypeCategory,
 } from '../analyzer/types';
 import { doForSubtypes, getMembersForClass, getMembersForModule, specializeType } from '../analyzer/typeUtils';
@@ -493,7 +495,7 @@ export class CompletionProvider {
 
     private _printMethodSignature(node: FunctionNode): string {
         const paramList = node.parameters
-            .map((param) => {
+            .map((param, index) => {
                 let paramString = '';
                 if (param.category === ParameterCategory.VarArgList) {
                     paramString += '*';
@@ -505,8 +507,9 @@ export class CompletionProvider {
                     paramString += param.name.value;
                 }
 
-                if (param.typeAnnotation) {
-                    paramString += ': ' + ParseTreeUtils.printExpression(param.typeAnnotation);
+                const paramTypeAnnotation = this._evaluator.getTypeAnnotationForParameter(node, index);
+                if (paramTypeAnnotation) {
+                    paramString += ': ' + ParseTreeUtils.printExpression(paramTypeAnnotation);
                 }
 
                 return paramString;
@@ -517,6 +520,9 @@ export class CompletionProvider {
 
         if (node.returnTypeAnnotation) {
             methodSignature += ' -> ' + ParseTreeUtils.printExpression(node.returnTypeAnnotation);
+        } else if (node.functionAnnotationComment) {
+            methodSignature +=
+                ' -> ' + ParseTreeUtils.printExpression(node.functionAnnotationComment.returnTypeAnnotation);
         }
 
         return methodSignature;
@@ -525,6 +531,7 @@ export class CompletionProvider {
     private _getMemberAccessCompletions(leftExprNode: ExpressionNode, priorWord: string): CompletionList | undefined {
         const leftType = this._evaluator.getType(leftExprNode);
         const symbolTable = new Map<string, Symbol>();
+        const completionList = CompletionList.create();
 
         if (leftType) {
             doForSubtypes(leftType, (subtype) => {
@@ -534,20 +541,35 @@ export class CompletionProvider {
                 }
 
                 if (isObject(specializedSubtype)) {
-                    getMembersForClass(specializedSubtype.classType, symbolTable, true);
+                    getMembersForClass(specializedSubtype.classType, symbolTable, /* includeInstanceVars */ true);
                 } else if (isClass(specializedSubtype)) {
-                    getMembersForClass(specializedSubtype, symbolTable, false);
+                    getMembersForClass(specializedSubtype, symbolTable, /* includeInstanceVars */ false);
                 } else if (isModule(specializedSubtype)) {
                     getMembersForModule(specializedSubtype, symbolTable);
+                } else if (
+                    specializedSubtype.category === TypeCategory.Function ||
+                    specializedSubtype.category === TypeCategory.OverloadedFunction
+                ) {
+                    const functionClass = this._evaluator.getBuiltInType(leftExprNode, 'function');
+                    if (functionClass && isClass(functionClass)) {
+                        getMembersForClass(functionClass, symbolTable, /* includeInstanceVars */ true);
+                    }
+                } else if (isNone(subtype)) {
+                    const objectClass = this._evaluator.getBuiltInType(leftExprNode, 'object');
+                    if (objectClass && isClass(objectClass)) {
+                        getMembersForClass(objectClass, symbolTable, TypeBase.isInstance(subtype));
+                    }
                 }
 
                 return undefined;
             });
-        }
 
-        const completionList = CompletionList.create();
-        const objectThrough: ObjectType | undefined = leftType && isObject(leftType) ? leftType : undefined;
-        this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
+            const objectThrough: ObjectType | undefined = leftType && isObject(leftType) ? leftType : undefined;
+            this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
+
+            // const moduleNamesForType = getDeclaringModulesForType(leftType);
+            // TODO - log modules to telemetry.
+        }
 
         return completionList;
     }
@@ -964,7 +986,7 @@ export class CompletionProvider {
             const similarity = StringUtils.computeCompletionSimilarity(priorWord, argName);
 
             if (similarity > similarityLimit) {
-                const completionItem = CompletionItem.create(argName);
+                const completionItem = CompletionItem.create(argName + '=');
                 completionItem.kind = CompletionItemKind.Variable;
 
                 const completionItemData: CompletionItemData = {
@@ -1022,16 +1044,20 @@ export class CompletionProvider {
             // exported from this scope, don't include it in the
             // suggestion list.
             if (!symbol.isExternallyHidden() && includeSymbolCallback(name)) {
-                this._addSymbol(
-                    name,
-                    symbol,
-                    priorWord,
-                    completionList,
-                    undefined,
-                    undefined,
-                    undefined,
-                    objectThrough
-                );
+                // Don't add a symbol more than once. It may have already been
+                // added from an inner scope's symbol table.
+                if (!completionList.items.some((item) => item.label === name)) {
+                    this._addSymbol(
+                        name,
+                        symbol,
+                        priorWord,
+                        completionList,
+                        undefined,
+                        undefined,
+                        undefined,
+                        objectThrough
+                    );
+                }
             }
         });
     }

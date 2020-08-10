@@ -345,7 +345,7 @@ test('ReturnTypes1', () => {
 test('Specialization1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['specialization1.py']);
 
-    validateResults(analysisResults, 7);
+    validateResults(analysisResults, 8);
 });
 
 test('Specialization2', () => {
@@ -1144,7 +1144,7 @@ test('NewType1', () => {
 test('NewType2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType2.py']);
 
-    validateResults(analysisResults, 1);
+    validateResults(analysisResults, 4);
 });
 
 test('NewType3', () => {
@@ -1441,6 +1441,12 @@ test('GenericTypes31', () => {
     validateResults(analysisResults, 0);
 });
 
+test('GenericTypes32', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes32.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1487,6 +1493,12 @@ test('Protocol8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol8.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('Protocol9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol9.py']);
+
+    validateResults(analysisResults, 0);
 });
 
 test('TypedDict1', () => {
@@ -1935,7 +1947,7 @@ test('ClassVar2', () => {
 test('TypeVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar1.py']);
 
-    validateResults(analysisResults, 2);
+    validateResults(analysisResults, 3);
 });
 
 test('TypeVar2', () => {
@@ -1984,4 +1996,16 @@ test('Decorator2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator2.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('FunctionAnnotation1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['functionAnnotation1.py']);
+
+    validateResults(analysisResults, 1);
+});
+
+test('FunctionAnnotation2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['functionAnnotation2.py']);
+
+    validateResults(analysisResults, 4);
 });

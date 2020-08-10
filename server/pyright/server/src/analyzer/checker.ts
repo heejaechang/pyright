@@ -158,7 +158,7 @@ export class Checker extends ParseTreeWalker {
 
     visitStatementList(node: StatementListNode) {
         node.statements.forEach((statement) => {
-            if (isExpressionNode(statement) && !AnalyzerNodeInfo.isCodeUnreachable(statement)) {
+            if (isExpressionNode(statement)) {
                 // Evaluate the expression in case it wasn't otherwise evaluated
                 // through lazy analysis. This will mark referenced symbols as
                 // accessed and report any errors associated with it.
@@ -227,11 +227,26 @@ export class Checker extends ParseTreeWalker {
                         );
                     }
                 }
+
+                // If it's a stub file, report an issue of the default value expression is not "...".
+                if (param.defaultValue && this._fileInfo.isStubFile) {
+                    const defaultValueType = this._evaluator.getType(param.defaultValue);
+                    if (!defaultValueType || !isEllipsisType(defaultValueType)) {
+                        this._evaluator.addDiagnostic(
+                            this._fileInfo.diagnosticRuleSet.reportInvalidStubStatement,
+                            DiagnosticRule.reportInvalidStubStatement,
+                            Localizer.Diagnostic.defaultValueNotEllipsis(),
+                            param.defaultValue
+                        );
+                    }
+                }
             });
 
             // If this is a stub, ensure that the return type is specified.
             if (this._fileInfo.isStubFile) {
-                if (!node.returnTypeAnnotation) {
+                const returnAnnotation =
+                    node.returnTypeAnnotation || node.functionAnnotationComment?.returnTypeAnnotation;
+                if (!returnAnnotation) {
                     this._evaluator.addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportUnknownParameterType,
                         DiagnosticRule.reportUnknownParameterType,
@@ -258,6 +273,10 @@ export class Checker extends ParseTreeWalker {
 
         if (node.returnTypeAnnotation) {
             this.walk(node.returnTypeAnnotation);
+        }
+
+        if (node.functionAnnotationComment) {
+            this.walk(node.functionAnnotationComment);
         }
 
         this.walkMultiple(node.decorators);
@@ -962,7 +981,29 @@ export class Checker extends ParseTreeWalker {
                     this._reportMultipleFinalDeclarations(name, symbol);
 
                     this._reportMultipleTypeAliasDeclarations(name, symbol);
+
+                    this._reportInvalidOverload(name, symbol);
                 });
+            }
+        }
+    }
+
+    private _reportInvalidOverload(name: string, symbol: Symbol) {
+        const typedDecls = symbol.getTypedDeclarations();
+        if (typedDecls.length === 1) {
+            const primaryDecl = typedDecls[0];
+            if (primaryDecl.type === DeclarationType.Function) {
+                const type = this._evaluator.getEffectiveTypeOfSymbol(symbol);
+
+                if (type.category === TypeCategory.Function && FunctionType.isOverloaded(type)) {
+                    // There should never be a single overload.
+                    this._evaluator.addDiagnostic(
+                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.singleOverload().format({ name }),
+                        primaryDecl.node.name
+                    );
+                }
             }
         }
     }
@@ -1726,7 +1767,8 @@ export class Checker extends ParseTreeWalker {
             return;
         }
 
-        if (node.returnTypeAnnotation) {
+        const returnAnnotation = node.returnTypeAnnotation || node.functionAnnotationComment?.returnTypeAnnotation;
+        if (returnAnnotation) {
             const functionNeverReturns = !this._evaluator.isAfterNodeReachable(node);
             const implicitlyReturnsNone = this._evaluator.isAfterNodeReachable(node.suite);
 
@@ -1738,7 +1780,7 @@ export class Checker extends ParseTreeWalker {
                         this._fileInfo.diagnosticRuleSet.reportUnknownVariableType,
                         DiagnosticRule.reportUnknownVariableType,
                         Localizer.Diagnostic.declaredReturnTypeUnknown(),
-                        node.returnTypeAnnotation
+                        returnAnnotation
                     );
                 } else if (isPartlyUnknown(declaredReturnType)) {
                     this._evaluator.addDiagnostic(
@@ -1747,7 +1789,7 @@ export class Checker extends ParseTreeWalker {
                         Localizer.Diagnostic.declaredReturnTypePartiallyUnknown().format({
                             returnType: this._evaluator.printType(declaredReturnType, /* expandTypeAlias */ false),
                         }),
-                        node.returnTypeAnnotation
+                        returnAnnotation
                     );
                 }
             }
@@ -1770,7 +1812,7 @@ export class Checker extends ParseTreeWalker {
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
                             Localizer.Diagnostic.noReturnReturnsNone(),
-                            node.returnTypeAnnotation
+                            returnAnnotation
                         );
                     }
                 } else if (!FunctionType.isAbstractMethod(functionType)) {
@@ -1793,7 +1835,7 @@ export class Checker extends ParseTreeWalker {
                                         /* expandTypeAlias */ false
                                     ),
                                 }) + diagAddendum.getString(),
-                                node.returnTypeAnnotation
+                                returnAnnotation
                             );
                         }
                     }
@@ -2026,6 +2068,16 @@ export class Checker extends ParseTreeWalker {
                     node.parameters.length > 0 ? node.parameters[0] : node.name
                 );
             }
+        } else if (node.name && node.name.value === '__class_getitem__') {
+            // __class_getitem__ overrides should have a "cls" parameter.
+            if (node.parameters.length === 0 || !node.parameters[0].name || node.parameters[0].name.value !== 'cls') {
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportSelfClsParameterName,
+                    DiagnosticRule.reportSelfClsParameterName,
+                    Localizer.Diagnostic.classGetItemClsParam(),
+                    node.parameters.length > 0 ? node.parameters[0] : node.name
+                );
+            }
         } else if (FunctionType.isStaticMethod(functionType)) {
             // Static methods should not have "self" or "cls" parameters.
             if (node.parameters.length > 0 && node.parameters[0].name) {
@@ -2089,7 +2141,11 @@ export class Checker extends ParseTreeWalker {
                         }
                     }
 
-                    if (!isLegalMetaclassName) {
+                    // Some typeshed stubs use a name that starts with an underscore to designate
+                    // a parameter that cannot be positional.
+                    const isPrivateName = SymbolNameUtils.isPrivateOrProtectedName(paramName);
+
+                    if (!isLegalMetaclassName && !isPrivateName) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportSelfClsParameterName,
                             DiagnosticRule.reportSelfClsParameterName,

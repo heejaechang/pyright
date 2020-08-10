@@ -36,3 +36,15 @@ i = f"""
         'bye'
     }
 """
+
+j = f"""
+{
+    f'''
+        {f' { f":" } '}
+    '''
+}
+"""
+
+# This should generate a warning because of the unknown
+# escape sequence but not an error.
+h = f"hello\{4}"

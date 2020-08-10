@@ -151,6 +151,10 @@ function loadStringsFromJsonFile(locale: string): StringLookupMap | undefined {
 
 export namespace Localizer {
     export namespace Diagnostic {
+        export const annotatedParamCountMismatch = () =>
+            new ParameterizedString<{ expected: number; received: number }>(
+                getRawString('Diagnostic.annotatedParamCountMismatch')
+            );
         export const annotatedTypeArgMissing = () => getRawString('Diagnostic.annotatedTypeArgMissing');
         export const annotationFormatString = () => getRawString('Diagnostic.annotationFormatString');
         export const annotationNotSupported = () => getRawString('Diagnostic.annotationNotSupported');
@@ -201,6 +205,7 @@ export namespace Localizer {
         export const callableFirstArg = () => getRawString('Diagnostic.callableFirstArg');
         export const classMethodClsParam = () => getRawString('Diagnostic.classMethodClsParam');
         export const classDecoratorTypeUnknown = () => getRawString('Diagnostic.classDecoratorTypeUnknown');
+        export const classGetItemClsParam = () => getRawString('Diagnostic.classGetItemClsParam');
         export const classVarFirstArgMissing = () => getRawString('Diagnostic.classVarFirstArgMissing');
         export const classVarTooManyArgs = () => getRawString('Diagnostic.classVarTooManyArgs');
         export const comprehensionInDict = () => getRawString('Diagnostic.comprehensionInDict');
@@ -219,6 +224,7 @@ export namespace Localizer {
         export const declaredReturnTypeUnknown = () => getRawString('Diagnostic.declaredReturnTypeUnknown');
         export const defaultValueContainsCall = () => getRawString('Diagnostic.defaultValueContainsCall');
         export const defaultValueNotAllowed = () => getRawString('Diagnostic.defaultValueNotAllowed');
+        export const defaultValueNotEllipsis = () => getRawString('Diagnostic.defaultValueNotEllipsis');
         export const dictInAnnotation = () => getRawString('Diagnostic.dictInAnnotation');
         export const dictKeyValuePairs = () => getRawString('Diagnostic.dictKeyValuePairs');
         export const delTargetExpr = () => getRawString('Diagnostic.delTargetExpr');
@@ -241,6 +247,7 @@ export namespace Localizer {
         export const exceptionTypeNotClass = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.exceptionTypeNotClass'));
         export const expectedAfterDecorator = () => getRawString('Diagnostic.expectedAfterDecorator');
+        export const expectedArrow = () => getRawString('Diagnostic.expectedArrow');
         export const expectedAsAfterException = () => getRawString('Diagnostic.expectedAsAfterException');
         export const expectedAssignRightHandExpr = () => getRawString('Diagnostic.expectedAssignRightHandExpr');
         export const expectedBinaryRightHandExpr = () => getRawString('Diagnostic.expectedBinaryRightHandExpr');
@@ -455,6 +462,8 @@ export namespace Localizer {
         export const returnTypeUnknown = () => getRawString('Diagnostic.returnTypeUnknown');
         export const returnTypePartiallyUnknown = () =>
             new ParameterizedString<{ returnType: string }>(getRawString('Diagnostic.returnTypePartiallyUnknown'));
+        export const singleOverload = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.singleOverload'));
         export const staticClsSelfParam = () => getRawString('Diagnostic.staticClsSelfParam');
         export const stringNonAsciiBytes = () => getRawString('Diagnostic.stringNonAsciiBytes');
         export const stringUnsupportedEscape = () => getRawString('Diagnostic.stringUnsupportedEscape');
@@ -547,6 +556,7 @@ export namespace Localizer {
         export const typeVarBoundAndConstrained = () => getRawString('Diagnostic.typeVarBoundAndConstrained');
         export const typeVarFirstArg = () => getRawString('Diagnostic.typeVarFirstArg');
         export const typeVarGeneric = () => getRawString('Diagnostic.typeVarGeneric');
+        export const typeVarSingleConstraint = () => getRawString('Diagnostic.typeVarSingleConstraint');
         export const typeVarUnknownParam = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeVarUnknownParam'));
         export const typeVarVariance = () => getRawString('Diagnostic.typeVarVariance');
