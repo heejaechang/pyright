@@ -200,6 +200,10 @@ export namespace Localizer {
         export const baseClassFinal = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.baseClassFinal'));
         export const baseClassUnknown = () => getRawString('Diagnostic.baseClassUnknown');
+        export const bindTypeMismatch = () =>
+            new ParameterizedString<{ type: string; methodName: string; paramName: string }>(
+                getRawString('Diagnostic.bindTypeMismatch')
+            );
         export const breakOutsideLoop = () => getRawString('Diagnostic.breakOutsideLoop');
         export const callableExtraArgs = () => getRawString('Diagnostic.callableExtraArgs');
         export const callableFirstArg = () => getRawString('Diagnostic.callableFirstArg');
@@ -415,6 +419,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredVariableDeclaration'));
         export const operatorLessOrGreaterDeprecated = () => getRawString('Diagnostic.operatorLessOrGreaterDeprecated');
         export const optionalExtraArgs = () => getRawString('Diagnostic.optionalExtraArgs');
+        export const overloadAbstractMismatch = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.overloadAbstractMismatch'));
         export const paramAfterKwargsParam = () => getRawString('Diagnostic.paramAfterKwargsParam');
         export const paramAlreadyAssigned = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramAlreadyAssigned'));

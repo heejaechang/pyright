@@ -748,6 +748,12 @@ test('AbstractClass4', () => {
     validateResults(analysisResults, 1);
 });
 
+test('AbstractClass5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['abstractClass5.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('Module1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['module1.py']);
 
@@ -1781,6 +1787,11 @@ test('MemberAccess2', () => {
 
 test('MemberAccess3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess3.py']);
+    validateResults(analysisResults, 3);
+});
+
+test('MemberAccess4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess4.py']);
     validateResults(analysisResults, 3);
 });
 
