@@ -6941,7 +6941,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (expectedType && isObject(expectedType)) {
             const expectedClass = expectedType.classType;
-            if (ClassType.isBuiltIn(expectedClass, 'Dict') || ClassType.isBuiltIn(expectedClass, 'dict')) {
+            if (
+                ClassType.isBuiltIn(expectedClass, 'Mapping') ||
+                ClassType.isBuiltIn(expectedClass, 'Dict') ||
+                ClassType.isBuiltIn(expectedClass, 'dict')
+            ) {
                 if (expectedClass.typeArguments && expectedClass.typeArguments.length === 2) {
                     expectedKeyType = specializeType(expectedClass.typeArguments[0], /* typeVarMap */ undefined);
                     expectedValueType = specializeType(expectedClass.typeArguments[1], /* typeVarMap */ undefined);
@@ -6956,7 +6960,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             let addUnknown = true;
 
             if (entryNode.nodeType === ParseNodeType.DictionaryKeyEntry) {
-                const keyType = getTypeOfExpression(entryNode.keyExpression, expectedKeyType).type;
+                let keyType = getTypeOfExpression(entryNode.keyExpression, expectedKeyType).type;
+                if (expectedKeyType) {
+                    const adjExpectedKeyType = makeTypeVarsConcrete(expectedKeyType);
+                    if (!isAnyOrUnknown(adjExpectedKeyType)) {
+                        if (canAssignType(adjExpectedKeyType, keyType, new DiagnosticAddendum(), undefined)) {
+                            keyType = adjExpectedKeyType;
+                        }
+                    }
+                }
                 let valueType: Type | undefined;
 
                 if (
@@ -7935,6 +7947,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             _promote: { alias: '', module: 'builtins' },
             no_type_check: { alias: '', module: 'builtins' },
             NoReturn: { alias: '', module: 'builtins' },
+            Counter: { alias: 'Counter', module: 'collections' },
             List: { alias: 'list', module: 'builtins' },
             Dict: { alias: 'dict', module: 'builtins' },
             DefaultDict: { alias: 'defaultdict', module: 'collections' },
