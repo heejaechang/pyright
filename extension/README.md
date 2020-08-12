@@ -90,6 +90,12 @@ Pylance provides users with the ability to customize their Python language suppo
         - `true` (default)
         - `false`
 
+-   `python.analysis.autoImportCompletions`
+    -   Used to control the offering of auto-imports in completions.
+    -   Accepted values:
+        -   `true` (default)
+        -   `false`
+
 
 Contributing
 ===============
