@@ -1,12 +1,13 @@
-# Ignore everything
-*
+# Until https://github.com/microsoft/vscode-vsce/issues/417 is fixed,
+# ignore known build artifacts.
 
-# Unignore required files
-!README.md
-!CHANGELOG.md
-!LICENSE.txt
-!NOTICE.txt
-!package*.json
-!dist/
-!images/
-!server/
+node_modules
+.vscode/**
+.vscode-test/**
+out/**
+src/**
+.gitignore
+**/*.map
+
+tsconfig.*
+webpack.*
