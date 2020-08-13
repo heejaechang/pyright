@@ -12,6 +12,7 @@ Notable changes:
 In addition, Pylance's copy of Pyright has been updated from 1.1.60 to 1.1.62, including the following changes:
 
 -   Unreleased in Pyright, but included in Pylance:
+    -   Bug Fix: Fixed bug that caused incorrect evaluation of symbol types within a chain of assignments (e.g. "a = b = c = 4") in some cases.
     -   Enhancement: Improved type checker's handling of "in" operator. It previously flagged an error if the right operand didn't support a `__contains__` method. It now properly checks for iterable types as well.
     -   Bug Fix: Fixed bug in bidirectional type inference for dictionary statements. The logic was not allowing for dict subclass Mapping.
     -   Enhancement: Added support for special type "Counter" exported by typing module, which is an alias for collections.Counter.
