@@ -7,7 +7,7 @@ Notable changes:
 -   The `pandas` stubs have been further improved.
     ([pylance-release#27](https://github.com/microsoft/pylance-release/issues/27), [pylance-release#90](https://github.com/microsoft/pylance-release/issues/90), [pylance-release#144](https://github.com/microsoft/pylance-release/issues/144), [pylance-release#148](https://github.com/microsoft/pylance-release/issues/148), [pylance-release#202](https://github.com/microsoft/pylance-release/issues/202))
 -   The VS Code settings editor (both UI and JSON) now provides hints for `python.analysis.diagnosticSeverityOverrides`, listing all valid options, their values, and descriptions.
--   Old-style `# type` comments for function signature type annotations are now supported. This syntax is underspecified and not preferred, but is commonly used provide compatibility with (the now end-of-life) Python 2, and may improve the usability of some libraries.
+-   Old-style `# type` comments for function signature type annotations are now supported. This syntax is underspecified and not preferred, but is commonly used to provide compatibility with (the now end-of-life) Python 2, and may improve the usability of some libraries.
 
 In addition, Pylance's copy of Pyright has been updated from 1.1.60 to 1.1.62, including the following changes:
 
