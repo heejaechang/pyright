@@ -14,9 +14,9 @@
         "url": "https://github.com/microsoft/pyrx"
     },
     "scripts": {
-        "install:all": "npm run build:copyTypeshed && npm run build:copyBundledStubs && npm install && npm run build:getonnx && cd pyright && npm run install:all && cd ..",
+        "install:all": "npm install && npm run build:getonnx && cd pyright && npm run install:all && cd ..",
         "start": "npm i && npm run build:server",
-        "build": "npm run build:server && npm run installServer",
+        "build": "npm run build:server && npm run installServer && npm run build:copyTypeshed && npm run build:copyBundledStubs",
         "build:server": "tsc",
         "build:copyTypeshed": "node ./copyTypeshedFallback.js",
         "build:copyBundledStubs": "node ./copyBundledStubs.js",
