@@ -92,6 +92,7 @@ import {
     NoneType,
     ObjectType,
     Type,
+    TypeBase,
     TypeCategory,
     UnknownType,
 } from './types';
@@ -215,7 +216,7 @@ export class Checker extends ParseTreeWalker {
                         const diagAddendum = new DiagnosticAddendum();
                         diagAddendum.addMessage(
                             Localizer.DiagnosticAddendum.paramType().format({
-                                paramType: this._evaluator.printType(paramType, /* expandTypeAlias */ false),
+                                paramType: this._evaluator.printType(paramType, /* expandTypeAlias */ true),
                             })
                         );
                         this._evaluator.addDiagnostic(
@@ -471,7 +472,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownVariableType,
                     DiagnosticRule.reportUnknownVariableType,
                     Localizer.Diagnostic.returnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ false),
+                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ true),
                     }),
                     node.returnExpression!
                 );
@@ -1401,6 +1402,10 @@ export class Checker extends ParseTreeWalker {
                         }
                         break;
 
+                    case TypeCategory.Function:
+                        isSupported = TypeBase.isInstantiable(subtype);
+                        break;
+
                     default:
                         isSupported = false;
                         break;
@@ -1787,7 +1792,7 @@ export class Checker extends ParseTreeWalker {
                         this._fileInfo.diagnosticRuleSet.reportUnknownVariableType,
                         DiagnosticRule.reportUnknownVariableType,
                         Localizer.Diagnostic.declaredReturnTypePartiallyUnknown().format({
-                            returnType: this._evaluator.printType(declaredReturnType, /* expandTypeAlias */ false),
+                            returnType: this._evaluator.printType(declaredReturnType, /* expandTypeAlias */ true),
                         }),
                         returnAnnotation
                     );
@@ -1855,7 +1860,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownParameterType,
                     DiagnosticRule.reportUnknownParameterType,
                     Localizer.Diagnostic.returnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(inferredReturnType, /* expandTypeAlias */ false),
+                        returnType: this._evaluator.printType(inferredReturnType, /* expandTypeAlias */ true),
                     }),
                     node.name
                 );
