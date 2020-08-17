@@ -4,13 +4,16 @@
 import { ConfigurationTarget, Memento } from 'vscode';
 
 import * as localize from './common/localize';
-import { getRandomBetween } from './common/utils';
+import {
+    getRandomBetween,
+    isPylanceDefaultLanguageServer,
+    LanguageServerSettingName,
+    PylanceName,
+} from './common/utils';
 import { AppConfiguration } from './types/appConfig';
 import { ApplicationShell } from './types/appShell';
 import { BrowserService } from './types/browser';
 import { CommandManager } from './types/commandManager';
-
-const lsSettingName = 'languageServer';
 
 abstract class BannerBase {
     protected disabledInCurrentSession = false;
@@ -40,8 +43,6 @@ export class ActivatePylanceBanner extends BannerBase {
     readonly LabelLater = localize.Common.remindMeLater();
 
     readonly settingKey: string;
-
-    static readonly ExpectedLanguageServer = 'Pylance';
 
     constructor(
         private readonly appShell: ApplicationShell,
@@ -81,29 +82,19 @@ export class ActivatePylanceBanner extends BannerBase {
         if (!this.enabled) {
             return false;
         }
-        // This check effective setting, we don't knoe where it is specified yet.
-        const ls = this.appConfig.getSetting<string>(lsSettingName);
-        return ls !== ActivatePylanceBanner.ExpectedLanguageServer;
+        return !isPylanceDefaultLanguageServer(this.appConfig);
     }
 
     private async enableLanguageServer(): Promise<void> {
         // Figure out which one to set.
-        const inspect = this.appConfig.inspect<string>(lsSettingName);
+        const inspect = this.appConfig.inspect<string>(LanguageServerSettingName);
         // If setting is specified per folder, we leave it alone. Scope of the setting is `window`.
         // If LS is specified in both workspace and global, we change nearest one, i.e. the workspace.
         if (inspect?.workspaceValue) {
-            await this.appConfig.updateSetting(
-                lsSettingName,
-                ActivatePylanceBanner.ExpectedLanguageServer,
-                ConfigurationTarget.Workspace
-            );
+            await this.appConfig.updateSetting(LanguageServerSettingName, PylanceName, ConfigurationTarget.Workspace);
         } else {
             // Global or not specified. Apply new value in the global scope.
-            await this.appConfig.updateSetting(
-                lsSettingName,
-                ActivatePylanceBanner.ExpectedLanguageServer,
-                ConfigurationTarget.Global
-            );
+            await this.appConfig.updateSetting(LanguageServerSettingName, PylanceName, ConfigurationTarget.Global);
         }
         await this.cmdManager.executeCommand('workbench.action.reloadWindow');
     }

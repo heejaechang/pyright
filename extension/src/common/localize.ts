@@ -20,6 +20,14 @@ export namespace LanguageServer {
         'LanguageServer.surveyMessage',
         'Can you please take 2 minutes to tell us how Pylance language server is working for you?'
     );
+    export const settingsMigratedMessage = localize(
+        'LanguageServer.settingsMigratedMessage',
+        'Settings applicable to Microsoft Language Server were copied to Pylance settings. Please check settings.json file(s) for details.'
+    );
+    export const settingsMigrationError = localize(
+        'LanguageServer.settingsMigrationError',
+        'The following settings could not be migrated:'
+    );
 }
 
 // Skip using vscode-nls and instead just compute our strings based on key values.

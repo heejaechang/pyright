@@ -9,6 +9,7 @@ import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
 import { loadLocalizedStrings } from './common/localize';
 import { setExtensionRoot } from './common/utils';
+import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
 import { BrowserServiceImpl } from './types/browser';
 import { CommandManagerImpl } from './types/commandManager';
@@ -23,6 +24,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     const serverPath = path.join(context.extensionPath, 'server');
     showActivatePylanceBanner(context, version).ignoreErrors();
     showPylanceSurveyBanner(context, version).ignoreErrors();
+    migrateV1Settings(new AppConfigurationImpl(), new ApplicationShellImpl()).ignoreErrors();
 
     return {
         languageServerFolder: async () => ({

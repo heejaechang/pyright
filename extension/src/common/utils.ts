@@ -1,6 +1,8 @@
 import * as crypto from 'crypto';
 import * as path from 'path';
 
+import { AppConfiguration } from '../types/appConfig';
+
 let extensionRootFolder: string;
 
 export function setExtensionRoot(extensionRoot: string): void {
@@ -36,4 +38,13 @@ function getRandom(): number {
 export function getRandomBetween(min = 0, max = 10): number {
     const randomVal: number = getRandom();
     return min + randomVal * (max - min);
+}
+
+export const PylanceName = 'Pylance';
+export const LanguageServerSettingName = 'languageServer';
+
+export function isPylanceDefaultLanguageServer(appConfig: AppConfiguration): boolean {
+    // This check effective setting, we don't know where it is specified yet.
+    const ls = appConfig.getSetting<string>(LanguageServerSettingName);
+    return ls === PylanceName;
 }
