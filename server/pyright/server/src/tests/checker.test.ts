@@ -330,6 +330,12 @@ test('TypeConstraint16', () => {
     validateResults(analysisResults, 2);
 });
 
+test('TypeConstraint17', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeConstraint17.py']);
+
+    validateResults(analysisResults, 8);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -718,10 +724,22 @@ test('Tuples6', () => {
     validateResults(analysisResults, 7);
 });
 
+test('Tuples7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples7.py']);
+
+    validateResults(analysisResults, 7);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
     validateResults(analysisResults, 6);
+});
+
+test('NamedTuples2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples2.py']);
+
+    validateResults(analysisResults, 8);
 });
 
 test('AbstractClass1', () => {
@@ -1801,6 +1819,11 @@ test('MemberAccess4', () => {
     validateResults(analysisResults, 3);
 });
 
+test('MemberAccess5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess5.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('ParamName1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1917,9 +1940,6 @@ test('Unions2', () => {
     validateResults(analysisResults38, 0);
 });
 
-// Skip ParamSpec tests until they are added back in to the
-// specification.
-/*
 test('ParamSpec1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1947,7 +1967,14 @@ test('ParamSpec3', () => {
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec3.py'], configOptions);
     validateResults(results, 1);
 });
-*/
+
+test('ParamSpec4', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec4.py'], configOptions);
+    validateResults(results, 5);
+});
 
 test('ClassVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar1.py']);

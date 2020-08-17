@@ -48,6 +48,9 @@ export interface ClassMember {
 
     // True if instance member, false if class member
     isInstanceMember: boolean;
+
+    // True if member has declared type, false if inferred
+    isTypeDeclared: boolean;
 }
 
 export const enum ClassMemberLookupFlags {
@@ -429,11 +432,37 @@ export function getSpecializedTupleType(type: Type): ClassType | undefined {
         classType = type.classType;
     }
 
-    if (classType && ClassType.isBuiltIn(classType, 'Tuple')) {
+    if (!classType) {
+        return undefined;
+    }
+
+    // See if this class derives from Tuple. If it does, we'll assume that it
+    // hasn't been overridden in a way that changes the behavior of the tuple class.
+    const tupleClass = classType.details.mro.find(
+        (mroClass) => isClass(mroClass) && ClassType.isBuiltIn(mroClass, 'Tuple')
+    );
+    if (!tupleClass || !isClass(tupleClass)) {
+        return undefined;
+    }
+
+    if (ClassType.isSameGenericClass(classType, tupleClass)) {
         return classType;
     }
 
-    return undefined;
+    const typeVarMap = buildTypeVarMapFromSpecializedClass(classType);
+    return specializeType(tupleClass, typeVarMap) as ClassType;
+}
+
+export function isLiteralType(type: Type, allowLiteralUnions = true): boolean {
+    if (isObject(type)) {
+        return type.classType.literalValue !== undefined;
+    }
+
+    if (type.category === TypeCategory.Union) {
+        return !type.subtypes.some((t) => !isObject(t) || t.classType.literalValue === undefined);
+    }
+
+    return false;
 }
 
 export function isEllipsisType(type: Type): boolean {
@@ -676,11 +705,13 @@ export function lookUpClassMember(
                 if ((flags & ClassMemberLookupFlags.SkipInstanceVariables) === 0) {
                     const symbol = memberFields.get(memberName);
                     if (symbol && symbol.isInstanceMember()) {
-                        if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
+                        const hasDeclaredType = symbol.hasTypedDeclarations();
+                        if (!declaredTypesOnly || hasDeclaredType) {
                             return {
                                 symbol,
                                 isInstanceMember: true,
                                 classType: specializedMroClass,
+                                isTypeDeclared: hasDeclaredType,
                             };
                         }
                     }
@@ -693,7 +724,8 @@ export function lookUpClassMember(
                         (flags & ClassMemberLookupFlags.SkipIfInaccessibleToInstance) === 0 ||
                         !symbol.isInaccessibleToInstance()
                     ) {
-                        if (!declaredTypesOnly || symbol.hasTypedDeclarations()) {
+                        const hasDeclaredType = symbol.hasTypedDeclarations();
+                        if (!declaredTypesOnly || hasDeclaredType) {
                             let isInstanceMember = false;
 
                             // For data classes and typed dicts, variables that are declared
@@ -715,6 +747,7 @@ export function lookUpClassMember(
                                 symbol,
                                 isInstanceMember,
                                 classType: specializedMroClass,
+                                isTypeDeclared: hasDeclaredType,
                             };
                         }
                     }
@@ -733,6 +766,7 @@ export function lookUpClassMember(
                 symbol: Symbol.createWithType(SymbolFlags.None, UnknownType.create()),
                 isInstanceMember: false,
                 classType: UnknownType.create(),
+                isTypeDeclared: false,
             };
         }
     } else if (isAnyOrUnknown(classType)) {
@@ -742,6 +776,7 @@ export function lookUpClassMember(
             symbol: Symbol.createWithType(SymbolFlags.None, UnknownType.create()),
             isInstanceMember: false,
             classType: UnknownType.create(),
+            isTypeDeclared: false,
         };
     }
 
@@ -946,18 +981,6 @@ export function buildTypeVarMapFromSpecializedClass(classType: ClassType, makeCo
     // fill in concrete types.
     if (!typeArguments && !makeConcrete) {
         typeArguments = typeParameters;
-    }
-
-    // Handle the special case where the source is a Tuple with heterogenous
-    // type arguments. In this case, we'll create a union out of the heterogeneous
-    // types.
-    if (ClassType.isBuiltIn(classType, 'Tuple') && classType.typeArguments) {
-        if (classType.typeArguments.length > 1) {
-            const lastTypeArg = classType.typeArguments[classType.typeArguments.length - 1];
-            if (!isEllipsisType(lastTypeArg)) {
-                typeArguments = [combineTypes(classType.typeArguments)];
-            }
-        }
     }
 
     return buildTypeVarMap(typeParameters, typeArguments);
@@ -1425,8 +1448,16 @@ function _specializeFunctionType(
 
     // Handle functions with a parameter specification in a special manner.
     if (functionType.details.paramSpec) {
-        const paramSpec = typeVarMap?.getParamSpec(functionType.details.paramSpec.name);
-        functionType = FunctionType.cloneForParamSpec(functionType, paramSpec);
+        let paramSpec = typeVarMap?.getParamSpec(functionType.details.paramSpec.name);
+        if (!paramSpec && makeConcrete) {
+            paramSpec = [
+                { name: 'args', type: AnyType.create() },
+                { name: 'kwargs', type: AnyType.create() },
+            ];
+        }
+        if (paramSpec) {
+            functionType = FunctionType.cloneForParamSpec(functionType, paramSpec);
+        }
     }
 
     const declaredReturnType =

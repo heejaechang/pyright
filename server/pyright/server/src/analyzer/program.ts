@@ -505,6 +505,10 @@ export class Program {
                     const writer = new TypeStubWriter(typeStubPath, sourceFileInfo.sourceFile, this._evaluator);
                     writer.write();
                 });
+
+                // This operation can consume significant memory, so check
+                // for situations where we need to discard the type cache.
+                this._handleMemoryHighUsage();
             }
         }
     }
@@ -1034,6 +1038,10 @@ export class Program {
                             token
                         );
                     }
+
+                    // This operation can consume significant memory, so check
+                    // for situations where we need to discard the type cache.
+                    this._handleMemoryHighUsage();
                 }
 
                 // Make sure to include declarations regardless where they are defined
@@ -1098,13 +1106,16 @@ export class Program {
             }
 
             for (const sourceFileInfo of this._sourceFileList) {
-                this._bindFile(sourceFileInfo);
+                // "Find symbols" includes references only from user code.
+                if (this._isUserCode(sourceFileInfo)) {
+                    this._bindFile(sourceFileInfo);
 
-                sourceFileInfo.sourceFile.addSymbolsForDocument(symbolList, this._evaluator, query, token);
+                    sourceFileInfo.sourceFile.addSymbolsForDocument(symbolList, this._evaluator, query, token);
 
-                // This operation can consume significant memory, so check
-                // for situations where we need to discard the type cache.
-                this._handleMemoryHighUsage();
+                    // This operation can consume significant memory, so check
+                    // for situations where we need to discard the type cache.
+                    this._handleMemoryHighUsage();
+                }
             }
         });
     }
@@ -1293,6 +1304,10 @@ export class Program {
 
                         curSourceFileInfo.sourceFile.addReferences(referencesResult, true, this._evaluator, token);
                     }
+
+                    // This operation can consume significant memory, so check
+                    // for situations where we need to discard the type cache.
+                    this._handleMemoryHighUsage();
                 }
             } else if (this._isUserCode(sourceFileInfo)) {
                 sourceFileInfo.sourceFile.addReferences(referencesResult, true, this._evaluator, token);
@@ -1389,6 +1404,10 @@ export class Program {
                 if (itemsToAdd) {
                     items = items.concat(...itemsToAdd);
                 }
+
+                // This operation can consume significant memory, so check
+                // for situations where we need to discard the type cache.
+                this._handleMemoryHighUsage();
             }
         }
 
