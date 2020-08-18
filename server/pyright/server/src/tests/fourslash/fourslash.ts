@@ -156,6 +156,7 @@ declare namespace _ {
                     parameters: string[];
                 }[];
                 activeParameters?: (number | undefined)[];
+                callHasParameters?: boolean;
             };
         }): void;
         verifyFindAllReferences(map: {

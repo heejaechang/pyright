@@ -892,6 +892,7 @@ export class TestState {
                 parameters: string[];
             }[];
             activeParameters?: (number | undefined)[];
+            callHasParameters?: boolean;
         };
     }): void {
         this._analyze();
@@ -937,6 +938,10 @@ export class TestState {
                 actual!.signatures.map((sig) => sig.activeParameter),
                 expected.activeParameters
             );
+
+            if (expected.callHasParameters !== undefined) {
+                assert.equal(actual.callHasParameters, expected.callHasParameters);
+            }
         }
     }
 

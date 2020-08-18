@@ -542,7 +542,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return sigInfo;
             });
 
-            let activeSignature: number | null = signatures.findIndex((sig) => sig.activeParameter !== undefined);
+            // A signature is active if it contains an active parameter,
+            // or if both the signature and its invocation have no parameters.
+            const isActive = (sig: SignatureInformation) =>
+                sig.activeParameter !== undefined ||
+                (!signatureHelpResults.callHasParameters && !sig.parameters?.length);
+
+            let activeSignature: number | null = signatures.findIndex(isActive);
             if (activeSignature === -1) {
                 activeSignature = null;
             }
@@ -562,9 +568,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 const prevActiveSignature = params.context.activeSignatureHelp?.activeSignature ?? null;
                 if (prevActiveSignature !== null && prevActiveSignature < signatures.length) {
                     const sig = signatures[prevActiveSignature];
-                    if (sig.activeParameter !== undefined) {
+                    if (isActive(sig)) {
                         activeSignature = prevActiveSignature;
-                        activeParameter = sig.activeParameter;
+                        activeParameter = sig.activeParameter ?? null;
                     }
                 }
             }
