@@ -421,8 +421,16 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredVariableDeclaration'));
         export const operatorLessOrGreaterDeprecated = () => getRawString('Diagnostic.operatorLessOrGreaterDeprecated');
         export const optionalExtraArgs = () => getRawString('Diagnostic.optionalExtraArgs');
+        export const overlappingOverload = () =>
+            new ParameterizedString<{ name: string; obscured: number; obscuredBy: number }>(
+                getRawString('Diagnostic.overlappingOverload')
+            );
         export const overloadAbstractMismatch = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.overloadAbstractMismatch'));
+        export const overloadReturnTypeMismatch = () =>
+            new ParameterizedString<{ name: string; newIndex: number; prevIndex: number }>(
+                getRawString('Diagnostic.overloadReturnTypeMismatch')
+            );
         export const paramAfterKwargsParam = () => getRawString('Diagnostic.paramAfterKwargsParam');
         export const paramAlreadyAssigned = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramAlreadyAssigned'));
@@ -625,6 +633,8 @@ export namespace Localizer {
             new ParameterizedString<{ paramName: string; functionName: string }>(
                 getRawString('DiagnosticAddendum.argParamFunction')
             );
+        export const argsParamMissing = () =>
+            new ParameterizedString<{ paramName: string }>(getRawString('DiagnosticAddendum.argsParamMissing'));
         export const argumentType = () =>
             new ParameterizedString<{ type: string }>(getRawString('DiagnosticAddendum.argumentType'));
         export const argumentTypes = () =>
@@ -678,6 +688,8 @@ export namespace Localizer {
             new ParameterizedString<{ type: string }>(getRawString('DiagnosticAddendum.noOverloadAssignable'));
         export const overloadCallName = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.overloadCallName'));
+        export const overloadNotAssignable = () =>
+            new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.overloadNotAssignable'));
         export const overriddenMethod = () => getRawString('DiagnosticAddendum.overriddenMethod');
         export const overriddenSymbol = () => getRawString('DiagnosticAddendum.overriddenSymbol');
         export const overrideParamCount = () =>
