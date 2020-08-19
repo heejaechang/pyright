@@ -39,7 +39,7 @@ class PylanceFeatures implements HostSpecificFeatures {
     }
 }
 
-describe('pylance fourslash tests', () => {
+describe('Pylance fourslash tests', () => {
     const testFiles: string[] = [];
 
     const basePath = path.resolve(path.dirname(module.filename), 'fourslash/');

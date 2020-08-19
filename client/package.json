@@ -90,6 +90,12 @@
                     ],
                     "scope": "resource"
                 },
+                "python.analysis.completeFunctionParens": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically add brackets for functions.",
+                    "scope": "resource"
+                },
                 "python.analysis.diagnosticSeverityOverrides": {
                     "type": "object",
                     "default": {},

@@ -40,6 +40,12 @@
             "type": "object",
             "title": "Pylance",
             "properties": {
+                "python.analysis.completeFunctionParens": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Add parentheses to function completions.",
+                    "scope": "resource"
+                },
                 "python.analysis.autoImportCompletions": {
                     "type": "boolean",
                     "default": true,

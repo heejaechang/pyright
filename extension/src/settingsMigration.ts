@@ -7,9 +7,7 @@ import { ApplicationShell } from './types/appShell';
 
 export const settingsMigrationMap = new Map<string, string>([
     ['autoComplete.extraPaths', 'analysis.extraPaths'],
-    // Update does not accept target name if it is not in project.json.
-    // TODO: Uncomment when feature is implemented.
-    // ['autoComplete.addBrackets', 'analysis.completeFunctionParens'],
+    ['autoComplete.addBrackets', 'analysis.completeFunctionParens'],
 ]);
 
 export async function migrateV1Settings(config: AppConfiguration, shell: ApplicationShell): Promise<void> {

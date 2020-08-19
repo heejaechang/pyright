@@ -5,17 +5,20 @@
  */
 
 import * as path from 'path';
-import { isArray } from 'util';
 import {
     CancellationToken,
     CodeAction,
     CodeActionKind,
     CodeActionParams,
     Command,
+    CompletionItemKind,
+    CompletionList,
+    CompletionParams,
     Connection,
     ExecuteCommandParams,
     InitializeParams,
     InitializeResult,
+    InsertTextFormat,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
@@ -57,6 +60,10 @@ import { AnalysisTracker } from './src/services/analysisTracker';
 const pythonSectionName = 'python';
 const pythonAnalysisSectionName = 'python.analysis';
 
+export interface PylanceServerSettings extends ServerSettings {
+    completeFunctionParens?: boolean;
+}
+
 class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
@@ -64,7 +71,10 @@ class PylanceServer extends LanguageServerBase {
     private _logger: LogService;
     private _platform: Platform;
     private _intelliCode: IntelliCodeExtension;
+    // TODO: the following settings are cached in getSettings() while they may be
+    // set per workspace or folder. Figure out how can we maintain cache per resource.
     private _progressBarEnabled: boolean;
+    private _serverSettings?: PylanceServerSettings;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -133,7 +143,7 @@ class PylanceServer extends LanguageServerBase {
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
-        const serverSettings: ServerSettings = {
+        const serverSettings: PylanceServerSettings = {
             autoSearchPaths: true,
             disableLanguageServices: false,
             openFilesOnly: true,
@@ -144,6 +154,7 @@ class PylanceServer extends LanguageServerBase {
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
             autoImportCompletions: true,
+            completeFunctionParens: false,
         };
 
         try {
@@ -156,7 +167,7 @@ class PylanceServer extends LanguageServerBase {
             const pythonAnalysisSection = await this.getConfiguration(workspace.rootUri, pythonAnalysisSectionName);
             if (pythonAnalysisSection) {
                 const typeshedPaths = pythonAnalysisSection.typeshedPaths;
-                if (typeshedPaths && isArray(typeshedPaths) && typeshedPaths.length > 0) {
+                if (typeshedPaths && Array.isArray(typeshedPaths) && typeshedPaths.length > 0) {
                     serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
                 }
 
@@ -186,23 +197,28 @@ class PylanceServer extends LanguageServerBase {
                     pythonAnalysisSection.typeCheckingMode ?? serverSettings.typeCheckingMode;
 
                 const extraPaths = pythonAnalysisSection.extraPaths;
-                if (extraPaths && isArray(extraPaths) && extraPaths.length > 0) {
+                if (extraPaths && Array.isArray(extraPaths) && extraPaths.length > 0) {
                     serverSettings.extraPaths = extraPaths.map((p) => normalizeSlashes(p));
                 }
 
                 serverSettings.autoImportCompletions =
                     pythonAnalysisSection.autoImportCompletions ?? serverSettings.autoImportCompletions;
+                serverSettings.completeFunctionParens =
+                    pythonAnalysisSection.completeFunctionParens ?? serverSettings.completeFunctionParens;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
         }
 
-        // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then
-        // progress bar is enabled.
+        // TODO: the following settings are cached in getSettings() while they may be
+        // set per workspace or folder. Figure out how can we maintain cache per resource.
+
+        // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then progress bar is enabled.
         this._progressBarEnabled =
             serverSettings.typeCheckingMode !== 'off' ||
             Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
 
+        this._serverSettings = serverSettings;
         return serverSettings;
     }
 
@@ -328,6 +344,22 @@ class PylanceServer extends LanguageServerBase {
                 this._telemetry.sendTelemetry(importEvent);
             }
         }
+    }
+
+    protected async onCompletion(
+        params: CompletionParams,
+        token: CancellationToken
+    ): Promise<CompletionList | undefined> {
+        const completionList = await super.onCompletion(params, token);
+        if (completionList && this._serverSettings?.completeFunctionParens && !token.isCancellationRequested) {
+            for (const c of completionList.items) {
+                if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
+                    c.insertText = (c.insertText ?? c.label) + '($0)';
+                    c.insertTextFormat = InsertTextFormat.Snippet;
+                }
+            }
+        }
+        return completionList;
     }
 
     private async _updateGlobalSettings(): Promise<void> {
