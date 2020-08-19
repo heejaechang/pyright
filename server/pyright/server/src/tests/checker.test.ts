@@ -419,7 +419,7 @@ test('Lambda1', () => {
 test('Lambda2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['lambda2.py']);
 
-    validateResults(analysisResults, 4);
+    validateResults(analysisResults, 5);
 });
 
 test('Lambda3', () => {
@@ -1724,6 +1724,21 @@ test('Overload2', () => {
 
 test('Overload3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload3.py']);
+    validateResults(analysisResults, 1);
+});
+
+test('Overload4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload4.py']);
+    validateResults(analysisResults, 1);
+});
+
+test('Overload5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload5.py']);
+    validateResults(analysisResults, 5);
+});
+
+test('Overload6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload6.py']);
     validateResults(analysisResults, 1);
 });
 

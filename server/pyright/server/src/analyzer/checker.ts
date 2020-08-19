@@ -97,6 +97,7 @@ import {
     UnknownType,
 } from './types';
 import {
+    CanAssignFlags,
     ClassMemberLookupFlags,
     derivesFromAnyOrUnknown,
     derivesFromClassRecursive,
@@ -311,6 +312,17 @@ export class Checker extends ParseTreeWalker {
         }
 
         this._scopedNodes.push(node);
+
+        if (functionTypeResult && functionTypeResult.decoratedType.category === TypeCategory.OverloadedFunction) {
+            const overloads = functionTypeResult.decoratedType.overloads;
+            if (overloads.length > 1) {
+                this._validateOverloadConsistency(
+                    node,
+                    overloads[overloads.length - 1],
+                    overloads.slice(0, overloads.length - 1)
+                );
+            }
+        }
 
         return false;
     }
@@ -789,6 +801,89 @@ export class Checker extends ParseTreeWalker {
 
         // Don't explore further.
         return false;
+    }
+
+    private _validateOverloadConsistency(
+        node: FunctionNode,
+        functionType: FunctionType,
+        prevOverloads: FunctionType[]
+    ) {
+        for (let i = 0; i < prevOverloads.length; i++) {
+            const prevOverload = prevOverloads[i];
+            if (this._isOverlappingOverload(functionType, prevOverload)) {
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                    DiagnosticRule.reportGeneralTypeIssues,
+                    Localizer.Diagnostic.overlappingOverload().format({
+                        name: node.name.value,
+                        obscured: prevOverloads.length + 1,
+                        obscuredBy: i + 1,
+                    }),
+                    node.name
+                );
+                break;
+            }
+        }
+
+        for (let i = 0; i < prevOverloads.length; i++) {
+            const prevOverload = prevOverloads[i];
+            if (this._isOverlappingOverload(prevOverload, functionType)) {
+                const prevReturnType = FunctionType.getSpecializedReturnType(prevOverload);
+                const returnType = FunctionType.getSpecializedReturnType(functionType);
+
+                if (
+                    prevReturnType &&
+                    returnType &&
+                    !this._evaluator.canAssignType(returnType, prevReturnType, new DiagnosticAddendum())
+                ) {
+                    const altNode = this._findNodeForOverload(node, prevOverload);
+                    this._evaluator.addDiagnostic(
+                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.overloadReturnTypeMismatch().format({
+                            name: node.name.value,
+                            newIndex: prevOverloads.length + 1,
+                            prevIndex: i + 1,
+                        }),
+                        (altNode || node).name
+                    );
+                    break;
+                }
+            }
+        }
+    }
+
+    // Mypy reports overlapping overload errors on the line that contains the
+    // earlier overload. Typeshed stubs contain type: ignore comments on these
+    // lines, so it is important for us to report them in the same manner.
+    private _findNodeForOverload(functionNode: FunctionNode, overloadType: FunctionType): FunctionNode | undefined {
+        const decls = this._evaluator.getDeclarationsForNameNode(functionNode.name);
+        if (!decls) {
+            return undefined;
+        }
+
+        for (const decl of decls) {
+            if (decl.type === DeclarationType.Function) {
+                const functionType = this._evaluator.getTypeOfFunction(decl.node);
+                if (functionType?.functionType === overloadType) {
+                    return decl.node;
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    private _isOverlappingOverload(functionType: FunctionType, prevOverload: FunctionType) {
+        return this._evaluator.canAssignType(
+            functionType,
+            prevOverload,
+            new DiagnosticAddendum(),
+            /* typeVarMap */ undefined,
+            CanAssignFlags.MatchTypeVarsExactly |
+                CanAssignFlags.SkipFunctionReturnTypeCheck |
+                CanAssignFlags.DisallowAssignFromAny
+        );
     }
 
     private _walkStatementsAndReportUnreachable(statements: StatementNode[]) {

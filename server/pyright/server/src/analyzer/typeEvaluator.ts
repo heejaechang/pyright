@@ -468,7 +468,13 @@ export interface TypeEvaluator {
     ) => CallSignatureInfo | undefined;
     getTypeAnnotationForParameter: (node: FunctionNode, paramIndex: number) => ExpressionNode | undefined;
 
-    canAssignType: (destType: Type, srcType: Type, diag: DiagnosticAddendum, typeVarMap?: TypeVarMap) => boolean;
+    canAssignType: (
+        destType: Type,
+        srcType: Type,
+        diag: DiagnosticAddendum,
+        typeVarMap?: TypeVarMap,
+        flags?: CanAssignFlags
+    ) => boolean;
     canOverrideMethod: (baseMethod: Type, overrideMethod: FunctionType, diag: DiagnosticAddendum) => boolean;
 
     addError: (message: string, node: ParseNode) => Diagnostic | undefined;
@@ -7564,6 +7570,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 });
             } else if (isEllipsisType(typeArgs[0].type)) {
                 FunctionType.addDefaultParameters(functionType);
+                functionType.details.flags |= FunctionTypeFlags.SkipParamCompatibilityCheck;
             } else if (isParamSpecType(typeArgs[0].type)) {
                 functionType.details.paramSpec = typeArgs[0].type as TypeVarType;
             } else {
@@ -7592,6 +7599,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
         } else {
             FunctionType.addDefaultParameters(functionType, /* useUnknown */ true);
+            functionType.details.flags |= FunctionTypeFlags.SkipParamCompatibilityCheck;
         }
 
         if (typeArgs && typeArgs.length > 1) {
@@ -8192,7 +8200,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 // If there was a declared type, make sure the RHS value is compatible.
                 if (declaredType) {
                     const diagAddendum = new DiagnosticAddendum();
-                    if (canAssignType(declaredType, srcType, diagAddendum)) {
+                    const typeVarMap = new TypeVarMap();
+                    if (canAssignType(declaredType, srcType, diagAddendum, typeVarMap)) {
                         // Constrain the resulting type to match the declared type.
                         srcType = narrowDeclaredTypeBasedOnAssignedType(declaredType, srcType);
                     }
@@ -12352,7 +12361,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 // If the symbol is private or constant, we can retain the literal
                                 // value. Otherwise, strip them off to make the type less specific,
                                 // allowing other values to be assigned to it in subclasses.
-                                if (!isPrivate && !isConstant && !isEnum && !isFinalVar) {
+                                if (TypeBase.isInstance(type) && !isPrivate && !isConstant && !isEnum && !isFinalVar) {
                                     type = stripLiteralValue(type);
                                 }
                             }
@@ -12650,6 +12659,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         srcType: ClassType,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap | undefined,
+        flags: CanAssignFlags,
         recursionCount: number
     ): boolean {
         const destClassFields = destType.details.fields;
@@ -12717,7 +12727,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 !ClassType.isBuiltIn(baseClass, 'Protocol')
             ) {
                 const specializedBaseClass = specializeForBaseClass(destType, baseClass, recursionCount + 1);
-                if (!canAssignClassToProtocol(specializedBaseClass, srcType, diag, typeVarMap, recursionCount + 1)) {
+                if (
+                    !canAssignClassToProtocol(
+                        specializedBaseClass,
+                        srcType,
+                        diag,
+                        typeVarMap,
+                        flags,
+                        recursionCount + 1
+                    )
+                ) {
                     typesAreConsistent = false;
                 }
             }
@@ -12733,7 +12752,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 /* makeConcrete */ false
             ) as ClassType;
 
-            if (!verifyTypeArgumentsAssignable(destType, specializedSrcProtocol, diag, typeVarMap, recursionCount)) {
+            if (
+                !verifyTypeArgumentsAssignable(
+                    destType,
+                    specializedSrcProtocol,
+                    diag,
+                    typeVarMap,
+                    flags,
+                    recursionCount
+                )
+            ) {
                 typesAreConsistent = false;
             }
         }
@@ -12799,7 +12827,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // Is it a structural type (i.e. a protocol)? If so, we need to
         // perform a member-by-member check.
         if (ClassType.isProtocolClass(destType)) {
-            return canAssignClassToProtocol(destType, srcType, diag, typeVarMap, recursionCount);
+            return canAssignClassToProtocol(destType, srcType, diag, typeVarMap, flags, recursionCount);
         }
 
         // Handle typed dicts. They also use a form of structural typing for type
@@ -12873,6 +12901,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     inheritanceChain,
                     diag,
                     typeVarMap,
+                    flags,
                     recursionCount + 1
                 );
             }
@@ -12913,6 +12942,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         inheritanceChain: InheritanceChain,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap | undefined,
+        flags: CanAssignFlags,
         recursionCount: number
     ): boolean {
         let curSrcType = srcType;
@@ -12958,7 +12988,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             srcArgCount = 1;
                         }
 
-                        if (srcTypeArgs.length === destArgCount || isDestHomogenousTuple || isSrcHomogeneousType) {
+                        if ((srcTypeArgs.length === destArgCount && !isSrcHomogeneousType) || isDestHomogenousTuple) {
                             for (let i = 0; i < Math.max(destArgCount, srcArgCount); i++) {
                                 const expectedDestType =
                                     (isDestHomogenousTuple ? destTypeArgs[0] : destTypeArgs[i]) || AnyType.create();
@@ -12971,7 +13001,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                         expectedSrcType,
                                         diag.createAddendum(),
                                         curTypeVarMap,
-                                        CanAssignFlags.Default,
+                                        flags,
                                         recursionCount + 1
                                     )
                                 ) {
@@ -13009,7 +13039,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             // Validate that the type arguments match.
-            if (!verifyTypeArgumentsAssignable(ancestorType, curSrcType, diag, curTypeVarMap, recursionCount)) {
+            if (!verifyTypeArgumentsAssignable(ancestorType, curSrcType, diag, curTypeVarMap, flags, recursionCount)) {
                 return false;
             }
 
@@ -13020,7 +13050,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         if (destType.typeArguments) {
             // If the dest type is specialized, make sure the specialized source
             // type arguments are assignable to the dest type arguments.
-            if (!verifyTypeArgumentsAssignable(destType, curSrcType, diag, typeVarMap, recursionCount)) {
+            if (!verifyTypeArgumentsAssignable(destType, curSrcType, diag, typeVarMap, flags, recursionCount)) {
                 return false;
             }
         } else if (
@@ -13045,6 +13075,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         srcType: ClassType,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap | undefined,
+        flags: CanAssignFlags,
         recursionCount: number
     ) {
         assert(ClassType.isSameGenericClass(destType, srcType));
@@ -13076,7 +13107,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 srcTypeArg,
                                 assignmentDiag,
                                 typeVarMap,
-                                CanAssignFlags.Default,
+                                flags,
                                 recursionCount + 1
                             )
                         ) {
@@ -13098,7 +13129,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 destTypeArg,
                                 assignmentDiag,
                                 typeVarMap,
-                                CanAssignFlags.ReverseTypeVarMatching,
+                                flags | CanAssignFlags.ReverseTypeVarMatching,
                                 recursionCount + 1
                             )
                         ) {
@@ -13118,7 +13149,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 srcTypeArg,
                                 assignmentDiag,
                                 typeVarMap,
-                                CanAssignFlags.EnforceInvariance,
+                                flags | CanAssignFlags.EnforceInvariance,
                                 recursionCount + 1
                             )
                         ) {
@@ -13328,8 +13359,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         flags = CanAssignFlags.Default,
         recursionCount = 0
     ): boolean {
-        let checkNamedParams = false;
-
         if (recursionCount > maxTypeRecursionCount) {
             return true;
         }
@@ -13353,16 +13382,48 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // Before performing any other checks, see if the dest type is a
         // TypeVar that we are attempting to match.
         if (isTypeVar(destType)) {
-            if (!reverseTypeVarMatching) {
-                return assignTypeToTypeVar(
-                    destType,
-                    srcType,
-                    /* canNarrowType */ false,
-                    diag,
-                    typeVarMap || new TypeVarMap(),
-                    flags,
-                    recursionCount + 1
+            if (flags & CanAssignFlags.MatchTypeVarsExactly) {
+                if (isTypeVar(srcType) && destType.name === srcType.name) {
+                    return true;
+                }
+            } else if (!reverseTypeVarMatching) {
+                if (
+                    assignTypeToTypeVar(
+                        destType,
+                        srcType,
+                        /* canNarrowType */ false,
+                        diag,
+                        typeVarMap || new TypeVarMap(),
+                        flags,
+                        recursionCount + 1
+                    )
+                ) {
+                    return true;
+                }
+
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(srcType),
+                        destType: printType(destType),
+                    })
                 );
+                return false;
+            }
+        }
+
+        if (isTypeVar(srcType)) {
+            if (flags & CanAssignFlags.MatchTypeVarsExactly) {
+                if (isTypeVar(destType) && destType.name === srcType.name) {
+                    return true;
+                }
+
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(srcType),
+                        destType: printType(destType),
+                    })
+                );
+                return false;
             }
         }
 
@@ -13378,7 +13439,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 const typeVarSubstitution = isEllipsisType(srcType) ? AnyType.create() : srcType;
                 setTypeArgumentsRecursive(destType, typeVarSubstitution, typeVarMap);
             }
-            return true;
+            if ((flags & CanAssignFlags.DisallowAssignFromAny) === 0) {
+                return true;
+            }
         }
 
         if (isNever(srcType)) {
@@ -13498,6 +13561,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             if (!foundMatch) {
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(srcType),
+                        destType: printType(destType),
+                    })
+                );
                 diag.addAddendum(diagAddendum);
                 return false;
             }
@@ -13515,29 +13584,53 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (isAnyOrUnknown(srcTypeArgs[0])) {
                     return true;
                 } else if (isObject(srcTypeArgs[0])) {
-                    return canAssignType(
-                        destType,
-                        srcTypeArgs[0].classType,
-                        diag.createAddendum(),
-                        typeVarMap,
-                        flags,
-                        recursionCount + 1
+                    if (
+                        canAssignType(
+                            destType,
+                            srcTypeArgs[0].classType,
+                            diag.createAddendum(),
+                            typeVarMap,
+                            flags,
+                            recursionCount + 1
+                        )
+                    ) {
+                        return true;
+                    }
+
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                            sourceType: printType(srcType),
+                            destType: printType(destType),
+                        })
                     );
+                    return false;
                 }
             }
         }
 
         if (isClass(destType)) {
             if (isClass(srcType)) {
-                return canAssignClass(
-                    destType,
-                    srcType,
-                    diag,
-                    typeVarMap,
-                    flags,
-                    recursionCount + 1,
-                    /* reportErrorsUsingObjType */ false
+                if (
+                    canAssignClass(
+                        destType,
+                        srcType,
+                        diag,
+                        typeVarMap,
+                        flags,
+                        recursionCount + 1,
+                        /* reportErrorsUsingObjType */ false
+                    )
+                ) {
+                    return true;
+                }
+
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(srcType),
+                        destType: printType(destType),
+                    })
                 );
+                return false;
             }
         }
 
@@ -13565,7 +13658,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         return canAssignType(
                             destTypeArgs[0].classType,
                             srcType,
-                            diag.createAddendum(),
+                            diag,
                             typeVarMap,
                             flags,
                             recursionCount + 1
@@ -13575,7 +13668,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             return canAssignType(
                                 destTypeArgs[0],
                                 convertToInstance(srcType),
-                                diag.createAddendum(),
+                                diag,
                                 typeVarMap,
                                 flags,
                                 recursionCount + 1
@@ -13584,14 +13677,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             srcType.category === TypeCategory.Function ||
                             srcType.category === TypeCategory.OverloadedFunction
                         ) {
-                            return canAssignType(
-                                destTypeArgs[0],
-                                srcType,
-                                diag.createAddendum(),
-                                typeVarMap,
-                                flags,
-                                recursionCount + 1
-                            );
+                            return canAssignType(destTypeArgs[0], srcType, diag, typeVarMap, flags, recursionCount + 1);
                         }
                     }
                 }
@@ -13634,19 +13720,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 // Is the destination a callback protocol (defined in PEP 544)?
                 const callbackType = getCallbackProtocolType(destType);
                 if (callbackType) {
-                    if (
-                        !canAssignFunction(
-                            callbackType,
-                            srcType,
-                            diag.createAddendum(),
-                            typeVarMap,
-                            recursionCount + 1,
-                            /* checkNamedParams */ true
-                        )
-                    ) {
-                        return false;
-                    }
-                    return true;
+                    return canAssignFunction(callbackType, srcType, diag, typeVarMap, flags, recursionCount + 1);
                 }
 
                 // All functions are assignable to "object".
@@ -13697,7 +13771,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             const callbackType = getCallbackProtocolType(destType);
             if (callbackType) {
                 destType = callbackType;
-                checkNamedParams = true;
             }
         }
 
@@ -13778,15 +13851,46 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
 
             if (srcFunction) {
-                return canAssignFunction(
-                    destType,
-                    srcFunction,
-                    diag.createAddendum(),
-                    typeVarMap,
-                    recursionCount + 1,
-                    checkNamedParams
-                );
+                if (
+                    canAssignFunction(
+                        destType,
+                        srcFunction,
+                        diag.createAddendum(),
+                        typeVarMap,
+                        flags,
+                        recursionCount + 1
+                    )
+                ) {
+                    return true;
+                }
             }
+        }
+
+        if (destType.category === TypeCategory.OverloadedFunction) {
+            const overloadDiag = diag.createAddendum();
+
+            // All overloads in the dest must be assignable.
+            const isAssignable = !destType.overloads.some((destOverload) => {
+                return !canAssignType(
+                    destOverload,
+                    srcType,
+                    overloadDiag.createAddendum(),
+                    new TypeVarMap(),
+                    flags,
+                    recursionCount + 1
+                );
+            });
+
+            if (!isAssignable) {
+                overloadDiag.addMessage(
+                    Localizer.DiagnosticAddendum.overloadNotAssignable().format({
+                        name: destType.overloads[0].details.name,
+                    })
+                );
+                return false;
+            }
+
+            return true;
         }
 
         // NoneType and ModuleType derive from object.
@@ -13810,6 +13914,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 destType: printType(destType),
             })
         );
+
         return false;
     }
 
@@ -13840,144 +13945,287 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         return undefined;
     }
 
+    function canAssignFunctionParameter(
+        destType: Type,
+        srcType: Type,
+        paramIndex: number,
+        diag: DiagnosticAddendum,
+        typeVarMap: TypeVarMap | undefined,
+        flags: CanAssignFlags,
+        recursionCount: number
+    ) {
+        // Call canAssignType once to perform any typeVarMap population.
+        canAssignType(
+            srcType,
+            destType,
+            new DiagnosticAddendum(),
+            typeVarMap,
+            flags | CanAssignFlags.ReverseTypeVarMatching,
+            recursionCount + 1
+        );
+
+        // Make sure we can assign the specialized dest type to the source type.
+        const specializedDestType = specializeType(destType, typeVarMap, /* makeConcrete */ false, recursionCount + 1);
+
+        if (!canAssignType(srcType, specializedDestType, diag.createAddendum(), undefined, flags, recursionCount + 1)) {
+            diag.addMessage(
+                Localizer.DiagnosticAddendum.paramAssignment().format({
+                    index: paramIndex + 1,
+                    sourceType: printType(specializedDestType),
+                    destType: printType(srcType),
+                })
+            );
+            return false;
+        }
+
+        return true;
+    }
+
     function canAssignFunction(
         destType: FunctionType,
         srcType: FunctionType,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap | undefined,
-        recursionCount: number,
-        checkNamedParams: boolean
+        flags: CanAssignFlags,
+        recursionCount: number
     ): boolean {
         let canAssign = true;
-
-        // Count the number of parameters that have names. We'll exclude
-        // pseudo-parameters (* and /) that designate name-only and position-only
-        // separators.
-        const srcParamCount = srcType.details.parameters.filter((param) => param.name).length;
-        const destParamCount = destType.details.parameters.filter((param) => param.name).length;
-        const minParamCount = Math.min(srcParamCount, destParamCount);
-
-        // Match as many input parameters as we can.
-        for (let paramIndex = 0; paramIndex < minParamCount; paramIndex++) {
-            const srcParam = srcType.details.parameters[paramIndex];
-            const destParam = destType.details.parameters[paramIndex];
-            const paramDiag = diag.createAddendum();
-
-            // If the dest or source involve var-args, no need to continue matching.
-            if (srcParam.category !== ParameterCategory.Simple || destParam.category !== ParameterCategory.Simple) {
-                break;
-            }
-
-            const srcParamType = FunctionType.getEffectiveParameterType(srcType, paramIndex);
-            const destParamType = FunctionType.getEffectiveParameterType(destType, paramIndex);
-
-            // Call canAssignType once to perform any typeVarMap population.
-            canAssignType(
-                srcParamType,
-                destParamType,
-                new DiagnosticAddendum(),
-                typeVarMap,
-                CanAssignFlags.ReverseTypeVarMatching,
-                recursionCount + 1
-            );
-
-            // Make sure we can assign the specialized dest type to the
-            // source type.
-            const specializedDestParamType = specializeType(
-                destParamType,
-                typeVarMap,
-                /* makeConcrete */ false,
-                recursionCount + 1
-            );
-
-            if (
-                !canAssignType(
-                    srcParamType,
-                    specializedDestParamType,
-                    paramDiag.createAddendum(),
-                    undefined,
-                    CanAssignFlags.Default,
-                    recursionCount + 1
-                )
-            ) {
-                paramDiag.addMessage(
-                    Localizer.DiagnosticAddendum.paramAssignment().format({
-                        index: paramIndex + 1,
-                        sourceType: printType(specializedDestParamType),
-                        destType: printType(srcParamType),
-                    })
-                );
-                canAssign = false;
-            }
-        }
+        const checkReturnType = (flags & CanAssignFlags.SkipFunctionReturnTypeCheck) === 0;
+        flags &= ~CanAssignFlags.SkipFunctionReturnTypeCheck;
 
         const srcParams = srcType.details.parameters;
         const destParams = destType.details.parameters;
 
-        const srcHasVarArgs =
-            srcParams.find((param) => param.name && param.category !== ParameterCategory.Simple) !== undefined;
-        const destHasVarArgs =
-            destParams.find((param) => param.name && param.category !== ParameterCategory.Simple) !== undefined;
+        const srcStartOfNamed = srcParams.findIndex(
+            (p, index) =>
+                p.category === ParameterCategory.VarArgDictionary ||
+                (p.category === ParameterCategory.VarArgList && !p.name) ||
+                (index > 0 && srcParams[index - 1].category === ParameterCategory.VarArgList)
+        );
+        let srcPositionals = srcStartOfNamed < 0 ? srcParams : srcParams.slice(0, srcStartOfNamed);
+        const srcArgsIndex = srcPositionals.findIndex((p) => p.category === ParameterCategory.VarArgList && p.name);
+        srcPositionals = srcPositionals.filter((p) => p.category === ParameterCategory.Simple && p.name);
 
-        if (checkNamedParams) {
+        const destStartOfNamed = destParams.findIndex(
+            (p, index) =>
+                p.category === ParameterCategory.VarArgDictionary ||
+                (p.category === ParameterCategory.VarArgList && !p.name) ||
+                (index > 0 && destParams[index - 1].category === ParameterCategory.VarArgList)
+        );
+        let destPositionals = destStartOfNamed < 0 ? destParams : destParams.slice(0, destStartOfNamed);
+        const destArgsIndex = destPositionals.findIndex((p) => p.category === ParameterCategory.VarArgList && p.name);
+        destPositionals = destPositionals.filter((p) => p.category === ParameterCategory.Simple && p.name);
+
+        const positionalsToMatch = Math.min(srcPositionals.length, destPositionals.length);
+
+        if (!FunctionType.shouldSkipParamCompatibilityCheck(destType)) {
+            // Match positional parameters.
+            for (let paramIndex = 0; paramIndex < positionalsToMatch; paramIndex++) {
+                const srcParamType = FunctionType.getEffectiveParameterType(
+                    srcType,
+                    srcParams.findIndex((p) => p === srcPositionals[paramIndex])
+                );
+                const destParamType = FunctionType.getEffectiveParameterType(
+                    destType,
+                    destParams.findIndex((p) => p === destPositionals[paramIndex])
+                );
+
+                if (
+                    !canAssignFunctionParameter(
+                        destParamType,
+                        srcParamType,
+                        paramIndex + 1,
+                        diag.createAddendum(),
+                        typeVarMap,
+                        flags,
+                        recursionCount
+                    )
+                ) {
+                    canAssign = false;
+                }
+            }
+
+            if (destPositionals.length < srcPositionals.length) {
+                // If the dest type includes a ParamSpec, the additional parameters
+                // can be assigned to it, so no need to report an error here.
+                if (!destType.details.paramSpec) {
+                    const nonDefaultSrcParamCount = srcParams.filter((p) => !!p.name && !p.hasDefault).length;
+                    if (destArgsIndex < 0) {
+                        if (destPositionals.length < nonDefaultSrcParamCount) {
+                            diag.createAddendum().addMessage(
+                                Localizer.DiagnosticAddendum.functionTooFewParams().format({
+                                    expected: nonDefaultSrcParamCount,
+                                    received: destPositionals.length,
+                                })
+                            );
+                            canAssign = false;
+                        }
+                    } else {
+                        // Make sure the remaining positional arguments are of the
+                        // correct type for the *args parameter.
+                        const destArgsType = FunctionType.getEffectiveParameterType(destType, destArgsIndex);
+                        if (!isAnyOrUnknown(destArgsType)) {
+                            for (
+                                let paramIndex = destPositionals.length;
+                                paramIndex < srcPositionals.length;
+                                paramIndex++
+                            ) {
+                                const srcParamType = FunctionType.getEffectiveParameterType(
+                                    srcType,
+                                    srcParams.findIndex((p) => p === srcPositionals[paramIndex])
+                                );
+                                if (
+                                    !canAssignFunctionParameter(
+                                        destArgsType,
+                                        srcParamType,
+                                        paramIndex + 1,
+                                        diag.createAddendum(),
+                                        typeVarMap,
+                                        flags,
+                                        recursionCount
+                                    )
+                                ) {
+                                    canAssign = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (srcPositionals.length < destPositionals.length) {
+                if (srcArgsIndex >= 0) {
+                    // Make sure the remaining dest parameters can be assigned to the source
+                    // *args parameter type.
+                    const srcArgsType = FunctionType.getEffectiveParameterType(srcType, srcArgsIndex);
+                    if (!isAnyOrUnknown(srcArgsType)) {
+                        for (
+                            let paramIndex = srcPositionals.length;
+                            paramIndex < destPositionals.length;
+                            paramIndex++
+                        ) {
+                            const destParamType = FunctionType.getEffectiveParameterType(
+                                destType,
+                                destParams.findIndex((p) => p === destPositionals[paramIndex])
+                            );
+                            if (
+                                !canAssignFunctionParameter(
+                                    destParamType,
+                                    srcArgsType,
+                                    paramIndex + 1,
+                                    diag.createAddendum(),
+                                    typeVarMap,
+                                    flags,
+                                    recursionCount
+                                )
+                            ) {
+                                canAssign = false;
+                            }
+                        }
+                    }
+                } else {
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.functionTooManyParams().format({
+                            expected: srcPositionals.length,
+                            received: destPositionals.length,
+                        })
+                    );
+                    canAssign = false;
+                }
+            }
+
+            // If both src and dest have an "*args" parameter, make sure
+            // their types are compatible.
+            if (srcArgsIndex >= 0 && destArgsIndex >= 0) {
+                const srcArgsType = FunctionType.getEffectiveParameterType(srcType, srcArgsIndex);
+                const destArgsType = FunctionType.getEffectiveParameterType(destType, destArgsIndex);
+                if (
+                    !canAssignFunctionParameter(
+                        destArgsType,
+                        srcArgsType,
+                        destArgsIndex + 1,
+                        diag.createAddendum(),
+                        typeVarMap,
+                        flags,
+                        recursionCount
+                    )
+                ) {
+                    canAssign = false;
+                }
+            }
+
+            // If the dest has an "*args" but the source doesn't, report the incompatibility.
+            // The converse situation is OK.
+            if (srcArgsIndex < 0 && destArgsIndex >= 0) {
+                diag.createAddendum().addMessage(
+                    Localizer.DiagnosticAddendum.argsParamMissing().format({
+                        paramName: destParams[destArgsIndex].name!,
+                    })
+                );
+                canAssign = false;
+            }
+
             // Handle matching of named (keyword) parameters.
             // Build a dictionary of named parameters in the dest.
             const destParamMap = new Map<string, FunctionParameter>();
-            let destHasNamedParam = false;
-            destParams.forEach((param) => {
-                if (destHasNamedParam) {
-                    if (param.name && param.category === ParameterCategory.Simple) {
-                        destParamMap.set(param.name, param);
-                    }
-                } else if (param.category === ParameterCategory.VarArgList) {
-                    destHasNamedParam = true;
-                }
-            });
-
-            let srcHasNamedParam = false;
-            srcParams.forEach((param) => {
-                if (srcHasNamedParam) {
-                    if (param.name && param.category === ParameterCategory.Simple) {
-                        const destParam = destParamMap.get(param.name);
-                        const paramDiag = diag.createAddendum();
-                        if (!destParam) {
-                            paramDiag.addMessage(
-                                Localizer.DiagnosticAddendum.namedParamMissingInDest().format({ name: param.name })
-                            );
-                            canAssign = false;
-                        } else {
-                            const specializedDestParamType = specializeType(
-                                destParam.type,
-                                typeVarMap,
-                                /* makeConcrete */ false,
-                                recursionCount + 1
-                            );
-                            if (
-                                !canAssignType(
-                                    param.type,
-                                    specializedDestParamType,
-                                    paramDiag.createAddendum(),
-                                    undefined,
-                                    CanAssignFlags.Default,
-                                    recursionCount + 1
-                                )
-                            ) {
-                                paramDiag.addMessage(
-                                    Localizer.DiagnosticAddendum.namedParamTypeMismatch().format({
-                                        name: param.name,
-                                        sourceType: printType(specializedDestParamType),
-                                        destType: printType(param.type),
-                                    })
-                                );
-                                canAssign = false;
-                            }
-                            destParamMap.delete(param.name);
+            let destHasKwargsParam = false;
+            if (destStartOfNamed >= 0) {
+                destParams.forEach((param, index) => {
+                    if (index >= destStartOfNamed) {
+                        if (param.category === ParameterCategory.VarArgDictionary) {
+                            destHasKwargsParam = true;
+                        } else if (param.name && param.category === ParameterCategory.Simple) {
+                            destParamMap.set(param.name, param);
                         }
                     }
-                } else if (param.category === ParameterCategory.VarArgList) {
-                    srcHasNamedParam = true;
-                }
-            });
+                });
+            }
+
+            if (srcStartOfNamed >= 0) {
+                srcParams.forEach((param, index) => {
+                    if (index >= srcStartOfNamed) {
+                        if (param.name && param.category === ParameterCategory.Simple) {
+                            const destParam = destParamMap.get(param.name);
+                            const paramDiag = diag.createAddendum();
+                            if (!destParam) {
+                                if (!destHasKwargsParam && !param.hasDefault) {
+                                    paramDiag.addMessage(
+                                        Localizer.DiagnosticAddendum.namedParamMissingInDest().format({
+                                            name: param.name,
+                                        })
+                                    );
+                                    canAssign = false;
+                                }
+                            } else {
+                                const specializedDestParamType = specializeType(
+                                    destParam.type,
+                                    typeVarMap,
+                                    /* makeConcrete */ false,
+                                    recursionCount + 1
+                                );
+                                if (
+                                    !canAssignType(
+                                        param.type,
+                                        specializedDestParamType,
+                                        paramDiag.createAddendum(),
+                                        undefined,
+                                        flags,
+                                        recursionCount + 1
+                                    )
+                                ) {
+                                    paramDiag.addMessage(
+                                        Localizer.DiagnosticAddendum.namedParamTypeMismatch().format({
+                                            name: param.name,
+                                            sourceType: printType(specializedDestParamType),
+                                            destType: printType(param.type),
+                                        })
+                                    );
+                                    canAssign = false;
+                                }
+                                destParamMap.delete(param.name);
+                            }
+                        }
+                    }
+                });
+            }
 
             // See if there are any unmatched named parameters.
             destParamMap.forEach((_, paramName) => {
@@ -13989,75 +14237,51 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             });
         }
 
-        // If we didn't find a var-arg parameter, the number of dest params
-        // must be enough to provide all of the non-default source params
-        // with values. Plus, the number of source params must be enough to
-        // accept all of the dest arguments.
-        if (!srcHasVarArgs && !destHasVarArgs) {
-            const nonDefaultSrcParamCount = srcParams.filter((param) => !!param.name && !param.hasDefault).length;
+        // Match the return parameter.
+        if (checkReturnType) {
+            const destReturnType = getFunctionEffectiveReturnType(destType);
+            if (!isAnyOrUnknown(destReturnType)) {
+                let srcReturnType = getFunctionEffectiveReturnType(srcType);
+                if (typeVarMap) {
+                    srcReturnType = specializeType(srcReturnType, typeVarMap, /* makeConcrete */ false);
+                }
+                const returnDiag = diag.createAddendum();
 
-            if (destParamCount < nonDefaultSrcParamCount) {
-                if (!destType.details.paramSpec) {
-                    diag.addMessage(
-                        Localizer.DiagnosticAddendum.functionTooFewParams().format({
-                            expected: nonDefaultSrcParamCount,
-                            received: destParamCount,
+                if (
+                    !canAssignType(
+                        destReturnType,
+                        srcReturnType,
+                        returnDiag.createAddendum(),
+                        typeVarMap,
+                        flags,
+                        recursionCount + 1
+                    )
+                ) {
+                    returnDiag.addMessage(
+                        Localizer.DiagnosticAddendum.functionReturnTypeMismatch().format({
+                            sourceType: printType(srcReturnType),
+                            destType: printType(destReturnType),
                         })
                     );
                     canAssign = false;
                 }
             }
 
-            if (destParamCount > srcParamCount) {
-                diag.addMessage(
-                    Localizer.DiagnosticAddendum.functionTooManyParams().format({
-                        expected: srcParamCount,
-                        received: destParamCount,
-                    })
+            // Are we assigning to a function with a ParamSpec?
+            if (destType.details.paramSpec && typeVarMap && !typeVarMap.isLocked()) {
+                typeVarMap.setParamSpec(
+                    destType.details.paramSpec.name,
+                    srcType.details.parameters
+                        .map((p, index) => {
+                            const paramSpecEntry: ParamSpecEntry = {
+                                name: p.name || `__p${index}`,
+                                type: p.type,
+                            };
+                            return paramSpecEntry;
+                        })
+                        .slice(destType.details.parameters.length, srcType.details.parameters.length)
                 );
-                canAssign = false;
             }
-        }
-
-        // Match the return parameter.
-        const destReturnType = getFunctionEffectiveReturnType(destType);
-        if (!isAnyOrUnknown(destReturnType)) {
-            const srcReturnType = getFunctionEffectiveReturnType(srcType);
-
-            if (
-                !canAssignType(
-                    destReturnType,
-                    srcReturnType,
-                    diag.createAddendum(),
-                    typeVarMap,
-                    CanAssignFlags.Default,
-                    recursionCount + 1
-                )
-            ) {
-                diag.addMessage(
-                    Localizer.DiagnosticAddendum.functionReturnTypeMismatch().format({
-                        sourceType: printType(srcReturnType),
-                        destType: printType(destReturnType),
-                    })
-                );
-                canAssign = false;
-            }
-        }
-
-        // Are we assigning to a function with a ParamSpec?
-        if (destType.details.paramSpec && typeVarMap && !typeVarMap.isLocked()) {
-            typeVarMap.setParamSpec(
-                destType.details.paramSpec.name,
-                srcType.details.parameters
-                    .map((p, index) => {
-                        const paramSpecEntry: ParamSpecEntry = {
-                            name: p.name || `__p${index}`,
-                            type: p.type,
-                        };
-                        return paramSpecEntry;
-                    })
-                    .slice(destType.details.parameters.length, srcType.details.parameters.length)
-            );
         }
 
         return canAssign;
@@ -14851,22 +15075,34 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     subtypes = filteredSubtypes;
                 }
 
-                const isLiteral = (type: Type) => isObject(type) && type.classType.literalValue !== undefined;
+                const isLiteralObject = (type: Type) => isObject(type) && type.classType.literalValue !== undefined;
+                const isLiteralClass = (type: Type) => isClass(type) && type.literalValue !== undefined;
 
                 const subtypeStrings: string[] = [];
                 while (subtypes.length > 0) {
                     const subtype = subtypes.shift()!;
-                    if (isLiteral(subtype)) {
-                        // Combine all literal values. Rather than printing Union[Literal[1],
+                    if (isLiteralObject(subtype)) {
+                        // Combine all literal objects. Rather than printing Union[Literal[1],
                         // Literal[2]], print Literal[1, 2].
-                        const literals = subtypes.filter((t) => isLiteral(t));
+                        const literals = subtypes.filter((t) => isLiteralObject(t));
                         literals.unshift(subtype);
-                        const literalValues = literals.map((t) => printLiteralValue(t as ObjectType));
+                        const literalValues = literals.map((t) => printLiteralValue((t as ObjectType).classType));
                         subtypeStrings.push(`Literal[${literalValues.join(', ')}]`);
 
                         // Remove the items we've handled.
                         if (literals.length > 1) {
-                            subtypes = subtypes.filter((t) => !isLiteral(t));
+                            subtypes = subtypes.filter((t) => !isLiteralObject(t));
+                        }
+                    } else if (isLiteralClass(subtype)) {
+                        // Combine all literal classes.
+                        const literals = subtypes.filter((t) => isLiteralClass(t));
+                        literals.unshift(subtype);
+                        const literalValues = literals.map((t) => printLiteralValue(t as ClassType));
+                        subtypeStrings.push(`Type[Literal[${literalValues.join(', ')}]]`);
+
+                        // Remove the items we've handled.
+                        if (literals.length > 1) {
+                            subtypes = subtypes.filter((t) => !isLiteralClass(t));
                         }
                     } else {
                         subtypeStrings.push(printType(subtype, /* expandTypeAlias */ false, recursionCount + 1));
