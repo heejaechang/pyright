@@ -31,7 +31,7 @@ import { ConsoleInterface, StandardConsole } from '../common/console';
 import { Diagnostic } from '../common/diagnostic';
 import { FileEditAction, TextEditAction } from '../common/editAction';
 import { LanguageServiceExtension } from '../common/extensibility';
-import { FileSystem, FileWatcher } from '../common/fileSystem';
+import { FileSystem, FileWatcher, isIgnoredDueToRelativePath } from '../common/fileSystem';
 import {
     combinePaths,
     FileSpec,
@@ -982,7 +982,12 @@ export class AnalyzerService {
                     this._console.info(`Adding fs watcher for directories:\n ${fileList.join('\n')}`);
                 }
 
+                const isIgnored = isIgnoredDueToRelativePath(fileList);
                 this._sourceFileWatcher = this._fs.createFileSystemWatcher(fileList, (event, path) => {
+                    if (isIgnored(path)) {
+                        return;
+                    }
+
                     if (this._verboseOutput) {
                         this._console.info(`Received fs event '${event}' for path '${path}'`);
                     }
@@ -1052,8 +1057,12 @@ export class AnalyzerService {
                 if (this._verboseOutput) {
                     this._console.info(`Adding fs watcher for library directories:\n ${watchList.join('\n')}`);
                 }
-
+                const isIgnored = isIgnoredDueToRelativePath(watchList);
                 this._libraryFileWatcher = this._fs.createFileSystemWatcher(watchList, (event, path) => {
+                    if (isIgnored(path)) {
+                        return;
+                    }
+
                     if (this._verboseOutput) {
                         this._console.info(`Received fs event '${event}' for path '${path}'`);
                     }
