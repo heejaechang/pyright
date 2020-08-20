@@ -84,9 +84,12 @@ export function createFromRealFileSystem(
 // it will give relative path rather than absolute path. To get rid of such cases,
 // we will drop any event with relative paths. this trick is copied from VS Code
 // (https://github.com/microsoft/vscode/blob/master/src/vs/platform/files/node/watcher/unix/chokidarWatcherService.ts)
-export function isIgnoredDueToRelativePath(paths: string[]) {
+export function ignoredWatchEventFunction(paths: string[]) {
     const normalizedPaths = paths.map((p) => p.toLowerCase());
     return (path: string): boolean => {
+        if (!path || path.indexOf('__pycache__')) {
+            return true;
+        }
         const normalizedPath = path.toLowerCase();
         return normalizedPaths.every((p) => normalizedPath.indexOf(p) < 0);
     };

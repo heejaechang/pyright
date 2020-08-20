@@ -31,7 +31,7 @@ import { ConsoleInterface, StandardConsole } from '../common/console';
 import { Diagnostic } from '../common/diagnostic';
 import { FileEditAction, TextEditAction } from '../common/editAction';
 import { LanguageServiceExtension } from '../common/extensibility';
-import { FileSystem, FileWatcher, isIgnoredDueToRelativePath } from '../common/fileSystem';
+import { FileSystem, FileWatcher, ignoredWatchEventFunction } from '../common/fileSystem';
 import {
     combinePaths,
     FileSpec,
@@ -981,7 +981,7 @@ export class AnalyzerService {
                     this._console.info(`Adding fs watcher for directories:\n ${fileList.join('\n')}`);
                 }
 
-                const isIgnored = isIgnoredDueToRelativePath(fileList);
+                const isIgnored = ignoredWatchEventFunction(fileList);
                 this._sourceFileWatcher = this._fs.createFileSystemWatcher(fileList, (event, path) => {
                     if (isIgnored(path)) {
                         return;
@@ -1056,7 +1056,7 @@ export class AnalyzerService {
                 if (this._verboseOutput) {
                     this._console.info(`Adding fs watcher for library directories:\n ${watchList.join('\n')}`);
                 }
-                const isIgnored = isIgnoredDueToRelativePath(watchList);
+                const isIgnored = ignoredWatchEventFunction(watchList);
                 this._libraryFileWatcher = this._fs.createFileSystemWatcher(watchList, (event, path) => {
                     if (isIgnored(path)) {
                         return;
