@@ -6561,6 +6561,25 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             }
         }
 
+        // Handle the special case where the unary operator is + or -, the operand
+        // is a literal int, and the resulting type is an int. In these cases, we'll
+        // want to interpret the resulting type as a literal.
+        if (node.operator === OperatorType.Add || node.operator === OperatorType.Subtract) {
+            if (
+                isObject(type) &&
+                ClassType.isBuiltIn(type.classType, 'int') &&
+                isObject(exprType) &&
+                ClassType.isBuiltIn(exprType.classType, 'int') &&
+                typeof exprType.classType.literalValue === 'number'
+            ) {
+                const value =
+                    node.operator === OperatorType.Add
+                        ? exprType.classType.literalValue
+                        : -exprType.classType.literalValue;
+                type = ObjectType.create(ClassType.cloneWithLiteral(type.classType, value));
+            }
+        }
+
         return { type, node };
     }
 
@@ -12994,18 +13013,19 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                     (isDestHomogenousTuple ? destTypeArgs[0] : destTypeArgs[i]) || AnyType.create();
                                 const expectedSrcType =
                                     (isSrcHomogeneousType ? srcTypeArgs[0] : srcTypeArgs[i]) || AnyType.create();
+                                const entryDiag = diag.createAddendum();
 
                                 if (
                                     !canAssignType(
                                         expectedDestType,
                                         expectedSrcType,
-                                        diag.createAddendum(),
+                                        entryDiag.createAddendum(),
                                         curTypeVarMap,
                                         flags,
                                         recursionCount + 1
                                     )
                                 ) {
-                                    diag.addMessage(
+                                    entryDiag.addMessage(
                                         Localizer.DiagnosticAddendum.tupleEntryTypeMismatch().format({ entry: i + 1 })
                                     );
                                     return false;
@@ -13499,17 +13519,17 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             // For union sources, all of the types need to be assignable to the dest.
             srcType.subtypes.forEach((t) => {
                 if (!canAssignType(destType, t, diag.createAddendum(), typeVarMap, flags, recursionCount + 1)) {
-                    diag.addMessage(
-                        Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
-                            sourceType: printType(t),
-                            destType: printType(destType),
-                        })
-                    );
                     isIncompatible = true;
                 }
             });
 
             if (isIncompatible) {
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(srcType),
+                        destType: printType(destType),
+                    })
+                );
                 return false;
             }
 
@@ -14394,18 +14414,22 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 const baseParamType = FunctionType.getEffectiveParameterType(baseMethod, i);
                 const overrideParamType = FunctionType.getEffectiveParameterType(overrideMethod, i);
 
-                if (
-                    baseParam.category !== overrideParam.category ||
-                    !canAssignType(baseParamType, overrideParamType, diag.createAddendum())
-                ) {
-                    diag.addMessage(
-                        Localizer.DiagnosticAddendum.overrideParamType().format({
-                            index: i + 1,
-                            baseType: printType(baseParamType),
-                            overrideType: printType(overrideParamType),
-                        })
-                    );
-                    canOverride = false;
+                const baseIsSynthesizedTypeVar = isTypeVar(baseParamType) && baseParamType.isSynthesized;
+                const overrideIsSynthesizedTypeVar = isTypeVar(overrideParamType) && overrideParamType.isSynthesized;
+                if (!baseIsSynthesizedTypeVar && !overrideIsSynthesizedTypeVar) {
+                    if (
+                        baseParam.category !== overrideParam.category ||
+                        !canAssignType(overrideParamType, baseParamType, diag.createAddendum())
+                    ) {
+                        diag.addMessage(
+                            Localizer.DiagnosticAddendum.overrideParamType().format({
+                                index: i + 1,
+                                baseType: printType(baseParamType),
+                                overrideType: printType(overrideParamType),
+                            })
+                        );
+                        canOverride = false;
+                    }
                 }
             }
         }
