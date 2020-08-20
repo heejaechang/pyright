@@ -452,7 +452,6 @@ export class AnalyzerService {
                     );
                 }
             }
-            this._updateLibraryFileWatcher();
         } else {
             configOptions.addExecEnvironmentForExtraPaths(
                 this._fs,
@@ -501,7 +500,7 @@ export class AnalyzerService {
             }
         }
 
-        configOptions.verboseOutput = !!commandLineOptions.verboseOutput;
+        configOptions.verboseOutput = commandLineOptions.verboseOutput ?? configOptions.verboseOutput;
         configOptions.checkOnlyOpenFiles = !!commandLineOptions.checkOnlyOpenFiles;
         configOptions.autoImportCompletions = !!commandLineOptions.autoImportCompletions;
 
@@ -678,8 +677,8 @@ export class AnalyzerService {
         return this._commandLineOptions?.typeCheckingMode;
     }
 
-    private get _verboseOutput() {
-        return !!this._commandLineOptions?.verboseOutput;
+    private get _verboseOutput(): boolean {
+        return !!this._configOptions.verboseOutput;
     }
 
     private get _typeStubTargetImportName() {
