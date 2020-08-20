@@ -28,13 +28,15 @@ export async function migrateV1Settings(config: AppConfiguration, shell: Applica
         }
     }
 
-    const outputChannel = shell.createOutputChannel(PylanceName);
-    if (migrated) {
-        outputChannel.appendLine(LanguageServer.settingsMigratedMessage());
-    }
-    if (errors.length > 0) {
-        outputChannel.appendLine(LanguageServer.settingsMigrationError());
-        outputChannel.appendLine(`    ${errors.join()}`);
+    if (migrated || errors.length > 0) {
+        const outputChannel = shell.createOutputChannel(PylanceName);
+        if (migrated) {
+            outputChannel.appendLine(LanguageServer.settingsMigratedMessage());
+        }
+        if (errors.length > 0) {
+            outputChannel.appendLine(LanguageServer.settingsMigrationError());
+            outputChannel.appendLine(`    ${errors.join()}`);
+        }
     }
 }
 
