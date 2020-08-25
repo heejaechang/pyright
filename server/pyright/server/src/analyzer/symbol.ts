@@ -32,10 +32,6 @@ export const enum SymbolFlags {
     // Indicates that the symbol is an instance member of a class.
     InstanceMember = 1 << 3,
 
-    // Most class variables are visible to class instances, but
-    // in a few cases, they are not accessible through instances.
-    InaccessibleToInstance = 1 << 4,
-
     // Indicates that the symbol is considered "private" to the
     // class and should not be accessed outside or overridden.
     PrivateMember = 1 << 5,
@@ -114,10 +110,6 @@ export class Symbol {
         return !!(this._flags & SymbolFlags.ClassMember);
     }
 
-    isInaccessibleToInstance() {
-        return !!(this._flags & SymbolFlags.InaccessibleToInstance);
-    }
-
     setIsInstanceMember() {
         this._flags |= SymbolFlags.InstanceMember;
     }
@@ -150,6 +142,14 @@ export class Symbol {
             const declIndex = this._declarations.findIndex((decl) => areDeclarationsSame(decl, declaration));
             if (declIndex < 0) {
                 this._declarations.push(declaration);
+
+                // If there is more than one declaration for a symbol, we will
+                // assume it is not a type alias.
+                this._declarations.forEach((decl) => {
+                    if (decl.type === DeclarationType.Variable && decl.typeAliasName) {
+                        delete decl.typeAliasName;
+                    }
+                });
             } else {
                 // If the new declaration has a defined type, it should replace
                 // the existing one.
@@ -170,8 +170,8 @@ export class Symbol {
                             curDecl.isFinal = true;
                         }
 
-                        if (declaration.isTypeAlias) {
-                            curDecl.isTypeAlias = true;
+                        if (declaration.isExplicitTypeAlias) {
+                            curDecl.isExplicitTypeAlias = true;
                         }
 
                         if (!curDecl.inferredTypeSource && declaration.inferredTypeSource) {
