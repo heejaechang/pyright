@@ -14,7 +14,6 @@ import {
     CompletionItemKind,
     CompletionList,
     CompletionParams,
-    Connection,
     ExecuteCommandParams,
     InitializeParams,
     InitializeResult,
@@ -40,7 +39,12 @@ import { createFromRealFileSystem, FileSystem } from './pyright/server/src/commo
 import * as consts from './pyright/server/src/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
 import { ProgressReporter } from './pyright/server/src/common/progressReporter';
-import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
+import {
+    LanguageServerBase,
+    ProgressReporterConnection,
+    ServerSettings,
+    WorkspaceServiceInstance,
+} from './pyright/server/src/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
 import { CommandController } from './src/commands/commandController';
 import { Commands } from './src/commands/commands';
@@ -121,7 +125,7 @@ class PylanceServer extends LanguageServerBase {
         this._intelliCode.initialize(this._logger, this._telemetry, this.fs, this._platform, icModelSubfolder);
 
         const server = this;
-        function reporterFactory(connection: Connection): ProgressReporter {
+        function reporterFactory(connection: ProgressReporterConnection): ProgressReporter {
             return {
                 isEnabled(data: AnalysisResults): boolean {
                     return server._progressBarEnabled;
