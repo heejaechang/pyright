@@ -129,6 +129,12 @@ export interface LanguageServerInterface {
     readonly fs: FileSystem;
 }
 
+// This is a subset of the LSP Connection, defined to not expose the LSP library
+// in the public interface.
+export interface ProgressReporterConnection {
+    sendNotification: (method: string, params?: any) => void;
+}
+
 export interface ServerOptions {
     productName: string;
     rootDirectory: string;
@@ -137,9 +143,7 @@ export interface ServerOptions {
     maxAnalysisTimeInForeground?: MaxAnalysisTime;
     supportedCommands?: string[];
     supportedCodeActions?: string[];
-    progressReporterFactory?: (connection: {
-        sendNotification: (method: string, params?: any) => void;
-    }) => ProgressReporter;
+    progressReporterFactory?: (connection: ProgressReporterConnection) => ProgressReporter;
 }
 
 interface InternalFileWatcher extends FileWatcher {
@@ -350,7 +354,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         // For any non-workspace paths, use the node file watcher.
         const nodeWatchers = nonWorkspacePaths.map((path) => {
-            return fs.watch(path, { recursive: true }, listener);
+            return fs.watch(path, { recursive: true }, (event, filename) =>
+                listener(event as FileWatcherEventType, filename)
+            );
         });
 
         const fileWatcher: InternalFileWatcher = {

@@ -94,7 +94,7 @@ import {
     ModuleLoaderActions,
     VariableDeclaration,
 } from './declaration';
-import { isTypeAliasDeclaration } from './declarationUtils';
+import { isExplicitTypeAliasDeclaration, isPossibleTypeAliasDeclaration } from './declarationUtils';
 import * as ParseTreeUtils from './parseTreeUtils';
 import { ScopeType } from './scope';
 import * as ScopeUtils from './scopeUtils';
@@ -147,6 +147,7 @@ import {
     Type,
     TypeBase,
     TypeCategory,
+    TypedDictEntry,
     TypeSourceId,
     TypeVarType,
     UnboundType,
@@ -195,7 +196,6 @@ import {
     stripLiteralTypeArgsValue,
     stripLiteralValue,
     transformTypeObjectToClass,
-    TypedDictEntry,
 } from './typeUtils';
 import { TypeVarMap } from './typeVarMap';
 
@@ -327,9 +327,6 @@ export const enum MemberAccessFlags {
     // Consider writes to symbols flagged as ClassVars as an error.
     DisallowClassVarWrites = 1 << 4,
 
-    // Don't allow access to attributes that are accessible only through the class.
-    SkipIfInaccessibleToInstance = 1 << 5,
-
     // This set of flags is appropriate for looking up methods.
     SkipForMethodLookup = SkipInstanceMembers | SkipGetAttributeCheck,
 }
@@ -426,6 +423,7 @@ export interface TypeEvaluator {
     getType: (node: ExpressionNode) => Type | undefined;
     getTypeOfClass: (node: ClassNode) => ClassTypeResult | undefined;
     getTypeOfFunction: (node: FunctionNode) => FunctionTypeResult | undefined;
+    getTypeOfAnnotation: (node: ExpressionNode, allowFinal?: boolean) => Type;
     evaluateTypesForStatement: (node: ParseNode) => void;
 
     getDeclaredTypeForExpression: (expression: ExpressionNode) => Type | undefined;
@@ -1097,9 +1095,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
             memberName,
             usage,
             diag,
-            memberAccessFlags |
-                MemberAccessFlags.DisallowClassVarWrites |
-                MemberAccessFlags.SkipIfInaccessibleToInstance
+            memberAccessFlags | MemberAccessFlags.DisallowClassVarWrites
         );
 
         let resultType = memberInfo ? memberInfo.type : undefined;
@@ -1449,8 +1445,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 );
                 if (symbolWithScope) {
                     const symbol = symbolWithScope.symbol;
-                    return symbol.getDeclarations().find((decl) => isTypeAliasDeclaration(decl)) !== undefined;
+                    return symbol.getDeclarations().find((decl) => isExplicitTypeAliasDeclaration(decl)) !== undefined;
                 }
+            }
+        }
+
+        return false;
+    }
+
+    // Determines whether the specified expression is possibly an implicit type alias.
+    // In Python, type aliases look the same as simple assignments, but we use some heuristics
+    // to tell them apart.
+    function isPossibleImplicitTypeAlias(expression: ExpressionNode): boolean {
+        if (expression.nodeType === ParseNodeType.Name) {
+            const symbolWithScope = lookUpSymbolRecursive(expression, expression.value, /* honorCodeFlow */ false);
+            if (symbolWithScope) {
+                const symbol = symbolWithScope.symbol;
+                return symbol.getDeclarations().find((decl) => isPossibleTypeAliasDeclaration(decl)) !== undefined;
             }
         }
 
@@ -3302,9 +3313,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
         if (flags & MemberAccessFlags.SkipObjectBaseClass) {
             classLookupFlags |= ClassMemberLookupFlags.SkipObjectBaseClass;
-        }
-        if (flags & MemberAccessFlags.SkipIfInaccessibleToInstance) {
-            classLookupFlags |= ClassMemberLookupFlags.SkipIfInaccessibleToInstance;
         }
 
         // Always look for a member with a declared type first.
@@ -8006,6 +8014,26 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         return typeOfExpr;
     }
 
+    function transformTypeForTypeAlias(type: Type, name: NameNode): Type {
+        if (!TypeBase.isInstantiable(type)) {
+            return type;
+        }
+
+        // Determine if there are any generic type parameters associated
+        // with this type alias.
+        const typeParameters: TypeVarType[] = [];
+
+        // Skip this for a simple TypeVar (one that's not part of a union).
+        if (!isTypeVar(type)) {
+            doForSubtypes(type, (subtype) => {
+                addTypeVarsToListIfUnique(typeParameters, getTypeVarArgumentsRecursive(subtype));
+                return undefined;
+            });
+        }
+
+        return TypeBase.cloneForTypeAlias(type, name.value, typeParameters.length > 0 ? typeParameters : undefined);
+    }
+
     function createSpecialBuiltInClass(node: ParseNode, assignedName: string, aliasMapEntry: AliasMapEntry): ClassType {
         const fileInfo = getFileInfo(node);
         const specialClassType = ClassType.create(
@@ -8162,37 +8190,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 // Determine whether there is a declared type.
                 const declaredType = getDeclaredTypeForExpression(node.leftExpression);
 
-                // Evaluate the type of the right-hand side. Don't specialize it in
-                // case it's a type alias with generic type arguments.
                 let flags: EvaluatorFlags = EvaluatorFlags.DoNotSpecialize;
                 if (fileInfo.isStubFile) {
                     // An assignment of ellipsis means "Any" within a type stub file.
                     flags |= EvaluatorFlags.ConvertEllipsisToUnknown;
                 }
 
-                const isTypeAlias = isDeclaredTypeAlias(node.leftExpression);
                 let typeAliasNameNode: NameNode | undefined;
-                if (isTypeAlias) {
+                if (isDeclaredTypeAlias(node.leftExpression)) {
                     flags |=
                         EvaluatorFlags.ExpectingType |
                         EvaluatorFlags.EvaluateStringLiteralAsType |
                         EvaluatorFlags.ParamSpecDisallowed;
 
                     typeAliasNameNode = (node.leftExpression as TypeAnnotationNode).valueExpression as NameNode;
-                } else {
-                    // The assignment isn't a declared type alias. See if it is potentially
-                    // a type alias. We'll consider it a potential type alias if the target
-                    // of the assignment is a simple name and this is the only place where
-                    // it is assigned.
+                } else if (isPossibleImplicitTypeAlias(node.leftExpression)) {
                     if (node.leftExpression.nodeType === ParseNodeType.Name) {
-                        const targetSymbolWithScope = lookUpSymbolRecursive(
-                            node.leftExpression,
-                            node.leftExpression.value,
-                            /* honorCodeFlow */ false
-                        );
-                        if (targetSymbolWithScope && targetSymbolWithScope.symbol.getDeclarations().length === 1) {
-                            typeAliasNameNode = node.leftExpression;
-                        }
+                        typeAliasNameNode = node.leftExpression;
                     }
                 }
 
@@ -8232,25 +8246,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     rightHandType = transformTypeForPossibleEnumClass(node.leftExpression, rightHandType);
                 }
 
-                // If this is a type alias, record its name based on the assignment target.
-                if (typeAliasNameNode && TypeBase.isInstantiable(rightHandType)) {
-                    // Determine if there are any generic type parameters associated
-                    // with this type alias.
-                    const typeParameters: TypeVarType[] = [];
-
-                    // Skip this for a simple TypeVar (one that's not part of a union).
-                    if (!isTypeVar(rightHandType)) {
-                        doForSubtypes(rightHandType, (subtype) => {
-                            addTypeVarsToListIfUnique(typeParameters, getTypeVarArgumentsRecursive(subtype));
-                            return undefined;
-                        });
-                    }
-
-                    rightHandType = TypeBase.cloneForTypeAlias(
-                        rightHandType,
-                        typeAliasNameNode.value,
-                        typeParameters.length > 0 ? typeParameters : undefined
-                    );
+                if (typeAliasNameNode) {
+                    // If this is a type alias, record its name based on the assignment target.
+                    rightHandType = transformTypeForTypeAlias(rightHandType, typeAliasNameNode);
                 }
             }
         }
@@ -8510,6 +8508,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (!computeMroLinearization(classType)) {
             addError(Localizer.Diagnostic.methodOrdering(), node.name);
+        }
+
+        // If a metaclass wasn't specified, assume "type".
+        if (!getMetaclass(classType)) {
+            if (!ClassType.isBuiltIn(classType, 'type')) {
+                const typeMetaclass = getBuiltInType(node, 'type');
+                if (typeMetaclass && isClass(typeMetaclass)) {
+                    classType.details.metaClass = typeMetaclass;
+                }
+            }
         }
 
         // The scope for this class becomes the "fields" for the corresponding type.
@@ -10077,7 +10085,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
 
         if (parent.nodeType === ParseNodeType.ModuleName) {
-            getTypeOfExpression(lastContextualExpression);
+            // A name within a module name isn't an expression,
+            // so there's nothing we can evaluate here.
             return;
         }
 
@@ -11964,6 +11973,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 namePartIndex < importInfo.resolvedPaths.length
             ) {
                 if (importInfo.resolvedPaths[namePartIndex]) {
+                    evaluateTypesForStatement(node);
+
                     // Synthesize an alias declaration for this name part. The only
                     // time this case is used is for the hover provider.
                     const aliasDeclaration: AliasDeclaration = {
@@ -12139,12 +12150,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 }
 
                 if (typeAnnotationNode) {
+                    const typeAliasNode = isDeclaredTypeAlias(typeAnnotationNode)
+                        ? ParseTreeUtils.getTypeAnnotationNode(typeAnnotationNode)
+                        : undefined;
                     let declaredType = getTypeOfAnnotation(typeAnnotationNode);
                     if (declaredType) {
                         // Apply enum transform if appropriate.
                         if (declaration.node.nodeType === ParseNodeType.Name) {
                             declaredType = transformTypeForPossibleEnumClass(declaration.node, declaredType);
                         }
+
+                        if (typeAliasNode && typeAliasNode.valueExpression.nodeType === ParseNodeType.Name) {
+                            declaredType = transformTypeForTypeAlias(declaredType, typeAliasNode.valueExpression);
+                        }
+
                         return declaredType;
                     }
                 }
@@ -12247,6 +12266,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 inferredType = transformTypeForPossibleEnumClass(resolvedDecl.node, inferredType);
             }
 
+            if (inferredType && resolvedDecl.typeAliasName) {
+                inferredType = transformTypeForTypeAlias(inferredType, resolvedDecl.typeAliasName);
+            }
+
             return inferredType;
         }
 
@@ -12329,8 +12352,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     }
 
     function getEffectiveTypeOfSymbolForUsage(symbol: Symbol, usageNode?: NameNode): EffectiveTypeResult {
-        // If there's a declared type, it takes precedence over
-        // inferred types.
+        // If there's a declared type, it takes precedence over inferred types.
         if (symbol.hasTypedDeclarations()) {
             return {
                 type: getDeclaredTypeOfSymbol(symbol) || UnknownType.create(),
@@ -12371,6 +12393,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
                         if (type) {
                             const isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
+                            const isTypeAlias =
+                                isExplicitTypeAliasDeclaration(decl) || isPossibleTypeAliasDeclaration(decl);
 
                             type = stripLiteralTypeArgsValue(type);
 
@@ -12380,7 +12404,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                                 // If the symbol is private or constant, we can retain the literal
                                 // value. Otherwise, strip them off to make the type less specific,
                                 // allowing other values to be assigned to it in subclasses.
-                                if (TypeBase.isInstance(type) && !isPrivate && !isConstant && !isEnum && !isFinalVar) {
+                                if (
+                                    TypeBase.isInstance(type) &&
+                                    !isTypeAlias &&
+                                    !isPrivate &&
+                                    !isConstant &&
+                                    !isEnum &&
+                                    !isFinalVar
+                                ) {
                                     type = stripLiteralValue(type);
                                 }
                             }
@@ -13763,7 +13794,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 if (metaclass) {
                     if (isAnyOrUnknown(metaclass)) {
                         return true;
-                    } else if (isClass(metaclass)) {
+                    } else if (isClass(metaclass) && !ClassType.isBuiltIn(metaclass, 'type')) {
                         // Handle EnumMeta, which requires special-case handling because
                         // of the way it's defined in enum.pyi. The type var _T must be
                         // manually set to the corresponding enum object type.
@@ -14661,8 +14692,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     }
 
     function getTypedDictMembersForClass(classType: ClassType) {
+        // Were the entries already calculated and cached?
+        if (!classType.details.typedDictEntries) {
+            const entries = new Map<string, TypedDictEntry>();
+            getTypedDictMembersForClassRecursive(classType, entries);
+
+            // Cache the entries for next time.
+            classType.details.typedDictEntries = entries;
+        }
+
+        // Create a copy of the entries so the caller can mutate them.
         const entries = new Map<string, TypedDictEntry>();
-        getTypedDictMembersForClassRecursive(classType, entries);
+        classType.details.typedDictEntries!.forEach((value, key) => {
+            entries.set(key, { ...value });
+        });
+
         return entries;
     }
 
@@ -15226,6 +15270,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         getType,
         getTypeOfClass,
         getTypeOfFunction,
+        getTypeOfAnnotation,
         evaluateTypesForStatement,
         getDeclaredTypeForExpression,
         verifyDeleteExpression,

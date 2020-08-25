@@ -73,15 +73,10 @@ export const enum ClassMemberLookupFlags {
     // If this flag is set, the instance variables are skipped.
     SkipInstanceVariables = 1 << 3,
 
-    // Most class variables are accessible to instances of the
-    // class, but a few are not. If this is set, these attributes
-    // are invisible.
-    SkipIfInaccessibleToInstance = 1 << 4,
-
     // By default, the first symbol is returned even if it has only
     // an inferred type associated with it. If this flag is set,
     // the search looks only for symbols with declared types.
-    DeclaredTypesOnly = 1 << 5,
+    DeclaredTypesOnly = 1 << 4,
 }
 
 export const enum CanAssignFlags {
@@ -107,12 +102,6 @@ export const enum CanAssignFlags {
 
     // For function types, skip the return type check.
     SkipFunctionReturnTypeCheck = 1 << 4,
-}
-
-export interface TypedDictEntry {
-    valueType: Type;
-    isRequired: boolean;
-    isProvided: boolean;
 }
 
 const singleTickRegEx = /'/g;
@@ -254,6 +243,8 @@ export function stripLiteralTypeArgsValue(type: Type, recursionCount = 0): Type 
                 type.skipAbstractClassTest
             );
         }
+
+        return type;
     }
 
     if (isObject(type)) {
@@ -265,9 +256,16 @@ export function stripLiteralTypeArgsValue(type: Type, recursionCount = 0): Type 
     }
 
     if (type.category === TypeCategory.Union) {
-        return doForSubtypes(type, (subtype) => {
-            return stripLiteralTypeArgsValue(subtype, recursionCount + 1);
+        let typeChanged = false;
+        const transformedUnion = doForSubtypes(type, (subtype) => {
+            const transformedType = stripLiteralTypeArgsValue(subtype, recursionCount + 1);
+            if (transformedType !== subtype) {
+                typeChanged = true;
+            }
+            return transformedType;
         });
+
+        return typeChanged ? transformedUnion : type;
     }
 
     if (type.category === TypeCategory.Function) {
@@ -288,10 +286,15 @@ export function stripLiteralTypeArgsValue(type: Type, recursionCount = 0): Type 
 
     if (type.category === TypeCategory.OverloadedFunction) {
         const strippedOverload = OverloadedFunctionType.create();
-        strippedOverload.overloads = type.overloads.map(
-            (t) => stripLiteralTypeArgsValue(t, recursionCount + 1) as FunctionType
-        );
-        return strippedOverload;
+        let typeChanged = false;
+        strippedOverload.overloads = type.overloads.map((t) => {
+            const transformedOverload = stripLiteralTypeArgsValue(t, recursionCount + 1) as FunctionType;
+            if (transformedOverload !== t) {
+                typeChanged = true;
+            }
+            return transformedOverload;
+        });
+        return typeChanged ? strippedOverload : type;
     }
 
     return type;
@@ -659,11 +662,7 @@ export function lookUpObjectMember(
     flags = ClassMemberLookupFlags.Default
 ): ClassMember | undefined {
     if (isObject(objectType)) {
-        return lookUpClassMember(
-            objectType.classType,
-            memberName,
-            flags | ClassMemberLookupFlags.SkipIfInaccessibleToInstance
-        );
+        return lookUpClassMember(objectType.classType, memberName, flags);
     }
 
     return undefined;
@@ -732,36 +731,31 @@ export function lookUpClassMember(
                 // Next look at class members.
                 const symbol = memberFields.get(memberName);
                 if (symbol && symbol.isClassMember()) {
-                    if (
-                        (flags & ClassMemberLookupFlags.SkipIfInaccessibleToInstance) === 0 ||
-                        !symbol.isInaccessibleToInstance()
-                    ) {
-                        const hasDeclaredType = symbol.hasTypedDeclarations();
-                        if (!declaredTypesOnly || hasDeclaredType) {
-                            let isInstanceMember = false;
+                    const hasDeclaredType = symbol.hasTypedDeclarations();
+                    if (!declaredTypesOnly || hasDeclaredType) {
+                        let isInstanceMember = false;
 
-                            // For data classes and typed dicts, variables that are declared
-                            // within the class are treated as instance variables. This distinction
-                            // is important in cases where a variable is a callable type because
-                            // we don't want to bind it to the instance like we would for a
-                            // class member.
-                            if (
-                                ClassType.isDataClass(specializedMroClass) ||
-                                ClassType.isTypedDictClass(specializedMroClass)
-                            ) {
-                                const decls = symbol.getDeclarations();
-                                if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
-                                    isInstanceMember = true;
-                                }
+                        // For data classes and typed dicts, variables that are declared
+                        // within the class are treated as instance variables. This distinction
+                        // is important in cases where a variable is a callable type because
+                        // we don't want to bind it to the instance like we would for a
+                        // class member.
+                        if (
+                            ClassType.isDataClass(specializedMroClass) ||
+                            ClassType.isTypedDictClass(specializedMroClass)
+                        ) {
+                            const decls = symbol.getDeclarations();
+                            if (decls.length > 0 && decls[0].type === DeclarationType.Variable) {
+                                isInstanceMember = true;
                             }
-
-                            return {
-                                symbol,
-                                isInstanceMember,
-                                classType: specializedMroClass,
-                                isTypeDeclared: hasDeclaredType,
-                            };
                         }
+
+                        return {
+                            symbol,
+                            isInstanceMember,
+                            classType: specializedMroClass,
+                            isTypeDeclared: hasDeclaredType,
+                        };
                     }
                 }
             }
@@ -795,25 +789,18 @@ export function lookUpClassMember(
     return undefined;
 }
 
-export function getMetaclass(type: ClassType, recursionCount = 0): ClassType | UnknownType | undefined {
-    if (recursionCount > maxTypeRecursionCount) {
-        return undefined;
-    }
-
-    if (type.details.metaClass) {
-        if (isClass(type.details.metaClass)) {
-            return type.details.metaClass;
+export function getMetaclass(type: ClassType): ClassType | UnknownType | undefined {
+    for (const mroClass of type.details.mro) {
+        if (isClass(mroClass)) {
+            if (mroClass.details.metaClass) {
+                if (isClass(mroClass.details.metaClass)) {
+                    return mroClass.details.metaClass;
+                } else {
+                    return UnknownType.create();
+                }
+            }
         } else {
             return UnknownType.create();
-        }
-    }
-
-    for (const base of type.details.baseClasses) {
-        if (isClass(base)) {
-            const metaclass = getMetaclass(base, recursionCount + 1);
-            if (metaclass) {
-                return metaclass;
-            }
         }
     }
 
@@ -1271,11 +1258,17 @@ export function getMembersForClass(classType: ClassType, symbolTable: SymbolTabl
     if (!includeInstanceVars) {
         const metaclass = getMetaclass(classType);
         if (metaclass && isClass(metaclass)) {
-            metaclass.details.fields.forEach((symbol, name) => {
-                if (!symbolTable.get(name)) {
-                    symbolTable.set(name, symbol);
+            for (const mroClass of metaclass.details.mro) {
+                if (isClass(mroClass)) {
+                    mroClass.details.fields.forEach((symbol, name) => {
+                        if (!symbolTable.get(name)) {
+                            symbolTable.set(name, symbol);
+                        }
+                    });
+                } else {
+                    break;
                 }
-            });
+            }
         }
     }
 }
