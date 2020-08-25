@@ -417,6 +417,12 @@ export class Binder extends ParseTreeWalker {
         this._createNewScope(ScopeType.Function, functionOrModuleScope, () => {
             AnalyzerNodeInfo.setScope(node, this._currentScope!);
 
+            const enclosingClass = ParseTreeUtils.getEnclosingClass(node);
+            if (enclosingClass) {
+                // Add the implicit "__class__" symbol described in PEP 3135.
+                this._addBuiltInSymbolToCurrentScope('__class__', node, 'class');
+            }
+
             this._deferBinding(() => {
                 // Create a start node for the function.
                 this._currentFlowNode = this._createStartFlowNode();
@@ -1101,7 +1107,9 @@ export class Binder extends ParseTreeWalker {
                     this._addError(Localizer.Diagnostic.nonLocalNoBinding().format({ name: nameValue }), name);
                 }
 
-                this._notLocalBindings.set(nameValue, NameBindingType.Nonlocal);
+                if (valueWithScope) {
+                    this._notLocalBindings.set(nameValue, NameBindingType.Nonlocal);
+                }
             });
         }
 
