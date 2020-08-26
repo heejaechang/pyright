@@ -8,7 +8,7 @@ import { AnalysisResults } from '../../pyright/server/src/analyzer/analysis';
 import { Duration } from '../../pyright/server/src/common/timing';
 import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 
-const TelemetryWaitTimeSeconds = 1;
+const TelemetryWaitTimeSeconds = 60;
 
 export class AnalysisTracker {
     private _peakRssMB = 0;
