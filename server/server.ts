@@ -366,6 +366,16 @@ class PylanceServer extends LanguageServerBase {
         return completionList;
     }
 
+    async updateSettingsForWorkspace(workspace: WorkspaceServiceInstance): Promise<void> {
+        await super.updateSettingsForWorkspace(workspace);
+
+        if (workspace.disableLanguageServices) {
+            return;
+        }
+
+        workspace.serviceInstance.startIndexing();
+    }
+
     private async _updateGlobalSettings(): Promise<void> {
         const pythonAnalysis = await this.getConfiguration(undefined, pythonAnalysisSectionName);
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);

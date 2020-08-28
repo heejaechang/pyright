@@ -1,16 +1,16 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
 // @indexerwithoutstdlib: true
 
+// @filename: mspythonconfig.json
+//// {
+////   "stubPath  ": "typings"
+//// }
+
 // @filename: test1.py
-//// [|/*marker*/testLib|].Test
+//// c = [|/*marker*/TypingStubFileFunction|]()
 
-// @filename: testLib/__init__.pyi
-// @library: true
-//// class Test: ...
-
-// @filename: testLib/__init__.py
-// @library: true
-//// class Test:
+// @filename: typings/stubFile.pyi
+//// def TypingStubFileFunction():
 ////     pass
 
 {
@@ -21,12 +21,12 @@
         marker: {
             codeActions: [
                 {
-                    title: `Add import testLib`,
+                    title: `Add import TypingStubFileFunction from stubFile`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import testLib',
+                        title: 'Add import TypingStubFileFunction from stubFile',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange), 'testLib', 'testLib'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange), 'TypingStubFileFunction', 'stubFile'],
                     },
                 },
             ],

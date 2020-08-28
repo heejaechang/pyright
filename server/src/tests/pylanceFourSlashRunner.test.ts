@@ -11,10 +11,12 @@ import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-lang
 
 import { createPylanceImportResolver } from '../../pylanceImportResolver';
 import { ImportResolverFactory } from '../../pyright/server/src/analyzer/importResolver';
+import { NullConsole } from '../../pyright/server/src/common/console';
 import * as consts from '../../pyright/server/src/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
 import { Range } from '../../pyright/server/src/common/textRange';
 import { LanguageServerInterface, WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
+import { IndexResults } from '../../pyright/server/src/languageService/documentSymbolProvider';
 import { runFourSlashTest } from '../../pyright/server/src/tests/harness/fourslash/runner';
 import { HostSpecificFeatures } from '../../pyright/server/src/tests/harness/fourslash/testState';
 import * as host from '../../pyright/server/src/tests/harness/host';
@@ -22,9 +24,34 @@ import { typeshedFolder } from '../../pyright/server/src/tests/harness/vfs/facto
 import { MODULE_PATH } from '../../pyright/server/src/tests/harness/vfs/filesystem';
 import { CommandController } from '../commands/commandController';
 import { CodeActionProvider } from '../languageService/codeActionProvider';
+import { Indexer } from '../services/indexer';
+
+const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));
 
 class PylanceFeatures implements HostSpecificFeatures {
     importResolverFactory: ImportResolverFactory = createPylanceImportResolver;
+    runIndexer(workspace: WorkspaceServiceInstance, noStdLib: boolean): void {
+        const workspaceMap = new Map<string, IndexResults>();
+        workspace.serviceInstance.test_program.indexWorkspace((p, r) => workspaceMap.set(p, r), CancellationToken.None);
+
+        const configOptions = workspace.serviceInstance.getConfigOptions();
+        const excludes = [];
+        if (noStdLib) {
+            excludes.push(typeshedFolder, bundledStubsFolder);
+        }
+
+        // create indices for libraries
+        const libraryMap = Indexer.indexLibraries(
+            workspace.serviceInstance.getImportResolver(),
+            configOptions,
+            new NullConsole(),
+            'Test',
+            excludes,
+            CancellationToken.None
+        );
+
+        workspace.serviceInstance.test_setIndexing(workspaceMap, libraryMap);
+    }
     getCodeActionsForPosition(
         workspace: WorkspaceServiceInstance,
         filePath: string,
@@ -57,7 +84,6 @@ describe('Pylance fourslash tests', () => {
         throw new Error(`expected folder not exist ${bundledStubsFolderPath} or ${typeshedFolderPath}`);
     }
 
-    const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));
     const mountedPaths = new Map<string, string>();
     mountedPaths.set(bundledStubsFolder, bundledStubsFolderPath);
     mountedPaths.set(typeshedFolder, typeshedFolderPath);

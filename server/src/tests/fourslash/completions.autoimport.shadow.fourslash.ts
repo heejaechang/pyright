@@ -1,12 +1,8 @@
-/// <reference path="fourslash.ts" />
+/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+// @indexerwithoutstdlib: true
 
 // @filename: test1.py
 //// MyShadow[|/*marker*/|]
-
-// @filename: test2.py
-//// import testLib
-//// a = testLib.MyShadow()
-//// a.[|/*hover*/method|]()
 
 // @filename: testLib/__init__.pyi
 // @library: true
@@ -19,15 +15,6 @@
 ////     def method():
 ////         'doc string'
 ////         pass
-
-// This will cause shadow file to be injected.
-helper.openFile(helper.getMarkerByName('hover').fileName);
-helper.verifyHover({
-    hover: {
-        value: '```python\n(method) method: () -> Unknown\n```\ndoc string',
-        kind: 'markdown',
-    },
-});
 
 // @ts-ignore
 await helper.verifyCompletion('exact', {

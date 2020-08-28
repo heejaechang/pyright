@@ -1,11 +1,15 @@
-/// <reference path="fourslash.ts" />
+/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+// @indexerwithoutstdlib: true
 
 // @filename: test1.py
 //// Test[|/*marker*/|]
 
-// @filename: test2.py
+// @filename: testLib/__init__.py
+// @library: true
 //// class Test:
 ////     pass
+////
+//// __all__ = ['Test']
 
 // @ts-ignore
 await helper.verifyCompletion('included', {
@@ -15,7 +19,7 @@ await helper.verifyCompletion('included', {
                 label: 'Test',
                 documentation: {
                     kind: 'markdown',
-                    value: 'Auto-import\n\n```\nfrom test2 import Test\n```',
+                    value: 'Auto-import\n\n```\nfrom testLib import Test\n```',
                 },
             },
         ],

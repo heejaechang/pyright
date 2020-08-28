@@ -1,7 +1,8 @@
 /*
  * analysisTracker.ts
  * Copyright (c) Microsoft Corporation.
- * Licensed under the MIT license.
+ *
+ * Send analysis result telemetry.
  */
 
 import { AnalysisResults } from '../../pyright/server/src/analyzer/analysis';

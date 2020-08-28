@@ -7,7 +7,6 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
-import { PackageScanner } from '../../packageScanner';
 import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
 import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
 import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
@@ -30,17 +29,11 @@ export class AddImportCommand implements ServerCommand {
         const source = params.arguments[3];
 
         const workspace = await this._ls.getWorkspaceForFile(filePath);
-        const configOptions = workspace.serviceInstance.getConfigOptions();
-        const importMap = PackageScanner.getScanner(workspace, token).getImportNameMap(
-            configOptions.findExecEnvironment(filePath)
-        );
-
         const autoImports = workspace.serviceInstance.getAutoImports(
             filePath,
             range,
             addImportSimilarityLimit,
             wellKnownAbbreviationMap,
-            importMap,
             token
         );
 

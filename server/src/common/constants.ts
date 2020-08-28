@@ -1,3 +1,10 @@
+/*
+ * constants.ts
+ * Copyright (c) Microsoft Corporation.
+ *
+ * defines Version.
+ */
+
 // Not using package.json, as it may contain sensitive info.
 import { pyrightCommit, version } from './metadata.json';
 

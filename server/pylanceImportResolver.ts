@@ -5,7 +5,6 @@
  * resolution of additional type stub paths.
  */
 
-import { PackageScanner } from './packageScanner';
 import { ImportedModuleDescriptor, ImportResolver } from './pyright/server/src/analyzer/importResolver';
 import { ImportResult, ImportType } from './pyright/server/src/analyzer/importResult';
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
@@ -56,6 +55,10 @@ export class PylanceImportResolver extends ImportResolver {
         this._onImportMetricsCallback = callback;
     }
 
+    protected getTypeshedPathEx(execEnv: ExecutionEnvironment, importFailureInfo: string[]): string | undefined {
+        return getBundledTypeStubsPath(this.fileSystem.getModulePath());
+    }
+
     protected resolveImportEx(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
@@ -86,26 +89,12 @@ export class PylanceImportResolver extends ImportResolver {
         }
         this._importMetrics = new ImportMetrics();
         super.invalidateCache();
-
-        // Invalidate PackageScanner cache
-        PackageScanner.invalidateCache();
     }
 
     getAndResetImportMetrics(): ImportMetrics {
         const usage = this._importMetrics;
         this._importMetrics = new ImportMetrics();
         return usage;
-    }
-
-    getImportRoots(execEnv: ExecutionEnvironment, useTypeshedVersionedFolders: boolean) {
-        const roots = super.getImportRoots(execEnv, useTypeshedVersionedFolders);
-
-        const bundled = getBundledTypeStubsPath(this.fileSystem.getModulePath());
-        if (bundled) {
-            roots.push(bundled);
-        }
-
-        return roots;
     }
 
     protected _addResultsToCache(

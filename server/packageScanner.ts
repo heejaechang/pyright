@@ -7,6 +7,7 @@
 import { CancellationToken } from 'vscode-languageserver';
 
 import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
+import { stdLibFolderName } from './pyright/server/src/analyzer/pythonPathUtils';
 import { isPrivateOrProtectedName } from './pyright/server/src/analyzer/symbolNameUtils';
 import { throwIfCancellationRequested } from './pyright/server/src/common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
@@ -18,34 +19,21 @@ import {
     stripFileExtension,
 } from './pyright/server/src/common/pathUtils';
 import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from './pyright/server/src/common/stringUtils';
-import { WorkspaceServiceInstance } from './pyright/server/src/languageServerBase';
-import {
-    FilePath,
-    FullImportName,
-    ImportName,
-    ImportNameMap,
-    ImportsMap,
-} from './pyright/server/src/languageService/autoImporter';
+
+export type ImportName = string;
+export type FullImportName = string;
+
+export interface PackageInfo {
+    stdLib: boolean;
+    isStub: boolean;
+    filePath: string;
+    shadowed: boolean;
+}
+
+export type ImportsMap = Map<FullImportName, PackageInfo>;
+export type ImportNameMap = Map<ImportName, ImportsMap>;
 
 export class PackageScanner {
-    private static _lastPackageCache: { projectRoot: string; scanner: PackageScanner } | undefined;
-
-    static getScanner(workspace: WorkspaceServiceInstance, token: CancellationToken) {
-        const configOptions = workspace.serviceInstance.getConfigOptions();
-        if (this._lastPackageCache?.projectRoot !== configOptions.projectRoot) {
-            const scanner = new PackageScanner(configOptions, workspace.serviceInstance.getImportResolver());
-
-            scanner.scan(token);
-            this._lastPackageCache = { projectRoot: configOptions.projectRoot, scanner: scanner };
-        }
-
-        return this._lastPackageCache.scanner;
-    }
-
-    static invalidateCache() {
-        this._lastPackageCache = undefined;
-    }
-
     private _indicesPerExecEnv = new Map<string, ImportNameMap>();
 
     private _executionEnvironments: ExecutionEnvironment[] = [];
@@ -73,26 +61,52 @@ export class PackageScanner {
         return this._indicesPerExecEnv.get(execEnv.root);
     }
 
+    getModuleFilesPerExecEnv() {
+        // Indices is organized by module names. Regroup them
+        // by module file path.
+        const map = new Map<string, string[]>();
+        for (const [execEnvRoot, nameMap] of this._indicesPerExecEnv) {
+            const set = new Set<string>();
+            for (const [_, moduleMap] of nameMap) {
+                for (const [_, packageInfo] of moduleMap) {
+                    if (!packageInfo.stdLib && packageInfo.isStub && !packageInfo.shadowed) {
+                        // filter out any third party library stubs that doesn't have corresponding
+                        // library installed in current execution environment.
+                        continue;
+                    }
+
+                    set.add(packageInfo.filePath);
+                }
+            }
+
+            map.set(execEnvRoot, [...set]);
+        }
+
+        return map;
+    }
+
     scan(token: CancellationToken): void {
         for (const execEnv of this._executionEnvironments) {
             const roots = this._getRoots(execEnv).filter((r) => this._fs.existsSync(r));
             for (const root of roots) {
-                for (const current of this._fs.readdirEntriesSync(root)) {
+                for (const fileEntry of this._fs.readdirEntriesSync(root)) {
                     throwIfCancellationRequested(token);
 
-                    if (current.isFile()) {
-                        if (current.name === '__init__.py' || current.name === '__init__.pyi') {
+                    if (fileEntry.isFile()) {
+                        if (fileEntry.name === '__init__.py' || fileEntry.name === '__init__.pyi') {
                             // root can't have __init__ or py file
                             continue;
                         }
 
                         // Stub file
-                        if (getFileExtension(current.name) === '.pyi') {
-                            const filePath = combinePaths(root, current.name);
+                        if (getFileExtension(fileEntry.name) === '.pyi') {
+                            const filePath = combinePaths(root, fileEntry.name);
                             const moduleName = this._importResolver.getModuleNameForImport(filePath, execEnv);
 
                             if (moduleName.moduleName) {
-                                this._get(execEnv, stripFileExtension(current.name)).set(
+                                this._setMap(
+                                    execEnv,
+                                    stripFileExtension(fileEntry.name),
                                     moduleName.moduleName,
                                     filePath
                                 );
@@ -101,8 +115,8 @@ export class PackageScanner {
                         }
                     }
 
-                    if (current.isDirectory() && !isPrivateOrProtectedName(stripFileExtension(current.name))) {
-                        this._scan(roots, execEnv, combinePaths(root, current.name), token);
+                    if (fileEntry.isDirectory() && !isPrivateOrProtectedName(stripFileExtension(fileEntry.name))) {
+                        this._scan(roots, execEnv, combinePaths(root, fileEntry.name), token);
                     }
                 }
             }
@@ -131,7 +145,7 @@ export class PackageScanner {
                 }
 
                 if (current.name === '__init__.py' || current.name === '__init__.pyi') {
-                    this._get(execEnv, getFileName(path)).set(moduleName.moduleName, filePath);
+                    this._setMap(execEnv, getFileName(path), moduleName.moduleName, filePath);
                     continue;
                 }
 
@@ -140,7 +154,7 @@ export class PackageScanner {
                     getFileExtension(current.name) === '.pyi' ||
                     (containsInit && getFileExtension(current.name) === '.py')
                 ) {
-                    this._get(execEnv, stripFileExtension(current.name)).set(moduleName.moduleName, filePath);
+                    this._setMap(execEnv, stripFileExtension(current.name), moduleName.moduleName, filePath);
                     continue;
                 }
             }
@@ -149,6 +163,36 @@ export class PackageScanner {
                 this._scan(roots, execEnv, combinePaths(path, current.name), token);
             }
         }
+    }
+
+    private _setMap(execEnv: ExecutionEnvironment, name: string, fullModuleName: string, filePath: string) {
+        const moduleNameMap = this._get(execEnv, name);
+
+        const existingPath = moduleNameMap.get(fullModuleName);
+        if (!existingPath) {
+            const stdLib = this._isStdLib(execEnv, filePath);
+            const isStub = getFileExtension(filePath) === '.pyi';
+            moduleNameMap.set(fullModuleName, { stdLib, isStub, filePath, shadowed: false });
+            return;
+        }
+
+        if (existingPath.isStub) {
+            existingPath.shadowed = true;
+            return;
+        }
+
+        existingPath.filePath = filePath;
+        existingPath.isStub = true;
+        existingPath.shadowed = true;
+    }
+
+    private _isStdLib(execEnv: ExecutionEnvironment, filePath: string): boolean {
+        const stdLibPath = this._importResolver.getTypeshedStdLibPath(execEnv);
+        if (!stdLibPath || stdLibPath.indexOf(stdLibFolderName) < 0) {
+            return false;
+        }
+
+        return filePath.startsWith(stdLibPath) || filePath.toLowerCase().startsWith(stdLibPath.toLowerCase());
     }
 
     private _get(execEnv: ExecutionEnvironment, name: string): ImportsMap {
@@ -160,7 +204,7 @@ export class PackageScanner {
 
         let set = map.get(name);
         if (!set) {
-            set = new Map<FullImportName, FilePath>();
+            set = new Map<FullImportName, PackageInfo>();
             map.set(name, set);
         }
 
@@ -169,7 +213,7 @@ export class PackageScanner {
 
     private _getRoots(execEnv: ExecutionEnvironment): string[] {
         return this._importResolver
-            .getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ false)
+            .getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ true)
             .filter((r) => r !== execEnv.root);
     }
 

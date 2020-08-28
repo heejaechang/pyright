@@ -1,16 +1,11 @@
-/// <reference path="fourslash.ts" />
+/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+// @indexer: true
 
 // @filename: test1.py
 //// os[|/*marker1*/|]
 
 // @filename: test2.py
 //// sys[|/*marker2*/|]
-
-// @filename: test3.py
-//// import os
-//// import sys
-//// a = os.path
-//// b = sys.path
 
 helper.openFile('/test1.py');
 

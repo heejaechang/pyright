@@ -1,4 +1,5 @@
 /// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+// @indexerwithoutstdlib: true
 
 // @filename: mspythonconfig.json
 //// {
@@ -13,15 +14,26 @@
 //// c = [|/*marker5*/topLevelStubFile|]()
 
 // @filename: typings/stubFile.pyi
+//// class MyType: ...
+
+// @filename: typings/stubFile.py
 //// class MyType:
 ////     pass
 
 // @filename: testLib/__init__.pyi
 // @library: true
+//// class MyType: ...
+
+// @filename: testLib/__init__.py
+// @library: true
 //// class MyType:
 ////     pass
 
 // @filename: testLib/stubFile.pyi
+// @library: true
+//// class MyType: ...
+
+// @filename: testLib/stubFile.py
 // @library: true
 //// class MyType:
 ////     pass
@@ -30,18 +42,34 @@
 // @library: true
 //// class MyType:
 ////     pass
+////
+//// __all__ = ['MyType']
 
 // @filename: testLib/nested/regularFile.py
 // @library: true
 //// class MyType:
 ////     pass
+////
+//// __all__ = ['MyType']
 
 // @filename: testLib/noInit/stubFile.pyi
+// @library: true
+//// class MyType: ...
+
+// @filename: testLib/noInit/__init__.py
+// @library: true
+//// from . import MyType
+
+// @filename: testLib/noInit/stubFile.py
 // @library: true
 //// class MyType:
 ////     pass
 
 // @filename: topLevelStubFile.pyi
+// @library: true
+//// class MyType: ...
+
+// @filename: topLevelStubFile/__init__.py
 // @library: true
 //// class MyType:
 ////     pass
