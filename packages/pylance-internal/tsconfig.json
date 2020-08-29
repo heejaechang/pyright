@@ -1,31 +1,11 @@
 {
-	"compilerOptions": {
-		"noUnusedLocals": true,
-		"noImplicitAny": true,
-		"noImplicitReturns": true,
-		"strictNullChecks": true,
-        "skipLibCheck": true,
-		"target": "es6",
-		"module": "commonjs",
-		"moduleResolution": "node",
-		"sourceMap": true,
-		"lib": [ "es2019" ],
-		"outDir": "../client/server",
-		"composite": true,
-		"declaration": true,
-		"resolveJsonModule": true
-	},
-	"include": [
-		"./src/**/*",
-		"./src/localization/*.json",
-		"./intelliCode/**/*",
-		"./*.ts",
-		"./pyright/server/src/**/*",
-		"./pyright/server/src/localization/*.json",
-		"./src/common/metadata.json"
-	],
-	"exclude": [
-		"node_modules"
-	],
-	"references": []
+    "extends": "../pyright/tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": "./out",
+        "paths": {
+            "pyright-internal/*": ["../pyright/packages/pyright-internal/src/*"]
+        }
+    },
+    "include": ["./src/**/*", "./src/localization/*.json", "./intelliCode/**/*", "./*.ts", "./src/common/metadata.json"]
 }

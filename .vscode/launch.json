@@ -1,181 +1,149 @@
 {
     "version": "0.2.0",
     "configurations": [
+        // Debug client
         {
-            "name": "Pylance Tests",
-            "type": "node",
-            "request": "launch",
-            "args": [
-                "--config",
-                "${workspaceRoot}/server/jest.config.js",
-                "-runInBand"
-            ],
-            "cwd": "${workspaceRoot}/server",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
-        },
-        {
-            "name": "Pylance Debug Client",
+            "name": "Pylance debug client",
             "type": "extensionHost",
             "request": "launch",
-            "runtimeExecutable": "${workspaceRoot}/client/out/src/extension.js",
-            "preLaunchTask": "npm: build",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}/client"
-            ],
+            "runtimeExecutable": "${workspaceRoot}/packages/pylance-client/dist/extension.js",
+            "preLaunchTask": "npm: build:debugclient:dev",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/pylance-client"],
             "stopOnEntry": false,
             "smartStep": true,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/server/out/**/*.js"
-            ]
+            "outFiles": ["${workspaceRoot}/packages/pylance-client/dist/**/*.js"]
         },
         {
-            "name": "Pylance Attach Server",
+            "name": "Pylance debug client (watch mode)",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceRoot}/packages/pylance-client/dist/extension.js",
+            "preLaunchTask": "Watch debug client",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/pylance-client"],
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": ["${workspaceRoot}/packages/pylance-client/dist/**/*.js"]
+        },
+        {
+            "name": "Pylance debug client attach server",
             "type": "node",
             "request": "attach",
             "protocol": "inspector",
             "port": 6600,
             "smartStep": true,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/server/out/**/*.js"
-            ]
+            "outFiles": ["${workspaceRoot}/packages/pylance-client/dist/**/*.js"]
         },
+
+        // Pylance tests
         {
+            "name": "Pylance tests",
             "type": "node",
             "request": "launch",
-            "name": "Pylance Launch Server",
-            "program": "${workspaceRoot}/dist/server.bundle.js",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "args": [
-                "--node-ipc"
-            ],
-            "sourceMaps": true,
-            "stopOnEntry": true
+            "args": ["--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pylance-internal",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/packages/pylance-internal/node_modules/jest/bin/jest"
         },
         {
             "name": "Pylance jest current file",
             "type": "node",
             "request": "launch",
-            "args": [
-                "${fileBasenameNoExtension}",
-                "--config",
-                "${workspaceRoot}/server/jest.config.js"
-            ],
-            "cwd": "${workspaceFolder}/server",
+            "args": ["${fileBasenameNoExtension}", "--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pylance-internal",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest",
-            "windows": {
-                "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
-            }
+            "program": "${workspaceFolder}/packages/pylance-internal/node_modules/jest/bin/jest"
         },
         {
             "name": "Pylance fourslash current file",
             "type": "node",
             "request": "launch",
-            "args": [
-                "pylanceFourSlashRunner.test.ts",
-                "-t ${fileBasenameNoExtension}",
-                "--config",
-                "${workspaceRoot}/server/jest.config.js"
-            ],
-            "cwd": "${workspaceFolder}/server",
+            "args": ["pylanceFourSlashRunner.test.ts", "-t ${fileBasenameNoExtension}", "--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pylance-internal",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/node_modules/jest/bin/jest",
-            "windows": {
-                "program": "${workspaceFolder}/server/node_modules/jest/bin/jest"
-            }
+            "program": "${workspaceFolder}/packages/pylance-internal/node_modules/jest/bin/jest"
         },
+
+        // Published extension
         {
-            "name": "PyRight Tests",
-            "type": "node",
-            "request": "launch",
-            "args": [
-                "--config",
-                "${workspaceRoot}/server/pyright/server/jest.config.js",
-                "-runInBand"
-            ],
-            "cwd": "${workspaceRoot}/server/pyright/server",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
-        },
-        {
-            "name": "Pyright Debug Client",
+            "name": "Pylance extension",
             "type": "extensionHost",
             "request": "launch",
-            "runtimeExecutable": "${workspaceRoot}/server/pyright/client/out/src/extension.js",
-            "preLaunchTask": "npm: build:pyrightDebug",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}/server/pyright/client"
-            ],
+            "runtimeExecutable": "${workspaceRoot}/packages/vscode-pylance/dist/extension.bundle.js",
+            "preLaunchTask": "npm: build:extension:dev",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-pylance"],
             "stopOnEntry": false,
             "smartStep": true,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/server/pyright/server/out/**/*.js"
-            ]
+            "outFiles": ["${workspaceRoot}/packages/vscode-pylance/dist/**/*.js"]
         },
         {
-            "name": "Pyright Attach Server",
+            "name": "Pylance extension (watch mode)",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${workspaceRoot}/packages/vscode-pylance/dist/extension.bundle.js",
+            "preLaunchTask": "Watch extension",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-pylance"],
+            "stopOnEntry": false,
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": ["${workspaceRoot}/packages/vscode-pylance/dist/**/*.js"]
+        },
+        {
+            "name": "Pylance extension attach server",
             "type": "node",
             "request": "attach",
             "protocol": "inspector",
             "port": 6600,
             "smartStep": true,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/server/pyright/server/out/**/*.js"
-            ]
+            "outFiles": ["${workspaceRoot}/packages/vscode-pylance/dist/**/*.js"]
         },
+
+        // Pyright
         {
-            // we have pyright and Pylance since jest.config.js is different.
-            "name": "PyRight jest current file",
+            "name": "Pyright tests",
             "type": "node",
             "request": "launch",
-            "args": [
-                "${fileBasenameNoExtension}",
-                "--config",
-                "${workspaceRoot}/server/pyright/server/jest.config.js"
-            ],
-            "cwd": "${workspaceRoot}/server/pyright/server",
+            "args": ["--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pyright/packages/pyright-internal",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest",
-            "windows": {
-                "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
-            }
+            "program": "${workspaceFolder}/packages/pyright/packages/pyright-internal/node_modules/jest/bin/jest"
         },
         {
-            "name": "PyRight fourslash current file",
+            "name": "Pyright jest current file",
             "type": "node",
             "request": "launch",
-            "args": [
-                "fourSlashRunner.test.ts",
-                "-t ${fileBasenameNoExtension}",
-                "--config",
-                "${workspaceRoot}/server/pyright/server/jest.config.js"
-            ],
-            "cwd": "${workspaceRoot}/server/pyright/server",
+            "args": ["${fileBasenameNoExtension}", "--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pyright/packages/pyright-internal",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "disableOptimisticBPs": true,
-            "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest",
-            "windows": {
-                "program": "${workspaceFolder}/server/pyright/server/node_modules/jest/bin/jest"
-            }
+            "program": "${workspaceFolder}/packages/pyright/packages/pyright-internal/node_modules/jest/bin/jest"
         },
+        {
+            "name": "Pyright fourslash current file",
+            "type": "node",
+            "request": "launch",
+            "args": ["fourSlashRunner.test.ts", "-t ${fileBasenameNoExtension}", "--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pyright/packages/pyright-internal",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/packages/pyright/packages/pyright-internal/node_modules/jest/bin/jest"
+        },
+
+        // Not yet working
         {
             "name": "IntelliCode Debug CLI",
             "type": "node",
@@ -190,19 +158,13 @@
             "stopOnEntry": false,
             "smartStep": true,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceRoot}/server/out/**/*.js"
-            ]
+            "outFiles": ["${workspaceRoot}/server/out/**/*.js"]
         },
         {
             "name": "IntelliCode CLI jest current file",
             "type": "node",
             "request": "launch",
-            "args": [
-                "${fileBasenameNoExtension}",
-                "--config",
-                "${workspaceRoot}/pythia/jest.config.js"
-            ],
+            "args": ["${fileBasenameNoExtension}", "--config", "${workspaceRoot}/pythia/jest.config.js"],
             "cwd": "${workspaceFolder}/pythia",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
@@ -216,40 +178,17 @@
             "name": "LS Extension tests",
             "type": "extensionHost",
             "request": "launch",
-            "preLaunchTask": "npm: build:extension",
+            "preLaunchTask": "npm: build:extension:tests",
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--disable-extensions",
-                "--extensionDevelopmentPath=${workspaceFolder}/extension",
-                "--extensionTestsPath=${workspaceFolder}/extension/out/tests/jest/jest-test-runner"
+                "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-pylance",
+                "--extensionTestsPath=${workspaceFolder}/packages/vscode-pylance/out/vscode-pylance/src/tests/jest/jest-test-runner"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
-            "outFiles": [
-                "${workspaceFolder}/extension/out/**/*.js"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ]
-        },
-        {
-            "name": "LS Extension startup",
-            "type": "extensionHost",
-            "request": "launch",
-            "preLaunchTask": "npm: pack:extension-debug",
-            "runtimeExecutable": "${workspaceRoot}/extension/dist/extension.js",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}/extension",
-            ],
-            "stopOnEntry": false,
-            "smartStep": true,
-            "sourceMaps": true,
-            "outFiles": [
-                "${workspaceFolder}/extension/out/**/*.js"
-            ],
-            "skipFiles": [
-                "<node_internals>/**"
-            ]
+            "outFiles": ["${workspaceFolder}/packages/vscode-pylance/out/**/*.js"],
+            "skipFiles": ["<node_internals>/**"]
         }
     ]
 }

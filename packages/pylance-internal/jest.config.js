@@ -1,8 +1,7 @@
-/*
- * jest.config.js
- *
- * Configuration for jest tests.
- */
+/* eslint-disable @typescript-eslint/no-var-requires */
+
+const { pathsToModuleNameMapper } = require('ts-jest/utils');
+const { compilerOptions } = require('./tsconfig');
 
 module.exports = {
     roots: ['<rootDir>/src/tests'],
@@ -22,4 +21,5 @@ module.exports = {
             },
         },
     },
+    moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' }),
 };

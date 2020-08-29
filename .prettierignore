@@ -1,9 +1,16 @@
-*.json
-**/pyright/**/*.md
+**/package-lock.json
 **/dist/**
 **/out/**
-**/client/server/**
-**/extension/server/**
 **/typeshed-fallback/**
 **/bundled-stubs/**
-extension/README.md
+
+# These files are compared exactly.
+packages/pylance-pythia/src/tests/baseline/**/*.json
+
+# This file should be exactly the same as pylance-release.
+packages/vscode-pylance/README.md
+
+# Prettier doesn't support a hierarchy of ignore files, so copy pyright's rules here.
+packages/pyright/**/*.json
+packages/pyright/**/*.md
+packages/pyright/**/.github/**

@@ -1,0 +1,8 @@
+steps:
+  - script: npx gulp setVersion
+    displayName: npx gulp setVersion
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+
+  - script: npx gulp setVersion --prBuildId $(Build.BuildId)
+    displayName: npx gulp setVersion --prBuildId $(Build.BuildId)
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))

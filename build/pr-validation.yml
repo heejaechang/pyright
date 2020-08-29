@@ -3,75 +3,29 @@ trigger: none
 pr:
   autoCancel: true
   branches:
-    include: ['master']
+    include: ['master', 'main']
 
 variables:
   - template: templates/globals.yml
 
 jobs:
-  - job: test
-    displayName: Test
-    strategy:
-      matrix:
-        linux:
-          jobName: Linux
-          imageName: 'ubuntu-18.04'
-        mac:
-          jobName: Mac
-          imageName: 'macOS-10.15'
-        windows-microbuild: # Internal only but faster; do not use for public PRs.
-          jobName: Windows
-          poolName: 'VSEng-MicroBuildVS2019'
-        # windows:
-        #   imageName: 'vs2017-win2016'
+  - job: typecheck
+    displayName: Typecheck
 
     pool:
-      name: $[variables.poolName]
-      vmImage: $[variables.imageName]
+      vmImage: 'ubuntu-18.04'
 
     steps:
       - template: templates/node.yml
 
-      - bash: |
-          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & echo ">>> Started xvfb"
-        displayName: Start xvfb
-        condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+      - script: npx tsc --noEmit
+        displayName: tsc root
 
-      - script: npm run test:all:pipeline
-        displayName: npm run test:all:pipeline
-        condition: ne(variables['Agent.OS'], 'Windows_NT')
-        env:
-          DISPLAY: ':99.0'
+      - script: npx lerna exec --stream --no-bail --ignore=pyright-root -- tsc --noEmit
+        displayName: tsc packages
 
-      - script: npm run test:all-except-extension:pipeline
-        displayName: npm run test:all-except-extension:pipeline
-        condition: eq(variables['Agent.OS'], 'Windows_NT')
-        env:
-          DISPLAY: ':99.0'
-
-      - task: PublishPipelineArtifact@1
-        displayName: Publish Istanbul report as artifact
-        inputs:
-          targetPath: '$(System.DefaultWorkingDirectory)/server/coverage-merged'
-          artifact: '$(jobName)-server-coverage-merged'
-          publishLocation: 'pipeline'
-        condition: succeededOrFailed()
-
-      - task: PublishTestResults@2
-        displayName: Publish test results
-        inputs:
-          testResultsFormat: 'JUnit'
-          testResultsFiles: '**/junit.xml'
-          testRunTitle: 'Test results for JavaScript'
-        condition: succeededOrFailed()
-
-      - task: PublishCodeCoverageResults@1
-        displayName: Publish coverage results
-        inputs:
-          codeCoverageTool: Cobertura
-          summaryFileLocation: '$(System.DefaultWorkingDirectory)/server/coverage-merged/cobertura-coverage.xml'
-          failIfCoverageEmpty: true
-        condition: succeededOrFailed()
+      - script: npx gulp --tasks
+        displayName: Check gulp
 
   - job: style
     displayName: Style
@@ -80,30 +34,30 @@ jobs:
 
     steps:
       - template: templates/node.yml
+        parameters:
+          installAll: true
 
       - bash: git diff --exit-code --name-only
         displayName: Diff after npm install
 
-      - script: npm run prettier
-        displayName: npm run prettier
+      - script: npm run check
+        displayName: npm run check
 
-      - script: npm run eslint
-        displayName: npm run eslint
+  - template: templates/test.yml
+    parameters:
+      name: pylance_internal
+      workingDirectory: packages/pylance-internal
+      dependsOn: typecheck
 
-      - script: npm run syncpack:check
-        displayName: npm run syncpack:check
+  - template: templates/test.yml
+    parameters:
+      name: pyright_internal
+      workingDirectory: packages/pyright/packages/pyright-internal
+      dependsOn: typecheck
 
-  - job: package
-    displayName: Package
-    pool:
-      name: 'VSEng-MicroBuildVS2019' # This is where we do our final builds for distribution; test packaging here.
-
-    steps:
-      - template: templates/node.yml
-
-      - script: npm run package
-        displayName: npm run package
-
-      - script: npm run package
-        displayName: package pythia CLI
-        workingDirectory: pythia
+  - template: templates/test.yml
+    parameters:
+      name: vscode_pylance
+      workingDirectory: packages/vscode-pylance
+      dependsOn: typecheck
+      gui: true

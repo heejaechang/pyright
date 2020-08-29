@@ -83,20 +83,20 @@ platforms.forEach(async (platform) => {
     try {
         archiveFilePath = await downloadOnnxZip(url, zipFileName);
     } catch (e) {
-        console.log(`Exception downloading ONNX module ${zipFileName}: ${e.stack}`);
-        return;
+        console.error(`Exception downloading ONNX module ${zipFileName}: ${e.stack}`);
+        process.exit(1);
     }
 
     let upackPath;
     try {
-        const upackPath = path.resolve(path.join(__dirname, '..', 'node_modules', 'onnxruntime'));
+        const upackPath = require('./findonnx');
         tar.x({
             file: archiveFilePath,
             cwd: upackPath,
             sync: true,
         });
     } catch (e) {
-        console.log(`Exception unpacking ONNX module ${archiveFilePath} to ${upackPath}: ${e.stack}`);
-        return;
+        console.error(`Exception unpacking ONNX module ${archiveFilePath} to ${upackPath}: ${e.stack}`);
+        process.exit(1);
     }
 });

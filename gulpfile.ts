@@ -30,18 +30,16 @@ async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void)
     await fsExtra.writeFile(filepath, output, 'utf-8');
 }
 
-const metadataFilepath = 'server/src/common/metadata.json';
+const metadataFilepath = 'packages/pylance-internal/src/common/metadata.json';
 
+// Don't bother updating package-lock.json; setVersion is used in the build where doing this
+// messes with npm caching, and these files aren't referenced from real code or shipped.
 const filesWithVersion = [
     metadataFilepath,
-    'package.json',
-    'package-lock.json',
-    'extension/package.json',
-    'extension/package-lock.json',
-    'server/package.json',
-    'server/package-lock.json',
-    'pythia/package.json',
-    'pythia/package-lock.json',
+    'packages/pylance/package.json',
+    'packages/vscode-pylance/package.json',
+    'packages/pylance-internal/package.json',
+    'packages/pylance-pythia/package.json',
 ];
 
 async function setAllVersions(version: string) {
@@ -54,7 +52,7 @@ async function setAllVersions(version: string) {
 }
 
 async function setPyrightCommit() {
-    const { stdout } = await exec('git config --file server/pyright/.gitrepo subrepo.commit');
+    const { stdout } = await exec('git config --file packages/pyright/.gitrepo subrepo.commit');
     const pyrightCommit = stdout.trim();
 
     await modifyJsonInPlace(metadataFilepath, (obj) => {
@@ -98,5 +96,6 @@ export const setVersion: TaskFunction = async () => {
     console.log(`Setting version to ${to}; version will appear formatted as ${toSemVer.format()}`);
     await setAllVersions(to);
 
-    await setPyrightCommit();
+    // TODO: Uncomment when the gitrepo is moved.
+    // await setPyrightCommit();
 };
