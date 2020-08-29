@@ -7,19 +7,17 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
-import {
-    getAllImportNames,
-    getContainingImportStatement,
-} from '../../pyright/server/src/analyzer/importStatementUtils';
-import * as ParseTreeUtils from '../../pyright/server/src/analyzer/parseTreeUtils';
-import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
-import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
-import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
-import { convertOffsetsToRange } from '../../pyright/server/src/common/positionUtils';
-import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
-import { doRangesIntersect, doRangesOverlap, Range, TextRange } from '../../pyright/server/src/common/textRange';
-import { TextRangeCollection } from '../../pyright/server/src/common/textRangeCollection';
-import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
+import { getAllImportNames, getContainingImportStatement } from 'pyright-internal/analyzer/importStatementUtils';
+import * as ParseTreeUtils from 'pyright-internal/analyzer/parseTreeUtils';
+import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
+import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
+import { convertOffsetsToRange } from 'pyright-internal/common/positionUtils';
+import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
+import { doRangesIntersect, doRangesOverlap, Range, TextRange } from 'pyright-internal/common/textRange';
+import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
+import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
+
 import { ServerCommand } from './commandController';
 
 export class RemoveUnusedImportCommand implements ServerCommand {

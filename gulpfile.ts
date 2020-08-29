@@ -96,6 +96,5 @@ export const setVersion: TaskFunction = async () => {
     console.log(`Setting version to ${to}; version will appear formatted as ${toSemVer.format()}`);
     await setAllVersions(to);
 
-    // TODO: Uncomment when the gitrepo is moved.
-    // await setPyrightCommit();
+    await setPyrightCommit();
 };

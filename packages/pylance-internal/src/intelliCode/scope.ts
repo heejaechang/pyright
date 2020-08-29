@@ -4,7 +4,9 @@
  * Scope related functions for IntelliCode.
  */
 
-import { ClassNode, FunctionNode, ModuleNode, ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
+import { fail } from 'pyright-internal/common/debug';
+import { ClassNode, FunctionNode, ModuleNode, ParseNode, ParseNodeType } from 'pyright-internal/parser/parseNodes';
+
 import { Assignment } from './types';
 
 export class Scope {

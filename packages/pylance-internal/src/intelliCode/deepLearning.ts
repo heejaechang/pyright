@@ -7,11 +7,12 @@
 import type { InferenceSession } from 'onnxruntime';
 import { CancellationToken } from 'vscode-languageserver';
 
-import { LogLevel } from '../pyright/server/src/common/console';
-import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
-import { LogService } from '../src/common/logger';
-import { Platform } from '../src/common/platform';
-import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
+import { LogLevel } from 'pyright-internal/common/console';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+
+import { LogService } from '../common/logger';
+import { Platform } from '../common/platform';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
 import { EditorInvocation, PythiaModel } from './models';
 import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';

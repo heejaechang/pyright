@@ -9,9 +9,10 @@ import 'jest-extended';
 import * as realFs from 'fs';
 import { anyString, instance, mock, verify, when } from 'ts-mockito';
 
-import { prepareNativesForCurrentPlatform } from '../../../intelliCode/nativeInit';
-import { FileSystem } from '../../../pyright/server/src/common/fileSystem';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+
 import { Platform } from '../../common/platform';
+import { prepareNativesForCurrentPlatform } from '../../intelliCode/nativeInit';
 
 let mockedFs: FileSystem;
 let mockedPlatform: Platform;

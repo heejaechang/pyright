@@ -6,10 +6,11 @@
 
 import * as path from 'path';
 
-import { LogLevel } from '../pyright/server/src/common/console';
-import { FileSystem } from '../pyright/server/src/common/fileSystem';
-import { LogService } from '../src/common/logger';
-import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
+import { LogLevel } from 'pyright-internal/common/console';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+
+import { LogService } from '../common/logger';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import {
     ModelFileName,
     ModelMetaDataFileName,

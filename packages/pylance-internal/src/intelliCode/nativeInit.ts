@@ -6,8 +6,9 @@
  */
 import * as path from 'path';
 
-import { FileSystem } from '../pyright/server/src/common/fileSystem';
-import { Platform } from '../src/common/platform';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+
+import { Platform } from '../common/platform';
 
 const nativesRoot = 'native';
 const onnxruntime = 'onnxruntime';

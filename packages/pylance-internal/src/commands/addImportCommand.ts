@@ -7,9 +7,10 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
-import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
-import { convertWorkspaceEdits } from '../../pyright/server/src/common/textEditUtils';
-import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
+import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
+import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
+
 import { ServerCommand } from './commandController';
 import { addImportSimilarityLimit, wellKnownAbbreviationMap } from './commands';
 

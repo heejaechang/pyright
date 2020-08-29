@@ -4,7 +4,7 @@
  * Logging service implementation.
  */
 
-import { ConsoleWithLogLevel, log as consoleLog, LogLevel } from '../../pyright/server/src/common/console';
+import { ConsoleWithLogLevel, log as consoleLog, LogLevel } from 'pyright-internal/common/console';
 
 export class LogService {
     constructor(private _console: ConsoleWithLogLevel) {}

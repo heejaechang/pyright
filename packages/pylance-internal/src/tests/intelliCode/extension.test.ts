@@ -7,27 +7,30 @@ import 'jest-extended';
 
 import * as realFs from 'fs';
 import * as path from 'path';
+import { DirResult, dirSync } from 'tmp';
 import { anyString, anything, capture, instance, mock, verify } from 'ts-mockito';
 import { CancellationToken } from 'vscode-languageserver';
 
-import { IntelliCodeCompletionListExtension } from '../../../intelliCode/extension';
-import { ModelFileName } from '../../../intelliCode/models';
-import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
+import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
+
 import { CommandController } from '../../commands/commandController';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../../commands/commands';
 import { LogService } from '../../common/logger';
 import { Platform } from '../../common/platform';
 import { TelemetryService } from '../../common/telemetry';
-import { clientServerModelLocation, getTestModel } from './testUtils';
+import { IntelliCodeCompletionListExtension } from '../../intelliCode/extension';
+import { ModelFileName } from '../../intelliCode/models';
+import { getTestModel } from './testUtils';
 
 const platform = new Platform();
-const modelUnpackFolder = path.resolve(path.join(__dirname, clientServerModelLocation));
-const modelFile = path.join(modelUnpackFolder, ModelFileName);
 
 let mockedFs: FileSystem;
 let mockedLog: LogService;
 let mockedTelemetry: TelemetryService;
 let log: LogService;
+let modelUnpackFolderTmp: DirResult;
+let modelUnpackFolder: string;
+let modelFile: string;
 
 describe('IntelliCode extension', () => {
     beforeEach(() => {
@@ -36,6 +39,17 @@ describe('IntelliCode extension', () => {
         mockedTelemetry = mock<TelemetryService>();
 
         log = instance(mockedLog);
+
+        modelUnpackFolderTmp = dirSync({
+            unsafeCleanup: true,
+        });
+
+        modelUnpackFolder = modelUnpackFolderTmp.name;
+        modelFile = path.join(modelUnpackFolder, ModelFileName);
+    });
+
+    afterEach(() => {
+        modelUnpackFolderTmp.removeCallback();
     });
 
     test('disable', async () => {

@@ -8,12 +8,10 @@
 import { AbstractCancellationTokenSource, CancellationToken } from 'vscode-languageserver';
 import { MessageChannel, parentPort, threadId, Worker, workerData } from 'worker_threads';
 
-import { PackageScanner } from '../../packageScanner';
-import { createPylanceImportResolver } from '../../pylanceImportResolver';
-import { ImportResolver } from '../../pyright/server/src/analyzer/importResolver';
-import { Indices, Program } from '../../pyright/server/src/analyzer/program';
-import { InitializationData } from '../../pyright/server/src/backgroundAnalysisBase';
-import { BackgroundThreadBase, createConfigOptionsFrom, LogData } from '../../pyright/server/src/backgroundThreadBase';
+import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { Indices, Program } from 'pyright-internal/analyzer/program';
+import { InitializationData } from 'pyright-internal/backgroundAnalysisBase';
+import { BackgroundThreadBase, createConfigOptionsFrom, LogData } from 'pyright-internal/backgroundThreadBase';
 import {
     createBackgroundThreadCancellationTokenSource,
     getCancellationFolderName,
@@ -21,12 +19,15 @@ import {
     getCancellationTokenId,
     OperationCanceledException,
     throwIfCancellationRequested,
-} from '../../pyright/server/src/common/cancellationUtils';
-import { ConfigOptions } from '../../pyright/server/src/common/configOptions';
-import { ConsoleInterface, log, LogLevel } from '../../pyright/server/src/common/console';
-import * as debug from '../../pyright/server/src/common/debug';
-import { IndexResults } from '../../pyright/server/src/languageService/documentSymbolProvider';
+} from 'pyright-internal/common/cancellationUtils';
+import { ConfigOptions } from 'pyright-internal/common/configOptions';
+import { ConsoleInterface, log, LogLevel } from 'pyright-internal/common/console';
+import * as debug from 'pyright-internal/common/debug';
+import { IndexResults } from 'pyright-internal/languageService/documentSymbolProvider';
+
 import { mainFilename } from '../common/mainModuleFileName';
+import { PackageScanner } from '../packageScanner';
+import { createPylanceImportResolver } from '../pylanceImportResolver';
 
 export class Indexer {
     // This will make sure each projectRoot will have only 1 background indexer running at a time.

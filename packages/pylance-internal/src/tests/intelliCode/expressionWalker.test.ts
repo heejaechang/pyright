@@ -6,7 +6,7 @@
 
 import 'jest-extended';
 
-import { StandardVariableType } from '../../../intelliCode/types';
+import { StandardVariableType } from '../../intelliCode/types';
 import { walkExpressions } from './testUtils';
 
 function verifySingle(code: string, key: string, value: string | undefined, spanStart: number) {

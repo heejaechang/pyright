@@ -3,7 +3,7 @@
     "private": true,
     "scripts": {
         "postinstall": "npm run bootstrap",
-        "bootstrap": "cross-env SKIP_LERNA_BOOTSTRAP=yes lerna bootstrap --concurrency 4",
+        "bootstrap": "node ./packages/pyright/build/skipBootstrap.js || cross-env SKIP_LERNA_BOOTSTRAP=yes lerna bootstrap --concurrency 4",
         "hoist": "cross-env SKIP_LERNA_BOOTSTRAP=yes lerna bootstrap --hoist",
         "clean": "lerna run --no-bail --stream clean",
         "install:all": "npm install && lerna exec --no-bail npm install",
@@ -32,7 +32,7 @@
         "git-describe": "^4.0.4",
         "gulp": "^4.0.2",
         "lerna": "^3.22.1",
-        "prettier": "^2.0.5",
+        "prettier": "2.1.1",
         "semver": "^7.3.2",
         "syncpack": "^5.5.6",
         "ts-node": "^9.0.0",

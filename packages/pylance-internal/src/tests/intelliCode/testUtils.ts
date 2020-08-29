@@ -7,15 +7,14 @@ import 'jest-extended';
 
 import * as path from 'path';
 
-import { AssignmentWalker } from '../../../intelliCode/assignmentWalker';
-import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
-import { EditorInvocation, ModelZipFileName } from '../../../intelliCode/models';
-import { EditorLookBackTokenGenerator } from '../../../intelliCode/tokens/editorTokenGenerator';
-import { DiagnosticSink } from '../../../pyright/server/src/common/diagnosticSink';
-import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
-import { ParseOptions, Parser, ParseResults } from '../../../pyright/server/src/parser/parser';
+import { DiagnosticSink } from 'pyright-internal/common/diagnosticSink';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { ParseOptions, Parser, ParseResults } from 'pyright-internal/parser/parser';
 
-export const clientServerModelLocation = '../../../../client/server/intelliCode/model';
+import { AssignmentWalker } from '../../intelliCode/assignmentWalker';
+import { ExpressionWalker } from '../../intelliCode/expressionWalker';
+import { EditorInvocation, ModelZipFileName } from '../../intelliCode/models';
+import { EditorLookBackTokenGenerator } from '../../intelliCode/tokens/editorTokenGenerator';
 
 export function parseCode(code: string): ParseResults {
     const parser = new Parser();

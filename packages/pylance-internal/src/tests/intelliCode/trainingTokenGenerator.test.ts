@@ -6,9 +6,10 @@
 
 import 'jest-extended';
 
-import { TrainingInvocations } from '../../../intelliCode/models';
-import { TrainingLookBackTokenGenerator } from '../../../intelliCode/tokens/trainingTokenGenerator';
-import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+
+import { TrainingInvocations } from '../../intelliCode/models';
+import { TrainingLookBackTokenGenerator } from '../../intelliCode/tokens/trainingTokenGenerator';
 import { verifyKeys, walkExpressions } from './testUtils';
 
 function getInference(code: string): Map<string, Map<string, TrainingInvocations>> | undefined {

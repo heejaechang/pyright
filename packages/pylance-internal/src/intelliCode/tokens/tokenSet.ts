@@ -4,9 +4,10 @@
  * Represents set of look back tokens for IntelliCode.
  */
 
-import { binarySearch, binarySearchKey } from '../../pyright/server/src/common/collectionUtils';
-import { Comparison, identity } from '../../pyright/server/src/common/core';
-import { Token } from '../../pyright/server/src/parser/tokenizerTypes';
+import { binarySearch, binarySearchKey } from 'pyright-internal/common/collectionUtils';
+import { Comparison, identity } from 'pyright-internal/common/core';
+import { Token } from 'pyright-internal/parser/tokenizerTypes';
+
 import { MethodInvokation } from '../types';
 
 export function integerBinarySearch(array: number[], value: number): number {

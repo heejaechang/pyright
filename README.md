@@ -2,84 +2,64 @@
 
 ## To Build
 
--   `npm run install:all` to install all dependencies
--   `npm run package` to build the server
--   `npx vsce package` in the `extension` directory to build the extension VSIX
-
-## Packaging
-
-From the `server` folder of the repo run `npx webpack`.
+-   `npm install` to install all dependencies, recursively.
+-   In the `packages/vscode-pylance` folder, run `npm run package` to build a VSIX.
 
 ## Releasing the extension
 
-Ensure you have a clean copy of the repo by cloning from origin (not your fork).
+Release builds are produced automatically by the build pipeline. To release,
+a tag must be pushed to the pyrx repo, then the build fetched from the pipeline
+artficats and uploaded the the extension website.
 
-```
-git clone https://www.github.com/microsoft/pyrx
+To do this, you can either clone the main repo and push the tag, or push the tag
+from a fork with the upstream set. For example
+
+```sh
+# If using HTTP auth
+git clone https://www.github.com/microsoft/pyrx pyrx-origin
+# If using SSH auth
+git clone git@github.com:microsoft/pyrx.git pyrx-origin
 ```
 
-If it's not a fresh checkout, do a clean.
-
-```
-git clean -fdx
-```
-
-Create a tag for this version. The format is YYYY.M.B where B starts at 0 for the first release of the month, and is incremented for each release during that month.
+Then tag and push:
 
 ```
 git tag 2020.6.1
-```
-
-Install the dependencies.
-
-```
-npm run install:all
-```
-
-Set the version in all of the required places.
-
-```
-npx gulp setVersion --to 2020.6.1
-# OR, auto-generated from git tags
-npx gulp setVersion
-```
-
-Note that this does not commit anything, it just aids in setting it in the right places.
-
-Build the extension.
-
-```
-cd extension
-npx vsce package
-```
-
-Do some sanity check on the built .vsix in the extension directory. Open as a zip file and look at the contents.
-
-Side-load the .vsix into VS Code and test.
-
-Publish the extension using the command line (TO BE DOCUMENTED) or upload using drag & drop at the [extension management site](https://marketplace.visualstudio.com/manage/publishers/ms-python/).
-
-Push the tag to the origin repo.
-
-```
 git push --tags
+```
+
+When the build completes for the tag, grab the VSIX from its artifacts, verify its contents,
+then upload to [extension management site](https://marketplace.visualstudio.com/manage/publishers/ms-python/).
+
+## Manual release steps
+
+If a release needs to be done manually, it can be done manually by cleaning.
+
+```sh
+git clean -fdx
+npm install
+npx gulp setVersion --to 2020.6.1
+cd packages/vscode-pylance
+npm run package
 ```
 
 ## Running
 
 ### Using Pylance test extension
 
--   If you have Python extension installed, change `python.languageServer` to `None`.
--   Do a production build from the command-line (`npm run package`). This will ensure that all of the npm dependencies are downloaded and the project builds.
--   Within VS Code, open the Pylance folder.
--   In the debugger panel make sure `Pylance Debug Client` is selected.
--   Press F5 to start. This will launch a second instance of VS Code.
--   Go back to the first instance and switch the menu in the debugger panel to `Pylance Attach Server` and hit the play button to attach to the server process. At this point, you should be able to set breakpoints anywhere in the server code, including the language service modules.
+-   Ensure you've run `npm install`.
+-   If you have Python extension installed, uninstall it or change `python.languageServer` to `None`.
+-   Run either the "Pylance debug client" or the "Pylance debug client (watch mode)" launch task.
+    This will start the debug extension in another VS Code instance.
+-   To attach to the server, return to the first instance and switch the menu in the debugger panel to
+    "Pylance debug client attach server" and hit the play button to attach to the server process.
+    At this point, you should be able to set breakpoints anywhere in the server code.
 
 ### In VS Code Python extension
 
--   Clone [Python Extension](https://github.com/Microsoft/vscode-python)
--   Create `nodeLanguageServer` subfolder
+-   Clone [Python Extension](https://github.com/microsoft/vscode-python) and follow its contributing steps.
+-   Create `nodeLanguageServer` subfolder in the `vscode-python` folder.
+-   Build a version of Pylance compatible with the code extension by running "npm run webpack" in the `packages/vscode-pylance` folder.
 -   Copy contents of `dist` folder to `nodeLanguageServer` subfolder in the Python extension.
 -   Set these attributes in `settings.json`:
 
@@ -92,16 +72,6 @@ git push --tags
 ```
 
 -   Launch the extension and open a Python file. The extension should then start Pylance language server.
-
-## Debugging in VS Code Python extension
-
--   Modify `tsconfig.json` in `server` folder by adding `sourceRoot` pointing where Pylance Server sources are. For example:`"sourceRoot": "e:/pyrx/server",`. This will generate source maps with absolute paths.
--   Build Pylance by running `npm run package` .
--   Copy `client\server` folder to `nodeLanguageServer` subfolder in the Python extension.
--   Run Python extension (in debugger or otherwise).
--   When Pylance loads, switch to VS Code instance with Pylance.
--   `Debug` => `Pylance Attach Server`
--   You should be able to set breakpoints in Pylance or Pyright and hit them.
 
 ## Debugging server startup code
 
@@ -120,7 +90,6 @@ Pylance extension does not launch language server on its own. However, you may n
 -   [Jest](https://jestjs.io/) is the test runner.
 -   Use [ts-mockito](https://www.npmjs.com/package/ts-mockito) for mocking.
 -   To run or debug tests in current file use `Pylance jest current file` task.
--   To run all tests from command line use `npm run test:all`.
 -   Useful extensions: `Jest` (from Orta)
 
 ## Debugging IntelliCode CLI
@@ -154,7 +123,7 @@ and a `.gitrepo` file which stores the subrepo's metadata (no magic strings in c
 Use the `.\subrepo.ps1` script to manage the subrepo. Example commands include:
 
 ```ps1
-# Pull from upstream pyright into server/pyright
+# Pull from upstream pyright into packages/pyright
 .\subrepo.ps1 pull
 # Create a squashed commit on a temporary branch to push back to pyright
 .\subrepo.ps1 branch -m "commit message"

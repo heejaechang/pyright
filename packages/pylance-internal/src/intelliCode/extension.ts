@@ -3,21 +3,22 @@
  *
  * Language service extension implementing IntelliCode.
  */
-import '../pyright/server/src/common/extensions';
+import 'pyright-internal/common/extensions';
 
 import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
 
-import { ConfigOptions } from '../pyright/server/src/common/configOptions';
-import { LogLevel } from '../pyright/server/src/common/console';
-import { assert } from '../pyright/server/src/common/debug';
-import { CompletionListExtension, LanguageServiceExtension } from '../pyright/server/src/common/extensibility';
-import { FileSystem } from '../pyright/server/src/common/fileSystem';
-import { Duration } from '../pyright/server/src/common/timing';
-import { ModuleNode } from '../pyright/server/src/parser/parseNodes';
-import { Commands, IntelliCodeCompletionCommandPrefix } from '../src/commands/commands';
-import { LogService } from '../src/common/logger';
-import { Platform } from '../src/common/platform';
-import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../src/common/telemetry';
+import { ConfigOptions } from 'pyright-internal/common/configOptions';
+import { LogLevel } from 'pyright-internal/common/console';
+import { assert } from 'pyright-internal/common/debug';
+import { CompletionListExtension, LanguageServiceExtension } from 'pyright-internal/common/extensibility';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { Duration } from 'pyright-internal/common/timing';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+
+import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
+import { LogService } from '../common/logger';
+import { Platform } from '../common/platform';
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
@@ -28,8 +29,8 @@ import { getExceptionMessage, IntelliCodeConstants } from './types';
 import { getZip } from './zip';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
-    private _icCompletionExtension: IntelliCodeCompletionListExtension;
-    private _telemetry: TelemetryService;
+    private _icCompletionExtension!: IntelliCodeCompletionListExtension;
+    private _telemetry!: TelemetryService;
     private _startup = true;
 
     get completionListExtension(): CompletionListExtension {
@@ -73,7 +74,7 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
 export class IntelliCodeCompletionListExtension implements CompletionListExtension {
     private _deepLearning: DeepLearning | undefined;
     private _enable = true;
-    private _modelZipPath: string;
+    private _modelZipPath?: string;
 
     constructor(
         private readonly _logger: LogService,

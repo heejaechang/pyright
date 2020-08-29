@@ -6,7 +6,8 @@
 
 import { Connection } from 'vscode-languageserver/node';
 
-import { assert } from '../../pyright/server/src/common/debug';
+import { assert } from 'pyright-internal/common/debug';
+
 import { VERSION } from './constants';
 
 export enum TelemetryEventName {

@@ -6,7 +6,7 @@
 
 import 'jest-extended';
 
-import { StandardVariableType } from '../../../intelliCode/types';
+import { StandardVariableType } from '../../intelliCode/types';
 import { walkAssignments } from './testUtils';
 
 describe('IntelliCode assignment walker', () => {

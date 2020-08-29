@@ -6,10 +6,11 @@
 
 import 'jest-extended';
 
-import { EditorInvocation } from '../../../intelliCode/models';
-import { EditorLookBackTokenGenerator } from '../../../intelliCode/tokens/editorTokenGenerator';
-import { StandardVariableType } from '../../../intelliCode/types';
-import { ModuleNode } from '../../../pyright/server/src/parser/parseNodes';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+
+import { EditorInvocation } from '../../intelliCode/models';
+import { EditorLookBackTokenGenerator } from '../../intelliCode/tokens/editorTokenGenerator';
+import { StandardVariableType } from '../../intelliCode/types';
 import { walkExpressions } from './testUtils';
 
 function getInference(code: string, position: number): EditorInvocation | undefined {

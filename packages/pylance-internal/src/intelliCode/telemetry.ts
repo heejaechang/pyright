@@ -7,8 +7,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CompletionItem } from 'vscode-languageserver';
 
-import { Commands } from '../src/commands/commands';
-import { TelemetryEvent, TelemetryEventName } from '../src/common/telemetry';
+import { Commands } from '../commands/commands';
+import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 import { FailureReason, ModelType } from './types';
 
 // Builds overall IntelliCode temeletry

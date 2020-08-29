@@ -4,9 +4,10 @@
  * Base class for lookback token production for IntelliCode.
  */
 
-import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
-import { Tokenizer } from '../../pyright/server/src/parser/tokenizer';
-import { IdentifierToken, Token, TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { Tokenizer } from 'pyright-internal/parser/tokenizer';
+import { IdentifierToken, Token, TokenType } from 'pyright-internal/parser/tokenizerTypes';
+
 import { IntelliCodeConstants, LiteralTokenValue } from '../types';
 import { TokenSet, TokenValuePair } from './tokenSet';
 

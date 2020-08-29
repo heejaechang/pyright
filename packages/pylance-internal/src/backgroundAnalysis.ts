@@ -7,22 +7,23 @@
  */
 
 import { CancellationToken } from 'vscode-languageserver';
-import { isMainThread, MessagePort, Worker, workerData } from 'worker_threads';
+import { MessagePort, Worker, workerData } from 'worker_threads';
 
-import { createPylanceImportResolver } from './pylanceImportResolver';
-import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
-import { Indices } from './pyright/server/src/analyzer/program';
+import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { Indices } from 'pyright-internal/analyzer/program';
 import {
     BackgroundAnalysisBase,
     BackgroundAnalysisRunnerBase,
     InitializationData,
-} from './pyright/server/src/backgroundAnalysisBase';
-import { getCancellationFolderName, OperationCanceledException } from './pyright/server/src/common/cancellationUtils';
-import { ConfigOptions } from './pyright/server/src/common/configOptions';
-import { ConsoleInterface, LogLevel } from './pyright/server/src/common/console';
-import { FileSystem } from './pyright/server/src/common/fileSystem';
-import { mainFilename } from './src/common/mainModuleFileName';
-import { BackgroundIndexRunner, Indexer } from './src/services/indexer';
+} from 'pyright-internal/backgroundAnalysisBase';
+import { getCancellationFolderName, OperationCanceledException } from 'pyright-internal/common/cancellationUtils';
+import { ConfigOptions } from 'pyright-internal/common/configOptions';
+import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+
+import { mainFilename } from './common/mainModuleFileName';
+import { createPylanceImportResolver } from './pylanceImportResolver';
+import { BackgroundIndexRunner, Indexer } from './services/indexer';
 
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
     constructor(console: ConsoleInterface) {
@@ -81,8 +82,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     }
 }
 
-// this lets the runner start in the worker thread
-if (!isMainThread) {
+export function runBackgroundThread() {
     const data = workerData as InitializationData;
     if (!data.runner) {
         // run default background runner

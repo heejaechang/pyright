@@ -11,19 +11,20 @@ import * as path from 'path';
 import { dirSync } from 'tmp';
 import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
 
-import { ModelLoader } from '../../../intelliCode/modelLoader';
+import { LogLevel } from 'pyright-internal/common/console';
+import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
+
+import { LogService } from '../../common/logger';
+import { formatEventName, TelemetryEventName, TelemetryService } from '../../common/telemetry';
+import { ModelLoader } from '../../intelliCode/modelLoader';
 import {
     IntelliCodeFolderName,
     ModelFileName,
     ModelMetaDataFileName,
     ModelSubFolder,
     ModelTokensFileName,
-} from '../../../intelliCode/models';
-import { getZip, Zip } from '../../../intelliCode/zip';
-import { LogLevel } from '../../../pyright/server/src/common/console';
-import { createFromRealFileSystem, FileSystem } from '../../../pyright/server/src/common/fileSystem';
-import { LogService } from '../../common/logger';
-import { formatEventName, TelemetryEventName, TelemetryService } from '../../common/telemetry';
+} from '../../intelliCode/models';
+import { getZip, Zip } from '../../intelliCode/zip';
 import { getTestModel } from './testUtils';
 
 let mockedFs: FileSystem;
@@ -45,7 +46,9 @@ describe('IntelliCode model loader', () => {
     });
 
     test('unpack model', async () => {
-        const tmpFolder = dirSync();
+        const tmpFolder = dirSync({
+            unsafeCleanup: true,
+        });
 
         try {
             // Copy model zip to a temp folder elsewhere

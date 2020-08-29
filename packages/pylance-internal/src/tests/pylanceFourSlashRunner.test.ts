@@ -9,21 +9,22 @@
 import * as path from 'path';
 import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-languageserver';
 
-import { createPylanceImportResolver } from '../../pylanceImportResolver';
-import { ImportResolverFactory } from '../../pyright/server/src/analyzer/importResolver';
-import { NullConsole } from '../../pyright/server/src/common/console';
-import * as consts from '../../pyright/server/src/common/pathConsts';
-import { combinePaths, normalizeSlashes, resolvePaths } from '../../pyright/server/src/common/pathUtils';
-import { Range } from '../../pyright/server/src/common/textRange';
-import { LanguageServerInterface, WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
-import { IndexResults } from '../../pyright/server/src/languageService/documentSymbolProvider';
-import { runFourSlashTest } from '../../pyright/server/src/tests/harness/fourslash/runner';
-import { HostSpecificFeatures } from '../../pyright/server/src/tests/harness/fourslash/testState';
-import * as host from '../../pyright/server/src/tests/harness/host';
-import { typeshedFolder } from '../../pyright/server/src/tests/harness/vfs/factory';
-import { MODULE_PATH } from '../../pyright/server/src/tests/harness/vfs/filesystem';
+import { ImportResolverFactory } from 'pyright-internal/analyzer/importResolver';
+import { NullConsole } from 'pyright-internal/common/console';
+import * as consts from 'pyright-internal/common/pathConsts';
+import { combinePaths, normalizeSlashes, resolvePaths } from 'pyright-internal/common/pathUtils';
+import { Range } from 'pyright-internal/common/textRange';
+import { LanguageServerInterface, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
+import { IndexResults } from 'pyright-internal/languageService/documentSymbolProvider';
+import { runFourSlashTest } from 'pyright-internal/tests/harness/fourslash/runner';
+import { HostSpecificFeatures } from 'pyright-internal/tests/harness/fourslash/testState';
+import * as host from 'pyright-internal/tests/harness/host';
+import { typeshedFolder } from 'pyright-internal/tests/harness/vfs/factory';
+import { MODULE_PATH } from 'pyright-internal/tests/harness/vfs/filesystem';
+
 import { CommandController } from '../commands/commandController';
 import { CodeActionProvider } from '../languageService/codeActionProvider';
+import { createPylanceImportResolver } from '../pylanceImportResolver';
 import { Indexer } from '../services/indexer';
 
 const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));
@@ -75,10 +76,10 @@ describe('Pylance fourslash tests', () => {
     }
 
     // make sure default folders exist
-    const bundledStubsFolderPath = resolvePaths(host.HOST.getWorkspaceRoot(), '../../bundled-stubs');
+    const bundledStubsFolderPath = resolvePaths(__dirname, '../../bundled-stubs');
     const typeshedFolderPath = resolvePaths(
-        host.HOST.getWorkspaceRoot(),
-        '../../pyright/client/' + consts.typeshedFallback
+        __dirname,
+        '../../../pyright/packages/pyright-internal/' + consts.typeshedFallback
     );
     if (!host.HOST.directoryExists(bundledStubsFolderPath) || !host.HOST.directoryExists(typeshedFolderPath)) {
         throw new Error(`expected folder not exist ${bundledStubsFolderPath} or ${typeshedFolderPath}`);
@@ -86,7 +87,8 @@ describe('Pylance fourslash tests', () => {
 
     const mountedPaths = new Map<string, string>();
     mountedPaths.set(bundledStubsFolder, bundledStubsFolderPath);
-    mountedPaths.set(typeshedFolder, typeshedFolderPath);
+    // We use pyright's typeshed-fallback. If this changes, adjust the below.
+    // mountedPaths.set(typeshedFolder, typeshedFolderPath);
 
     const pylanceFeatures = new PylanceFeatures();
 

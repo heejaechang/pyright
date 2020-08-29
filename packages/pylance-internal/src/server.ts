@@ -21,45 +21,46 @@ import {
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
-import { BackgroundAnalysis } from './backgroundAnalysis';
-import { IntelliCodeExtension } from './intelliCode/extension';
-import { ModelSubFolder } from './intelliCode/models';
-import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
-import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
-import { AnalysisResults } from './pyright/server/src/analyzer/analysis';
-import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
-import { BackgroundAnalysisBase } from './pyright/server/src/backgroundAnalysisBase';
-import { Commands as PyRightCommands } from './pyright/server/src/commands/commands';
-import { getCancellationFolderName } from './pyright/server/src/common/cancellationUtils';
-import { ConfigOptions } from './pyright/server/src/common/configOptions';
-import { ConsoleWithLogLevel, LogLevel } from './pyright/server/src/common/console';
-import { isString } from './pyright/server/src/common/core';
-import * as debug from './pyright/server/src/common/debug';
-import { createFromRealFileSystem, FileSystem } from './pyright/server/src/common/fileSystem';
-import * as consts from './pyright/server/src/common/pathConsts';
-import { convertUriToPath, normalizeSlashes } from './pyright/server/src/common/pathUtils';
-import { ProgressReporter } from './pyright/server/src/common/progressReporter';
+import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
+import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { BackgroundAnalysisBase } from 'pyright-internal/backgroundAnalysisBase';
+import { Commands as PyRightCommands } from 'pyright-internal/commands/commands';
+import { getCancellationFolderName } from 'pyright-internal/common/cancellationUtils';
+import { ConfigOptions } from 'pyright-internal/common/configOptions';
+import { ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
+import { isString } from 'pyright-internal/common/core';
+import * as debug from 'pyright-internal/common/debug';
+import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
+import * as consts from 'pyright-internal/common/pathConsts';
+import { convertUriToPath, normalizeSlashes } from 'pyright-internal/common/pathUtils';
+import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import {
     LanguageServerBase,
     ProgressReporterConnection,
     ServerSettings,
     WorkspaceServiceInstance,
-} from './pyright/server/src/languageServerBase';
-import { CodeActionProvider as PyrightCodeActionProvider } from './pyright/server/src/languageService/codeActionProvider';
-import { CommandController } from './src/commands/commandController';
-import { Commands } from './src/commands/commands';
-import { PYRIGHT_COMMIT, VERSION } from './src/common/constants';
-import { LogService } from './src/common/logger';
-import { Platform } from './src/common/platform';
+} from 'pyright-internal/languageServerBase';
+import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
+
+import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
+import { CommandController } from './commands/commandController';
+import { Commands } from './commands/commands';
+import { PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { LogService } from './common/logger';
+import { Platform } from './common/platform';
 import {
     addMeasurementsToEvent,
     sendMeasurementsTelemetry,
     TelemetryEvent,
     TelemetryEventName,
     TelemetryService,
-} from './src/common/telemetry';
-import { CodeActionProvider as PylanceCodeActionProvider } from './src/languageService/codeActionProvider';
-import { AnalysisTracker } from './src/services/analysisTracker';
+} from './common/telemetry';
+import { IntelliCodeExtension } from './intelliCode/extension';
+import { ModelSubFolder } from './intelliCode/models';
+import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
+import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
+import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
+import { AnalysisTracker } from './services/analysisTracker';
 
 const pythonSectionName = 'python';
 const pythonAnalysisSectionName = 'python.analysis';
@@ -77,7 +78,7 @@ class PylanceServer extends LanguageServerBase {
     private _intelliCode: IntelliCodeExtension;
     // TODO: the following settings are cached in getSettings() while they may be
     // set per workspace or folder. Figure out how can we maintain cache per resource.
-    private _progressBarEnabled: boolean;
+    private _progressBarEnabled?: boolean;
     private _serverSettings?: PylanceServerSettings;
 
     constructor() {
@@ -95,14 +96,6 @@ class PylanceServer extends LanguageServerBase {
             supportedCodeActions: [CodeActionKind.QuickFix],
         });
 
-        // Pylance has "typeshed-fallback" under "client/server" rather than "client" as pyright does
-        // but __dirname points to "client/server" same as pyright.
-        // the difference comes from the fact that pyright deploy everything under client but pylance
-        // let users to download only server part.
-        //
-        // make sure root directory points to __dirname which is "client/server" where we can discover
-        // "typeshed-fallback" folder
-        //
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
         // 2. to set "cwd" to run python to find search path.
@@ -128,7 +121,7 @@ class PylanceServer extends LanguageServerBase {
         function reporterFactory(connection: ProgressReporterConnection): ProgressReporter {
             return {
                 isEnabled(data: AnalysisResults): boolean {
-                    return server._progressBarEnabled;
+                    return !!server._progressBarEnabled;
                 },
 
                 begin(): void {
@@ -382,7 +375,11 @@ class PylanceServer extends LanguageServerBase {
     }
 }
 
-if (isMainThread) {
-    prepareNativesForCurrentPlatform(createFromRealFileSystem(), new Platform());
-    new PylanceServer();
+export function main() {
+    if (isMainThread) {
+        prepareNativesForCurrentPlatform(createFromRealFileSystem(), new Platform());
+        new PylanceServer();
+    } else {
+        runBackgroundThread();
+    }
 }

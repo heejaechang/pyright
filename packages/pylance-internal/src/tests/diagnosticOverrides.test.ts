@@ -3,11 +3,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
+import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
 
 describe('Diagnostic overrides', () => {
     test('Compare DiagnosticRule to package.json', () => {
-        const extensionRoot = path.resolve(__dirname, '..', '..', '..', 'extension');
+        const extensionRoot = path.resolve(__dirname, '..', '..', '..', 'vscode-pylance');
         const packageJson = path.join(extensionRoot, 'package.json');
         const jsonString = fs.readFileSync(packageJson, { encoding: 'utf-8' });
         const json = JSON.parse(jsonString);

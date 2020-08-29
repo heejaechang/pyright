@@ -1,4 +1,4 @@
-/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+/// <reference path="fourslash.ts" />
 // @indexer: true
 
 // @filename: test1.py

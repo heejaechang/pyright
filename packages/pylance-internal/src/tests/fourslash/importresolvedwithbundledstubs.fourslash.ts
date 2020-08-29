@@ -1,4 +1,4 @@
-/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+/// <reference path="fourslash.ts" />
 
 // @filename: importresolved.py
 //// # django will resolve, have bundled stubs and sources

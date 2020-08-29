@@ -4,17 +4,17 @@
  * serverSettings tests.
  */
 
-import * as assert from 'assert';
+import assert from 'assert';
 
-import { AnalyzerService } from '../../pyright/server/src/analyzer/service';
-import { DiagnosticSeverityOverrides } from '../../pyright/server/src/common/commandLineOptions';
-import { NullConsole } from '../../pyright/server/src/common/console';
-import { createDeferred } from '../../pyright/server/src/common/deferred';
-import { FileSystem } from '../../pyright/server/src/common/fileSystem';
-import { convertPathToUri, normalizeSlashes } from '../../pyright/server/src/common/pathUtils';
-import { ServerSettings, WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
-import { AnalyzerServiceExecutor } from '../../pyright/server/src/languageService/analyzerServiceExecutor';
-import { TestFileSystem } from '../../pyright/server/src/tests/harness/vfs/filesystem';
+import { AnalyzerService } from 'pyright-internal/analyzer/service';
+import { DiagnosticSeverityOverrides } from 'pyright-internal/common/commandLineOptions';
+import { NullConsole } from 'pyright-internal/common/console';
+import { createDeferred } from 'pyright-internal/common/deferred';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { convertPathToUri, normalizeSlashes } from 'pyright-internal/common/pathUtils';
+import { ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
+import { AnalyzerServiceExecutor } from 'pyright-internal/languageService/analyzerServiceExecutor';
+import { TestFileSystem } from 'pyright-internal/tests/harness/vfs/filesystem';
 
 const rootPath = normalizeSlashes('/');
 

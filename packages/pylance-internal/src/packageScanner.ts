@@ -6,19 +6,19 @@
 
 import { CancellationToken } from 'vscode-languageserver';
 
-import { ImportResolver } from './pyright/server/src/analyzer/importResolver';
-import { stdLibFolderName } from './pyright/server/src/analyzer/pythonPathUtils';
-import { isPrivateOrProtectedName } from './pyright/server/src/analyzer/symbolNameUtils';
-import { throwIfCancellationRequested } from './pyright/server/src/common/cancellationUtils';
-import { ConfigOptions, ExecutionEnvironment } from './pyright/server/src/common/configOptions';
+import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { stdLibFolderName } from 'pyright-internal/analyzer/pythonPathUtils';
+import { isPrivateOrProtectedName } from 'pyright-internal/analyzer/symbolNameUtils';
+import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import {
     combinePaths,
     getFileExtension,
     getFileName,
     isFileSystemCaseSensitive,
     stripFileExtension,
-} from './pyright/server/src/common/pathUtils';
-import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from './pyright/server/src/common/stringUtils';
+} from 'pyright-internal/common/pathUtils';
+import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from 'pyright-internal/common/stringUtils';
 
 export type ImportName = string;
 export type FullImportName = string;
@@ -37,7 +37,7 @@ export class PackageScanner {
     private _indicesPerExecEnv = new Map<string, ImportNameMap>();
 
     private _executionEnvironments: ExecutionEnvironment[] = [];
-    private _stringComparer: (a: string | undefined, b: string | undefined) => boolean;
+    private _stringComparer: (a: string, b: string) => boolean;
 
     constructor(configOptions: ConfigOptions, private _importResolver: ImportResolver) {
         this._stringComparer = isFileSystemCaseSensitive(this._fs)

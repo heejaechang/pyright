@@ -557,7 +557,7 @@
         "@types/jest": "^26.0.0",
         "@types/node": "~12.12.54",
         "@types/source-map-support": "^0.5.1",
-        "@types/vscode": "^1.47.0",
+        "@types/vscode": "^1.48.0",
         "clean-webpack-plugin": "^3.0.0",
         "copy-webpack-plugin": "^6.0.3",
         "jest": "^26.0.1",

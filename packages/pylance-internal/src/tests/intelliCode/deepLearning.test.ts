@@ -7,34 +7,35 @@
 import 'jest-extended';
 
 import * as path from 'path';
+import { DirResult, dirSync } from 'tmp';
 import { instance, mock } from 'ts-mockito';
-import { CancellationToken } from 'vscode-languageserver';
+import { CancellationToken, WorkDoneProgress } from 'vscode-languageserver';
 
-import { DeepLearning } from '../../../intelliCode/deepLearning';
-import { ExpressionWalker } from '../../../intelliCode/expressionWalker';
-import { ModelLoader } from '../../../intelliCode/modelLoader';
-import {
-    ModelFileName,
-    ModelMetaDataFileName,
-    ModelTokensFileName,
-    ModelZipFileName,
-} from '../../../intelliCode/models';
-import { Zip } from '../../../intelliCode/zip';
-import { createFromRealFileSystem } from '../../../pyright/server/src/common/fileSystem';
+import { createFromRealFileSystem } from 'pyright-internal/common/fileSystem';
+
 import { Platform } from '../../common/platform';
-import { clientServerModelLocation, parseCode, walkAssignments } from './testUtils';
+import { DeepLearning } from '../../intelliCode/deepLearning';
+import { ExpressionWalker } from '../../intelliCode/expressionWalker';
+import { ModelLoader } from '../../intelliCode/modelLoader';
+import { ModelFileName, ModelMetaDataFileName, ModelTokensFileName, ModelZipFileName } from '../../intelliCode/models';
+import { Zip } from '../../intelliCode/zip';
+import { parseCode, walkAssignments } from './testUtils';
 
 const platform = new Platform();
 
 let deepLearning: DeepLearning;
 let modelZipFolderPath: string | undefined;
+let modelUnpackFolderTmp: DirResult;
+let modelUnpackFolder: string;
 
 describe('IntelliCode deep learning', () => {
+    // TODO: These tests don't run.
+
     beforeAll(async () => {
         const fs = createFromRealFileSystem();
         const mockedZip = mock<Zip>();
         const loader = new ModelLoader(fs, instance(mockedZip));
-        modelZipFolderPath = path.resolve(path.join(__dirname, '../../../intelliCode/model/model.zip'));
+        modelZipFolderPath = path.resolve(__dirname, 'data');
 
         const modelZipPath = path.join(modelZipFolderPath, ModelZipFileName);
         if (!fs.existsSync(modelZipPath)) {
@@ -47,16 +48,24 @@ describe('IntelliCode deep learning', () => {
             return;
         }
 
-        const modelUnpackFolder = path.join(__dirname, clientServerModelLocation);
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelFileName)));
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelMetaDataFileName)));
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelTokensFileName)));
+        modelUnpackFolderTmp = dirSync({
+            unsafeCleanup: true,
+        });
+        modelUnpackFolder = modelUnpackFolderTmp.name;
 
         const model = await loader.loadModel(modelZipPath, modelUnpackFolder);
         expect(model).toBeDefined();
 
+        expect(fs.existsSync(path.join(modelUnpackFolder, ModelFileName)));
+        expect(fs.existsSync(path.join(modelUnpackFolder, ModelMetaDataFileName)));
+        expect(fs.existsSync(path.join(modelUnpackFolder, ModelTokensFileName)));
+
         deepLearning = new DeepLearning(model!, platform);
         await deepLearning.initialize();
+    });
+
+    afterAll(() => {
+        modelUnpackFolderTmp.removeCallback();
     });
 
     if (!modelZipFolderPath) {

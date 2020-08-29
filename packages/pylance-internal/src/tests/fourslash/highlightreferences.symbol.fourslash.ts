@@ -1,4 +1,4 @@
-/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+/// <reference path="fourslash.ts" />
 
 // @filename: testLib1/__init__.py
 // @library: true

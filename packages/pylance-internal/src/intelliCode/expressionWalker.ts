@@ -13,7 +13,8 @@ import {
     ParseNode,
     ParseNodeArray,
     ParseNodeType,
-} from '../pyright/server/src/parser/parseNodes';
+} from 'pyright-internal/parser/parseNodes';
+
 import { BaseParseTreeWalker } from './baseParseTreeWalker';
 import { resolveVariable } from './resolution';
 import { Scope } from './scope';

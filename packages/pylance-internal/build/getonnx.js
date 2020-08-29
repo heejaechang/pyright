@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-var-requires */
 
+// Allow skipping of this script; useful when needing to run npm install
+// without package-lock existing (which this script depends on).
+if (process.env.SKIP_GET_ONNX) {
+    process.exit(0);
+}
+
 // Downloads ONNX runtime from all platforms since npm
 // only brings down bits specific to the current machine OS.
 // We need all platforms packages into the bundle.

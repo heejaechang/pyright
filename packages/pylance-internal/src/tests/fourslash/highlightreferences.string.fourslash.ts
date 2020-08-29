@@ -1,4 +1,4 @@
-/// <reference path="../../../pyright/server/src/tests/fourslash/fourslash.ts" />
+/// <reference path="fourslash.ts" />
 
 // @filename: test.py
 //// a = [|{| "name":"marker", "kind":"text" |}'string literal'|]

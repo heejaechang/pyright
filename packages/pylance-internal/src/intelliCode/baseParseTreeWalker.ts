@@ -4,13 +4,14 @@
  * Base AST walker for IntelliCode.
  */
 
-import { ParseTreeWalker } from '../pyright/server/src/analyzer/parseTreeWalker';
-import { ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
+import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
+import { ParseNode, ParseNodeType } from 'pyright-internal/parser/parseNodes';
+
 import { getEnclosingScopeForNode, Scope } from './scope';
 
 export class BaseParseTreeWalker extends ParseTreeWalker {
     // Current scope's function node
-    protected _currentScope: Scope;
+    protected _currentScope!: Scope; // TODO: Remove this !
 
     scopes: Scope[] = [];
 

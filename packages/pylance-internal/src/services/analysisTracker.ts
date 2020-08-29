@@ -1,12 +1,12 @@
 /*
  * analysisTracker.ts
  * Copyright (c) Microsoft Corporation.
- *
- * Send analysis result telemetry.
+ * Licensed under the MIT license.
  */
 
-import { AnalysisResults } from '../../pyright/server/src/analyzer/analysis';
-import { Duration } from '../../pyright/server/src/common/timing';
+import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
+import { Duration } from 'pyright-internal/common/timing';
+
 import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 
 const TelemetryWaitTimeSeconds = 60;
@@ -16,8 +16,8 @@ export class AnalysisTracker {
     private _isTrackingAnalysis = false;
     private _isFirstRun = true;
     private _numFilesAnalyzed = 0;
-    private _analysisDuration: Duration;
-    private _initalAnalysisElapsedTimeSeconds: number;
+    private _analysisDuration?: Duration;
+    private _initalAnalysisElapsedTimeSeconds?: number;
     private _telemetryLimiter: Duration | undefined;
 
     updateTelemetry(results: AnalysisResults): TelemetryEvent | undefined {
@@ -52,6 +52,10 @@ export class AnalysisTracker {
             }
             this._telemetryLimiter = new Duration();
 
+            if (!this._analysisDuration || !this._initalAnalysisElapsedTimeSeconds) {
+                return;
+            }
+
             try {
                 const te = new TelemetryEvent(TelemetryEventName.ANALYSIS_COMPLETE);
                 const usage = process.memoryUsage();
@@ -62,7 +66,7 @@ export class AnalysisTracker {
                 te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
                 te.Measurements['externalMB'] = usage.external / 1024 / 1024;
                 te.Measurements['elapsedMs'] =
-                    this._analysisDuration?.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds * 1000;
+                    this._analysisDuration.getDurationInMilliseconds() + this._initalAnalysisElapsedTimeSeconds * 1000;
                 te.Measurements['numFilesAnalyzed'] = this._numFilesAnalyzed;
                 te.Measurements['numFilesInProgram'] = results.filesInProgram;
                 te.Measurements['fatalErrorOccurred'] = results.fatalErrorOccurred ? 1 : 0;
@@ -74,6 +78,5 @@ export class AnalysisTracker {
                 this._isFirstRun = false;
             }
         }
-        return;
     }
 }

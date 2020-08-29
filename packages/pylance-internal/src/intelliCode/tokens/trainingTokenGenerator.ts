@@ -4,8 +4,9 @@
  * Lookback token generator for IntelliCode in training mode.
  */
 
-import { ModuleNode } from '../../pyright/server/src/parser/parseNodes';
-import { TokenType } from '../../pyright/server/src/parser/tokenizerTypes';
+import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { TokenType } from 'pyright-internal/parser/tokenizerTypes';
+
 import { ExpressionWalker } from '../expressionWalker';
 import { LookbackTokenLength, TrainingInvocations } from '../models';
 import { LookBackTokenGenerator } from './lookbackTokenGenerator';

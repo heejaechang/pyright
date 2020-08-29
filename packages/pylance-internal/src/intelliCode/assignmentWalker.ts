@@ -21,7 +21,8 @@ import {
     ParseNodeArray,
     ParseNodeType,
     WithNode,
-} from '../pyright/server/src/parser/parseNodes';
+} from 'pyright-internal/parser/parseNodes';
+
 import { BaseParseTreeWalker } from './baseParseTreeWalker';
 import { resolveFunction, resolveVariable } from './resolution';
 import { getScopeQualifiedName, Scope } from './scope';

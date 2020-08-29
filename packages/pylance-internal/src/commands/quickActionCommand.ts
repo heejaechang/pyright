@@ -7,7 +7,8 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
-import { LanguageServerInterface } from '..//../pyright/server/src/languageServerBase';
+import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
+
 import { AddImportCommand } from './addImportCommand';
 import { ServerCommand } from './commandController';
 import { Commands } from './commands';

@@ -7,8 +7,8 @@
 import * as path from 'path';
 import { open } from 'yauzl';
 
-import { createDeferred } from '../pyright/server/src/common/deferred';
-import { FileSystem } from '../pyright/server/src/common/fileSystem';
+import { createDeferred } from 'pyright-internal/common/deferred';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
 
 export interface Zip {
     unzip(archivePath: string, destinationFolder: string): Promise<number>;

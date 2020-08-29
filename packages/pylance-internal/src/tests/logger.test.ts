@@ -4,10 +4,11 @@
  * Logger service tests.
  */
 
-import * as assert from 'assert';
+import assert from 'assert';
 import { anyString, capture, instance, mock, verify } from 'ts-mockito';
 
-import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from '../../pyright/server/src/common/console';
+import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
+
 import { LogService } from '../common/logger';
 
 let mockedRemoteConsole: ConsoleInterface;

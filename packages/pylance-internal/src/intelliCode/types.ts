@@ -4,7 +4,7 @@
  * Definitions of IntelliCode data based on AST nodes.
  */
 
-import { ParseNode, ParseNodeType } from '../pyright/server/src/parser/parseNodes';
+import { ParseNode, ParseNodeType } from 'pyright-internal/parser/parseNodes';
 
 class KeyValueWithLocation {
     readonly spanStart: number;

@@ -7,12 +7,13 @@
 
 import { CancellationToken, CodeAction, CodeActionKind, Command } from 'vscode-languageserver';
 
-import { Commands as PyrightCommands } from '../../pyright/server/src/commands/commands';
-import { throwIfCancellationRequested } from '../../pyright/server/src/common/cancellationUtils';
-import { DiagnosticCategory } from '../../pyright/server/src/common/diagnostic';
-import { DiagnosticRule } from '../../pyright/server/src/common/diagnosticRules';
-import { Range } from '../../pyright/server/src/common/textRange';
-import { WorkspaceServiceInstance } from '../../pyright/server/src/languageServerBase';
+import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
+import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
+import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
+import { Range } from 'pyright-internal/common/textRange';
+import { WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
+
 import { addImportSimilarityLimit, Commands, wellKnownAbbreviationMap } from '../commands/commands';
 
 export class CodeActionProvider {
