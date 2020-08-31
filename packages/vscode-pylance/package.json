@@ -27,7 +27,7 @@
         "Programming Languages"
     ],
     "icon": "images/icon.png",
-    "main": "./dist/extension.js",
+    "main": "./dist/extension.bundle.js",
     "activationEvents": [
         "onLanguage:python",
         "workspaceContains:mspythonconfig.json"
