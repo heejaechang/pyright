@@ -2,43 +2,60 @@ trigger:
   branches:
     include:
       - master
+      - main
       - refs/tags/*
 
 pr:
   autoCancel: true
   branches:
-    include: ['master']
+    include: ['master', 'main']
 
 variables:
   - template: templates/globals.yml
 
-jobs:
-  - job: build
-    displayName: Build
+pool:
+  vmImage: 'ubuntu-18.04'
 
-    pool:
-      vmImage: 'ubuntu-18.04'
+jobs:
+  - job: vsix
+    displayName: VSIX
 
     steps:
       - template: templates/node.yml
-
-      - script: npx gulp setVersion
-        displayName: npx gulp setVersion
-        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-
-      - script: npx gulp setVersion --prBuildId $(Build.BuildId)
-        displayName: npx gulp setVersion --prBuildId $(Build.BuildId)
-        condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+      - template: templates/set-version.yml
 
       - script: npx vsce package -o vscode-pylance.vsix
-        displayName: npx vsce package -o vscode-pylance.vsix
-        workingDirectory: extension
+        displayName: Package vscode-pylance
+        workingDirectory: packages/vscode-pylance
 
-      - script: npm run build:pythia
-        displayName: npm run build:pythia
-
-      - publish: extension/vscode-pylance.vsix
+      - publish: packages/vscode-pylance/vscode-pylance.vsix
         artifact: VSIX
 
-      - publish: pythia/dist/pythia.js
+  - job: pylance
+    displayName: Pylance
+
+    steps:
+      - template: templates/node.yml
+      - template: templates/set-version.yml
+
+      - script: npm run build
+        displayName: Build pylance
+        workingDirectory: packages/pylance
+
+
+      # - publish: packages/pylance/dist
+      #   artifact: pylance
+
+  - job: pythia
+    displayName: Pythia
+
+    steps:
+      - template: templates/node.yml
+      - template: templates/set-version.yml
+
+      - script: npm run build
+        displayName: Build pythia
+        workingDirectory: packages/pylance-pythia
+
+      - publish: packages/pylance-pythia/dist
         artifact: pythia

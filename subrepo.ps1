@@ -1,3 +1,5 @@
+#!/usr/bin/env pwsh
+
 param (
     [string]$subcommand = "",
     [string]$m = "",
@@ -32,14 +34,19 @@ function Invoke-Call {
     }
 }
 
-$currentCommit = (git config --file server/pyright/.gitrepo subrepo.commit) | Write-Output
+$currentCommit = (git config --file packages/pyright/.gitrepo subrepo.commit) | Write-Output
 
 switch ($subcommand) {
+    "clone" {
+        # Force clone the repo.
+        Invoke-Call { git subrepo clone https://github.com/microsoft/pyright.git packages/pyright }
+        break
+    }
     "reclone" {
         # Remove the temporary branch and worktree.
-        Invoke-Call { git subrepo clean server/pyright }
+        Invoke-Call { git subrepo clean packages/pyright }
         # Force clone the repo.
-        Invoke-Call { git subrepo clone --force https://github.com/microsoft/pyright.git server/pyright }
+        Invoke-Call { git subrepo clone --force https://github.com/microsoft/pyright.git packages/pyright }
         break
     }
     "pull" {
@@ -54,17 +61,17 @@ switch ($subcommand) {
         Write-Output "Updating to pyright commit $newCommit."
 
         # Remove the temporary branch and worktree.
-        Invoke-Call { git subrepo clean server/pyright }
+        Invoke-Call { git subrepo clean packages/pyright }
 
         # Pull changes and squash commit them.
-        Invoke-Call { git subrepo pull server/pyright }
+        Invoke-Call { git subrepo pull packages/pyright }
 
         # Now, branch to see if there are any diffs. If not, then we can just reclone.
         Write-Host "Branching to check if the pyright tree is clean."
-        Invoke-Call { git subrepo clean server/pyright }
-        Invoke-Call { git subrepo branch server/pyright }
+        Invoke-Call { git subrepo clean packages/pyright }
+        Invoke-Call { git subrepo branch packages/pyright }
         
-        Push-Location .git/tmp/subrepo/server/pyright
+        Push-Location .git/tmp/subrepo/packages/pyright
         $noDiff = Invoke-CallOk { git diff --quiet $newCommit }
         Pop-Location
 
@@ -72,7 +79,7 @@ switch ($subcommand) {
             # No diff, so it's safe to manually move the subrepo parent to HEAD.
             Write-Host "pyright tree is clean, moving subrepo parent."
             $newParent = (git rev-parse HEAD) | Write-Output
-            Invoke-Call { git config --file server/pyright/.gitrepo subrepo.parent $newParent }
+            Invoke-Call { git config --file packages/pyright/.gitrepo subrepo.parent $newParent }
             Invoke-Call { git commit -am "Update git-subrepo parent" }
         }
         else {
@@ -87,13 +94,13 @@ switch ($subcommand) {
         }
 
         # Remove the temporary branch and worktree.
-        Invoke-Call { git subrepo clean server/pyright }
+        Invoke-Call { git subrepo clean packages/pyright }
         # Ensure we have all of the subrepo refs.
-        Invoke-Call { git subrepo fetch server/pyright }
-        # Populate the subrepo/server/pyright branch with new changes.
-        Invoke-Call { git subrepo branch server/pyright }
-        # Enter worktree; changes here are applied to the subrepo/server/pyright branch.
-        Push-Location .git/tmp/subrepo/server/pyright
+        Invoke-Call { git subrepo fetch packages/pyright }
+        # Populate the subrepo/packages/pyright branch with new changes.
+        Invoke-Call { git subrepo branch packages/pyright }
+        # Enter worktree; changes here are applied to the subrepo/packages/pyright branch.
+        Push-Location .git/tmp/subrepo/packages/pyright
         # Remove all commits after the last pull and restage the difference.
         Invoke-Call { git reset --soft $currentCommit }
         # Commit changes with a new message.
@@ -111,7 +118,7 @@ switch ($subcommand) {
             Write-Error "Please provide forkBranch." -ErrorAction Stop
         }
 
-        Invoke-Call { git push $forkRemote subrepo/server/pyright:$forkBranch }
+        Invoke-Call { git push $forkRemote subrepo/packages/pyright:$forkBranch }
         break
     }
     default {

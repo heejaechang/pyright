@@ -1,5 +1,5 @@
 parameters:
-  installAll: 'true'
+  installAll: false
 
 steps:
   - task: NodeTool@0
@@ -16,6 +16,10 @@ steps:
         npm | "$(Agent.OS)"
       path: $(npm_config_cache)
 
-  - script: npm run install:all
-    displayName: npm run install:all
-    condition: and(succeeded(), eq('${{ parameters.installAll }}', 'true'))
+  - ${{ if eq(parameters.installAll, false)}}:
+      - script: npm install
+        displayName: npm install
+
+  - ${{ if eq(parameters.installAll, true)}}:
+      - script: npm run install:all
+        displayName: npm run install:all

@@ -1,0 +1,11 @@
+{
+    "extends": "../pyright/tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": "./out",
+        "paths": {
+            "pyright-internal/*": ["../pyright/packages/pyright-internal/src/*"]
+        }
+    },
+    "include": ["./src/**/*", "./src/localization/*.json", "./intelliCode/**/*", "./*.ts", "./src/common/metadata.json"]
+}

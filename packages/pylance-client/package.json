@@ -1,0 +1,179 @@
+{
+    "name": "pylance-client",
+    "displayName": "Pylance",
+    "description": "Pylance extension to VS Code (FOR DEBUGGING ONLY)",
+    "version": "0.0.0",
+    "private": true,
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": {
+        "name": "Microsoft Corporation"
+    },
+    "publisher": "ms-python",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/pyrx"
+    },
+    "engines": {
+        "vscode": "^1.48.0"
+    },
+    "keywords": [
+        "python"
+    ],
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:python",
+        "workspaceContains:pyrightconfig.json"
+    ],
+    "icon": "images/icon.png",
+    "main": "./dist/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "python",
+                "aliases": [
+                    "Python"
+                ],
+                "extensions": [
+                    ".py",
+                    ".pyi"
+                ]
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Pylance",
+            "properties": {
+                "python.analysis.typeshedPaths": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Paths to look for typeshed modules.",
+                    "scope": "resource"
+                },
+                "python.analysis.stubPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to directory containing custom type stub files.",
+                    "scope": "resource"
+                },
+                "python.analysis.diagnosticMode": {
+                    "type": "string",
+                    "default": "openFilesOnly",
+                    "enum": [
+                        "openFilesOnly",
+                        "workspace"
+                    ],
+                    "enumDescriptions": [
+                        "Analyzes and reports errors on only open files.",
+                        "Analyzes and reports errors on all files in the workspace."
+                    ],
+                    "scope": "resource"
+                },
+                "python.analysis.logLevel": {
+                    "type": "string",
+                    "default": "Info",
+                    "enum": [
+                        "Error",
+                        "Warning",
+                        "Info",
+                        "Trace"
+                    ],
+                    "enumDescriptions": [
+                        "Log only errors.",
+                        "Log errors and warnings.",
+                        "Log everything except trace.",
+                        "Log everything."
+                    ],
+                    "scope": "resource"
+                },
+                "python.analysis.completeFunctionParens": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically add brackets for functions.",
+                    "scope": "resource"
+                },
+                "python.analysis.diagnosticSeverityOverrides": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Allows a user to override the severity levels for individual diagnostics.",
+                    "scope": "resource",
+                    "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "warning",
+                            "information",
+                            "error"
+                        ]
+                    }
+                },
+                "python.analysis.extraPaths": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Additional import search resolution paths",
+                    "scope": "resource"
+                },
+                "python.pythonPath": {
+                    "type": "string",
+                    "default": "python",
+                    "description": "Path to Python, you can use a custom version of Python.",
+                    "scope": "resource"
+                },
+                "python.venvPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to folder with a list of Virtual Environments.",
+                    "scope": "resource"
+                },
+                "pyright.disableLanguageServices": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Disables type completion, definitions, and references.",
+                    "scope": "resource"
+                },
+                "pyright.openFilesOnly": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Report errors only for currently-open files.",
+                    "scope": "resource"
+                },
+                "pyright.useLibraryCodeForTypes": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use library implementations to extract type information when type stub is not present.",
+                    "scope": "resource"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "clean": "shx rm -rf ./dist ./out",
+        "webpack": "webpack --mode development --progress",
+        "webpack-dev": "npm run clean && webpack --mode development --watch --info-verbosity verbose --progress"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.48.0",
+        "clean-webpack-plugin": "^3.0.0",
+        "copy-webpack-plugin": "^6.0.3",
+        "native-ext-loader": "^2.3.0",
+        "shx": "^0.3.2",
+        "ts-loader": "^8.0.3",
+        "tsconfig-paths-webpack-plugin": "^3.3.0",
+        "typescript": "^4.0.2",
+        "webpack": "^5.0.0-beta.26",
+        "webpack-cli": "^3.3.12"
+    },
+    "dependencies": {
+        "vscode-jsonrpc": "6.0.0-next.5",
+        "vscode-languageclient": "7.0.0-next.9",
+        "vscode-languageserver": "7.0.0-next.7",
+        "vscode-uri": "^2.1.2"
+    }
+}

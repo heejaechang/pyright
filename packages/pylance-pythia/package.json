@@ -1,0 +1,46 @@
+{
+    "name": "pylance-pythia",
+    "displayName": "Pythia",
+    "description": "Pythia for Python repo analysis utility",
+    "version": "0.0.0",
+    "private": true,
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": {
+        "name": "Microsoft Corporation"
+    },
+    "publisher": "Microsoft Corporation",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/pyrx"
+    },
+    "scripts": {
+        "build": "webpack --mode production --progress",
+        "clean": "shx rm -rf ./dist ./out",
+        "test": "node --expose-gc node_modules/jest/bin/jest --forceExit --runInBand",
+        "prepublishOnly": "npm run clean && npm run build"
+    },
+    "dependencies": {
+        "JSONStream": "^1.3.5"
+    },
+    "devDependencies": {
+        "@types/jest": "^26.0.0",
+        "@types/node": "~12.12.54",
+        "clean-webpack-plugin": "^3.0.0",
+        "jest": "^26.0.1",
+        "jest-extended": "^0.11.5",
+        "jest-junit": "^11.0.0",
+        "shx": "^0.3.2",
+        "ts-jest": "^26.1.0",
+        "ts-loader": "^8.0.3",
+        "tsconfig-paths-webpack-plugin": "^3.3.0",
+        "typescript": "^4.0.2",
+        "webpack": "^5.0.0-beta.26",
+        "webpack-cli": "^3.3.12"
+    },
+    "files": [
+        "/dist"
+    ],
+    "bin": {
+        "pythia": "dist/pythia.js"
+    }
+}

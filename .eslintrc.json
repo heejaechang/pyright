@@ -1,27 +1,34 @@
 {
-    "extends": [
-        "eslint:recommended",
-        "prettier",
-        "plugin:@typescript-eslint/recommended"
-    ],
+    "extends": ["eslint:recommended", "prettier", "plugin:@typescript-eslint/recommended"],
     "env": {
-        "browser": true
+        "browser": false
     },
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "ecmaVersion": 2017,
         "sourceType": "module"
     },
-    "plugins": [
-        "@typescript-eslint/eslint-plugin",
-        "simple-import-sort"
-    ],
+    "plugins": ["@typescript-eslint/eslint-plugin", "simple-import-sort"],
+    "root": true,
     "rules": {
         "eqeqeq": "error",
         "no-constant-condition": 0,
         "no-inner-declarations": 0,
         "no-undef": 0,
-        "simple-import-sort/sort": "error",
+        "simple-import-sort/sort": [
+            "error",
+            {
+                "groups": [
+                    // Defaults from simple-import-sort, but with local packages between third-party and relative imports.
+                    ["^\\u0000"],
+                    ["^@?\\w"],
+                    ["^[^.]"],
+                    ["^pyright"],
+                    ["^pylance"],
+                    ["^\\."]
+                ]
+            }
+        ],
         "@typescript-eslint/explicit-function-return-type": 0,
         "@typescript-eslint/explicit-module-boundary-types": 0,
         "@typescript-eslint/ban-types": 0,
