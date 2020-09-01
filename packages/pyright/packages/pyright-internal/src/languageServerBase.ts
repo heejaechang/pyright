@@ -44,6 +44,7 @@ import {
     WatchKind,
     WorkDoneProgressReporter,
     WorkspaceEdit,
+    WorkspaceFolder,
 } from 'vscode-languageserver/node';
 
 import { AnalysisResults } from './analyzer/analysis';
@@ -761,15 +762,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
                     event.added.forEach(async (workspace) => {
                         const rootPath = convertUriToPath(workspace.uri);
-                        const newWorkspace: WorkspaceServiceInstance = {
-                            workspaceName: workspace.name,
-                            rootPath,
-                            rootUri: workspace.uri,
-                            serviceInstance: this.createAnalyzerService(workspace.name),
-                            disableLanguageServices: false,
-                            disableOrganizeImports: false,
-                            isInitialized: createDeferred<boolean>(),
-                        };
+                        const newWorkspace = this.createWorkspaceServiceInstance(workspace, rootPath);
                         this._workspaceMap.set(rootPath, newWorkspace);
                         await this.updateSettingsForWorkspace(newWorkspace);
                     });
@@ -859,26 +852,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         if (params.workspaceFolders) {
             params.workspaceFolders.forEach((folder) => {
                 const path = convertUriToPath(folder.uri);
-                this._workspaceMap.set(path, {
-                    workspaceName: folder.name,
-                    rootPath: path,
-                    rootUri: folder.uri,
-                    serviceInstance: this.createAnalyzerService(folder.name),
-                    disableLanguageServices: false,
-                    disableOrganizeImports: false,
-                    isInitialized: createDeferred<boolean>(),
-                });
+                this._workspaceMap.set(path, this.createWorkspaceServiceInstance(folder, path));
             });
         } else if (params.rootPath) {
-            this._workspaceMap.set(params.rootPath, {
-                workspaceName: '',
-                rootPath: params.rootPath,
-                rootUri: '',
-                serviceInstance: this.createAnalyzerService(params.rootPath),
-                disableLanguageServices: false,
-                disableOrganizeImports: false,
-                isInitialized: createDeferred<boolean>(),
-            });
+            this._workspaceMap.set(params.rootPath, this.createWorkspaceServiceInstance(undefined, params.rootPath));
         }
 
         const result: InitializeResult = {
@@ -917,6 +894,21 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return result;
     }
 
+    protected createWorkspaceServiceInstance(
+        workspace: WorkspaceFolder | undefined,
+        rootPath: string
+    ): WorkspaceServiceInstance {
+        return {
+            workspaceName: workspace?.name ?? '',
+            rootPath,
+            rootUri: workspace?.uri ?? '',
+            serviceInstance: this.createAnalyzerService(workspace?.name ?? rootPath),
+            disableLanguageServices: false,
+            disableOrganizeImports: false,
+            isInitialized: createDeferred<boolean>(),
+        };
+    }
+
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
         // Send the computed diagnostics to the client.
         results.diagnostics.forEach((fileDiag) => {
@@ -951,8 +943,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         }
     }
 
-    async updateSettingsForWorkspace(workspace: WorkspaceServiceInstance): Promise<void> {
-        const serverSettings = await this.getSettings(workspace);
+    async updateSettingsForWorkspace(
+        workspace: WorkspaceServiceInstance,
+        serverSettings?: ServerSettings
+    ): Promise<void> {
+        serverSettings = serverSettings ?? (await this.getSettings(workspace));
 
         // Set logging level first.
         (this.console as ConsoleWithLogLevel).level = serverSettings.logLevel ?? LogLevel.Info;

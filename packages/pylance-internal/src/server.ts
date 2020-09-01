@@ -18,6 +18,7 @@ import {
     InitializeParams,
     InitializeResult,
     InsertTextFormat,
+    WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
@@ -68,6 +69,9 @@ const pythonAnalysisSectionName = 'python.analysis';
 export interface PylanceServerSettings extends ServerSettings {
     completeFunctionParens?: boolean;
 }
+export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstance {
+    completeFunctionParens?: boolean;
+}
 
 class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
@@ -79,7 +83,6 @@ class PylanceServer extends LanguageServerBase {
     // TODO: the following settings are cached in getSettings() while they may be
     // set per workspace or folder. Figure out how can we maintain cache per resource.
     private _progressBarEnabled?: boolean;
-    private _serverSettings?: PylanceServerSettings;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -207,15 +210,11 @@ class PylanceServer extends LanguageServerBase {
             this.console.error(`Error reading settings: ${error}`);
         }
 
-        // TODO: the following settings are cached in getSettings() while they may be
-        // set per workspace or folder. Figure out how can we maintain cache per resource.
-
         // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then progress bar is enabled.
         this._progressBarEnabled =
             serverSettings.typeCheckingMode !== 'off' ||
             Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
 
-        this._serverSettings = serverSettings;
         return serverSettings;
     }
 
@@ -348,7 +347,11 @@ class PylanceServer extends LanguageServerBase {
         token: CancellationToken
     ): Promise<CompletionList | undefined> {
         const completionList = await super.onCompletion(params, token);
-        if (completionList && this._serverSettings?.completeFunctionParens && !token.isCancellationRequested) {
+        const workspace = (await this.getWorkspaceForFile(
+            convertUriToPath(params.textDocument.uri)
+        )) as PylanceWorkspaceServiceInstance;
+
+        if (completionList && workspace.completeFunctionParens && !token.isCancellationRequested) {
             for (const c of completionList.items) {
                 if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
                     c.insertText = (c.insertText ?? c.label) + '($0)';
@@ -359,13 +362,26 @@ class PylanceServer extends LanguageServerBase {
         return completionList;
     }
 
-    async updateSettingsForWorkspace(workspace: WorkspaceServiceInstance): Promise<void> {
-        await super.updateSettingsForWorkspace(workspace);
+    protected createWorkspaceServiceInstance(
+        workspace: WorkspaceFolder | undefined,
+        rootPath: string
+    ): PylanceWorkspaceServiceInstance {
+        const src = super.createWorkspaceServiceInstance(workspace, rootPath);
+        return { ...src, completeFunctionParens: false };
+    }
+
+    async updateSettingsForWorkspace(
+        workspace: WorkspaceServiceInstance,
+        serverSettings?: ServerSettings
+    ): Promise<void> {
+        serverSettings = serverSettings ?? (await this.getSettings(workspace));
+        await super.updateSettingsForWorkspace(workspace, serverSettings);
+        (workspace as PylanceWorkspaceServiceInstance).completeFunctionParens = !!(serverSettings as PylanceServerSettings)
+            .completeFunctionParens;
 
         if (workspace.disableLanguageServices) {
             return;
         }
-
         workspace.serviceInstance.startIndexing();
     }
 
