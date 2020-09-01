@@ -807,6 +807,11 @@ export class TestState {
         map: {
             [marker: string]: {
                 completions: _.FourSlashCompletionItem[];
+                moduleContext?: {
+                    lastKnownModule?: string;
+                    lastKnownMemberName?: string;
+                    unknownMemberName?: string;
+                };
             };
         }
     ): Promise<void> {
@@ -829,31 +834,33 @@ export class TestState {
                 CancellationToken.None
             );
 
-            if (result) {
+            if (result?.completionList) {
                 if (verifyMode === 'exact') {
-                    if (result.items.length !== expectedCompletions.length) {
+                    if (result.completionList.items.length !== expectedCompletions.length) {
                         assert.fail(
                             `Expected ${expectedCompletions.length} items but received ${
-                                result.items.length
-                            }. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
+                                result.completionList.items.length
+                            }. Actual completions:\n${stringify(result.completionList.items.map((r) => r.label))}`
                         );
                     }
                 }
 
                 for (let i = 0; i < expectedCompletions.length; i++) {
                     const expected = expectedCompletions[i];
-                    const actualIndex = result.items.findIndex((a) => a.label === expected.label);
+                    const actualIndex = result.completionList.items.findIndex((a) => a.label === expected.label);
                     if (actualIndex >= 0) {
                         if (verifyMode === 'excluded') {
                             // we're not supposed to find the completions passed to the test
                             assert.fail(
                                 `Completion item with label "${
                                     expected.label
-                                }" unexpected. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
+                                }" unexpected. Actual completions:\n${stringify(
+                                    result.completionList.items.map((r) => r.label)
+                                )}`
                             );
                         }
 
-                        const actual: CompletionItem = result.items[actualIndex];
+                        const actual: CompletionItem = result.completionList.items[actualIndex];
                         assert.equal(actual.label, expected.label);
                         if (expectedCompletions[i].documentation !== undefined) {
                             if (actual.documentation === undefined) {
@@ -870,27 +877,50 @@ export class TestState {
                             }
                         }
 
-                        result.items.splice(actualIndex, 1);
+                        result.completionList.items.splice(actualIndex, 1);
                     } else {
                         if (verifyMode === 'included' || verifyMode === 'exact') {
                             // we're supposed to find all items passed to the test
                             assert.fail(
                                 `Completion item with label "${
                                     expected.label
-                                }" expected. Actual completions:\n${stringify(result.items.map((r) => r.label))}`
+                                }" expected. Actual completions:\n${stringify(
+                                    result.completionList.items.map((r) => r.label)
+                                )}`
                             );
                         }
                     }
                 }
 
                 if (verifyMode === 'exact') {
-                    if (result.items.length !== 0) {
+                    if (result.completionList.items.length !== 0) {
                         // we removed every item we found, there should not be any remaining
-                        assert.fail(`Completion items unexpected: ${stringify(result.items.map((r) => r.label))}`);
+                        assert.fail(
+                            `Completion items unexpected: ${stringify(result.completionList.items.map((r) => r.label))}`
+                        );
                     }
                 }
             } else {
                 assert.fail('Failed to get completions');
+            }
+
+            if (map[markerName].moduleContext !== undefined && result?.moduleContext !== undefined) {
+                const expectedModule = map[markerName].moduleContext?.lastKnownModule;
+                const expectedType = map[markerName].moduleContext?.lastKnownMemberName;
+                const expectedName = map[markerName].moduleContext?.unknownMemberName;
+                if (
+                    result?.moduleContext?.lastKnownModule !== expectedModule ||
+                    result?.moduleContext?.lastKnownMemberName !== expectedType ||
+                    result?.moduleContext?.unknownMemberName !== expectedName
+                ) {
+                    assert.fail(
+                        `Expected completion results moduleContext with \n    lastKnownModule: "${expectedModule}"\n    lastKnownMemberName: "${expectedType}"\n    unknownMemberName: "${expectedName}"\n  Actual moduleContext:\n    lastKnownModule: "${
+                            result.moduleContext?.lastKnownModule ?? ''
+                        }"\n    lastKnownMemberName: "${
+                            result.moduleContext?.lastKnownMemberName ?? ''
+                        }\n    unknownMemberName: "${result.moduleContext?.unknownMemberName ?? ''}" `
+                    );
+                }
             }
         }
     }

@@ -12,7 +12,6 @@ import {
     AbstractCancellationTokenSource,
     CancellationToken,
     CompletionItem,
-    CompletionList,
     DocumentSymbol,
     SymbolInformation,
 } from 'vscode-languageserver';
@@ -46,6 +45,7 @@ import {
 } from '../common/pathUtils';
 import { DocumentRange, Position, Range } from '../common/textRange';
 import { timingStats } from '../common/timing';
+import { CompletionResults } from '../languageService/completionProvider';
 import { IndexResults } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
@@ -263,7 +263,7 @@ export class AnalyzerService {
         position: Position,
         workspacePath: string,
         token: CancellationToken
-    ): Promise<CompletionList | undefined> {
+    ): Promise<CompletionResults | undefined> {
         return this._program.getCompletionsForPosition(
             filePath,
             position,

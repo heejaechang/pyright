@@ -69,6 +69,14 @@ export function activate(context: ExtensionContext) {
 
     languageClient.onTelemetry((eventInfo) => {
         console.log(`onTelemetry EventName: ${eventInfo.EventName}`);
+
+        for (const [prop, value] of Object.entries(eventInfo.Properties)) {
+            console.log(`               Property: ${prop} : ${value}`);
+        }
+
+        for (const [measure, value] of Object.entries(eventInfo.Measurements)) {
+            console.log(`               Measurement: ${measure} : ${value}`);
+        }
     });
 }
 

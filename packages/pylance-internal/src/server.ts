@@ -18,6 +18,7 @@ import {
     InitializeParams,
     InitializeResult,
     InsertTextFormat,
+    Position,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
@@ -42,6 +43,7 @@ import {
     WorkspaceServiceInstance,
 } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
+import { CompletionResults } from 'pyright-internal/languageService/completionProvider';
 
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
@@ -52,6 +54,7 @@ import { Platform } from './common/platform';
 import {
     addMeasurementsToEvent,
     sendMeasurementsTelemetry,
+    StubTelemetry,
     TelemetryEvent,
     TelemetryEventName,
     TelemetryService,
@@ -308,6 +311,25 @@ class PylanceServer extends LanguageServerBase {
         );
 
         return [...actions1, ...actions2];
+    }
+
+    protected async getWorkspaceCompletionsForPosition(
+        workspace: WorkspaceServiceInstance,
+        filePath: string,
+        position: Position,
+        workspacePath: string,
+        token: CancellationToken
+    ): Promise<CompletionResults | undefined> {
+        const completionResults = await workspace.serviceInstance.getCompletionsForPosition(
+            filePath,
+            position,
+            workspacePath,
+            token
+        );
+
+        StubTelemetry.sendStubCompletionTelemetryForMissingTypes(completionResults, this._telemetry);
+
+        return completionResults;
     }
 
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {

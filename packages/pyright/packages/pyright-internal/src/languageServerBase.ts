@@ -77,7 +77,7 @@ import { ProgressReporter, ProgressReportTracker } from './common/progressReport
 import { convertWorkspaceEdits } from './common/textEditUtils';
 import { Position } from './common/textRange';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
-import { CompletionItemData } from './languageService/completionProvider';
+import { CompletionItemData, CompletionResults } from './languageService/completionProvider';
 import { convertHoverResults } from './languageService/hoverProvider';
 import { Localizer } from './localization/localize';
 import { WorkspaceMap } from './workspaceMap';
@@ -598,6 +598,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onCompletion((params, token) => this.onCompletion(params, token));
+
         this._connection.onCompletionResolve(async (params, token) => {
             // Cancellation bugs in vscode and LSP:
             // https://github.com/microsoft/vscode-languageserver-node/issues/615
@@ -825,6 +826,16 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
     }
 
+    protected getWorkspaceCompletionsForPosition(
+        workspace: WorkspaceServiceInstance,
+        filePath: string,
+        position: Position,
+        workspacePath: string,
+        token: CancellationToken
+    ): Promise<CompletionResults | undefined> {
+        return workspace.serviceInstance.getCompletionsForPosition(filePath, position, workspacePath, token);
+    }
+
     updateSettingsForAllWorkspaces(): void {
         this._workspaceMap.forEach((workspace) => {
             this.updateSettingsForWorkspace(workspace).ignoreErrors();
@@ -997,18 +1008,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             return;
         }
 
-        const completions = await workspace.serviceInstance.getCompletionsForPosition(
+        const completions = await this.getWorkspaceCompletionsForPosition(
+            workspace,
             filePath,
             position,
             workspace.rootPath,
             token
         );
 
-        if (completions) {
-            completions.isIncomplete = completionIncomplete;
+        if (completions && completions.completionList) {
+            completions.completionList.isIncomplete = completionIncomplete;
         }
 
-        return completions;
+        return completions?.completionList;
     }
 
     protected convertLogLevel(logLevel?: string): LogLevel {

@@ -8,13 +8,7 @@
  * and all of their recursive imports.
  */
 
-import {
-    CancellationToken,
-    CompletionItem,
-    CompletionList,
-    DocumentSymbol,
-    SymbolInformation,
-} from 'vscode-languageserver';
+import { CancellationToken, CompletionItem, DocumentSymbol, SymbolInformation } from 'vscode-languageserver';
 import {
     CallHierarchyIncomingCall,
     CallHierarchyItem,
@@ -51,6 +45,7 @@ import {
     ModuleSymbolMap,
 } from '../languageService/autoImporter';
 import { CallHierarchyProvider } from '../languageService/callHierarchyProvider';
+import { CompletionResults } from '../languageService/completionProvider';
 import { IndexResults } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferencesResult } from '../languageService/referencesProvider';
@@ -1251,13 +1246,13 @@ export class Program {
         workspacePath: string,
         libraryMap: Map<string, IndexResults> | undefined,
         token: CancellationToken
-    ): Promise<CompletionList | undefined> {
+    ): Promise<CompletionResults | undefined> {
         const sourceFileInfo = this._sourceFileMap.get(filePath);
         if (!sourceFileInfo) {
             return undefined;
         }
 
-        let completionList = this._runEvaluatorWithCancellationToken(token, () => {
+        const completionResult = this._runEvaluatorWithCancellationToken(token, () => {
             this._bindFile(sourceFileInfo);
 
             const execEnv = this._configOptions.findExecEnvironment(filePath);
@@ -1275,8 +1270,8 @@ export class Program {
             );
         });
 
-        if (!completionList || !this._extension?.completionListExtension) {
-            return completionList;
+        if (!completionResult?.completionList || !this._extension?.completionListExtension) {
+            return completionResult;
         }
 
         const pr = sourceFileInfo.sourceFile.getParseResults();
@@ -1284,8 +1279,8 @@ export class Program {
         if (pr?.parseTree && content) {
             const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
             if (offset !== undefined) {
-                completionList = await this._extension.completionListExtension.updateCompletionList(
-                    completionList,
+                completionResult.completionList = await this._extension.completionListExtension.updateCompletionList(
+                    completionResult.completionList,
                     pr.parseTree,
                     content,
                     offset,
@@ -1295,7 +1290,7 @@ export class Program {
             }
         }
 
-        return completionList;
+        return completionResult;
     }
 
     resolveCompletionItem(

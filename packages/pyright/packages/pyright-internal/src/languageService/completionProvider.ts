@@ -44,12 +44,20 @@ import {
     isNone,
     isObject,
     isTypeVar,
+    isUnbound,
+    isUnknown,
     ObjectType,
     Type,
     TypeBase,
     TypeCategory,
 } from '../analyzer/types';
-import { doForSubtypes, getMembersForClass, getMembersForModule, specializeType } from '../analyzer/typeUtils';
+import {
+    doForSubtypes,
+    getDeclaringModulesForType,
+    getMembersForClass,
+    getMembersForModule,
+    specializeType,
+} from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
 import { TextEditAction } from '../common/editAction';
@@ -168,6 +176,18 @@ export interface CompletionItemData {
     symbolId?: number;
 }
 
+// ModuleContext attempts to gather info for unknown types
+export interface ModuleContext {
+    lastKnownModule?: string;
+    lastKnownMemberName?: string;
+    unknownMemberName?: string;
+}
+
+export interface CompletionResults {
+    completionList: CompletionList | undefined;
+    moduleContext?: ModuleContext;
+}
+
 interface RecentCompletionInfo {
     label: string;
     autoImportText: string;
@@ -203,7 +223,7 @@ export class CompletionProvider {
         private _cancellationToken: CancellationToken
     ) {}
 
-    getCompletionsForPosition(): CompletionList | undefined {
+    getCompletionsForPosition(): CompletionResults | undefined {
         const offset = convertPositionToOffset(this._position, this._parseResults.tokenizerOutput.lines);
         if (offset === undefined) {
             return undefined;
@@ -406,7 +426,7 @@ export class CompletionProvider {
         priorWord: string,
         priorText: string,
         postText: string
-    ): CompletionList | undefined {
+    ): CompletionResults | undefined {
         // Is the error due to a missing member access name? If so,
         // we can evaluate the left side of the member access expression
         // to determine its type and offer suggestions based on it.
@@ -445,15 +465,15 @@ export class CompletionProvider {
         return undefined;
     }
 
-    private _createSingleKeywordCompletionList(keyword: string): CompletionList {
+    private _createSingleKeywordCompletionList(keyword: string): CompletionResults {
         const completionItem = CompletionItem.create(keyword);
         completionItem.kind = CompletionItemKind.Keyword;
         completionItem.sortText = this._makeSortText(SortCategory.LikelyKeyword, keyword);
-
-        return CompletionList.create([completionItem]);
+        const completionList = CompletionList.create([completionItem]);
+        return { completionList };
     }
 
-    private _getMethodOverrideCompletions(partialName: NameNode): CompletionList | undefined {
+    private _getMethodOverrideCompletions(partialName: NameNode): CompletionResults | undefined {
         const enclosingClass = ParseTreeUtils.getEnclosingClass(partialName, true);
         if (!enclosingClass) {
             return undefined;
@@ -492,7 +512,7 @@ export class CompletionProvider {
             }
         });
 
-        return completionList;
+        return { completionList };
     }
 
     private _printMethodSignature(node: FunctionNode): string {
@@ -530,10 +550,14 @@ export class CompletionProvider {
         return methodSignature;
     }
 
-    private _getMemberAccessCompletions(leftExprNode: ExpressionNode, priorWord: string): CompletionList | undefined {
+    private _getMemberAccessCompletions(
+        leftExprNode: ExpressionNode,
+        priorWord: string
+    ): CompletionResults | undefined {
         const leftType = this._evaluator.getType(leftExprNode);
         const symbolTable = new Map<string, Symbol>();
         const completionList = CompletionList.create();
+        let lastKnownModule: ModuleContext | undefined;
 
         if (leftType) {
             doForSubtypes(leftType, (subtype) => {
@@ -569,11 +593,65 @@ export class CompletionProvider {
             const objectThrough: ObjectType | undefined = leftType && isObject(leftType) ? leftType : undefined;
             this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
 
-            // const moduleNamesForType = getDeclaringModulesForType(leftType);
-            // TODO - log modules to telemetry.
+            // If we dont know this type, look for a module we should stub
+            if (!leftType || isUnknown(leftType) || isUnbound(leftType)) {
+                lastKnownModule = this._getLastKnownModule(leftExprNode, leftType);
+            }
         }
 
-        return completionList;
+        return { completionList, moduleContext: lastKnownModule };
+    }
+
+    private _getLastKnownModule(leftExprNode: ExpressionNode, leftType: Type | undefined): ModuleContext | undefined {
+        let curNode: ExpressionNode | undefined = leftExprNode;
+        let curType: Type | undefined = leftType;
+        let unknownMemberName: string | undefined =
+            leftExprNode.nodeType === ParseNodeType.MemberAccess ? leftExprNode?.memberName.value : undefined;
+
+        // Walk left of the expression scope till we find a known type. A.B.Unknown.<-- return B.
+        while (curNode) {
+            if (curNode.nodeType === ParseNodeType.Call || curNode.nodeType === ParseNodeType.MemberAccess) {
+                // Move left
+                curNode = curNode.leftExpression;
+
+                // First time in the loop remember the name of the unknown type.
+                if (unknownMemberName === undefined) {
+                    unknownMemberName =
+                        curNode.nodeType === ParseNodeType.MemberAccess ? curNode?.memberName.value ?? '' : '';
+                }
+            } else {
+                curNode = undefined;
+            }
+
+            if (curNode) {
+                curType = this._evaluator.getType(curNode);
+
+                // Breakout if we found a known type.
+                if (curType !== undefined && !isUnknown(curType) && !isUnbound(curType)) {
+                    break;
+                }
+            }
+        }
+
+        const context: ModuleContext = {};
+        if (curType && !isUnknown(curType) && !isUnbound(curType) && curNode) {
+            const moduleNamesForType = getDeclaringModulesForType(curType);
+
+            // For union types we only care about non 'typing' modules.
+            context.lastKnownModule = moduleNamesForType.find((n) => n !== 'typing');
+
+            if (curNode.nodeType === ParseNodeType.MemberAccess) {
+                context.lastKnownMemberName = curNode.memberName.value;
+            } else if (curNode.nodeType === ParseNodeType.Name && isClass(curType)) {
+                context.lastKnownMemberName = curType.details.name;
+            } else if (curNode.nodeType === ParseNodeType.Name && isObject(curType)) {
+                context.lastKnownMemberName = curType.classType.details.name;
+            }
+
+            context.unknownMemberName = unknownMemberName;
+        }
+
+        return context;
     }
 
     private _getStatementCompletions(
@@ -581,7 +659,7 @@ export class CompletionProvider {
         priorWord: string,
         priorText: string,
         postText: string
-    ): CompletionList | undefined {
+    ): CompletionResults | undefined {
         // For now, use the same logic for expressions and statements.
         return this._getExpressionCompletions(parseNode, priorWord, priorText, postText);
     }
@@ -591,7 +669,7 @@ export class CompletionProvider {
         priorWord: string,
         priorText: string,
         postText: string
-    ): CompletionList | undefined {
+    ): CompletionResults | undefined {
         // If the user typed a "." as part of a number, don't present
         // any completion options.
         if (parseNode.nodeType === ParseNodeType.Number) {
@@ -637,7 +715,7 @@ export class CompletionProvider {
             }
         }
 
-        return completionList;
+        return { completionList };
     }
 
     private _addCallArgumentCompletions(
@@ -726,7 +804,7 @@ export class CompletionProvider {
         priorWord: string,
         priorText: string,
         postText: string
-    ): CompletionList | undefined {
+    ): CompletionResults | undefined {
         let parentNode: ParseNode | undefined = parseNode.parent;
         if (!parentNode || parentNode.nodeType !== ParseNodeType.StringList || parentNode.strings.length > 1) {
             return undefined;
@@ -778,7 +856,7 @@ export class CompletionProvider {
             this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
         }
 
-        return completionList;
+        return { completionList };
     }
 
     // Given a string of text that precedes the current insertion point,
@@ -920,7 +998,10 @@ export class CompletionProvider {
         }
     }
 
-    private _getImportFromCompletions(importFromNode: ImportFromNode, priorWord: string): CompletionList | undefined {
+    private _getImportFromCompletions(
+        importFromNode: ImportFromNode,
+        priorWord: string
+    ): CompletionResults | undefined {
         // Don't attempt to provide completions for "from X import *".
         if (importFromNode.isWildcardImport) {
             return undefined;
@@ -959,7 +1040,7 @@ export class CompletionProvider {
             }
         });
 
-        return completionList;
+        return { completionList };
     }
 
     private _findMatchingKeywords(keywordList: string[], partialMatch: string): string[] {
@@ -1432,7 +1513,7 @@ export class CompletionProvider {
         }
     }
 
-    private _getImportModuleCompletions(node: ModuleNameNode): CompletionList {
+    private _getImportModuleCompletions(node: ModuleNameNode): CompletionResults {
         const execEnvironment = this._configOptions.findExecEnvironment(this._filePath);
         const moduleDescriptor: ImportedModuleDescriptor = {
             leadingDots: node.leadingDots,
@@ -1472,6 +1553,6 @@ export class CompletionProvider {
             completionItem.sortText = this._makeSortText(SortCategory.ImportModuleName, completionName);
         });
 
-        return completionList;
+        return { completionList };
     }
 }
