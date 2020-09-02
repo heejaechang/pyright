@@ -214,10 +214,24 @@ test('Builtins1', () => {
     }
 });
 
-function validateResults(results: TestUtils.FileAnalysisResult[], errorCount: number, warningCount = 0) {
+function validateResults(
+    results: TestUtils.FileAnalysisResult[],
+    errorCount: number,
+    warningCount = 0,
+    infoCount?: number,
+    unusedCode?: number
+) {
     assert.equal(results.length, 1);
     assert.equal(results[0].errors.length, errorCount);
     assert.equal(results[0].warnings.length, warningCount);
+
+    if (infoCount !== undefined) {
+        assert.equal(results[0].infos.length, infoCount);
+    }
+
+    if (unusedCode !== undefined) {
+        assert.equal(results[0].unusedCodes.length, unusedCode);
+    }
 }
 
 test('BadToken1', () => {
@@ -500,6 +514,12 @@ test('Function11', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function11.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('Function12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function12.py']);
+
+    validateResults(analysisResults, 0, 0, 0, 2);
 });
 
 test('Annotations1', () => {
@@ -1062,6 +1082,12 @@ test('Classes5', () => {
     validateResults(analysisResults, 4);
 });
 
+test('Classes6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes6.py']);
+
+    validateResults(analysisResults, 3);
+});
+
 test('Mro1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['mro1.py']);
 
@@ -1481,6 +1507,19 @@ test('GenericTypes32', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes32.py']);
 
     validateResults(analysisResults, 0);
+});
+
+test('GenericTypes33', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // By default, reportMissingTypeArgument is disabled.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes33.py']);
+    validateResults(analysisResults, 0);
+
+    // Turn on errors.
+    configOptions.diagnosticRuleSet.reportMissingTypeArgument = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes33.py'], configOptions);
+    validateResults(analysisResults, 3);
 });
 
 test('Protocol1', () => {
@@ -2051,6 +2090,12 @@ test('TryExcept3', () => {
     validateResults(analysisResults, 0);
 });
 
+test('TryExcept4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept4.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('Decorator1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator1.py']);
 
@@ -2073,4 +2118,10 @@ test('FunctionAnnotation2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['functionAnnotation2.py']);
 
     validateResults(analysisResults, 4);
+});
+
+test('FunctionAnnotation3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['functionAnnotation3.py']);
+
+    validateResults(analysisResults, 2);
 });
