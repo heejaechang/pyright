@@ -3,11 +3,11 @@
  *
  * IntelliCode telemetry.
  */
-
 import { v4 as uuidv4 } from 'uuid';
 import { CompletionItem } from 'vscode-languageserver';
 
 import { Commands } from '../commands/commands';
+import { mergeCommands } from '../commands/multiCommand';
 import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 import { FailureReason, ModelType } from './types';
 
@@ -92,12 +92,12 @@ function buildCompletionItemsTelemetry(completionList: CompletionItem[], applied
             teCopy.Properties['IsIntelliCodeCommit'] = 'False';
         }
 
-        item.command = {
+        item.command = mergeCommands(item.command, {
             title: '',
             command: Commands.intelliCodeCompletionItemCommand,
             // Each command has telemetry and data on this specific item attached.
             // Telemetry is submitted when command is executed (i.e. item commited).
             arguments: [teCopy],
-        };
+        });
     }
 }

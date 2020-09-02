@@ -10,15 +10,34 @@
  */
 
 import * as path from 'path';
-import { ExtensionContext } from 'vscode';
+import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
+
+import { Commands } from 'pylance-internal/commands/commands';
 
 import { FileBasedCancellationStrategy } from './cancellationUtils';
 import { ProgressReporting } from './progress';
 
 let cancellationStrategy: FileBasedCancellationStrategy | undefined;
 
-export function activate(context: ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
+    registerCommand(context, Commands.runCommands, (...args: vscode.Command[]) => {
+        args.forEach((c) => {
+            vscode.commands.executeCommand(c.command, ...(c.arguments ?? []));
+        });
+    });
+
+    registerCommand(context, Commands.triggerParameterHints, (scope: string) => {
+        const hintsEnabled = vscode.workspace.getConfiguration('editor.parameterHints', {
+            uri: vscode.Uri.parse(scope),
+            languageId: 'python',
+        });
+
+        if (hintsEnabled.get<boolean | undefined>('enabled')) {
+            vscode.commands.executeCommand('editor.action.triggerParameterHints');
+        }
+    });
+
     cancellationStrategy = new FileBasedCancellationStrategy();
 
     const nonBundlePath = context.asAbsolutePath(path.join('dist', 'server.js'));
@@ -90,4 +109,13 @@ export function deactivate() {
     // that deactivation is done synchronously. We don't have
     // anything to do here.
     return undefined;
+}
+
+function registerCommand(
+    context: vscode.ExtensionContext,
+    command: string,
+    callback: (...args: any[]) => any,
+    thisArg?: any
+) {
+    context.subscriptions.push(vscode.commands.registerCommand(command, callback, thisArg));
 }

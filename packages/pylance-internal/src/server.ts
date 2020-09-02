@@ -48,6 +48,7 @@ import { CompletionResults } from 'pyright-internal/languageService/completionPr
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
+import { mergeCommands } from './commands/multiCommand';
 import { PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -378,6 +379,11 @@ class PylanceServer extends LanguageServerBase {
                 if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
                     c.insertText = (c.insertText ?? c.label) + '($0)';
                     c.insertTextFormat = InsertTextFormat.Snippet;
+                    c.command = mergeCommands(c.command, {
+                        title: '',
+                        command: Commands.triggerParameterHints,
+                        arguments: [params.textDocument.uri],
+                    });
                 }
             }
         }

@@ -16,6 +16,8 @@ export enum Commands {
     // Command IntelliCode uses to track completion commit in telemetry. Not user-facing.
     intelliCodeCompletionItemCommand = 'python.intellicode.completionItemSelected',
     intelliCodeLoadExtension = 'python.intellicode.loadLanguageServerExtension',
+    runCommands = 'pylance.runCommands',
+    triggerParameterHints = 'pylance.triggerParameterHints',
 }
 
 // We'll use a somewhat-arbitrary cutoff value here to determine

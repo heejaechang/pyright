@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { Commands } from 'pylance-internal/commands/commands';
+
 import { LSExtensionApi } from './api';
 import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
@@ -25,6 +27,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     showActivatePylanceBanner(context, version).ignoreErrors();
     showPylanceSurveyBanner(context, version).ignoreErrors();
     migrateV1Settings(new AppConfigurationImpl(), new ApplicationShellImpl()).ignoreErrors();
+
+    registerCommand(context, Commands.runCommands, (...args: vscode.Command[]) => {
+        args.forEach((c) => {
+            vscode.commands.executeCommand(c.command, ...(c.arguments ?? []));
+        });
+    });
+
+    registerCommand(context, Commands.triggerParameterHints, (scope: string) => {
+        const hintsEnabled = vscode.workspace.getConfiguration('editor.parameterHints', {
+            uri: vscode.Uri.parse(scope),
+            languageId: 'python',
+        });
+
+        if (hintsEnabled.get<boolean | undefined>('enabled')) {
+            vscode.commands.executeCommand('editor.action.triggerParameterHints');
+        }
+    });
 
     return {
         languageServerFolder: async () => ({
@@ -84,4 +103,13 @@ async function showPylanceSurveyBanner(context: vscode.ExtensionContext, version
         version
     );
     return survey.show();
+}
+
+function registerCommand(
+    context: vscode.ExtensionContext,
+    command: string,
+    callback: (...args: any[]) => any,
+    thisArg?: any
+) {
+    context.subscriptions.push(vscode.commands.registerCommand(command, callback, thisArg));
 }
