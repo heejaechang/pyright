@@ -56,6 +56,7 @@ import {
     ParameterNode,
     ParseNode,
     ParseNodeType,
+    RaiseNode,
     SetNode,
     SliceNode,
     StringListNode,
@@ -190,6 +191,7 @@ import {
     removeFalsinessFromType,
     removeTruthinessFromType,
     requiresSpecialization,
+    requiresTypeArguments,
     selfSpecializeClassType,
     setTypeArgumentsRecursive,
     specializeType,
@@ -291,6 +293,12 @@ export const enum EvaluatorFlags {
     // The Generic class type is allowed in this context. It is
     // normally not allowed if ExpectingType is set.
     GenericClassTypeAllowed = 1 << 11,
+
+    // In most cases where ExpectingType is set, generic classes
+    // with missing type args are reported to the user, but there
+    // are cases where it is legitimate to leave off missing
+    // type args, such as with the "bound" parameter in a TypeArg.
+    AllowMissingTypeArgs = 1 << 12,
 }
 
 interface EvaluatorUsage {
@@ -428,6 +436,7 @@ export interface TypeEvaluator {
     evaluateTypesForStatement: (node: ParseNode) => void;
 
     getDeclaredTypeForExpression: (expression: ExpressionNode) => Type | undefined;
+    verifyRaiseExceptionType: (node: RaiseNode) => void;
     verifyDeleteExpression: (node: ExpressionNode) => void;
 
     isAfterNodeReachable: (node: ParseNode) => boolean;
@@ -1773,7 +1782,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // entries added by this class.
         const localDataClassEntries: DataClassEntry[] = [];
         const fullDataClassEntries: DataClassEntry[] = [];
-        addInheritedDataClassEntries(classType, fullDataClassEntries);
+        const allAncestorsKnown = addInheritedDataClassEntries(classType, fullDataClassEntries);
+
+        if (!allAncestorsKnown) {
+            // If one or more ancestor classes have an unknown type, we cannot
+            // safely determine the parameter list, so we'll accept any parameters
+            // to avoid a false positive.
+            FunctionType.addDefaultParameters(initType);
+        }
 
         // Maintain a list of "type evaluators".
         type TypeEvaluator = () => Type;
@@ -1902,7 +1918,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         });
 
         const symbolTable = classType.details.fields;
-        if (!skipSynthesizeInit) {
+        if (!skipSynthesizeInit && allAncestorsKnown) {
             fullDataClassEntries.forEach((entry) => {
                 if (entry.includeInInit) {
                     const functionParam: FunctionParameter = {
@@ -2711,6 +2727,86 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
     }
 
+    function verifyRaiseExceptionType(node: RaiseNode) {
+        const baseExceptionType = getBuiltInType(node, 'BaseException');
+
+        if (node.typeExpression) {
+            const exceptionType = getType(node.typeExpression);
+
+            // Validate that the argument of "raise" is an exception object or class.
+            // If it is a class, validate that the class's constructor accepts zero
+            // arguments.
+            if (exceptionType && baseExceptionType && isClass(baseExceptionType)) {
+                const diagAddendum = new DiagnosticAddendum();
+
+                doForSubtypes(exceptionType, (subtype) => {
+                    if (!isAnyOrUnknown(subtype)) {
+                        if (isClass(subtype)) {
+                            if (!derivesFromClassRecursive(subtype, baseExceptionType, /* ignoreUnknown */ false)) {
+                                diagAddendum.addMessage(
+                                    Localizer.Diagnostic.exceptionTypeIncorrect().format({
+                                        type: printType(subtype, /* expandTypeAlias */ false),
+                                    })
+                                );
+                            } else {
+                                let callResult: CallResult | undefined;
+                                suppressDiagnostics(() => {
+                                    callResult = validateConstructorArguments(
+                                        node.typeExpression!,
+                                        [],
+                                        subtype,
+                                        /* skipUnknownArgCheck */ false,
+                                        /* expectedType */ undefined
+                                    );
+                                });
+
+                                if (callResult && callResult.argumentErrors) {
+                                    diagAddendum.addMessage(
+                                        Localizer.Diagnostic.exceptionTypeNotInstantiable().format({
+                                            type: printType(subtype, /* expandTypeAlias */ false),
+                                        })
+                                    );
+                                }
+                            }
+                        } else if (isObject(subtype)) {
+                            if (
+                                !derivesFromClassRecursive(
+                                    subtype.classType,
+                                    baseExceptionType,
+                                    /* ignoreUnknown */ false
+                                )
+                            ) {
+                                diagAddendum.addMessage(
+                                    Localizer.Diagnostic.exceptionTypeIncorrect().format({
+                                        type: printType(subtype, /* expandTypeAlias */ false),
+                                    })
+                                );
+                            }
+                        } else {
+                            diagAddendum.addMessage(
+                                Localizer.Diagnostic.exceptionTypeIncorrect().format({
+                                    type: printType(subtype, /* expandTypeAlias */ false),
+                                })
+                            );
+                        }
+                    }
+
+                    return subtype;
+                });
+
+                if (!diagAddendum.isEmpty()) {
+                    const fileInfo = getFileInfo(node);
+                    addDiagnostic(
+                        fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.expectedExceptionClass() + diagAddendum.getString(),
+                        node.typeExpression
+                    );
+                }
+            }
+        }
+    }
+
     function verifyDeleteExpression(node: ExpressionNode) {
         switch (node.nodeType) {
             case ParseNodeType.Name: {
@@ -2775,8 +2871,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
     // Builds a sorted list of dataclass entries that are inherited by
     // the specified class. These entries must be unique and in reverse-MRO
-    // order.
+    // order. Returns true if all of the class types in the hierarchy are
+    // known, false if one or more are unknown.
     function addInheritedDataClassEntries(classType: ClassType, entries: DataClassEntry[]) {
+        let allAncestorsAreKnown = true;
+
         for (let i = classType.details.mro.length - 1; i >= 0; i--) {
             const mroClass = classType.details.mro[i];
 
@@ -2793,8 +2892,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         entries.push(entry);
                     }
                 });
+            } else {
+                allAncestorsAreKnown = false;
             }
         }
+        return allAncestorsAreKnown;
     }
 
     function getReturnTypeFromGenerator(type: Type): Type | undefined {
@@ -2943,6 +3045,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
             if (!(flags & EvaluatorFlags.DoNotSpecialize)) {
                 if (isClass(type)) {
+                    if (
+                        (flags & EvaluatorFlags.ExpectingType) !== 0 &&
+                        (flags & EvaluatorFlags.AllowMissingTypeArgs) === 0
+                    ) {
+                        if (requiresTypeArguments(type) && !type.typeArguments) {
+                            addDiagnostic(
+                                fileInfo.diagnosticRuleSet.reportMissingTypeArgument,
+                                DiagnosticRule.reportMissingTypeArgument,
+                                Localizer.Diagnostic.typeArgsMissingForClass().format({
+                                    name: type.details.name,
+                                }),
+                                node
+                            );
+                        }
+                    }
                     if (!type.typeArguments) {
                         type = createSpecializedClassType(type, undefined, flags, node);
                     }
@@ -2953,6 +3070,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     if (typeType) {
                         type = typeType;
                     }
+                } else if (
+                    (flags & EvaluatorFlags.ExpectingType) !== 0 &&
+                    type.typeAliasInfo &&
+                    type.typeAliasInfo.typeParameters &&
+                    type.typeAliasInfo.typeParameters.length > 0 &&
+                    !type.typeAliasInfo.typeArguments
+                ) {
+                    addDiagnostic(
+                        fileInfo.diagnosticRuleSet.reportMissingTypeArgument,
+                        DiagnosticRule.reportMissingTypeArgument,
+                        Localizer.Diagnostic.typeArgsMissingForAlias().format({
+                            name: type.typeAliasInfo.aliasName,
+                        }),
+                        node
+                    );
                 }
             }
 
@@ -4318,6 +4450,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         // If the lookup failed, try to return the first base class. An error
         // will be reported by the member lookup logic at a later time.
         if (isClass(targetClassType)) {
+            // If the class derives from one or more unknown classes,
+            // return unknown here to prevent spurious errors.
+            if (targetClassType.details.mro.some((mroBase) => isAnyOrUnknown(mroBase))) {
+                return UnknownType.create();
+            }
+
             const baseClasses = targetClassType.details.baseClasses;
             if (baseClasses.length > 0) {
                 const baseClassType = baseClasses[0];
@@ -5799,7 +5937,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                             argList[i].valueExpression || errorNode
                         );
                     } else {
-                        const argType = getTypeForArgumentExpectingType(argList[i], getFileInfo(errorNode));
+                        const argType = getTypeForArgumentExpectingType(
+                            argList[i],
+                            getFileInfo(errorNode),
+                            /* allowMissingTypeArgs */ true
+                        );
                         if (requiresSpecialization(argType)) {
                             addError(Localizer.Diagnostic.typeVarGeneric(), argList[i].valueExpression || errorNode);
                         }
@@ -8801,7 +8943,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         if (node.functionAnnotationComment && !node.functionAnnotationComment.isParamListEllipsis) {
             const expected = node.parameters.length - firstCommentAnnotationIndex;
             const received = node.functionAnnotationComment.paramTypeAnnotations.length;
-            if (expected !== received) {
+
+            // For methods with "self" or "cls" parameters, the annotation list
+            // can either include or exclude the annotation for the first parameter.
+            if (firstCommentAnnotationIndex > 0 && received === node.parameters.length) {
+                firstCommentAnnotationIndex = 0;
+            } else if (received !== expected) {
                 addError(
                     Localizer.Diagnostic.annotatedParamCountMismatch().format({
                         expected,
@@ -9530,9 +9677,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                 }
 
                 // Is it a generator?
-                if (functionDecl?.yieldExpressions) {
+                if (functionDecl?.yieldStatements) {
                     const inferredYieldTypes: Type[] = [];
-                    functionDecl.yieldExpressions.forEach((yieldNode) => {
+                    functionDecl.yieldStatements.forEach((yieldNode) => {
                         if (isNodeReachable(yieldNode)) {
                             if (yieldNode.nodeType === ParseNodeType.YieldFrom) {
                                 const iteratorType = getTypeOfExpression(yieldNode.expression).type;
@@ -9587,7 +9734,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         // If the function always raises and never returns, assume a "NoReturn" type.
                         // Skip this for abstract methods which often are implemented with "raise
                         // NotImplementedError()".
-                        if (isAbstract) {
+                        if (isAbstract || methodAlwaysRaisesNotImplemented(functionDecl)) {
                             inferredReturnType = UnknownType.create();
                         } else {
                             const noReturnClass = getTypingType(node, 'NoReturn');
@@ -9599,8 +9746,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                         }
                     } else {
                         const inferredReturnTypes: Type[] = [];
-                        if (functionDecl?.returnExpressions) {
-                            functionDecl.returnExpressions.forEach((returnNode) => {
+                        if (functionDecl?.returnStatements) {
+                            functionDecl.returnStatements.forEach((returnNode) => {
                                 if (isNodeReachable(returnNode)) {
                                     if (returnNode.returnExpression) {
                                         const returnType = getTypeOfExpression(returnNode.returnExpression).type;
@@ -9631,6 +9778,34 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         }
 
         return inferredReturnType;
+    }
+
+    // Determines whether the function consists only of a "raise" statement
+    // and the exception type raised is a NotImplementedError. This is commonly
+    // used for abstract methods that
+    function methodAlwaysRaisesNotImplemented(functionDecl?: FunctionDeclaration): boolean {
+        if (
+            !functionDecl ||
+            !functionDecl.isMethod ||
+            functionDecl.returnStatements ||
+            functionDecl.yieldStatements ||
+            !functionDecl.raiseStatements
+        ) {
+            return false;
+        }
+
+        for (const raiseStatement of functionDecl.raiseStatements) {
+            if (!raiseStatement.typeExpression || raiseStatement.valueExpression) {
+                return false;
+            }
+            const raiseType = getTypeOfExpression(raiseStatement.typeExpression).type;
+            const classType = isClass(raiseType) ? raiseType : isObject(raiseType) ? raiseType.classType : undefined;
+            if (!classType || !ClassType.isBuiltIn(classType, 'NotImplementedError')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     function evaluateTypesForForStatement(node: ForNode): void {
@@ -10389,7 +10564,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
                     // we'll assume the yield statements are reachable. Also, don't
                     // infer a "no return" type for abstract methods.
                     if (
-                        !functionType.details.declaration.yieldExpressions &&
+                        !functionType.details.declaration.yieldStatements &&
                         !FunctionType.isAbstractMethod(functionType) &&
                         !FunctionType.isStubDefinition(functionType)
                     ) {
@@ -11719,7 +11894,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
     // used in cases where the argument is expected to be a type
     // and therefore follows the normal rules of types (e.g. they
     // can be forward-declared in stubs, etc.).
-    function getTypeForArgumentExpectingType(arg: FunctionArgument, fileInfo: AnalyzerFileInfo): Type {
+    function getTypeForArgumentExpectingType(
+        arg: FunctionArgument,
+        fileInfo: AnalyzerFileInfo,
+        allowMissingTypeArgs = false
+    ): Type {
         if (arg.type) {
             return arg.type;
         }
@@ -11731,6 +11910,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
 
         if (fileInfo.isStubFile) {
             flags |= EvaluatorFlags.AllowForwardReferences;
+        }
+
+        if (allowMissingTypeArgs) {
+            flags |= EvaluatorFlags.AllowMissingTypeArgs;
         }
 
         // If there was no defined type provided, there should always
@@ -15226,6 +15409,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, printTypeFlags: 
         getTypeOfAnnotation,
         evaluateTypesForStatement,
         getDeclaredTypeForExpression,
+        verifyRaiseExceptionType,
         verifyDeleteExpression,
         isAfterNodeReachable,
         isNodeReachable,

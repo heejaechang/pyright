@@ -252,6 +252,8 @@ export namespace Localizer {
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.exceptionTypeIncorrect'));
         export const exceptionTypeNotClass = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.exceptionTypeNotClass'));
+        export const exceptionTypeNotInstantiable = () =>
+            new ParameterizedString<{ type: string }>(getRawString('Diagnostic.exceptionTypeNotInstantiable'));
         export const expectedAfterDecorator = () => getRawString('Diagnostic.expectedAfterDecorator');
         export const expectedArrow = () => getRawString('Diagnostic.expectedArrow');
         export const expectedAsAfterException = () => getRawString('Diagnostic.expectedAsAfterException');
@@ -515,6 +517,10 @@ export namespace Localizer {
         export const typeArgsExpectingNone = () => getRawString('Diagnostic.typeArgsExpectingNone');
         export const typeArgsMismatchOne = () =>
             new ParameterizedString<{ received: number }>(getRawString('Diagnostic.typeArgsMismatchOne'));
+        export const typeArgsMissingForAlias = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeArgsMissingForAlias'));
+        export const typeArgsMissingForClass = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeArgsMissingForClass'));
         export const typeArgsTooMany = () =>
             new ParameterizedString<{ expected: number; received: number }>(getRawString('Diagnostic.typeArgsTooMany'));
         export const typeAssignmentMismatch = () =>
