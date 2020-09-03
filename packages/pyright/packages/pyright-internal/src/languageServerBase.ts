@@ -48,6 +48,7 @@ import {
 } from 'vscode-languageserver/node';
 
 import { AnalysisResults } from './analyzer/analysis';
+import { BackgroundAnalysisProgram } from './analyzer/backgroundAnalysisProgram';
 import { ImportResolver } from './analyzer/importResolver';
 import { MaxAnalysisTime } from './analyzer/program';
 import { AnalyzerService, configFileNames } from './analyzer/service';
@@ -216,7 +217,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._workspaceMap = new WorkspaceMap(this);
 
         // Set up callbacks.
-        this._setupConnection(_serverOptions.supportedCommands ?? [], _serverOptions.supportedCodeActions ?? []);
+        this.setupConnection(_serverOptions.supportedCommands ?? [], _serverOptions.supportedCodeActions ?? []);
 
         this._progressReporter = new ProgressReportTracker(
             this._serverOptions.progressReporterFactory
@@ -288,6 +289,24 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return new ImportResolver(fs, options);
     }
 
+    protected createBackgroundAnalysisProgram(
+        console: ConsoleInterface,
+        configOptions: ConfigOptions,
+        importResolver: ImportResolver,
+        extension?: LanguageServiceExtension,
+        backgroundAnalysis?: BackgroundAnalysisBase,
+        maxAnalysisTime?: MaxAnalysisTime
+    ): BackgroundAnalysisProgram {
+        return new BackgroundAnalysisProgram(
+            console,
+            configOptions,
+            importResolver,
+            extension,
+            backgroundAnalysis,
+            maxAnalysisTime
+        );
+    }
+
     protected setExtension(extension: any): void {
         this._serverOptions.extension = extension;
     }
@@ -309,7 +328,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             undefined,
             this._serverOptions.extension,
             this.createBackgroundAnalysis(),
-            this._serverOptions.maxAnalysisTimeInForeground
+            this._serverOptions.maxAnalysisTimeInForeground,
+            this.createBackgroundAnalysisProgram.bind(this)
         );
 
         service.setCompletionCallback((results) => this.onAnalysisCompletedHandler(results));
@@ -381,7 +401,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return fileWatcher;
     }
 
-    private _setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
+    protected setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
         // After the server has started the client sends an initialize request. The server receives
         // in the passed params the rootPath of the workspace plus the client capabilities.
         this._connection.onInitialize((params) => this.initialize(params, supportedCommands, supportedCodeActions));

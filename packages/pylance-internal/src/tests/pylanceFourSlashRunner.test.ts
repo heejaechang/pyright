@@ -16,6 +16,7 @@ import { combinePaths, normalizeSlashes, resolvePaths } from 'pyright-internal/c
 import { Range } from 'pyright-internal/common/textRange';
 import { LanguageServerInterface, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { IndexResults } from 'pyright-internal/languageService/documentSymbolProvider';
+import { FourSlashData } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
 import { runFourSlashTest } from 'pyright-internal/tests/harness/fourslash/runner';
 import { HostSpecificFeatures } from 'pyright-internal/tests/harness/fourslash/testState';
 import * as host from 'pyright-internal/tests/harness/host';
@@ -26,6 +27,7 @@ import { CommandController } from '../commands/commandController';
 import { CodeActionProvider } from '../languageService/codeActionProvider';
 import { createPylanceImportResolver } from '../pylanceImportResolver';
 import { Indexer } from '../services/indexer';
+import { PylanceTestState } from './pylanceTestState';
 
 const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));
 
@@ -98,7 +100,19 @@ describe('Pylance fourslash tests', () => {
             const justName = fn.replace(/^.*[\\/]/, '');
 
             it('fourslash test ' + justName + ' run', (cb) => {
-                runFourSlashTest(MODULE_PATH, fn, cb, mountedPaths, pylanceFeatures);
+                runFourSlashTest(
+                    MODULE_PATH,
+                    fn,
+                    cb,
+                    mountedPaths,
+                    pylanceFeatures,
+                    (
+                        basePath: string,
+                        testData: FourSlashData,
+                        mountPaths?: Map<string, string>,
+                        hostSpecificFeatures?: HostSpecificFeatures
+                    ) => new PylanceTestState(basePath, testData, mountPaths, hostSpecificFeatures)
+                );
             });
         });
     });

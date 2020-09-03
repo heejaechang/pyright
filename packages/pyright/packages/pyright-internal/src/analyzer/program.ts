@@ -144,6 +144,10 @@ export class Program {
         this._createNewEvaluator();
     }
 
+    get evaluator(): TypeEvaluator | undefined {
+        return this._evaluator;
+    }
+
     setConfigOptions(configOptions: ConfigOptions) {
         this._configOptions = configOptions;
 

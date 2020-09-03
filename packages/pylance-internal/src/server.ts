@@ -19,23 +19,33 @@ import {
     InitializeResult,
     InsertTextFormat,
     Position,
+    SemanticTokens,
+    SemanticTokensClientCapabilities,
+    SemanticTokensDelta,
+    SemanticTokensDeltaParams,
+    SemanticTokensParams,
+    SemanticTokensRangeParams,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
 
 import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
+import { BackgroundAnalysisProgram } from 'pyright-internal/analyzer/backgroundAnalysisProgram';
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { MaxAnalysisTime } from 'pyright-internal/analyzer/program';
 import { BackgroundAnalysisBase } from 'pyright-internal/backgroundAnalysisBase';
 import { Commands as PyRightCommands } from 'pyright-internal/commands/commands';
 import { getCancellationFolderName } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
-import { ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
+import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
 import { isString } from 'pyright-internal/common/core';
 import * as debug from 'pyright-internal/common/debug';
+import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
 import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, normalizeSlashes } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
+import { Range } from 'pyright-internal/common/textRange';
 import {
     LanguageServerBase,
     ProgressReporterConnection,
@@ -64,6 +74,7 @@ import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelSubFolder } from './intelliCode/models';
 import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
+import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
 import { AnalysisTracker } from './services/analysisTracker';
 
@@ -243,6 +254,18 @@ class PylanceServer extends LanguageServerBase {
     ): InitializeResult {
         const result = super.initialize(params, supportedCommands, supportedCodeActions);
 
+        const tokenLegend = SemanticTokenProvider.computeLegend(
+            params.capabilities as SemanticTokensClientCapabilities
+        );
+
+        result.capabilities.semanticTokensProvider = {
+            legend: tokenLegend,
+            range: true,
+            full: {
+                delta: true,
+            },
+        };
+
         // Temporary workaround until VS internal issue 1155697 is fixed
         // VS protocol type definitions are not up to date with current LSP spec
         // and only expects booleans for these.
@@ -256,6 +279,91 @@ class PylanceServer extends LanguageServerBase {
         }
 
         return result;
+    }
+
+    protected setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
+        super.setupConnection(supportedCommands, supportedCodeActions);
+
+        this._connection.languages.semanticTokens.on(
+            async (params: SemanticTokensParams, token: CancellationToken): Promise<SemanticTokens> => {
+                const filePath = convertUriToPath(params.textDocument.uri);
+
+                const workspace = await this.getWorkspaceForFile(filePath);
+                if (workspace.disableLanguageServices) {
+                    return { data: [] };
+                }
+
+                const tokens = await this._getBackgroundAnalysisProgram(workspace).getSemanticTokens(
+                    filePath,
+                    undefined,
+                    undefined,
+                    token
+                );
+
+                return tokens;
+            }
+        );
+
+        this._connection.languages.semanticTokens.onDelta(
+            async (
+                params: SemanticTokensDeltaParams,
+                token: CancellationToken
+            ): Promise<SemanticTokens | SemanticTokensDelta> => {
+                const filePath = convertUriToPath(params.textDocument.uri);
+
+                const workspace = await this.getWorkspaceForFile(filePath);
+                if (workspace.disableLanguageServices) {
+                    return { data: [] };
+                }
+
+                const tokens = await this._getBackgroundAnalysisProgram(workspace).getSemanticTokens(
+                    filePath,
+                    undefined,
+                    params.previousResultId,
+                    token
+                );
+
+                return tokens;
+            }
+        );
+
+        this._connection.languages.semanticTokens.onRange(
+            async (params: SemanticTokensRangeParams, token: CancellationToken): Promise<SemanticTokens> => {
+                const filePath = convertUriToPath(params.textDocument.uri);
+
+                const workspace = await this.getWorkspaceForFile(filePath);
+                if (workspace.disableLanguageServices) {
+                    return { data: [] };
+                }
+
+                const tokens = await this._getBackgroundAnalysisProgram(workspace).getSemanticTokens(
+                    filePath,
+                    params.range,
+                    undefined,
+                    token
+                );
+
+                return tokens;
+            }
+        );
+    }
+
+    protected createBackgroundAnalysisProgram(
+        console: ConsoleInterface,
+        configOptions: ConfigOptions,
+        importResolver: ImportResolver,
+        extension?: LanguageServiceExtension,
+        backgroundAnalysis?: BackgroundAnalysisBase,
+        maxAnalysisTime?: MaxAnalysisTime
+    ): BackgroundAnalysisProgram {
+        return new PylanceBackgroundAnalysisProgram(
+            console,
+            configOptions,
+            importResolver,
+            extension,
+            backgroundAnalysis,
+            maxAnalysisTime
+        );
     }
 
     protected isLongRunningCommand(command: string): boolean {
@@ -413,9 +521,44 @@ class PylanceServer extends LanguageServerBase {
         workspace.serviceInstance.startIndexing();
     }
 
+    private _getBackgroundAnalysisProgram(workspace: WorkspaceServiceInstance) {
+        return workspace.serviceInstance.backgroundAnalysisProgram as PylanceBackgroundAnalysisProgram;
+    }
+
     private async _updateGlobalSettings(): Promise<void> {
         const pythonAnalysis = await this.getConfiguration(undefined, pythonAnalysisSectionName);
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
+    }
+}
+
+class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
+    constructor(
+        console: ConsoleInterface,
+        configOptions: ConfigOptions,
+        importResolver: ImportResolver,
+        extension?: LanguageServiceExtension,
+        backgroundAnalysis?: BackgroundAnalysisBase,
+        maxAnalysisTime?: MaxAnalysisTime
+    ) {
+        super(console, configOptions, importResolver, extension, backgroundAnalysis, maxAnalysisTime);
+    }
+
+    async getSemanticTokens(
+        filePath: string,
+        range: Range | undefined,
+        previousResultId: string | undefined,
+        token: CancellationToken
+    ): Promise<SemanticTokens> {
+        if (this.backgroundAnalysis) {
+            return (this.backgroundAnalysis as BackgroundAnalysis).getSemanticTokens(
+                filePath,
+                range,
+                previousResultId,
+                token
+            );
+        }
+
+        return getSemanticTokens(this.program, filePath, range, previousResultId, token);
     }
 }
 

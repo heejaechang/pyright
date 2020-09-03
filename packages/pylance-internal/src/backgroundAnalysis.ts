@@ -6,22 +6,32 @@
  * run analyzer from background thread
  */
 
-import { CancellationToken } from 'vscode-languageserver';
-import { MessagePort, Worker, workerData } from 'worker_threads';
+import { CancellationToken, SemanticTokens } from 'vscode-languageserver';
+import { MessageChannel, MessagePort, Worker, workerData } from 'worker_threads';
 
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { Indices } from 'pyright-internal/analyzer/program';
 import {
+    AnalysisRequest,
     BackgroundAnalysisBase,
     BackgroundAnalysisRunnerBase,
     InitializationData,
 } from 'pyright-internal/backgroundAnalysisBase';
-import { getCancellationFolderName, OperationCanceledException } from 'pyright-internal/common/cancellationUtils';
+import { getBackgroundWaiter, run } from 'pyright-internal/backgroundThreadBase';
+import {
+    getCancellationFolderName,
+    getCancellationTokenFromId,
+    getCancellationTokenId,
+    OperationCanceledException,
+    throwIfCancellationRequested,
+} from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { Range } from 'pyright-internal/common/textRange';
 
 import { mainFilename } from './common/mainModuleFileName';
+import { getSemanticTokens } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver } from './pylanceImportResolver';
 import { BackgroundIndexRunner, Indexer } from './services/indexer';
 
@@ -55,11 +65,58 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
     cancelIndexing(configOptions: ConfigOptions) {
         Indexer.cancelIndexingRequest(configOptions);
     }
+
+    async getSemanticTokens(
+        filePath: string,
+        range: Range | undefined,
+        previousResultId: string | undefined,
+        token: CancellationToken
+    ): Promise<SemanticTokens> {
+        throwIfCancellationRequested(token);
+
+        const { port1, port2 } = new MessageChannel();
+        const waiter = getBackgroundWaiter<SemanticTokens>(port1);
+
+        const cancellationId = getCancellationTokenId(token);
+        this.enqueueRequest({
+            requestType: 'getSemanticTokens',
+            data: { filePath, range, previousResultId, cancellationId },
+            port: port2,
+        });
+
+        const result = await waiter;
+
+        port2.close();
+        port1.close();
+
+        return result;
+    }
 }
 
 class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     constructor() {
         super();
+    }
+
+    protected onMessage(msg: AnalysisRequest) {
+        switch (msg.requestType) {
+            case 'getSemanticTokens': {
+                this.log(LogLevel.Info, `Background analysis message: ${msg.requestType}`);
+
+                run(() => {
+                    const { filePath, range, previousResultId, cancellationId } = msg.data;
+                    const token = getCancellationTokenFromId(cancellationId);
+                    throwIfCancellationRequested(token);
+
+                    return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+                }, msg.port!);
+                break;
+            }
+
+            default: {
+                super.onMessage(msg);
+            }
+        }
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
