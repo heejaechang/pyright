@@ -11,6 +11,7 @@ const packages = path.resolve(__dirname, '..');
 
 const typeshedFallback = path.resolve(packages, 'pyright', 'packages', 'pyright-internal', 'typeshed-fallback');
 const bundledStubs = path.resolve(packages, 'pylance-internal', 'bundled-stubs');
+const schemas = path.resolve(packages, 'pyright', 'packages', 'vscode-pyright', 'schemas');
 
 const onnxRoot = require(path.resolve(packages, 'pylance-internal', 'build', 'findonnx'));
 const onnxBin = path.join(onnxRoot, 'bin');
@@ -74,6 +75,7 @@ module.exports = {
                 { from: onnxBin, to: 'native/onnxruntime' },
                 { from: typeshedFallback, to: 'typeshed-fallback' },
                 { from: bundledStubs, to: 'bundled-stubs' },
+                { from: schemas, to: 'schemas' },
             ],
         }),
     ],

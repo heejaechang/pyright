@@ -553,7 +553,17 @@
                     }
                 }
             }
-        }
+        },
+        "jsonValidation": [
+            {
+                "fileMatch": "pyrightconfig.json",
+                "url": "./dist/schemas/pyrightconfig.schema.json"
+            },
+            {
+                "fileMatch": "mspythonconfig.json",
+                "url": "./dist/schemas/pyrightconfig.schema.json"
+            }
+        ]
     },
     "scripts": {
         "clean": "shx rm -rf ./dist ./out",
