@@ -989,9 +989,9 @@ export class CompletionProvider {
                     completionList,
                     undefined,
                     '',
-                    result.isImportFrom
+                    result.source
                         ? `Auto-import\n\n\`\`\`\nfrom ${result.source} import ${result.name}\n\`\`\``
-                        : `Auto-import\n\n\`\`\`\nimport ${result.source}\n\`\`\``,
+                        : `Auto-import\n\n\`\`\`\nimport ${result.name}\n\`\`\``,
                     undefined,
                     result.edits
                 );

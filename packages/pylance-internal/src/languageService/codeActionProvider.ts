@@ -76,7 +76,7 @@ export class CodeActionProvider {
                     continue;
                 }
 
-                let title = result.isImportFrom
+                let title = result.source
                     ? `Add import ${result.name} from ${result.source}`
                     : `Add import ${result.name}`;
 

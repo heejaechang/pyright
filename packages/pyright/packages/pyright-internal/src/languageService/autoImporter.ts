@@ -124,19 +124,18 @@ export function buildModuleSymbolsMap(files: SourceFileInfo[], token: Cancellati
 }
 
 export interface AutoImportResult {
-    isImportFrom: boolean;
     name: string;
     symbol?: Symbol;
-    source: string;
+    source?: string;
     edits: TextEditAction[];
     alias?: string;
     kind?: CompletionItemKind;
 }
 
 interface ImportParts {
-    namePart?: string;
     importName: string;
-    importSource: string;
+    symbolName?: string;
+    importFrom?: string;
     filePath: string;
     numberOfNameParts: number;
     moduleNameAndType: ModuleNameAndType;
@@ -298,9 +297,9 @@ export class AutoImporter {
                     autoImportSymbol.importAlias,
                     {
                         importParts: {
-                            namePart: name,
+                            symbolName: name,
                             importName: name,
-                            importSource,
+                            importFrom: importSource,
                             filePath,
                             numberOfNameParts,
                             moduleNameAndType,
@@ -326,7 +325,6 @@ export class AutoImporter {
                 symbol: autoImportSymbol.symbol,
                 source: importSource,
                 edits: autoImportTextEdits,
-                isImportFrom: true,
                 alias: aliasName,
                 kind: autoImportSymbol.kind,
             });
@@ -349,7 +347,7 @@ export class AutoImporter {
             return;
         }
 
-        const alreadyIncluded = this._containsName(importParts.importName, importParts.importSource, results);
+        const alreadyIncluded = this._containsName(importParts.importName, importParts.importFrom, results);
         if (alreadyIncluded) {
             return;
         }
@@ -374,9 +372,9 @@ export class AutoImporter {
                 throwIfCancellationRequested(token);
 
                 const autoImportTextEdits = this._getTextEditsForAutoImportByFilePath(
-                    importAliasData.importParts.namePart,
+                    importAliasData.importParts.symbolName,
                     importAliasData.importParts.filePath,
-                    importAliasData.importParts.importSource,
+                    importAliasData.importParts.importFrom ?? importAliasData.importParts.importName,
                     importAliasData.importGroup,
                     aliasName
                 );
@@ -385,9 +383,8 @@ export class AutoImporter {
                     name: importAliasData.importParts.importName,
                     alias: aliasName,
                     symbol: importAliasData.symbol,
-                    source: importAliasData.importParts.importSource,
+                    source: importAliasData.importParts.importFrom,
                     edits: autoImportTextEdits,
-                    isImportFrom: !!importAliasData.importParts.namePart,
                 });
             });
         });
@@ -479,20 +476,20 @@ export class AutoImporter {
 
         return createImportParts(this._getModuleNameAndTypeFromFilePath(filePath));
 
-        function createImportParts(module: ModuleNameAndType) {
-            const importSource = module.moduleName;
-            if (!importSource) {
-                return;
+        function createImportParts(module: ModuleNameAndType): ImportParts | undefined {
+            const moduleName = module.moduleName;
+            if (!moduleName) {
+                return undefined;
             }
 
-            const index = importSource.lastIndexOf('.');
-            const importNamePart = index > 0 ? importSource.substring(index + 1) : undefined;
+            const index = moduleName.lastIndexOf('.');
+            const importNamePart = index > 0 ? moduleName.substring(index + 1) : undefined;
             return {
-                namePart: importNamePart,
-                importName: index > 0 ? importNamePart! : importSource,
-                importSource: index > 0 ? importSource.substring(0, index) : importSource,
+                symbolName: importNamePart,
+                importName: importNamePart ?? moduleName,
+                importFrom: index > 0 ? moduleName.substring(0, index) : undefined,
                 filePath,
-                numberOfNameParts: importSource.split('.').length,
+                numberOfNameParts: moduleName.split('.').length,
                 moduleNameAndType: module,
             };
         }

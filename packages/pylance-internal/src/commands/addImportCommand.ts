@@ -27,7 +27,9 @@ export class AddImportCommand implements ServerCommand {
         const filePath = params.arguments[0];
         const range = params.arguments[1];
         const name = params.arguments[2];
-        const source = params.arguments[3];
+
+        // Normalize null to undefined
+        const source = params.arguments[3] ?? undefined;
 
         const workspace = await this._ls.getWorkspaceForFile(filePath);
         const autoImports = workspace.serviceInstance.getAutoImports(

@@ -26,7 +26,7 @@
                     command: {
                         title: 'Add import testLib',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange), 'testLib', 'testLib'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange), 'testLib', undefined],
                     },
                 },
             ],

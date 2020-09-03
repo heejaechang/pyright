@@ -91,7 +91,7 @@
                     command: {
                         title: 'Add import stubFile',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', 'stubFile'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', undefined],
                     },
                 },
                 {
@@ -122,7 +122,7 @@
                     command: {
                         title: 'Add import testLib',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange2), 'testLib', 'testLib'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange2), 'testLib', undefined],
                     },
                 },
             ],
@@ -161,12 +161,7 @@
                     command: {
                         title: 'Add import topLevelStubFile',
                         command: 'python.addImport',
-                        arguments: [
-                            '\\test1.py',
-                            JSON.stringify(positionRange5),
-                            'topLevelStubFile',
-                            'topLevelStubFile',
-                        ],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange5), 'topLevelStubFile', undefined],
                     },
                 },
             ],

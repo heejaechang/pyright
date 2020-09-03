@@ -29,7 +29,7 @@
                     command: {
                         title: 'Add import os',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'os', 'os'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'os', undefined],
                     },
                 },
             ],
@@ -42,7 +42,7 @@
                     command: {
                         title: 'Add import sys',
                         command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange2), 'sys', 'sys'],
+                        arguments: ['\\test1.py', JSON.stringify(positionRange2), 'sys', undefined],
                     },
                 },
             ],
