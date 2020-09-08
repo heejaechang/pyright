@@ -919,9 +919,9 @@ export class Program {
             const map = this._buildModuleSymbolsMap(sourceFileInfo, token);
             const autoImporter = new AutoImporter(
                 this._configOptions,
-                sourceFile.getFilePath(),
                 this._importResolver,
                 parseTree,
+                range.start,
                 [],
                 map,
                 libraryMap
