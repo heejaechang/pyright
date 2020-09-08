@@ -97,14 +97,14 @@ export class PylanceImportResolver extends ImportResolver {
         return usage;
     }
 
-    protected _addResultsToCache(
+    protected addResultsToCache(
         execEnv: ExecutionEnvironment,
         importName: string,
         importResult: ImportResult,
         importedSymbols: string[] | undefined
     ) {
         this._addResultToImportMetrics(importResult);
-        return super._addResultsToCache(execEnv, importName, importResult, importedSymbols);
+        return super.addResultsToCache(execEnv, importName, importResult, importedSymbols);
     }
 
     private _addResultToImportMetrics(importResult: ImportResult) {
