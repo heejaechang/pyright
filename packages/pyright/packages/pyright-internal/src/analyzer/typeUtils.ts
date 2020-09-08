@@ -7,6 +7,9 @@
  * Collection of functions that operate on Type objects.
  */
 
+import { isClassOrTypeElement } from 'typescript';
+
+import { PythonVersion } from '../common/pythonVersion';
 import { ParameterCategory } from '../parser/parseNodes';
 import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
@@ -102,6 +105,10 @@ export const enum CanAssignFlags {
 
     // For function types, skip the return type check.
     SkipFunctionReturnTypeCheck = 1 << 4,
+
+    // Normally type vars are specialized during type comparisons.
+    // With this flag, a type var must match a type var exactly.
+    DoNotSpecializeTypeVars = 1 << 5,
 }
 
 const singleTickRegEx = /'/g;
@@ -325,6 +332,43 @@ export function transformTypeObjectToClass(type: Type): Type {
     return typeArg.classType;
 }
 
+// Determines whether the type alias placeholder is used directly
+// within the specified type. It's OK if it's used indirectly as
+// a type argument.
+export function isTypeAliasRecursive(typeAliasPlaceholder: TypeVarType, type: Type) {
+    if (type.category !== TypeCategory.Union) {
+        // Handle the specific case where the type alias directly refers to itself.
+        // In this case, the type will be unbound because it could not be resolved.
+        return (
+            type.category === TypeCategory.Unbound &&
+            type.typeAliasInfo &&
+            type.typeAliasInfo.aliasName === typeAliasPlaceholder.details.recursiveTypeAliasName
+        );
+    }
+
+    for (const subtype of type.subtypes) {
+        if (isTypeSame(typeAliasPlaceholder, subtype)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function transformPossibleRecursiveTypeAlias(type: Type): Type;
+export function transformPossibleRecursiveTypeAlias(type: Type | undefined): Type | undefined {
+    if (type) {
+        if (type.category === TypeCategory.TypeVar && type.details.recursiveTypeAliasName && type.details.boundType) {
+            if (TypeBase.isInstance(type)) {
+                return convertToInstance(type.details.boundType);
+            }
+            return type.details.boundType;
+        }
+    }
+
+    return type;
+}
+
 // None is always falsy. All other types are generally truthy
 // unless they are objects that support the __bool__ or __len__
 // methods.
@@ -505,10 +549,10 @@ export function isParamSpecType(type: Type): boolean {
         return false;
     }
 
-    return type.isParamSpec;
+    return type.details.isParamSpec;
 }
 
-export function isProperty(type: Type): boolean {
+export function isProperty(type: Type): type is ObjectType {
     return isObject(type) && ClassType.isPropertyClass(type.classType);
 }
 
@@ -531,8 +575,14 @@ export function partiallySpecializeType(type: Type, contextClassType: ClassType)
 export function makeTypeVarsConcrete(type: Type): Type {
     return doForSubtypes(type, (subtype) => {
         if (isTypeVar(subtype)) {
-            if (subtype.boundType) {
-                return subtype.boundType;
+            if (subtype.details.boundType) {
+                return subtype.details.boundType;
+            }
+
+            // If this is a recursive type alias placeholder
+            // that hasn't yet been resolved, return it as is.
+            if (subtype.details.recursiveTypeAliasName) {
+                return subtype;
             }
 
             // Normally, we would use UnknownType here, but we need
@@ -581,7 +631,7 @@ export function specializeType(
 
     if (isTypeVar(type)) {
         if (typeVarMap) {
-            const replacementType = typeVarMap.getTypeVar(type.name);
+            const replacementType = typeVarMap.getTypeVar(type);
             if (replacementType) {
                 // If we're replacing a TypeVar with another type and the
                 // original is not an instance, convert the replacement so it's also
@@ -593,8 +643,8 @@ export function specializeType(
                 return replacementType;
             }
         } else {
-            if (type.boundType) {
-                return specializeType(type.boundType, undefined, /* makeConcrete */ false, recursionLevel + 1);
+            if (type.details.boundType) {
+                return specializeType(type.details.boundType, undefined, /* makeConcrete */ false, recursionLevel + 1);
             }
 
             return makeConcrete ? UnknownType.create() : type;
@@ -624,7 +674,7 @@ export function specializeType(
                     return specializeType(firstTypeArg.classType, typeVarMap, makeConcrete, recursionLevel + 1);
                 } else if (isTypeVar(firstTypeArg)) {
                     if (typeVarMap) {
-                        const replacementType = typeVarMap.getTypeVar(firstTypeArg.name);
+                        const replacementType = typeVarMap.getTypeVar(firstTypeArg);
                         if (replacementType && isObject(replacementType)) {
                             return replacementType.classType;
                         }
@@ -821,6 +871,10 @@ export function getTypeVarArgumentsRecursive(type: Type, recursionCount = 0): Ty
     };
 
     if (isTypeVar(type)) {
+        // Don't return any recursive type alias placeholders.
+        if (type.details.recursiveTypeAliasName) {
+            return [];
+        }
         return [type];
     } else if (isClass(type)) {
         return getTypeVarsFromClass(type);
@@ -942,8 +996,8 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type, typeVar
             break;
 
         case TypeCategory.TypeVar:
-            if (!typeVarMap.hasTypeVar(destType.name)) {
-                typeVarMap.setTypeVar(destType.name, srcType, typeVarMap.isNarrowable(destType.name));
+            if (!typeVarMap.hasTypeVar(destType)) {
+                typeVarMap.setTypeVar(destType, srcType, typeVarMap.isNarrowable(destType));
             }
             break;
     }
@@ -970,7 +1024,6 @@ export function buildTypeVarMapFromSpecializedClass(classType: ClassType, makeCo
 export function buildTypeVarMap(typeParameters: TypeVarType[], typeArgs: Type[] | undefined): TypeVarMap {
     const typeVarMap = new TypeVarMap();
     typeParameters.forEach((typeParam, index) => {
-        const typeVarName = typeParam.name;
         let typeArgType: Type;
 
         if (typeArgs) {
@@ -983,7 +1036,7 @@ export function buildTypeVarMap(typeParameters: TypeVarType[], typeArgs: Type[] 
             typeArgType = getConcreteTypeFromTypeVar(typeParam);
         }
 
-        typeVarMap.setTypeVar(typeVarName, typeArgType, false);
+        typeVarMap.setTypeVar(typeParam, typeArgType, false);
     });
 
     return typeVarMap;
@@ -1365,10 +1418,10 @@ function _specializeClassType(
         ClassType.getTypeParameters(classType).forEach((typeParam) => {
             let typeArgType: Type;
 
-            if (typeVarMap && typeVarMap.getTypeVar(typeParam.name)) {
+            if (typeVarMap && typeVarMap.hasTypeVar(typeParam)) {
                 // If the type var map already contains this type var, use
                 // the existing type.
-                typeArgType = typeVarMap.getTypeVar(typeParam.name)!;
+                typeArgType = typeVarMap.getTypeVar(typeParam)!;
                 specializationNeeded = true;
             } else {
                 // If the type var map wasn't provided or doesn't contain this
@@ -1394,8 +1447,15 @@ function _specializeClassType(
 // Converts a type var type into the most specific type
 // that fits the specified constraints.
 export function getConcreteTypeFromTypeVar(type: TypeVarType, recursionLevel = 0): Type {
-    if (type.boundType) {
-        return specializeType(type.boundType, undefined, /* makeConcrete */ false, recursionLevel + 1);
+    if (type.details.boundType) {
+        // If this is a recursive type alias placeholder, don't continue
+        // to specialize it because it will expand it out until we hit the
+        // recursion limit.
+        if (type.details.recursiveTypeAliasName) {
+            return type.details.boundType;
+        }
+
+        return specializeType(type.details.boundType, undefined, /* makeConcrete */ false, recursionLevel + 1);
     }
 
     // Note that we can't use constraints for specialization because
@@ -1435,7 +1495,7 @@ function _specializeFunctionType(
 
     // Handle functions with a parameter specification in a special manner.
     if (functionType.details.paramSpec) {
-        let paramSpec = typeVarMap?.getParamSpec(functionType.details.paramSpec.name);
+        let paramSpec = typeVarMap?.getParamSpec(functionType.details.paramSpec);
         if (!paramSpec && makeConcrete) {
             paramSpec = [
                 { name: 'args', type: AnyType.create() },
@@ -1513,7 +1573,7 @@ export function requiresTypeArguments(classType: ClassType) {
         // If there are type parameters, type arguments are needed.
         // The exception is if type parameters have been synthesized
         // for classes that have untyped constructors.
-        return !classType.details.typeParameters[0].isSynthesized;
+        return !classType.details.typeParameters[0].details.isSynthesized;
     }
 
     // There are a few built-in special classes that require

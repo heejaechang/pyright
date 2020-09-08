@@ -515,6 +515,23 @@ export function getEnclosingFunction(node: ParseNode): FunctionNode | undefined 
     return undefined;
 }
 
+export function getEnclosingClassOrFunction(node: ParseNode): FunctionNode | ClassNode | undefined {
+    let curNode = node.parent;
+    while (curNode) {
+        if (curNode.nodeType === ParseNodeType.Function) {
+            return curNode;
+        }
+
+        if (curNode.nodeType === ParseNodeType.Class) {
+            return curNode;
+        }
+
+        curNode = curNode.parent;
+    }
+
+    return undefined;
+}
+
 export function getEnclosingSuiteOrModule(node: ParseNode): SuiteNode | ModuleNode | undefined {
     let curNode = node.parent;
     while (curNode) {
@@ -629,6 +646,36 @@ export function getEvaluationScopeNode(node: ParseNode): EvaluationScopeNode {
     }
 
     fail('Did not find evaluation scope');
+    return undefined!;
+}
+
+// Returns the parse node corresponding to the function or class that
+// contains the specified typeVar reference.
+export function getTypeVarScopeNode(node: ParseNode): EvaluationScopeNode {
+    let prevNode: ParseNode | undefined;
+    let curNode: ParseNode | undefined = node;
+
+    while (curNode) {
+        switch (curNode.nodeType) {
+            case ParseNodeType.Function: {
+                if (prevNode === curNode.suite) {
+                    return curNode;
+                }
+                break;
+            }
+
+            case ParseNodeType.Class: {
+                if (prevNode === curNode.suite) {
+                    return curNode;
+                }
+                break;
+            }
+        }
+
+        prevNode = curNode;
+        curNode = curNode.parent;
+    }
+
     return undefined!;
 }
 

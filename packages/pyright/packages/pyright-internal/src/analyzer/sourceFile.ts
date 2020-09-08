@@ -186,11 +186,13 @@ export class SourceFile {
         if (this._isStubFile) {
             if (
                 this._filePath.endsWith(normalizeSlashes('/collections/__init__.pyi')) ||
+                this._filePath.endsWith(normalizeSlashes('/asyncio/futures.pyi')) ||
                 fileName === 'builtins.pyi' ||
                 fileName === '_importlib_modulespec.pyi' ||
                 fileName === 'dataclasses.pyi' ||
                 fileName === 'abc.pyi' ||
                 fileName === 'enum.pyi' ||
+                fileName === 'queue.pyi' ||
                 fileName === 'types.pyi'
             ) {
                 this._isBuiltInStubFile = true;
@@ -576,7 +578,9 @@ export class SourceFile {
                     (e.stack ? e.stack.toString() : undefined) ||
                     (typeof e.message === 'string' ? e.message : undefined) ||
                     JSON.stringify(e);
-                this._console.error(`An internal error occurred while parsing ${this.getFilePath()}: ` + message);
+                this._console.error(
+                    Localizer.Diagnostic.internalParseError().format({ file: this.getFilePath(), message })
+                );
 
                 // Create dummy parse results.
                 this._parseResults = {
@@ -599,7 +603,10 @@ export class SourceFile {
                 this._builtinsImport = undefined;
 
                 const diagSink = new DiagnosticSink();
-                diagSink.addError(`An internal error occurred while parsing file`, getEmptyRange());
+                diagSink.addError(
+                    Localizer.Diagnostic.internalParseError().format({ file: this.getFilePath(), message }),
+                    getEmptyRange()
+                );
                 this._parseDiagnostics = diagSink.fetchAndClear();
 
                 // Do not rethrow the exception, swallow it here. Callers are not
@@ -900,11 +907,14 @@ export class SourceFile {
                     (typeof e.message === 'string' ? e.message : undefined) ||
                     JSON.stringify(e);
                 this._console.error(
-                    `An internal error occurred while performing name binding for ${this.getFilePath()}: ` + message
+                    Localizer.Diagnostic.internalBindError().format({ file: this.getFilePath(), message })
                 );
 
                 const diagSink = new DiagnosticSink();
-                diagSink.addError(`An internal error occurred while performing name binding`, getEmptyRange());
+                diagSink.addError(
+                    Localizer.Diagnostic.internalBindError().format({ file: this.getFilePath(), message }),
+                    getEmptyRange()
+                );
                 this._bindDiagnostics = diagSink.fetchAndClear();
 
                 // Do not rethrow the exception, swallow it here. Callers are not
@@ -946,11 +956,13 @@ export class SourceFile {
                         (typeof e.message === 'string' ? e.message : undefined) ||
                         JSON.stringify(e);
                     this._console.error(
-                        `An internal error occurred while while performing type checking for ${this.getFilePath()}: ` +
-                            message
+                        Localizer.Diagnostic.internalTypeCheckingError().format({ file: this.getFilePath(), message })
                     );
                     const diagSink = new DiagnosticSink();
-                    diagSink.addError(`An internal error occurred while performing type checking`, getEmptyRange());
+                    diagSink.addError(
+                        Localizer.Diagnostic.internalTypeCheckingError().format({ file: this.getFilePath(), message }),
+                        getEmptyRange()
+                    );
 
                     this._checkerDiagnostics = diagSink.fetchAndClear();
 
