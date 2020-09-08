@@ -215,6 +215,10 @@ export class AnalyzerService {
         return this._program.getBoundSourceFile(path)?.getParseResults();
     }
 
+    getTextOnRange(filePath: string, range: Range, token: CancellationToken) {
+        return this._program.getTextOnRange(filePath, range, token);
+    }
+
     getAutoImports(
         filePath: string,
         range: Range,

@@ -11,6 +11,7 @@ import { Commands as PyrightCommands } from 'pyright-internal/commands/commands'
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
 import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
+import { getCharacterCount } from 'pyright-internal/common/stringUtils';
 import { Range } from 'pyright-internal/common/textRange';
 import { WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 
@@ -68,6 +69,7 @@ export class CodeActionProvider {
                 token
             );
 
+            const addImportsCodeActions = [];
             for (const result of autoImports) {
                 throwIfCancellationRequested(token);
 
@@ -81,7 +83,7 @@ export class CodeActionProvider {
                     : `Add import ${result.name}`;
 
                 title = result.alias ? `${title} as ${result.alias}` : title;
-                codeActions.push(
+                addImportsCodeActions.push(
                     CodeAction.create(
                         title,
                         Command.create(title, Commands.addImport, filePath, diagRange, result.name, result.source),
@@ -89,8 +91,59 @@ export class CodeActionProvider {
                     )
                 );
             }
+
+            const writtenWord = workspace.serviceInstance.getTextOnRange(filePath, diagRange, token);
+            codeActions.push(
+                ...addImportsCodeActions.sort((left, right) => {
+                    const leftName = left.command!.arguments![2] as string;
+                    const rightName = right.command!.arguments![2] as string;
+
+                    if (leftName === rightName) {
+                        return addImportCompare(left, right);
+                    }
+
+                    if (leftName === writtenWord) {
+                        return -1;
+                    }
+
+                    if (rightName === writtenWord) {
+                        return 1;
+                    }
+
+                    return addImportCompare(left, right);
+                })
+            );
         }
 
         return codeActions;
     }
+}
+
+function addImportCompare(left: CodeAction, right: CodeAction) {
+    const leftName = left.command!.arguments![2] as string;
+    const rightName = right.command!.arguments![2] as string;
+
+    const leftSource = left.command!.arguments![3] as string;
+    const rightSource = right.command!.arguments![3] as string;
+
+    if (!leftSource && !rightSource) {
+        return leftName.localeCompare(rightName);
+    }
+
+    if (!leftSource && rightSource) {
+        return -1;
+    }
+
+    if (leftSource && !rightSource) {
+        return 1;
+    }
+
+    const leftDots = getCharacterCount(leftSource, '.');
+    const rightDots = getCharacterCount(rightSource, '.');
+    const comp = leftDots - rightDots;
+    if (comp === 0) {
+        return left.title.localeCompare(right.title);
+    }
+
+    return comp;
 }

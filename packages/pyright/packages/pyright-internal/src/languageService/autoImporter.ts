@@ -138,7 +138,7 @@ interface ImportParts {
     symbolName?: string;
     importFrom?: string;
     filePath: string;
-    numberOfNameParts: number;
+    dotCount: number;
     moduleNameAndType: ModuleNameAndType;
 }
 
@@ -267,7 +267,7 @@ export class AutoImporter {
             return;
         }
 
-        const numberOfNameParts = importSource.split('.').length;
+        const dotCount = StringUtils.getCharacterCount(importSource, '.');
         topLevelSymbols.forEach((autoImportSymbol, name) => {
             throwIfCancellationRequested(token);
 
@@ -304,7 +304,7 @@ export class AutoImporter {
                             importName: name,
                             importFrom: importSource,
                             filePath,
-                            numberOfNameParts,
+                            dotCount,
                             moduleNameAndType,
                         },
                         importGroup,
@@ -431,7 +431,7 @@ export class AutoImporter {
             return groupComparison;
         }
 
-        const dotComparison = left.importParts.numberOfNameParts - right.importParts.numberOfNameParts;
+        const dotComparison = left.importParts.dotCount - right.importParts.dotCount;
         if (dotComparison !== 0) {
             return dotComparison;
         }
@@ -487,12 +487,13 @@ export class AutoImporter {
 
             const index = moduleName.lastIndexOf('.');
             const importNamePart = index > 0 ? moduleName.substring(index + 1) : undefined;
+            const importFrom = index > 0 ? moduleName.substring(0, index) : undefined;
             return {
                 symbolName: importNamePart,
                 importName: importNamePart ?? moduleName,
-                importFrom: index > 0 ? moduleName.substring(0, index) : undefined,
+                importFrom,
                 filePath,
-                numberOfNameParts: moduleName.split('.').length,
+                dotCount: StringUtils.getCharacterCount(moduleName, '.'),
                 moduleNameAndType: module,
             };
         }

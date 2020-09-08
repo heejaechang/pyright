@@ -881,6 +881,32 @@ export class Program {
         }
     }
 
+    getTextOnRange(filePath: string, range: Range, token: CancellationToken): string | undefined {
+        const sourceFileInfo = this._sourceFileMap.get(filePath);
+        if (!sourceFileInfo) {
+            return undefined;
+        }
+
+        const sourceFile = sourceFileInfo.sourceFile;
+        const fileContents = sourceFile.getFileContents();
+        if (!fileContents) {
+            // this only works with opened file
+            return undefined;
+        }
+
+        return this._runEvaluatorWithCancellationToken(token, () => {
+            this._parseFile(sourceFileInfo);
+
+            const parseTree = sourceFile.getParseResults()!;
+            const textRange = convertRangeToTextRange(range, parseTree.tokenizerOutput.lines);
+            if (!textRange) {
+                return undefined;
+            }
+
+            return fileContents.substr(textRange.start, textRange.length);
+        });
+    }
+
     getAutoImports(
         filePath: string,
         range: Range,
