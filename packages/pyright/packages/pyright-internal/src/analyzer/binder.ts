@@ -278,7 +278,11 @@ export class Binder extends ParseTreeWalker {
                 );
             } else {
                 // Source found, but type stub is missing
-                if (!importResult.isStubFile && importResult.importType === ImportType.ThirdParty) {
+                if (
+                    !importResult.isStubFile &&
+                    importResult.importType === ImportType.ThirdParty &&
+                    !importResult.isPyTypedPresent
+                ) {
                     const diagnostic = this._addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportMissingTypeStubs,
                         DiagnosticRule.reportMissingTypeStubs,
@@ -562,6 +566,11 @@ export class Binder extends ParseTreeWalker {
         let isPossibleTypeAlias = true;
         if (ParseTreeUtils.getEnclosingClass(node) || ParseTreeUtils.getEnclosingFunction(node)) {
             // We will assume that type aliases are defined only at the module level.
+            isPossibleTypeAlias = false;
+        } else if (node.rightExpression.nodeType === ParseNodeType.Call) {
+            // Some special built-in types defined in typing.pyi use
+            // assignments of the form List = _Alias(). We don't want to
+            // treat these as type aliases.
             isPossibleTypeAlias = false;
         }
 
@@ -2300,7 +2309,7 @@ export class Binder extends ParseTreeWalker {
                         node: target,
                         isConstant: isConstantName(name.value),
                         isFinal: finalInfo.isFinal,
-                        isExplicitTypeAlias,
+                        typeAliasAnnotation: isExplicitTypeAlias ? typeAnnotation : undefined,
                         typeAliasName: isExplicitTypeAlias ? target : undefined,
                         path: this._fileInfo.filePath,
                         typeAnnotationNode,

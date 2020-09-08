@@ -39,3 +39,42 @@ Pyright can be run as either a VS Code extension or as a node-based command-line
 | 2           | Fatal error occurred with no errors or warnings reported          |
 | 3           | Config file could not be read or parsed                           |
 
+
+# JSON Output
+
+If the “--outputjson” option is specified on the command line, diagnostics are output in JSON format. The JSON structure is as follows:
+```javascript
+{
+    version: string,
+    time: string,
+    diagnostics: Diagnostic[],
+    summary: {
+        filesAnalyzed: number,
+        errorCount: number,
+        warningCount: number,
+        timeInSec: number
+    }
+}
+```
+
+Each Diagnostic is formatted output in the following format:
+
+```javascript
+{
+    file: string,
+    severity: 'error' | 'warning',
+    message: string,
+    range: {
+        start: {
+            line: number,
+            character: number
+        },
+        end: {
+            line: number,
+            character: number
+        }
+    }
+}
+```
+
+Diagnostic line and character numbers are zero-based.
