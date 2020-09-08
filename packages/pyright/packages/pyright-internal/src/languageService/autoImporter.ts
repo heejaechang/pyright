@@ -27,6 +27,7 @@ import { ConfigOptions } from '../common/configOptions';
 import { TextEditAction } from '../common/editAction';
 import { combinePaths, getDirectoryPath, getFileName, stripFileExtension } from '../common/pathUtils';
 import * as StringUtils from '../common/stringUtils';
+import { Position } from '../common/textRange';
 import { ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 import {
@@ -149,16 +150,18 @@ interface ImportAliasData {
 
 export class AutoImporter {
     private _importStatements: ImportStatements;
+    private _filePath: string;
 
     constructor(
         private _configOptions: ConfigOptions,
-        private _filePath: string,
         private _importResolver: ImportResolver,
         private _parseResults: ParseResults,
+        private _invocationPosition: Position,
         private _excludes: string[],
         private _moduleSymbolMap: ModuleSymbolMap,
         private _libraryMap?: Map<string, IndexResults>
     ) {
+        this._filePath = AnalyzerNodeInfo.getFileInfo(this._parseResults.parseTree)!.filePath;
         this._importStatements = getTopLevelImports(this._parseResults.parseTree);
     }
 
@@ -562,6 +565,7 @@ export class AutoImporter {
             moduleName,
             importGroup,
             this._parseResults,
+            this._invocationPosition,
             aliasName
         );
     }
