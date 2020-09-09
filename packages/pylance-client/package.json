@@ -161,6 +161,19 @@
                 "fileMatch": "mspythonconfig.json",
                 "url": "./dist/schemas/pyrightconfig.schema.json"
             }
+        ],
+        "semanticTokenTypes": [
+            {
+                "id": "selfParameter",
+                "description": "self parameter",
+                "superType": "parameter"
+            }
+        ],
+        "semanticTokenModifiers": [
+            {
+                "id": "typeHint",
+                "description": "inside a type hint comment"
+            }
         ]
     },
     "scripts": {

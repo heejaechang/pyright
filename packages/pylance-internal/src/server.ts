@@ -254,6 +254,8 @@ class PylanceServer extends LanguageServerBase {
     ): InitializeResult {
         const result = super.initialize(params, supportedCommands, supportedCodeActions);
 
+        this._logger.log(LogLevel.Info, JSON.stringify(params.capabilities));
+
         const tokenLegend = SemanticTokenProvider.computeLegend(
             params.capabilities as SemanticTokensClientCapabilities
         );

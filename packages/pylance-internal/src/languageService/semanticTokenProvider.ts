@@ -50,7 +50,8 @@ enum TokenTypes {
     parameter = 15,
     module = 16,
     intrinsic = 17,
-    _ = 18,
+    selfParameter = 18,
+    _ = 19,
 }
 
 enum TokenModifiers {
@@ -60,7 +61,8 @@ enum TokenModifiers {
     abstract = 4,
     async = 8,
     documentation = 16,
-    _ = 17,
+    typeHint = 32,
+    _ = 33,
 }
 
 interface TokenInfo {
@@ -106,6 +108,8 @@ export class SemanticTokenProvider {
                     tokenTypes.push('namespace');
                 } else if (str === 'intrinsic') {
                     tokenTypes.push('operator');
+                } else if (str === 'selfParameter') {
+                    tokenTypes.push('selfParameter');
                 } else {
                     tokenTypes.push('type');
                 }
@@ -115,9 +119,9 @@ export class SemanticTokenProvider {
         const tokenModifiers: string[] = [];
         for (let i = 0; i < TokenModifiers._; i++) {
             const str = TokenModifiers[i];
-            if (clientTokenModifiers.has(str)) {
-                tokenModifiers.push(str);
-            }
+            //if (clientTokenModifiers.has(str)) {
+            tokenModifiers.push(str);
+            //}
         }
 
         return { tokenTypes, tokenModifiers };
@@ -224,6 +228,10 @@ class TokenWalker extends ParseTreeWalker {
         return doRangesOverlap(nodeRange, this._range);
     }
 
+    private _isTypeHintComment(node: NameNode): boolean {
+        return node.parent?.nodeType === ParseNodeType.FunctionAnnotation;
+    }
+
     private _getNameNodeToken(node: NameNode): TokenInfo | undefined {
         if (this._cachedNodeTokenInfo.has(node)) {
             return this._cachedNodeTokenInfo.get(node);
@@ -233,19 +241,33 @@ class TokenWalker extends ParseTreeWalker {
         if (declarations && declarations.length > 0) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(declarations[0], /* resolveLocalNames */ true);
             if (resolvedDecl) {
+                const isTypeHint = this._isTypeHintComment(node);
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
                         return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
                     case DeclarationType.Parameter:
-                        return { type: TokenTypes.parameter, modifiers: TokenModifiers.none };
+                        if (node.value === 'self') {
+                            return { type: TokenTypes.selfParameter, modifiers: TokenModifiers.none };
+                        } else {
+                            return { type: TokenTypes.parameter, modifiers: TokenModifiers.none };
+                        }
                     case DeclarationType.SpecialBuiltInClass:
-                        return { type: TokenTypes.class, modifiers: TokenModifiers.none };
+                        return {
+                            type: TokenTypes.class,
+                            modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                        };
                     case DeclarationType.Class: {
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
-                            return { type: TokenTypes.enum, modifiers: TokenModifiers.none };
+                            return {
+                                type: TokenTypes.enum,
+                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                            };
                         } else {
-                            return { type: TokenTypes.class, modifiers: TokenModifiers.none };
+                            return {
+                                type: TokenTypes.class,
+                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                            };
                         }
                     }
                     case DeclarationType.Function: {
