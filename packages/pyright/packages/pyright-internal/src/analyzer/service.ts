@@ -554,6 +554,7 @@ export class AnalyzerService {
         configOptions.verboseOutput = commandLineOptions.verboseOutput ?? configOptions.verboseOutput;
         configOptions.checkOnlyOpenFiles = !!commandLineOptions.checkOnlyOpenFiles;
         configOptions.autoImportCompletions = !!commandLineOptions.autoImportCompletions;
+        configOptions.indexing = !!commandLineOptions.indexing;
 
         // If useLibraryCodeForTypes was not specified in the config, allow the settings
         // or command line to override it.

@@ -194,8 +194,6 @@ export class Indexer {
             if (results.symbols.length > 0) {
                 map.set(file, results);
             }
-
-            program.getSourceFile(file)?.markDirtyAndDropEverything();
         }
 
         return map;

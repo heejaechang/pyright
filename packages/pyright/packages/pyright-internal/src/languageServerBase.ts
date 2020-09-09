@@ -100,6 +100,7 @@ export interface ServerSettings {
     diagnosticSeverityOverrides?: DiagnosticSeverityOverridesMap;
     logLevel?: LogLevel;
     autoImportCompletions?: boolean;
+    indexing?: boolean;
 }
 
 export interface WorkspaceServiceInstance {

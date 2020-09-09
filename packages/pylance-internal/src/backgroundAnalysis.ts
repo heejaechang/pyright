@@ -101,7 +101,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     protected onMessage(msg: AnalysisRequest) {
         switch (msg.requestType) {
             case 'getSemanticTokens': {
-                this.log(LogLevel.Info, `Background analysis message: ${msg.requestType}`);
+                this.log(LogLevel.Log, `Background analysis message: ${msg.requestType}`);
 
                 run(() => {
                     const { filePath, range, previousResultId, cancellationId } = msg.data;
