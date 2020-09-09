@@ -428,6 +428,10 @@ export class Program {
     }
 
     indexWorkspace(callback: (path: string, results: IndexResults) => void, token: CancellationToken) {
+        if (!this._configOptions.indexing) {
+            return;
+        }
+
         return this._runEvaluatorWithCancellationToken(token, () => {
             // Go through all workspace files to create indexing data.
             // This will cause all files in the workspace to be parsed and bound. We might

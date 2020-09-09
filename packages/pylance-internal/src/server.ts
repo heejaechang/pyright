@@ -169,6 +169,7 @@ class PylanceServer extends LanguageServerBase {
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
             autoImportCompletions: true,
+            indexing: false,
             completeFunctionParens: false,
         };
 
@@ -220,6 +221,7 @@ class PylanceServer extends LanguageServerBase {
                     pythonAnalysisSection.autoImportCompletions ?? serverSettings.autoImportCompletions;
                 serverSettings.completeFunctionParens =
                     pythonAnalysisSection.completeFunctionParens ?? serverSettings.completeFunctionParens;
+                serverSettings.indexing = pythonAnalysisSection.indexing ?? serverSettings.indexing;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
