@@ -762,6 +762,12 @@ test('Tuples7', () => {
     validateResults(analysisResults, 7);
 });
 
+test('Tuples8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples8.py']);
+
+    validateResults(analysisResults, 7);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
@@ -1047,7 +1053,7 @@ test('TypeAlias5', () => {
 test('TypeAlias6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias6.py']);
 
-    validateResults(analysisResults, 3);
+    validateResults(analysisResults, 7);
 });
 
 test('TypeAlias7', () => {

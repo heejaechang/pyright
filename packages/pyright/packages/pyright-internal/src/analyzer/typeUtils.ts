@@ -356,6 +356,7 @@ export function isTypeAliasRecursive(typeAliasPlaceholder: TypeVarType, type: Ty
 }
 
 export function transformPossibleRecursiveTypeAlias(type: Type): Type;
+export function transformPossibleRecursiveTypeAlias(type: Type | undefined): Type | undefined;
 export function transformPossibleRecursiveTypeAlias(type: Type | undefined): Type | undefined {
     if (type) {
         if (type.category === TypeCategory.TypeVar && type.details.recursiveTypeAliasName && type.details.boundType) {
@@ -400,7 +401,7 @@ export function canBeFalsy(type: Type, recursionLevel = 0): boolean {
 
         case TypeCategory.Object: {
             // Handle tuples specially.
-            if (ClassType.isBuiltIn(type.classType, 'Tuple') && type.classType.typeArguments) {
+            if (isTupleClass(type.classType) && type.classType.typeArguments) {
                 if (type.classType.typeArguments.length === 0) {
                     return true;
                 }
@@ -463,7 +464,7 @@ export function canBeTruthy(type: Type, recursionLevel = 0): boolean {
 
         case TypeCategory.Object: {
             // Check for Tuple[()] (an empty tuple).
-            if (ClassType.isBuiltIn(type.classType, 'Tuple')) {
+            if (isTupleClass(type.classType)) {
                 if (type.classType.typeArguments && type.classType.typeArguments.length === 0) {
                     return false;
                 }
@@ -495,11 +496,9 @@ export function getSpecializedTupleType(type: Type): ClassType | undefined {
         return undefined;
     }
 
-    // See if this class derives from Tuple. If it does, we'll assume that it
+    // See if this class derives from Tuple or tuple. If it does, we'll assume that it
     // hasn't been overridden in a way that changes the behavior of the tuple class.
-    const tupleClass = classType.details.mro.find(
-        (mroClass) => isClass(mroClass) && ClassType.isBuiltIn(mroClass, 'Tuple')
-    );
+    const tupleClass = classType.details.mro.find((mroClass) => isClass(mroClass) && isTupleClass(mroClass));
     if (!tupleClass || !isClass(tupleClass)) {
         return undefined;
     }
@@ -554,6 +553,10 @@ export function isParamSpecType(type: Type): boolean {
 
 export function isProperty(type: Type): type is ObjectType {
     return isObject(type) && ClassType.isPropertyClass(type.classType);
+}
+
+export function isTupleClass(type: ClassType) {
+    return ClassType.isBuiltIn(type) && (type.details.name === 'Tuple' || type.details.name === 'tuple');
 }
 
 // Partially specializes a type within the context of a specified
@@ -952,6 +955,11 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type, typeVar
         case TypeCategory.Class:
             if (destType.typeArguments) {
                 destType.typeArguments.forEach((typeArg) => {
+                    setTypeArgumentsRecursive(typeArg, srcType, typeVarMap, recursionCount + 1);
+                });
+            }
+            if (destType.effectiveTypeArguments) {
+                destType.effectiveTypeArguments.forEach((typeArg) => {
                     setTypeArgumentsRecursive(typeArg, srcType, typeVarMap, recursionCount + 1);
                 });
             }
@@ -1403,6 +1411,7 @@ function _specializeClassType(
     }
 
     let newTypeArgs: Type[] = [];
+    let newEffectiveTypeArgs: Type[] | undefined;
     let specializationNeeded = false;
 
     // If type args were previously provided, specialize them.
@@ -1414,6 +1423,16 @@ function _specializeClassType(
             }
             return newTypeArgType;
         });
+
+        if (classType.effectiveTypeArguments) {
+            newEffectiveTypeArgs = classType.effectiveTypeArguments.map((oldTypeArgType) => {
+                const newTypeArgType = specializeType(oldTypeArgType, typeVarMap, makeConcrete, recursionLevel + 1);
+                if (newTypeArgType !== oldTypeArgType) {
+                    specializationNeeded = true;
+                }
+                return newTypeArgType;
+            });
+        }
     } else {
         ClassType.getTypeParameters(classType).forEach((typeParam) => {
             let typeArgType: Type;
@@ -1441,7 +1460,13 @@ function _specializeClassType(
         return classType;
     }
 
-    return ClassType.cloneForSpecialization(classType, newTypeArgs, /* isTypeArgumentExplicit */ false);
+    return ClassType.cloneForSpecialization(
+        classType,
+        newTypeArgs,
+        /* isTypeArgumentExplicit */ false,
+        /* skipAbstractClassTest */ undefined,
+        newEffectiveTypeArgs
+    );
 }
 
 // Converts a type var type into the most specific type
@@ -1664,7 +1689,8 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
         }
 
         case TypeCategory.TypeVar: {
-            return true;
+            // If this is a recursive type alias, don't treat it like other TypeVars.
+            return type.details.recursiveTypeAliasName === undefined;
         }
     }
 
