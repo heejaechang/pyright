@@ -18,14 +18,14 @@ import { ModuleNode } from 'pyright-internal/parser/parseNodes';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
-import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import { getExceptionMessage, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
 import { PythiaModel } from './models';
 import { buildRecommendationsTelemetry } from './telemetry';
-import { getExceptionMessage, IntelliCodeConstants } from './types';
+import { IntelliCodeConstants } from './types';
 import { getZip } from './zip';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
@@ -269,7 +269,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 await this._deepLearning.initialize();
             }
         } catch (e) {
-            this._logger.log(LogLevel.Warn, `Failed to load IntelliCode model. Exception: ${getExceptionMessage(e)}`);
+            const reason = 'Failed to load IntelliCode model';
+            this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
+            this._telemetry.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
         }
     }
 }

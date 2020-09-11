@@ -64,7 +64,6 @@ import { LogService } from './common/logger';
 import { Platform } from './common/platform';
 import {
     addMeasurementsToEvent,
-    sendMeasurementsTelemetry,
     StubTelemetry,
     TelemetryEvent,
     TelemetryEventName,
@@ -392,7 +391,7 @@ class PylanceServer extends LanguageServerBase {
 
         resolver.setStubUsageCallback((importMetrics) => {
             if (!importMetrics.isEmpty()) {
-                sendMeasurementsTelemetry(this._telemetry, TelemetryEventName.IMPORT_METRICS, importMetrics);
+                this._telemetry?.sendMeasurementsTelemetry(TelemetryEventName.IMPORT_METRICS, importMetrics);
             }
         });
 

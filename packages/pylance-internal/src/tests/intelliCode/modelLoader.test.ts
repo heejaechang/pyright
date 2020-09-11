@@ -74,9 +74,12 @@ describe('IntelliCode model loader', () => {
         }
     });
 
+    const defaultErrorName = 'Error name';
+    const defaultErrorMessage = 'Error message';
+
     function makeError(): Error {
-        const error = new Error('Error');
-        error.name = 'Error';
+        const error = new Error(defaultErrorMessage);
+        error.name = defaultErrorName;
         return error;
     }
 
@@ -111,7 +114,7 @@ describe('IntelliCode model loader', () => {
 
     test('no files in folder', async () => {
         when(mockedFs.readdirSync(anyString())).thenReturn([]);
-        await verifyLogOnError(instance(mockedFs), 'Unable to find');
+        await verifyLogOnError(instance(mockedFs), 'Unable to find', true);
     });
 
     test('unable to read JSON', async () => {
@@ -125,27 +128,36 @@ describe('IntelliCode model loader', () => {
         when(mockedFs.readFileText(anyString(), anyString())).thenReturn(Promise.resolve('***'));
         when(mockedFs.readdirSync(anyString())).thenReturn(['1.onnx']);
 
-        await verifyLogOnError(instance(mockedFs), 'Unable to parse');
+        await verifyLogOnError(instance(mockedFs), 'Unable to parse', false, 'SyntaxError');
     });
 
-    async function verifyLogOnError(fs: FileSystem, message: string): Promise<void> {
+    async function verifyLogOnError(
+        fs: FileSystem,
+        message: string,
+        skipException = false,
+        expectedErrorName?: string
+    ): Promise<void> {
         const mockedZip = mock<Zip>();
         when(mockedZip.unzip(anyString(), anyString())).thenReturn(Promise.resolve(3));
 
         const ml = new ModelLoader(fs, instance(mockedZip), log, telemetry);
         await ml.loadModel(getTestModel(), modelFolder);
-        verifyErrorLog(message);
+        verifyErrorLog(message, skipException, expectedErrorName);
     }
 
-    function verifyErrorLog(message: string): void {
+    function verifyErrorLog(message: string, skipException = false, expectedErrorName?: string): void {
         verify(mockedLog.log(LogLevel.Error, anyString())).once();
 
         const callArgs = capture(mockedLog.log).first();
         expect(callArgs[0]).toEqual(LogLevel.Error);
         expect(callArgs[1]).toStartWith(message);
 
-        const [te] = capture(mockedTelemetry.sendTelemetry).first();
-        expect(te.EventName).toEqual(formatEventName(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED));
-        expect(te.Properties['Reason']).toStartWith(message);
+        if (!skipException) {
+            const [eventName, e] = capture(mockedTelemetry.sendExceptionTelemetry).first();
+            expect(eventName).toEqual(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED);
+            expect(e).toBeDefined();
+            expectedErrorName = expectedErrorName ?? defaultErrorName;
+            expect(e.name).toEqual(expectedErrorName);
+        }
     }
 });
