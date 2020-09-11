@@ -10,7 +10,7 @@ import { LogLevel } from 'pyright-internal/common/console';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 
 import { LogService } from '../common/logger';
-import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import { getExceptionMessage, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import {
     ModelFileName,
     ModelMetaDataFileName,
@@ -19,7 +19,6 @@ import {
     PythiaModel,
     PythiaModelMetaData,
 } from './models';
-import { getExceptionMessage } from './types';
 import { Zip } from './zip';
 
 const modelFilesExt = '.onnx';
@@ -76,9 +75,7 @@ export class ModelLoader {
             }
         } catch (error) {
             if (error.code !== 'EEXIST') {
-                const message = 'Unable to create model folder';
-                this._logger?.log(LogLevel.Error, `${message} ${modelUnpackFolder}, error ${error.code}`);
-                this.sendTelemetry(`${message}, error ${error.code}`);
+                this.logError(`Unable to create model folder ${modelUnpackFolder}`, error);
                 return false;
             }
         }
@@ -101,9 +98,7 @@ export class ModelLoader {
         }
 
         if (modelFiles.length === 0) {
-            const message = 'Unable to find any IntelliCode data';
-            this._logger?.log(LogLevel.Error, `${message} in ${modelUnpackFolder}.`);
-            this.sendTelemetry(message);
+            this.logError(`Unable to find any IntelliCode data in ${modelUnpackFolder}.`);
             return false;
         }
 
@@ -150,14 +145,12 @@ export class ModelLoader {
         }
     }
 
-    private logError(reason: string, e?: Error): void {
-        this._logger?.log(LogLevel.Error, e ? `${reason}. Exception ${getExceptionMessage(e)}` : reason);
-        this.sendTelemetry(reason);
-    }
-
-    private sendTelemetry(reason: string): void {
-        const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED);
-        te.Properties['Reason'] = reason;
-        this._telemetry?.sendTelemetry(te);
+    private logError(reason: string, e?: any): void {
+        if (e) {
+            this._logger?.log(LogLevel.Error, e ? `${reason}. Exception ${getExceptionMessage(e)}` : reason);
+            this._telemetry?.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
+        } else {
+            this._logger?.log(LogLevel.Error, reason);
+        }
     }
 }

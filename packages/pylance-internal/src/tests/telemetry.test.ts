@@ -8,43 +8,59 @@ import assert from 'assert';
 import { capture, instance, mock, verify, when } from 'ts-mockito';
 import { Connection, Telemetry } from 'vscode-languageserver/node';
 
-import {
-    formatEventName,
-    sendMeasurementsTelemetry,
-    TelemetryEvent,
-    TelemetryEventName,
-    TelemetryService,
-} from '../common/telemetry';
+import { formatEventName, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 
 let ts: TelemetryService;
 let mockedTelemetry: Telemetry;
 
-beforeEach(() => {
-    const mockedConnection = mock<Connection>();
-    mockedTelemetry = mock<Telemetry>();
-    const telemetry = instance(mockedTelemetry);
+describe('Telemetry', () => {
+    beforeEach(() => {
+        const mockedConnection = mock<Connection>();
+        mockedTelemetry = mock<Telemetry>();
+        const telemetry = instance(mockedTelemetry);
 
-    when(mockedConnection.telemetry).thenReturn(telemetry);
-    const connection = instance(mockedConnection);
+        when(mockedConnection.telemetry).thenReturn(telemetry);
+        const connection = instance(mockedConnection);
 
-    ts = new TelemetryService(connection);
-});
+        ts = new TelemetryService(connection);
+    });
 
-test('Telemetry: send measurements', () => {
-    const m: {
-        [key: string]: number;
-    } = {};
+    test('send measurements', () => {
+        const m: {
+            [key: string]: number;
+        } = {};
 
-    m['m1'] = 1;
-    m['m2'] = 2;
-    sendMeasurementsTelemetry(ts, TelemetryEventName.ANALYSIS_COMPLETE, m);
+        m['m1'] = 1;
+        m['m2'] = 2;
+        ts.sendMeasurementsTelemetry(TelemetryEventName.ANALYSIS_COMPLETE, m);
 
-    const [arg] = capture(mockedTelemetry.logEvent).first();
-    const te = arg as TelemetryEvent;
+        const [arg] = capture(mockedTelemetry.logEvent).first();
+        const te = arg as TelemetryEvent;
 
-    verify(mockedTelemetry.logEvent(te)).once();
-    assert(te instanceof TelemetryEvent);
-    assert(te.EventName === formatEventName(TelemetryEventName.ANALYSIS_COMPLETE));
-    assert(te.Measurements['m1'] === 1);
-    assert(te.Measurements['m2'] === 2);
+        verify(mockedTelemetry.logEvent(te)).once();
+        assert(te instanceof TelemetryEvent);
+        expect(te.EventName === formatEventName(TelemetryEventName.ANALYSIS_COMPLETE));
+        expect(te.Measurements['m1']).toEqual(1);
+        expect(te.Measurements['m2']).toEqual(2);
+    });
+
+    [undefined, 'Stack'].forEach((stack) => {
+        test(`send exception with stack '${stack ?? 'undefined'}'`, () => {
+            const e: Error = {
+                message: 'Message',
+                name: 'Name',
+                stack,
+            };
+
+            ts.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
+            const [arg] = capture(mockedTelemetry.logEvent).first();
+            const te = arg as TelemetryEvent;
+
+            verify(mockedTelemetry.logEvent(te)).once();
+            assert(te instanceof TelemetryEvent);
+
+            expect(te.EventName).toEqual(formatEventName(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED));
+            expect(te.Exception).toEqual(e);
+        });
+    });
 });

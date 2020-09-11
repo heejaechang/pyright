@@ -78,11 +78,3 @@ export enum ModelType {
     Sequence = 'Sequence',
     LSTM = 'LSTM',
 }
-
-export function getExceptionMessage(e: Error): string {
-    return (
-        (e.stack ? e.stack.toString() : undefined) ||
-        (typeof e.message === 'string' ? e.message : undefined) ||
-        JSON.stringify(e)
-    );
-}

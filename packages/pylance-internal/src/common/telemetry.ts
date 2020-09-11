@@ -43,12 +43,15 @@ export class TelemetryEvent {
         [key: string]: number;
     } = {};
 
-    constructor(eventName: string) {
+    readonly Exception: Error | undefined;
+
+    constructor(eventName: string, ex?: Error) {
         this.EventName = formatEventName(eventName);
+        this.Exception = ex;
     }
 
     clone(): TelemetryEvent {
-        const te = new TelemetryEvent(this.EventName.substr(languageServerEventPrefix.length));
+        const te = new TelemetryEvent(this.EventName.substr(languageServerEventPrefix.length), this.Exception);
         for (const key in this.Properties) {
             te.Properties[key] = this.Properties[key];
         }
@@ -71,19 +74,16 @@ export class TelemetryService {
     sendTelemetry(event: TelemetryEvent): void {
         this._connection?.telemetry.logEvent(event);
     }
-}
 
-export function sendMeasurementsTelemetry(
-    ts: TelemetryService | undefined,
-    telemetryEventName: TelemetryEventName,
-    metrics: Object
-) {
-    if (!ts) {
-        return;
+    sendExceptionTelemetry(eventName: string, e: Error): void {
+        this.sendTelemetry(new TelemetryEvent(eventName, e));
     }
-    const te = new TelemetryEvent(telemetryEventName);
-    addMeasurementsToEvent(te, metrics);
-    ts.sendTelemetry(te);
+
+    sendMeasurementsTelemetry(telemetryEventName: TelemetryEventName, metrics: Object) {
+        const te = new TelemetryEvent(telemetryEventName);
+        addMeasurementsToEvent(te, metrics);
+        this.sendTelemetry(te);
+    }
 }
 
 export function addMeasurementsToEvent(te: TelemetryEvent, metrics: Object) {
@@ -150,4 +150,20 @@ export function addModuleInfoToEvent(te: TelemetryEvent, moduleContext: ModuleCo
     }
 
     return te;
+}
+
+export function getExceptionMessage(e: any): string {
+    let message = exceptionToString(e);
+    if (e.code) {
+        message += `, Error code: ${e.code}`;
+    }
+    return message;
+}
+
+export function exceptionToString(e: any): string {
+    return (
+        (e.stack ? e.stack.toString() : undefined) ||
+        (typeof e.message === 'string' ? e.message : undefined) ||
+        JSON.stringify(e)
+    );
 }

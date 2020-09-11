@@ -17,7 +17,7 @@ import { CommandController } from '../../commands/commandController';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../../commands/commands';
 import { LogService } from '../../common/logger';
 import { Platform } from '../../common/platform';
-import { TelemetryService } from '../../common/telemetry';
+import { TelemetryEventName, TelemetryService } from '../../common/telemetry';
 import { IntelliCodeCompletionListExtension } from '../../intelliCode/extension';
 import { ModelFileName } from '../../intelliCode/models';
 import { getTestModel } from './testUtils';
@@ -58,6 +58,7 @@ describe('IntelliCode extension', () => {
         await ic.updateSettings(false);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
+        verify(mockedTelemetry.sendExceptionTelemetry(anything(), anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
         expect(realFs.existsSync(modelFile)).toBeFalse();
     });
@@ -68,6 +69,7 @@ describe('IntelliCode extension', () => {
         await ic.updateSettings(true);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
+        verify(mockedTelemetry.sendExceptionTelemetry(anything(), anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
         expect(realFs.existsSync(modelFile)).toBeFalse();
     });
@@ -81,8 +83,8 @@ describe('IntelliCode extension', () => {
         expect(realFs.existsSync(modelFile)).toBeTrue();
 
         // Test model is not loadable into ONNX, so exception is expected.
-        const [te] = capture(mockedTelemetry.sendTelemetry).first();
-        expect(te.Properties['Reason']).toStartWith('Failed to create IntelliCode session');
+        const [eventName, e] = capture(mockedTelemetry.sendExceptionTelemetry).first();
+        expect(eventName).toEqual(TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED);
     });
 
     test('command prefix', async () => {
