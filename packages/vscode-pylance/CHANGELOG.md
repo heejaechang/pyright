@@ -1,6 +1,6 @@
 # Changelog
 
-## 2020.9.3 (10 September 2020)
+## 2020.9.4 (10 September 2020)
 
 Notable changes:
 
