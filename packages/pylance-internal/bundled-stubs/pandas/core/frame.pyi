@@ -1188,7 +1188,7 @@ Examples
     @overload
     def set_index(
         self,
-        keys: List,
+        keys: Union[Label, Sequence],
         drop: _bool = ...,
         append: _bool = ...,
         verify_integrity: _bool = ...,
@@ -1198,7 +1198,7 @@ Examples
     @overload
     def set_index(
         self,
-        keys: List,
+        keys: Union[Label, Sequence],
         drop: _bool = ...,
         append: _bool = ...,
         verify_integrity: _bool = ...,
@@ -1208,7 +1208,7 @@ Examples
     @overload
     def set_index(
         self,
-        keys: List,
+        keys: Union[Label, Sequence],
         drop: _bool = ...,
         append: _bool = ...,
         *,
@@ -1217,7 +1217,7 @@ Examples
     @overload
     def set_index(
         self,
-        keys: List,
+        keys: Union[Label, Sequence],
         drop: _bool = ...,
         append: _bool = ...,
         inplace: Optional[_bool] = ...,
@@ -1805,7 +1805,7 @@ sorted_obj : DataFrame or None
     ) -> None: ...
     def groupby(
         self,
-        by: Optional[Union[List[_str], _str]],
+        by: Optional[Union[List[_str], _str]] = ...,
         axis: AxisType = ...,
         level: Optional[Level] = ...,
         as_index: _bool = ...,
