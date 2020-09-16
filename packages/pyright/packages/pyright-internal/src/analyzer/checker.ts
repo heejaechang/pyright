@@ -68,6 +68,7 @@ import { AnalyzerFileInfo } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { Declaration, DeclarationType } from './declaration';
 import { isExplicitTypeAliasDeclaration, isFinalVariableDeclaration } from './declarationUtils';
+import { ImportType } from './importResult';
 import { getTopLevelImports } from './importStatementUtils';
 import * as ParseTreeUtils from './parseTreeUtils';
 import { ParseTreeWalker } from './parseTreeWalker';
@@ -272,6 +273,10 @@ export class Checker extends ParseTreeWalker {
 
             if (param.typeAnnotation) {
                 this.walk(param.typeAnnotation);
+            }
+
+            if (param.typeAnnotationComment) {
+                this.walk(param.typeAnnotationComment);
             }
         });
 
@@ -731,6 +736,17 @@ export class Checker extends ParseTreeWalker {
             node.imports.forEach((importAs) => {
                 this._evaluator.evaluateTypesForStatement(importAs);
             });
+        } else {
+            const importInfo = AnalyzerNodeInfo.getImportInfo(node.module);
+            if (importInfo && importInfo.isImportFound && importInfo.importType !== ImportType.Local) {
+                this._evaluator.addDiagnosticForTextRange(
+                    this._fileInfo,
+                    this._fileInfo.diagnosticRuleSet.reportWildcardImportFromLibrary,
+                    DiagnosticRule.reportWildcardImportFromLibrary,
+                    Localizer.Diagnostic.wildcardLibraryImport(),
+                    node.wildcardToken || node
+                );
+            }
         }
 
         return false;

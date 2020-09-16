@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.69",
+    "version": "1.1.72",
     "private": true,
     "license": "MIT",
     "author": {
@@ -219,6 +219,17 @@
                             "type": "string",
                             "description": "Diagnostics for an imported symbol or module that is imported more than once.",
                             "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportWildcardImportFromLibrary": {
+                            "type": "string",
+                            "description": "Diagnostics for an wildcard import from an external library.",
+                            "default": "warning",
                             "enum": [
                                 "none",
                                 "information",
@@ -565,7 +576,7 @@
                     "enum": [
                         "Error",
                         "Warning",
-                        "Info",
+                        "Information",
                         "Trace"
                     ]
                 },

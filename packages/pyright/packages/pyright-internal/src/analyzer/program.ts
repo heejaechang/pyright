@@ -217,6 +217,7 @@ export class Program {
             filePath,
             importName,
             /* isThirdPartyImport */ false,
+            /* isInPyTypedPackage */ false,
             this._console,
             this._logTracker
         );
@@ -246,6 +247,7 @@ export class Program {
                 filePath,
                 importName,
                 /* isThirdPartyImport */ false,
+                /* isInPyTypedPackage */ false,
                 this._console,
                 this._logTracker
             );
@@ -600,6 +602,7 @@ export class Program {
                 shadowImplPath,
                 importName,
                 /* isThirdPartyImport */ false,
+                /* isInPyTypedPackage */ false,
                 this._console,
                 this._logTracker
             );
@@ -631,7 +634,10 @@ export class Program {
     }
 
     private _createNewEvaluator() {
-        this._evaluator = createTypeEvaluator(this._lookUpImport, Program._getPrintTypeFlags(this._configOptions));
+        this._evaluator = createTypeEvaluator(this._lookUpImport, {
+            disableInferenceForPyTypedSources: this._configOptions.disableInferenceForPyTypedSources,
+            printTypeFlags: Program._getPrintTypeFlags(this._configOptions),
+        });
     }
 
     private _parseFile(fileToParse: SourceFileInfo) {
@@ -1919,6 +1925,7 @@ export class Program {
                         importInfo.path,
                         importName,
                         importInfo.isThirdPartyImport,
+                        importInfo.isPyTypedPresent,
                         this._console,
                         this._logTracker
                     );
