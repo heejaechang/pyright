@@ -195,7 +195,6 @@ export namespace Localizer {
         export const awaitNotInAsync = () => getRawString('Diagnostic.awaitNotInAsync');
         export const backticksIllegal = () => getRawString('Diagnostic.backticksIllegal');
         export const baseClassCircular = () => getRawString('Diagnostic.baseClassCircular');
-        export const baseClassDoubleGeneric = () => getRawString('Diagnostic.baseClassDoubleGeneric');
         export const baseClassInvalid = () => getRawString('Diagnostic.baseClassInvalid');
         export const baseClassFinal = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.baseClassFinal'));
@@ -239,6 +238,7 @@ export namespace Localizer {
         export const dictExpandIllegalInComprehension = () =>
             getRawString('Diagnostic.dictExpandIllegalInComprehension');
         export const duplicateArgsParam = () => getRawString('Diagnostic.duplicateArgsParam');
+        export const duplicateBaseClass = () => getRawString('Diagnostic.duplicateBaseClass');
         export const duplicateCatchAll = () => getRawString('Diagnostic.duplicateCatchAll');
         export const duplicateImport = () =>
             new ParameterizedString<{ importName: string }>(getRawString('Diagnostic.duplicateImport'));
@@ -537,8 +537,14 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeArgsMissingForAlias'));
         export const typeArgsMissingForClass = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeArgsMissingForClass'));
+        export const typeArgsTooFew = () =>
+            new ParameterizedString<{ name: string; expected: number; received: number }>(
+                getRawString('Diagnostic.typeArgsTooFew')
+            );
         export const typeArgsTooMany = () =>
-            new ParameterizedString<{ expected: number; received: number }>(getRawString('Diagnostic.typeArgsTooMany'));
+            new ParameterizedString<{ name: string; expected: number; received: number }>(
+                getRawString('Diagnostic.typeArgsTooMany')
+            );
         export const typeAssignmentMismatch = () =>
             new ParameterizedString<{ sourceType: string; destType: string }>(
                 getRawString('Diagnostic.typeAssignmentMismatch')
@@ -644,6 +650,7 @@ export namespace Localizer {
         export const walrusIllegal = () => getRawString('Diagnostic.walrusIllegal');
         export const walrusNotAllowed = () => getRawString('Diagnostic.walrusNotAllowed');
         export const wildcardInFunction = () => getRawString('Diagnostic.wildcardInFunction');
+        export const wildcardLibraryImport = () => getRawString('Diagnostic.wildcardLibraryImport');
         export const yieldFromIllegal = () => getRawString('Diagnostic.yieldFromIllegal');
         export const yieldFromOutsideAsync = () => getRawString('Diagnostic.yieldFromOutsideAsync');
         export const yieldOutsideFunction = () => getRawString('Diagnostic.yieldOutsideFunction');

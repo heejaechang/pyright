@@ -227,7 +227,7 @@ export class Binder extends ParseTreeWalker {
                 this._addBuiltInSymbolToCurrentScope('__loader__', node, 'Any');
                 this._addBuiltInSymbolToCurrentScope('__package__', node, 'str');
                 this._addBuiltInSymbolToCurrentScope('__spec__', node, 'Any');
-                this._addBuiltInSymbolToCurrentScope('__path__', node, 'Iterable[str]');
+                this._addBuiltInSymbolToCurrentScope('__path__', node, 'List[str]');
                 this._addBuiltInSymbolToCurrentScope('__file__', node, 'str');
                 this._addBuiltInSymbolToCurrentScope('__cached__', node, 'str');
                 this._addBuiltInSymbolToCurrentScope('__dict__', node, 'Dict[str, Any]');
@@ -394,6 +394,10 @@ export class Binder extends ParseTreeWalker {
 
             if (param.typeAnnotation) {
                 this.walk(param.typeAnnotation);
+            }
+
+            if (param.typeAnnotationComment) {
+                this.walk(param.typeAnnotationComment);
             }
         });
 
@@ -2644,7 +2648,9 @@ export class Binder extends ParseTreeWalker {
         const functionNode = ParseTreeUtils.getEnclosingFunction(node);
 
         if (!functionNode) {
-            this._addError(Localizer.Diagnostic.yieldOutsideFunction(), node);
+            if (!ParseTreeUtils.getEnclosingLambda(node)) {
+                this._addError(Localizer.Diagnostic.yieldOutsideFunction(), node);
+            }
         } else if (functionNode.isAsync && node.nodeType === ParseNodeType.YieldFrom) {
             // PEP 525 indicates that 'yield from' is not allowed in an
             // async function.
@@ -2672,14 +2678,18 @@ export class Binder extends ParseTreeWalker {
             case 'error':
                 diagnostic = this._addError(message, textRange);
                 break;
+
             case 'warning':
                 diagnostic = this._addWarning(message, textRange);
                 break;
+
             case 'information':
                 diagnostic = this._addInformation(message, textRange);
                 break;
+
             case 'none':
                 break;
+
             default:
                 return assertNever(diagLevel, `${diagLevel} is not expected`);
         }

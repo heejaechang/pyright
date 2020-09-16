@@ -110,6 +110,9 @@ export interface DiagnosticRuleSet {
     // Report symbol or module that is imported more than once?
     reportDuplicateImport: DiagnosticLevel;
 
+    // Report use of wildcard import for non-local imports?
+    reportWildcardImportFromLibrary: DiagnosticLevel;
+
     // Report attempts to subscript (index) an Optional type?
     reportOptionalSubscript: DiagnosticLevel;
 
@@ -239,6 +242,7 @@ export function getDiagLevelDiagnosticRules() {
         DiagnosticRule.reportUnusedFunction,
         DiagnosticRule.reportUnusedVariable,
         DiagnosticRule.reportDuplicateImport,
+        DiagnosticRule.reportWildcardImportFromLibrary,
         DiagnosticRule.reportOptionalSubscript,
         DiagnosticRule.reportOptionalMemberAccess,
         DiagnosticRule.reportOptionalCall,
@@ -299,6 +303,7 @@ export function getOffDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnusedFunction: 'none',
         reportUnusedVariable: 'none',
         reportDuplicateImport: 'none',
+        reportWildcardImportFromLibrary: 'none',
         reportOptionalSubscript: 'none',
         reportOptionalMemberAccess: 'none',
         reportOptionalCall: 'none',
@@ -355,6 +360,7 @@ export function getBasicDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnusedFunction: 'none',
         reportUnusedVariable: 'none',
         reportDuplicateImport: 'none',
+        reportWildcardImportFromLibrary: 'warning',
         reportOptionalSubscript: 'none',
         reportOptionalMemberAccess: 'none',
         reportOptionalCall: 'none',
@@ -411,6 +417,7 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnusedFunction: 'error',
         reportUnusedVariable: 'error',
         reportDuplicateImport: 'error',
+        reportWildcardImportFromLibrary: 'error',
         reportOptionalSubscript: 'error',
         reportOptionalMemberAccess: 'error',
         reportOptionalCall: 'error',
@@ -452,6 +459,14 @@ export class ConfigOptions {
     constructor(projectRoot: string, typeCheckingMode?: string) {
         this.projectRoot = projectRoot;
         this.diagnosticRuleSet = ConfigOptions.getDiagnosticRuleSet(typeCheckingMode);
+
+        // If type checking mode is off, allow inference for py.typed sources
+        // since there is little or no downside and possible upside of discovering
+        // more type information in this case. If type checking is enabled, using
+        // type inference in this case can result in false positive errors.
+        if (typeCheckingMode === 'off') {
+            this.disableInferenceForPyTypedSources = false;
+        }
     }
 
     // Absolute directory of project. All relative paths in the config
@@ -507,6 +522,10 @@ export class ConfigOptions {
 
     // Use indexing.
     indexing = false;
+
+    // Avoid using type inferencing for files within packages that claim
+    // to contain type annotations?
+    disableInferenceForPyTypedSources = true;
 
     //---------------------------------------------------------------
     // Diagnostics Rule Set
@@ -610,24 +629,27 @@ export class ConfigOptions {
         typeCheckingMode: string | undefined,
         console: ConsoleInterface,
         diagnosticOverrides?: DiagnosticSeverityOverridesMap,
-        pythonPath?: string
+        pythonPath?: string,
+        skipIncludeSection = false
     ) {
         // Read the "include" entry.
-        this.include = [];
-        if (configObj.include !== undefined) {
-            if (!Array.isArray(configObj.include)) {
-                console.error(`Config "include" entry must must contain an array.`);
-            } else {
-                const filesList = configObj.include as string[];
-                filesList.forEach((fileSpec, index) => {
-                    if (typeof fileSpec !== 'string') {
-                        console.error(`Index ${index} of "include" array should be a string.`);
-                    } else if (isAbsolute(fileSpec)) {
-                        console.error(`Ignoring path "${fileSpec}" in "include" array because it is not relative.`);
-                    } else {
-                        this.include.push(getFileSpec(this.projectRoot, fileSpec));
-                    }
-                });
+        if (!skipIncludeSection) {
+            this.include = [];
+            if (configObj.include !== undefined) {
+                if (!Array.isArray(configObj.include)) {
+                    console.error(`Config "include" entry must must contain an array.`);
+                } else {
+                    const filesList = configObj.include as string[];
+                    filesList.forEach((fileSpec, index) => {
+                        if (typeof fileSpec !== 'string') {
+                            console.error(`Index ${index} of "include" array should be a string.`);
+                        } else if (isAbsolute(fileSpec)) {
+                            console.error(`Ignoring path "${fileSpec}" in "include" array because it is not relative.`);
+                        } else {
+                            this.include.push(getFileSpec(this.projectRoot, fileSpec));
+                        }
+                    });
+                }
             }
         }
 
@@ -710,7 +732,11 @@ export class ConfigOptions {
             }
         }
 
-        const defaultSettings = ConfigOptions.getDiagnosticRuleSet(configTypeCheckingMode || typeCheckingMode);
+        const effectiveTypeCheckingMode = configTypeCheckingMode || typeCheckingMode;
+        const defaultSettings = ConfigOptions.getDiagnosticRuleSet(effectiveTypeCheckingMode);
+        if (effectiveTypeCheckingMode === 'off') {
+            this.disableInferenceForPyTypedSources = false;
+        }
 
         // Apply host provided overrides first and then overrides from the config file
         this.applyDiagnosticOverrides(diagnosticOverrides);
@@ -804,6 +830,13 @@ export class ConfigOptions {
                 configObj.reportDuplicateImport,
                 DiagnosticRule.reportDuplicateImport,
                 defaultSettings.reportDuplicateImport
+            ),
+
+            // Read the "reportWildcardImportFromLibrary" entry.
+            reportWildcardImportFromLibrary: this._convertDiagnosticLevel(
+                configObj.reportWildcardImportFromLibrary,
+                DiagnosticRule.reportWildcardImportFromLibrary,
+                defaultSettings.reportWildcardImportFromLibrary
             ),
 
             // Read the "reportMissingModuleSource" entry.

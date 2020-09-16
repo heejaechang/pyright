@@ -423,6 +423,7 @@ export interface ParameterNode extends ParseNodeBase {
     category: ParameterCategory;
     name?: NameNode;
     typeAnnotation?: ExpressionNode;
+    typeAnnotationComment?: ExpressionNode;
     defaultValue?: ExpressionNode;
 }
 
@@ -1669,6 +1670,7 @@ export interface ImportFromNode extends ParseNodeBase {
     imports: ImportFromAsNode[];
     isWildcardImport: boolean;
     usesParens: boolean;
+    wildcardToken?: Token;
     missingImportKeyword?: boolean;
 }
 
