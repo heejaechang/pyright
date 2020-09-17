@@ -141,4 +141,16 @@ z = b(1, 2, 3).fit(x, y).`;
             { key: 'a.b.fit', value: undefined, spanStart: 25 },
         ]);
     });
+
+    test('tensorflow', () => {
+        const code = `
+import tensorflow as tf
+o = tf.train.`;
+        const ew = walkExpressions(code);
+        const mi = ew.methodInvokations;
+        expect(mi).toIncludeSameMembers([
+            { key: 'tensorflow', value: 'train', spanStart: 31 },
+            { key: 'tensorflow.train', value: undefined, spanStart: 36 },
+        ]);
+    });
 });

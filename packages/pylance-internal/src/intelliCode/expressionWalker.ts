@@ -59,6 +59,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
         // Handle 'missing member name'
         if (node.category === ErrorExpressionCategory.MissingMemberAccessName) {
             switch (node.child?.nodeType) {
+                case ParseNodeType.MemberAccess:
                 case ParseNodeType.Name:
                 case ParseNodeType.Call:
                 case ParseNodeType.Index:
