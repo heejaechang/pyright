@@ -164,15 +164,54 @@
         ],
         "semanticTokenTypes": [
             {
+                "id": "module",
+                "description": "module",
+                "superType": "namespace"
+            },
+            {
+                "id": "intrinsic",
+                "description": "intrinsic",
+                "superType": "operator"
+            },
+            {
                 "id": "selfParameter",
                 "description": "self parameter",
                 "superType": "parameter"
+            },
+            {
+                "id": "clsParameter",
+                "description": "cls parameter",
+                "superType": "parameter"
+            },
+            {
+                "id": "magicFunction",
+                "description": "magic aka dunder function",
+                "superType": "function"
             }
         ],
         "semanticTokenModifiers": [
             {
                 "id": "typeHint",
                 "description": "inside a type hint comment"
+            }
+        ],
+        "semanticTokenScopes": [
+            {
+                "language": "python",
+                "scopes": {
+                    "selfParameter": [
+                        "variable.parameter.function.language.special.self.python"
+                    ],
+                    "clsParameter": [
+                        "variable.parameter.function.language.special.cls.python"
+                    ],
+                    "magicFunction": [
+                        "support.function.magic.python"
+                    ],
+                    "*.typeHint": [
+                        "comment.typehint.type.notation.python"
+                    ]
+                }
             }
         ]
     },

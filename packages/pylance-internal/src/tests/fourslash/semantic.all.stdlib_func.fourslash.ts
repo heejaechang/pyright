@@ -13,16 +13,10 @@
 helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'sem1',
-        tokens: [{ type: 'namespace' }, { type: 'variable' }, { type: 'namespace' }, { type: 'function' }],
+        tokens: [{ type: 'module' }, { type: 'variable' }, { type: 'module' }, { type: 'function' }],
     },
     {
         fileOrStartMarker: 'sem2',
-        tokens: [
-            { type: 'namespace' },
-            { type: 'class' },
-            { type: 'class' },
-            { type: 'function' },
-            { type: 'property' },
-        ],
+        tokens: [{ type: 'module' }, { type: 'class' }, { type: 'class' }, { type: 'function' }, { type: 'property' }],
     },
 ]);

@@ -31,19 +31,19 @@
 helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'sem1',
-        tokens: [{ type: 'namespace' }, { type: 'namespace' }, { type: 'function' }],
+        tokens: [{ type: 'module' }, { type: 'module' }, { type: 'function' }],
     },
     {
         fileOrStartMarker: 'sem2',
-        tokens: [{ type: 'namespace' }, { type: 'namespace' }, { type: 'function' }],
+        tokens: [{ type: 'module' }, { type: 'module' }, { type: 'function' }],
     },
     {
         fileOrStartMarker: 'sem3',
-        tokens: [{ type: 'namespace' }, { type: 'namespace' }],
+        tokens: [{ type: 'module' }, { type: 'module' }],
     },
     {
         fileOrStartMarker: 'sem4',
-        tokens: [{ type: 'namespace' }, { type: 'namespace' }],
+        tokens: [{ type: 'module' }, { type: 'module' }],
     },
     {
         fileOrStartMarker: 'sem5',

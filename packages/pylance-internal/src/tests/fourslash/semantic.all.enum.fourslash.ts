@@ -11,7 +11,7 @@ helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'marker',
         tokens: [
-            { type: 'namespace' },
+            { type: 'module' },
             { type: 'enum' },
             { type: 'enum' },
             { type: 'enum' },
