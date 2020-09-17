@@ -220,7 +220,7 @@ export function throwIfCancellationRequested(token: CancellationToken) {
 let cancellationFolderName: string | undefined;
 
 export function getCancellationFolderName() {
-    return undefined; // cancellationFolderName;
+    return cancellationFolderName;
 }
 
 export function setCancellationFolderName(folderName?: string) {
