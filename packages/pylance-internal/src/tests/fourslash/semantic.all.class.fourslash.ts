@@ -38,6 +38,8 @@
 //// class [|MyClass4|]:
 ////     def [|__init__|]([|self|]):
 ////         pass
+////     def [|not_really_self_param|]([|first|], [|self|]):
+////         pass
 
 helper.verifySemanticTokens([
     {
@@ -83,6 +85,13 @@ helper.verifySemanticTokens([
     },
     {
         fileOrStartMarker: 'sem4',
-        tokens: [{ type: 'class' }, { type: 'magicFunction' }, { type: 'selfParameter' }],
+        tokens: [
+            { type: 'class' },
+            { type: 'magicFunction' },
+            { type: 'selfParameter' },
+            { type: 'function' },
+            { type: 'parameter' },
+            { type: 'parameter' },
+        ],
     },
 ]);

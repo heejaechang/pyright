@@ -6,7 +6,7 @@ import {
     SemanticTokensLegend,
 } from 'vscode-languageserver/node';
 
-import { DeclarationType } from 'pyright-internal/analyzer/declaration';
+import { DeclarationType, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
 import { getEnclosingClass, isWithinAnnotationComment } from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
 import { Program } from 'pyright-internal/analyzer/program';
@@ -218,15 +218,25 @@ class TokenWalker extends ParseTreeWalker {
         return doRangesOverlap(nodeRange, this._range);
     }
 
-    private _getParameterTokenType(node: NameNode): TokenTypes {
-        switch (node.value) {
-            case 'self':
-                return TokenTypes.selfParameter;
-            case 'cls':
-                return TokenTypes.clsParameter;
-            default:
-                return TokenTypes.parameter;
+    private _getParameterTokenType(decl: ParameterDeclaration): TokenTypes {
+        const name = decl.node.name?.value;
+
+        // Only consider self and cls if they are the first parameter
+        const parent = decl.node.parent;
+        if (parent?.nodeType === ParseNodeType.Function) {
+            if (parent.parameters.length > 0 && parent.parameters[0].name?.value === name) {
+                switch (name) {
+                    case 'self':
+                        return TokenTypes.selfParameter;
+                    case 'cls':
+                        return TokenTypes.clsParameter;
+                    default:
+                        return TokenTypes.parameter;
+                }
+            }
         }
+
+        return TokenTypes.parameter;
     }
 
     private _getFunctionTokenType(node: NameNode): TokenTypes {
@@ -251,7 +261,7 @@ class TokenWalker extends ParseTreeWalker {
                     case DeclarationType.Intrinsic:
                         return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
                     case DeclarationType.Parameter:
-                        return { type: this._getParameterTokenType(node), modifiers: TokenModifiers.none };
+                        return { type: this._getParameterTokenType(resolvedDecl), modifiers: TokenModifiers.none };
                     case DeclarationType.SpecialBuiltInClass:
                         return {
                             type: TokenTypes.class,
