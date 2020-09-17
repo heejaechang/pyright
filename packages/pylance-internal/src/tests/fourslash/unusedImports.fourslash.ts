@@ -2,7 +2,8 @@
 
 // @filename: mspythonconfig.json
 //// {
-////   "reportUnusedImport": true
+////   "reportUnusedImport": true,
+////   "reportWildcardImportFromLibrary": false
 //// }
 
 // @filename: testLib1/__init__.py

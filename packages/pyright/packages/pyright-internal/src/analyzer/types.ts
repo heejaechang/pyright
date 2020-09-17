@@ -778,15 +778,19 @@ export const enum FunctionTypeFlags {
     // Function is declared within a type stub fille
     StubDefinition = 1 << 11,
 
+    // Function is declared within a module that claims to be fully typed
+    // (i.e. a "py.typed" file is present).
+    PyTypedDefinition = 1 << 12,
+
     // Function is decorated with @final
-    Final = 1 << 12,
+    Final = 1 << 13,
 
     // Function has one or more parameters that are missing type annotations
-    UnannotatedParams = 1 << 13,
+    UnannotatedParams = 1 << 14,
 
     // Any collection of parameters will match this function. This is used
     // for Callable[..., x].
-    SkipParamCompatibilityCheck = 1 << 14,
+    SkipParamCompatibilityCheck = 1 << 15,
 }
 
 interface FunctionDetails {
@@ -1064,6 +1068,10 @@ export namespace FunctionType {
         return (type.details.flags & FunctionTypeFlags.StubDefinition) !== 0;
     }
 
+    export function isPyTypedDefinition(type: FunctionType) {
+        return (type.details.flags & FunctionTypeFlags.PyTypedDefinition) !== 0;
+    }
+
     export function isFinal(type: FunctionType) {
         return (type.details.flags & FunctionTypeFlags.Final) !== 0;
     }
@@ -1185,7 +1193,7 @@ export interface UnionType extends TypeBase {
 }
 
 export namespace UnionType {
-    export function create(subtypes: Type[] = []) {
+    export function create() {
         const newUnionType: UnionType = {
             category: TypeCategory.Union,
             subtypes: [],
@@ -1386,6 +1394,14 @@ export function isModule(type: Type): type is ModuleType {
 
 export function isTypeVar(type: Type): type is TypeVarType {
     return type.category === TypeCategory.TypeVar;
+}
+
+export function isFunction(type: Type): type is FunctionType {
+    return type.category === TypeCategory.Function;
+}
+
+export function isOverloadedFunction(type: Type): type is OverloadedFunctionType {
+    return type.category === TypeCategory.OverloadedFunction;
 }
 
 export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolean {
