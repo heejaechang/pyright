@@ -6,10 +6,11 @@ import {
     SemanticTokensLegend,
 } from 'vscode-languageserver/node';
 
-import { DeclarationType } from 'pyright-internal/analyzer/declaration';
-import { getEnclosingClass } from 'pyright-internal/analyzer/parseTreeUtils';
+import { DeclarationType, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
+import { getEnclosingClass, isWithinAnnotationComment } from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
 import { Program } from 'pyright-internal/analyzer/program';
+import { isConstantName, isDunderName } from 'pyright-internal/analyzer/symbolNameUtils';
 import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
 import { ClassType, FunctionTypeFlags, TypeCategory } from 'pyright-internal/analyzer/types';
 import { isProperty } from 'pyright-internal/analyzer/typeUtils';
@@ -50,7 +51,10 @@ enum TokenTypes {
     parameter = 15,
     module = 16,
     intrinsic = 17,
-    _ = 18,
+    selfParameter = 18,
+    clsParameter = 19,
+    magicFunction = 20,
+    _ = 21,
 }
 
 enum TokenModifiers {
@@ -60,7 +64,8 @@ enum TokenModifiers {
     abstract = 4,
     async = 8,
     documentation = 16,
-    _ = 17,
+    typeHint = 32,
+    readonly = 64,
 }
 
 interface TokenInfo {
@@ -93,32 +98,21 @@ export function getSemanticTokens(
 
 export class SemanticTokenProvider {
     static computeLegend(capability: SemanticTokensClientCapabilities): SemanticTokensLegend {
-        const clientTokenTypes = new Set<string>(capability.textDocument?.semanticTokens?.tokenTypes ?? []);
-        const clientTokenModifiers = new Set<string>(capability.textDocument?.semanticTokens?.tokenModifiers ?? []);
-
         const tokenTypes: string[] = [];
         for (let i = 0; i < TokenTypes._; i++) {
             const str = TokenTypes[i];
-            if (clientTokenTypes.has(str)) {
-                tokenTypes.push(str);
-            } else {
-                if (str === 'module') {
-                    tokenTypes.push('namespace');
-                } else if (str === 'intrinsic') {
-                    tokenTypes.push('operator');
-                } else {
-                    tokenTypes.push('type');
-                }
-            }
+            tokenTypes.push(str);
         }
 
-        const tokenModifiers: string[] = [];
-        for (let i = 0; i < TokenModifiers._; i++) {
-            const str = TokenModifiers[i];
-            if (clientTokenModifiers.has(str)) {
-                tokenModifiers.push(str);
-            }
-        }
+        const tokenModifiers: string[] = [
+            'declaration',
+            'static',
+            'abstract',
+            'async',
+            'documentation',
+            'typeHint',
+            'readonly',
+        ];
 
         return { tokenTypes, tokenModifiers };
     }
@@ -224,6 +218,35 @@ class TokenWalker extends ParseTreeWalker {
         return doRangesOverlap(nodeRange, this._range);
     }
 
+    private _getParameterTokenType(decl: ParameterDeclaration): TokenTypes {
+        const name = decl.node.name?.value;
+
+        // Only consider self and cls if they are the first parameter
+        const parent = decl.node.parent;
+        if (parent?.nodeType === ParseNodeType.Function) {
+            if (parent.parameters.length > 0 && parent.parameters[0].name?.value === name) {
+                switch (name) {
+                    case 'self':
+                        return TokenTypes.selfParameter;
+                    case 'cls':
+                        return TokenTypes.clsParameter;
+                    default:
+                        return TokenTypes.parameter;
+                }
+            }
+        }
+
+        return TokenTypes.parameter;
+    }
+
+    private _getFunctionTokenType(node: NameNode): TokenTypes {
+        if (isDunderName(node.value)) {
+            return TokenTypes.magicFunction;
+        } else {
+            return TokenTypes.function;
+        }
+    }
+
     private _getNameNodeToken(node: NameNode): TokenInfo | undefined {
         if (this._cachedNodeTokenInfo.has(node)) {
             return this._cachedNodeTokenInfo.get(node);
@@ -233,19 +256,29 @@ class TokenWalker extends ParseTreeWalker {
         if (declarations && declarations.length > 0) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(declarations[0], /* resolveLocalNames */ true);
             if (resolvedDecl) {
+                const isTypeHint = isWithinAnnotationComment(node);
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
                         return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
                     case DeclarationType.Parameter:
-                        return { type: TokenTypes.parameter, modifiers: TokenModifiers.none };
+                        return { type: this._getParameterTokenType(resolvedDecl), modifiers: TokenModifiers.none };
                     case DeclarationType.SpecialBuiltInClass:
-                        return { type: TokenTypes.class, modifiers: TokenModifiers.none };
+                        return {
+                            type: TokenTypes.class,
+                            modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                        };
                     case DeclarationType.Class: {
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
-                            return { type: TokenTypes.enum, modifiers: TokenModifiers.none };
+                            return {
+                                type: TokenTypes.enum,
+                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                            };
                         } else {
-                            return { type: TokenTypes.class, modifiers: TokenModifiers.none };
+                            return {
+                                type: TokenTypes.class,
+                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                            };
                         }
                     }
                     case DeclarationType.Function: {
@@ -259,6 +292,8 @@ class TokenWalker extends ParseTreeWalker {
                             }
 
                             if (declaredType.category === TypeCategory.Function) {
+                                tokenType = this._getFunctionTokenType(node);
+
                                 if (declaredType.details.flags & FunctionTypeFlags.AbstractMethod) {
                                     modifier = modifier | TokenModifiers.abstract;
                                 }
@@ -285,7 +320,10 @@ class TokenWalker extends ParseTreeWalker {
                             // To improve: in 'self.field', 'field' should be a member instead of a variable
                             // this currently works only if the class has a declaration 'field'
                             // if all you have is a line somewhere self.field = 1, then it doesn't know it's a field
-                            return { type: TokenTypes.variable, modifiers: TokenModifiers.none };
+                            return {
+                                type: TokenTypes.variable,
+                                modifiers: isConstantName(node.value) ? TokenModifiers.readonly : TokenModifiers.none,
+                            };
                         }
                         break;
                     }

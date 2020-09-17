@@ -38,15 +38,15 @@ helper.verifySemanticTokens([
     },
     {
         fileOrStartMarker: 'sem2',
-        tokens: [{ type: 'namespace' }, { type: 'function' }, { type: 'function' }, { type: 'function' }],
+        tokens: [{ type: 'module' }, { type: 'function' }, { type: 'function' }, { type: 'function' }],
     },
     {
         fileOrStartMarker: 'sem3',
-        tokens: [{ type: 'namespace' }, { type: 'variable' }, { type: 'variable' }, { type: 'variable' }],
+        tokens: [{ type: 'module' }, { type: 'variable' }, { type: 'variable' }, { type: 'variable' }],
     },
     {
         fileOrStartMarker: 'sem4',
-        tokens: [{ type: 'namespace' }],
+        tokens: [{ type: 'module' }],
     },
     {
         fileOrStartMarker: 'sem5',

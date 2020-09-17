@@ -7,7 +7,7 @@
 ////         [|variable|] = [|parameter|]
 ////
 ////     @[|staticmethod|]
-////     def [|method2|]():
+////     def [|method2|]([|cls|]):
 ////         pass
 ////
 ////     @[|staticmethod|]
@@ -33,18 +33,27 @@
 //// [|mc|].[|method1|](0)
 //// [|mc|].not_exist(0)
 
+// @filename: sem4.py
+//// [|/*sem4*/|]
+//// class [|MyClass4|]:
+////     def [|__init__|]([|self|]):
+////         pass
+////     def [|not_really_self_param|]([|first|], [|self|]):
+////         pass
+
 helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'sem1',
         tokens: [
             { type: 'class' },
             { type: 'function' },
-            { type: 'parameter' },
+            { type: 'selfParameter' },
             { type: 'parameter' },
             { type: 'variable' },
             { type: 'parameter' },
             { type: 'class' },
             { type: 'function', modifiers: ['static'] },
+            { type: 'clsParameter' },
             { type: 'class' },
             { type: 'function', modifiers: ['async', 'static'] },
         ],
@@ -55,23 +64,34 @@ helper.verifySemanticTokens([
             { type: 'class' },
             { type: 'class' },
             { type: 'property' },
-            { type: 'parameter' },
+            { type: 'selfParameter' },
             { type: 'property' },
             { type: 'property' },
-            { type: 'parameter' },
+            { type: 'selfParameter' },
             { type: 'parameter' },
         ],
     },
     {
         fileOrStartMarker: 'sem3',
         tokens: [
-            { type: 'namespace' },
+            { type: 'module' },
             { type: 'class' },
             { type: 'variable' },
             { type: 'class' },
             { type: 'variable' },
             { type: 'function' },
             { type: 'variable' },
+        ],
+    },
+    {
+        fileOrStartMarker: 'sem4',
+        tokens: [
+            { type: 'class' },
+            { type: 'magicFunction' },
+            { type: 'selfParameter' },
+            { type: 'function' },
+            { type: 'parameter' },
+            { type: 'parameter' },
         ],
     },
 ]);

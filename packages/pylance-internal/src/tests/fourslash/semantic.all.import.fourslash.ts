@@ -9,11 +9,11 @@ helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'marker',
         tokens: [
-            { type: 'namespace' },
-            { type: 'namespace' },
-            { type: 'namespace' },
-            { type: 'namespace' },
-            { type: 'namespace' },
+            { type: 'module' },
+            { type: 'module' },
+            { type: 'module' },
+            { type: 'module' },
+            { type: 'module' },
             { type: 'function' },
         ],
     },
