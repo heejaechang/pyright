@@ -55,6 +55,14 @@ npm run package
     "Pylance debug client attach server" and hit the play button to attach to the server process.
     At this point, you should be able to set breakpoints anywhere in the server code.
 
+### Debugging IntelliCode in Pylance test extension
+
+-   Open VS Code extensions folder
+-   Locate IntelliCode model, typically largest file in `extensions\visualstudioexptteam.vscodeintellicode-*\cache`.
+-   Open `src/intelliCode/extension.ts`
+-   Add `this._modelZipPath = '<path_to_the_model>;'`
+-   You should be able to debug IntelliCode model and recommendations.
+
 ### In VS Code Python extension
 
 -   Clone [Python Extension](https://github.com/microsoft/vscode-python) and follow its contributing steps.
