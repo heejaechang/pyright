@@ -28,7 +28,7 @@ abstract class BannerBase {
         return this.memento.update(this.settingName, false);
     }
 
-    abstract async show(): Promise<void>;
+    abstract show(): Promise<void>;
 }
 
 function getActivatePylanceBannerSettingKey(version: string): string {
