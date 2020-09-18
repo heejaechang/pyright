@@ -616,7 +616,11 @@
         "semanticTokenModifiers": [
             {
                 "id": "typeHint",
-                "description": "inside a type hint comment"
+                "description": "inside a type annotation"
+            },
+            {
+                "id": "typeHintComment",
+                "description": "inside a comment style type annotation"
             }
         ],
         "semanticTokenScopes": [
@@ -632,7 +636,7 @@
                     "magicFunction": [
                         "support.function.magic.python"
                     ],
-                    "*.typeHint": [
+                    "*.typeHintComment": [
                         "comment.typehint.type.notation.python"
                     ]
                 }
