@@ -7,7 +7,11 @@ import {
 } from 'vscode-languageserver/node';
 
 import { DeclarationType, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
-import { getEnclosingClass, isWithinAnnotationComment } from 'pyright-internal/analyzer/parseTreeUtils';
+import {
+    getEnclosingClass,
+    isWithinAnnotationComment,
+    isWithinTypeAnnotation,
+} from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
 import { Program } from 'pyright-internal/analyzer/program';
 import { isConstantName, isDunderName } from 'pyright-internal/analyzer/symbolNameUtils';
@@ -65,7 +69,8 @@ enum TokenModifiers {
     async = 8,
     documentation = 16,
     typeHint = 32,
-    readonly = 64,
+    typeHintComment = 64,
+    readonly = 128,
 }
 
 interface TokenInfo {
@@ -111,6 +116,7 @@ export class SemanticTokenProvider {
             'async',
             'documentation',
             'typeHint',
+            'typeHintComment',
             'readonly',
         ];
 
@@ -247,6 +253,16 @@ class TokenWalker extends ParseTreeWalker {
         }
     }
 
+    private _getTypeAnnotationModifiers(node: NameNode): TokenModifiers {
+        if (isWithinAnnotationComment(node)) {
+            return TokenModifiers.typeHintComment;
+        } else if (isWithinTypeAnnotation(node, false)) {
+            return TokenModifiers.typeHint;
+        } else {
+            return TokenModifiers.none;
+        }
+    }
+
     private _getNameNodeToken(node: NameNode): TokenInfo | undefined {
         if (this._cachedNodeTokenInfo.has(node)) {
             return this._cachedNodeTokenInfo.get(node);
@@ -256,7 +272,7 @@ class TokenWalker extends ParseTreeWalker {
         if (declarations && declarations.length > 0) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(declarations[0], /* resolveLocalNames */ true);
             if (resolvedDecl) {
-                const isTypeHint = isWithinAnnotationComment(node);
+                const typeAnnotationModifiers = this._getTypeAnnotationModifiers(node);
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
                         return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
@@ -265,19 +281,19 @@ class TokenWalker extends ParseTreeWalker {
                     case DeclarationType.SpecialBuiltInClass:
                         return {
                             type: TokenTypes.class,
-                            modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                            modifiers: typeAnnotationModifiers,
                         };
                     case DeclarationType.Class: {
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
                             return {
                                 type: TokenTypes.enum,
-                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                                modifiers: typeAnnotationModifiers,
                             };
                         } else {
                             return {
                                 type: TokenTypes.class,
-                                modifiers: isTypeHint ? TokenModifiers.typeHint : TokenModifiers.none,
+                                modifiers: typeAnnotationModifiers,
                             };
                         }
                     }
