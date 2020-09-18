@@ -616,7 +616,7 @@
         "semanticTokenModifiers": [
             {
                 "id": "typeHint",
-                "description": "inside a regular (Python 3.5+) type annotation"
+                "description": "inside a type annotation"
             },
             {
                 "id": "typeHintComment",
