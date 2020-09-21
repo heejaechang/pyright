@@ -43,13 +43,13 @@ import {
     isModule,
     isNone,
     isObject,
-    isTypeVar,
     isUnbound,
     isUnknown,
     ObjectType,
     Type,
     TypeBase,
     TypeCategory,
+    UnknownType,
 } from '../analyzer/types';
 import {
     doForSubtypes,
@@ -57,7 +57,7 @@ import {
     getMembersForClass,
     getMembersForModule,
     isProperty,
-    specializeType,
+    makeTypeVarsConcrete,
 } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
@@ -174,7 +174,7 @@ export interface CompletionItemData {
     workspacePath: string;
     position: Position;
     autoImportText?: string;
-    symbolId?: number;
+    symbolLabel?: string;
 }
 
 // ModuleContext attempts to gather info for unknown types
@@ -393,7 +393,7 @@ export class CompletionProvider {
             CompletionProvider._mostRecentCompletions.pop();
         }
 
-        if (completionItemData.symbolId) {
+        if (completionItemData.symbolLabel) {
             this._itemToResolve = completionItem;
 
             // Rerun the completion lookup. It will fill in additional information
@@ -562,10 +562,7 @@ export class CompletionProvider {
 
         if (leftType) {
             doForSubtypes(leftType, (subtype) => {
-                let specializedSubtype = subtype;
-                if (isTypeVar(subtype)) {
-                    specializedSubtype = specializeType(subtype, /* typeVarMap */ undefined, /* makeConcrete */ true);
-                }
+                const specializedSubtype = makeTypeVarsConcrete(subtype);
 
                 if (isObject(specializedSubtype)) {
                     getMembersForClass(specializedSubtype.classType, symbolTable, /* includeInstanceVars */ true);
@@ -591,7 +588,10 @@ export class CompletionProvider {
                 return undefined;
             });
 
-            const objectThrough: ObjectType | undefined = leftType && isObject(leftType) ? leftType : undefined;
+            const specializedLeftType = makeTypeVarsConcrete(leftType);
+            const objectThrough: ObjectType | undefined = isObject(specializedLeftType)
+                ? specializedLeftType
+                : undefined;
             this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
 
             // If we dont know this type, look for a module we should stub
@@ -1205,9 +1205,9 @@ export class CompletionProvider {
                 // Are we resolving a completion item? If so, see if this symbol
                 // is the one that we're trying to match.
                 if (this._itemToResolve) {
-                    const completionItemData = this._itemToResolve.data;
+                    const completionItemData = this._itemToResolve.data as CompletionItemData;
 
-                    if (completionItemData.symbolId === symbol.id) {
+                    if (completionItemData.symbolLabel === name) {
                         // This call can be expensive to perform on every completion item
                         // that we return, so we do it lazily in the "resolve" callback.
                         const type = this._evaluator.getEffectiveTypeOfSymbol(symbol);
@@ -1228,7 +1228,18 @@ export class CompletionProvider {
                                         ? this._evaluator.bindFunctionToClassOrObject(objectThrough, type, false)
                                         : type;
                                     if (functionType) {
-                                        if (functionType.category === TypeCategory.OverloadedFunction) {
+                                        if (isProperty(functionType) && objectThrough) {
+                                            const propertyType =
+                                                this._evaluator.getGetterTypeFromProperty(
+                                                    functionType.classType,
+                                                    /* inferTypeIfNeeded */ true
+                                                ) || UnknownType.create();
+                                            typeDetail =
+                                                name +
+                                                ': ' +
+                                                this._evaluator.printType(propertyType, /* expandTypeAlias */ false) +
+                                                ' (property)';
+                                        } else if (functionType.category === TypeCategory.OverloadedFunction) {
                                             typeDetail = functionType.overloads
                                                 .map(
                                                     (overload) =>
@@ -1317,8 +1328,7 @@ export class CompletionProvider {
                 undefined,
                 autoImportText,
                 textEdit,
-                additionalTextEdits,
-                symbol.id
+                additionalTextEdits
             );
         } else {
             // Does the symbol have no declaration but instead has a synthesized type?
@@ -1334,8 +1344,7 @@ export class CompletionProvider {
                     undefined,
                     undefined,
                     textEdit,
-                    additionalTextEdits,
-                    symbol.id
+                    additionalTextEdits
                 );
             }
         }
@@ -1350,8 +1359,7 @@ export class CompletionProvider {
         documentation?: string,
         autoImportText?: string,
         textEdit?: TextEdit,
-        additionalTextEdits?: TextEditAction[],
-        symbolId?: number
+        additionalTextEdits?: TextEditAction[]
     ) {
         const similarity = StringUtils.computeCompletionSimilarity(filter, name);
 
@@ -1382,9 +1390,7 @@ export class CompletionProvider {
                 completionItem.sortText = this._makeSortText(SortCategory.NormalSymbol, name);
             }
 
-            if (symbolId !== undefined) {
-                completionItemData.symbolId = symbolId;
-            }
+            completionItemData.symbolLabel = name;
 
             let markdownString = '';
 
