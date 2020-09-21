@@ -12,9 +12,7 @@
 
     helper.verifyHighlightReferences({
         marker: {
-            references: ranges.map((r) => {
-                return { range: helper.convertPositionRange(r) };
-            }),
+            references: [], // Document highlighting for string literals is disabled.
         },
     });
 }
