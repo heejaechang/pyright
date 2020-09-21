@@ -636,6 +636,12 @@ test('Properties6', () => {
     validateResults(analysisResult2, 0);
 });
 
+test('Properties7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['properties7.py']);
+
+    validateResults(analysisResults, 2);
+});
+
 test('Operators1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators1.py']);
 
@@ -1226,6 +1232,12 @@ test('Assignment7', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Assignment8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment8.py']);
+
+    validateResults(analysisResults, 1);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -1249,6 +1261,12 @@ test('Super1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super1.py']);
 
     validateResults(analysisResults, 4);
+});
+
+test('Super2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super2.py']);
+
+    validateResults(analysisResults, 0, 0, 3);
 });
 
 test('NewType1', () => {
@@ -1811,6 +1829,11 @@ test('AssignmentExpr7', () => {
     validateResults(analysisResults, 1);
 });
 
+test('AssignmentExpr8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr8.py']);
+    validateResults(analysisResults, 0);
+});
+
 test('Import1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import1.py']);
     validateResults(analysisResults, 0);
@@ -1994,6 +2017,11 @@ test('MemberAccess4', () => {
 test('MemberAccess5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess5.py']);
     validateResults(analysisResults, 0);
+});
+
+test('MemberAccess6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess6.py']);
+    validateResults(analysisResults, 2);
 });
 
 test('ParamName1', () => {

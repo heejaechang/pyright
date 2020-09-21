@@ -215,6 +215,13 @@ interface TypeResult {
     typeList?: TypeResult[];
     isResolutionCyclical?: boolean;
     expectedTypeDiagAddendum?: DiagnosticAddendum;
+
+    // Used for the output of "super" calls used on the LHS of
+    // a member access. Normally the type of the LHS is the same
+    // as the class or object used to bind the member, but the
+    // "super" call can specify a different class or object to
+    // bind.
+    bindToType?: ClassType | ObjectType;
 }
 
 interface EffectiveTypeResult {
@@ -355,6 +362,10 @@ export const enum MemberAccessFlags {
     // Consider writes to symbols flagged as ClassVars as an error.
     DisallowClassVarWrites = 1 << 4,
 
+    // Allow classes to be bound to instance methods. This is used for
+    // metaclass methods.
+    TreatAsClassMethod = 1 << 5,
+
     // This set of flags is appropriate for looking up methods.
     SkipForMethodLookup = SkipInstanceMembers | SkipGetAttributeCheck,
 }
@@ -491,6 +502,7 @@ export interface TypeEvaluator {
         supportGetItem: boolean
     ) => Type;
     getTypedDictMembersForClass: (classType: ClassType) => Map<string, TypedDictEntry>;
+    getGetterTypeFromProperty: (propertyClass: ClassType, inferTypeIfNeeded: boolean) => Type | undefined;
 
     getEffectiveTypeOfSymbol: (symbol: Symbol) => Type;
     getFunctionDeclaredReturnType: (node: FunctionNode) => Type | undefined;
@@ -588,6 +600,11 @@ interface ReturnTypeInferenceContext {
 // the more types we may be able to infer, but the worse the
 // performance.
 const maxReturnTypeInferenceStackSize = 3;
+
+// How many entries in a list, set, or dict should we examine
+// when inferring the type? We need to cut it off at some point
+// to avoid excessive computation.
+const maxEntriesToUseForInference = 64;
 
 export interface EvaluatorOptions {
     disableInferenceForPyTypedSources: boolean;
@@ -1160,7 +1177,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         usage: EvaluatorUsage,
         diag: DiagnosticAddendum,
         memberAccessFlags = MemberAccessFlags.None,
-        bindToClass?: ClassType
+        bindToType?: ClassType | ObjectType
     ): Type | undefined {
         const memberInfo = getTypeFromClassMemberName(
             errorNode,
@@ -1179,9 +1196,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             ) {
                 if (memberInfo!.isClassMember) {
                     resultType = bindFunctionToClassOrObject(
-                        bindToClass || objectType,
+                        bindToType || objectType,
                         resultType,
-                        !!bindToClass,
+                        (memberAccessFlags & MemberAccessFlags.TreatAsClassMethod) !== 0,
                         errorNode
                     );
                 }
@@ -1207,7 +1224,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             memberName,
             usage,
             diag,
-            memberAccessFlags | MemberAccessFlags.SkipInstanceMembers
+            memberAccessFlags | MemberAccessFlags.SkipInstanceMembers | MemberAccessFlags.SkipGetAttributeCheck
         );
         let isMetaclassMember = false;
 
@@ -1221,7 +1238,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     memberName,
                     usage,
                     new DiagnosticAddendum(),
-                    memberAccessFlags | MemberAccessFlags.SkipInstanceMembers,
+                    memberAccessFlags,
                     classType
                 );
                 isMetaclassMember = true;
@@ -1548,6 +1565,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
     function getDeclaredTypeForExpression(expression: ExpressionNode): Type | undefined {
         let symbol: Symbol | undefined;
         let classOrObjectBase: ClassType | ObjectType | undefined;
+        let memberAccessClass: Type | undefined;
 
         switch (expression.nodeType) {
             case ParseNodeType.Name: {
@@ -1573,6 +1591,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         ClassMemberLookupFlags.DeclaredTypesOnly
                     );
                     classOrObjectBase = baseType;
+                    memberAccessClass = classMemberInfo?.classType;
                 } else if (isClass(baseType)) {
                     classMemberInfo = lookUpClassMember(
                         baseType,
@@ -1580,6 +1599,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         ClassMemberLookupFlags.SkipInstanceVariables | ClassMemberLookupFlags.DeclaredTypesOnly
                     );
                     classOrObjectBase = baseType;
+                    memberAccessClass = classMemberInfo?.classType;
                 }
 
                 if (classMemberInfo) {
@@ -1631,6 +1651,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 }
 
                 if (classOrObjectBase) {
+                    if (memberAccessClass && isClass(memberAccessClass)) {
+                        declaredType = partiallySpecializeType(declaredType, memberAccessClass);
+                    }
+
                     declaredType = bindFunctionToClassOrObject(
                         classOrObjectBase,
                         declaredType,
@@ -3503,13 +3527,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     // represents a class.
                     return getTypeFromMemberAccessWithBaseType(
                         node,
-                        { type: classFromTypeObject, node: baseTypeResult.node },
+                        { type: classFromTypeObject, node: baseTypeResult.node, bindToType: baseTypeResult.bindToType },
                         usage,
                         flags
                     );
                 }
 
-                type = getTypeFromObjectMember(node.memberName, baseType, memberName, usage, diag);
+                type = getTypeFromObjectMember(
+                    node.memberName,
+                    baseType,
+                    memberName,
+                    usage,
+                    diag,
+                    /* memberAccessFlags */ undefined,
+                    baseTypeResult.bindToType
+                );
                 break;
             }
 
@@ -3681,12 +3713,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         flags: MemberAccessFlags,
         bindToClass?: ClassType
     ): ClassMemberLookup | undefined {
-        // If this is a special type (like "List") that has an alias
-        // class (like "list"), switch to the alias, which defines
-        // the members.
-        if (classType.details.aliasClass) {
-            classType = classType.details.aliasClass;
-        }
+        // If this is a special type (like "List") that has an alias class (like
+        // "list"), switch to the alias, which defines the members.
+        classType = classType.details.aliasClass || classType;
 
         let classLookupFlags = ClassMemberLookupFlags.Default;
         if (flags & MemberAccessFlags.SkipInstanceMembers) {
@@ -3713,14 +3742,28 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         if (memberInfo) {
-            let type: Type;
+            let type: Type | undefined;
             if (usage.method === 'get') {
                 type = getTypeOfMember(memberInfo);
             } else {
-                // If the usage indicates a 'set' or 'delete', use
-                // only the declared type to avoid circular
+                // If the usage indicates a 'set' or 'delete' and the access is within the
+                // class definition itself, use only the declared type to avoid circular
                 // type evaluation.
-                type = getDeclaredTypeOfSymbol(memberInfo.symbol) || UnknownType.create();
+                const containingClass = ParseTreeUtils.getEnclosingClass(errorNode);
+                if (containingClass) {
+                    const containingClassType = getTypeOfClass(containingClass)?.classType;
+                    if (
+                        containingClassType &&
+                        isClass(containingClassType) &&
+                        ClassType.isSameGenericClass(containingClassType, classType)
+                    ) {
+                        type = getDeclaredTypeOfSymbol(memberInfo.symbol) || UnknownType.create();
+                    }
+                }
+
+                if (!type) {
+                    type = getTypeOfMember(memberInfo);
+                }
             }
 
             if (usage.method === 'set' && memberInfo.symbol.isClassVar()) {
@@ -3746,163 +3789,21 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 }
             }
 
-            // Apply special access methods "__get__", "__set__", or "__delete__".
-            let isTypeValid = true;
-            type = doForSubtypes(type, (subtype) => {
-                if (isObject(subtype)) {
-                    let accessMethodName: string;
+            const objectAccessType = applyObjectAccessMethod(
+                type,
+                memberInfo,
+                classType,
+                (flags & MemberAccessFlags.SkipInstanceMembers) === 0,
+                errorNode,
+                memberName,
+                usage,
+                diag
+            );
 
-                    if (usage.method === 'get') {
-                        accessMethodName = '__get__';
-                    } else if (usage.method === 'set') {
-                        accessMethodName = '__set__';
-                    } else {
-                        accessMethodName = '__delete__';
-                    }
-
-                    const memberClassType = subtype.classType;
-                    const accessMethod = lookUpClassMember(
-                        memberClassType,
-                        accessMethodName,
-                        ClassMemberLookupFlags.SkipInstanceVariables
-                    );
-
-                    // Handle properties specially.
-                    if (ClassType.isPropertyClass(subtype.classType)) {
-                        if (usage.method === 'set') {
-                            if (!accessMethod) {
-                                diag.addMessage(
-                                    Localizer.DiagnosticAddendum.propertyMissingSetter().format({ name: memberName })
-                                );
-                                isTypeValid = false;
-                                return undefined;
-                            }
-                        } else if (usage.method === 'del') {
-                            if (!accessMethod) {
-                                diag.addMessage(
-                                    Localizer.DiagnosticAddendum.propertyMissingDeleter().format({ name: memberName })
-                                );
-                                isTypeValid = false;
-                                return undefined;
-                            }
-                        }
-                    }
-
-                    if (accessMethod) {
-                        let accessMethodType = getTypeOfMember(accessMethod);
-
-                        // If it's an overloaded function, determine which overload to use.
-                        if (accessMethodType.category === TypeCategory.OverloadedFunction) {
-                            const argList: FunctionArgument[] = [
-                                {
-                                    argumentCategory: ArgumentCategory.Simple,
-                                    type: ObjectType.create(memberClassType),
-                                },
-                                {
-                                    argumentCategory: ArgumentCategory.Simple,
-                                    type:
-                                        flags & MemberAccessFlags.SkipInstanceMembers
-                                            ? NoneType.createInstance()
-                                            : ObjectType.create(classType),
-                                },
-                                {
-                                    argumentCategory: ArgumentCategory.Simple,
-                                    type: AnyType.create(),
-                                },
-                            ];
-
-                            const overload = findOverloadedFunctionType(
-                                errorNode,
-                                argList,
-                                accessMethodType,
-                                /* expectedType */ undefined
-                            );
-                            if (overload) {
-                                accessMethodType = overload;
-                            }
-                        }
-
-                        if (accessMethodType && accessMethodType.category === TypeCategory.Function) {
-                            // Bind the accessor to the base object type.
-                            const boundMethodType = bindFunctionToClassOrObject(
-                                bindToClass || ObjectType.create(classType),
-                                accessMethodType,
-                                bindToClass !== undefined,
-                                errorNode
-                            );
-
-                            if (boundMethodType) {
-                                accessMethodType = boundMethodType as FunctionType;
-
-                                if (usage.method === 'get') {
-                                    const returnType = getFunctionEffectiveReturnType(accessMethodType);
-                                    if (isClass(memberInfo!.classType)) {
-                                        return partiallySpecializeType(returnType, memberInfo!.classType);
-                                    }
-                                    return returnType;
-                                } else {
-                                    if (usage.method === 'set') {
-                                        // Verify that the setter's parameter type matches
-                                        // the type of the value being assigned.
-                                        if (accessMethodType.details.parameters.length >= 2) {
-                                            const setValueType = accessMethodType.details.parameters[1].type;
-                                            if (!canAssignType(setValueType, usage.setType!, diag)) {
-                                                isTypeValid = false;
-                                                return undefined;
-                                            }
-                                        }
-                                    }
-
-                                    // The type isn't important for set or delete usage.
-                                    // We just need to return some defined type.
-                                    return AnyType.create();
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (usage.method === 'set') {
-                    let enforceTargetType = false;
-
-                    if (memberInfo!.symbol.hasTypedDeclarations()) {
-                        // If the member has a declared type, we will enforce it.
-                        enforceTargetType = true;
-                    } else {
-                        // If the member has no declared type, we will enforce it
-                        // if this assignment isn't within the enclosing class. If
-                        // it is within the enclosing class, the assignment is used
-                        // to infer the type of the member.
-                        if (!memberInfo!.symbol.getDeclarations().some((decl) => decl.node === errorNode)) {
-                            enforceTargetType = true;
-                        }
-                    }
-
-                    if (enforceTargetType) {
-                        let effectiveType = subtype;
-
-                        // If the code is patching a method (defined on the class)
-                        // with an object-level function, strip the "self" parameter
-                        // off the original type. This is sometimes done for test
-                        // purposes to override standard behaviors of specific methods.
-                        if ((flags & MemberAccessFlags.SkipInstanceMembers) === 0) {
-                            if (!memberInfo!.isInstanceMember && subtype.category === TypeCategory.Function) {
-                                if (FunctionType.isClassMethod(subtype) || FunctionType.isInstanceMethod(subtype)) {
-                                    effectiveType = stripFirstParameter(subtype);
-                                }
-                            }
-                        }
-
-                        return effectiveType;
-                    }
-                }
-
-                return subtype;
-            });
-
-            if (!isTypeValid) {
+            if (!objectAccessType) {
                 return undefined;
             }
+            type = objectAccessType;
 
             if (usage.method === 'set') {
                 // Verify that the assigned type is compatible.
@@ -3914,7 +3815,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             classType: printObjectTypeForClass(classType),
                         })
                     );
-                    isTypeValid = false;
                     return undefined;
                 }
             }
@@ -3926,78 +3826,256 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         if (!(flags & MemberAccessFlags.SkipGetAttributeCheck)) {
-            if (usage.method === 'get') {
-                // See if the class has a "__getattribute__" or "__getattr__" method.
-                // If so, arbitrary members are supported.
-                const getAttribType = getTypeFromClassMember(
-                    errorNode,
-                    classType,
-                    '__getattribute__',
-                    { method: 'get' },
-                    new DiagnosticAddendum(),
-                    MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
-                );
-
-                if (getAttribType && getAttribType.category === TypeCategory.Function) {
-                    return {
-                        type: getFunctionEffectiveReturnType(getAttribType),
-                        isClassMember: false,
-                    };
-                }
-
-                const getAttrType = getTypeFromClassMember(
-                    errorNode,
-                    classType,
-                    '__getattr__',
-                    { method: 'get' },
-                    new DiagnosticAddendum(),
-                    MemberAccessFlags.SkipForMethodLookup
-                );
-                if (getAttrType && getAttrType.category === TypeCategory.Function) {
-                    return {
-                        type: getFunctionEffectiveReturnType(getAttrType),
-                        isClassMember: false,
-                    };
-                }
-            } else if (usage.method === 'set') {
-                const setAttrType = getTypeFromClassMember(
-                    errorNode,
-                    classType,
-                    '__setattr__',
-                    { method: 'get' },
-                    new DiagnosticAddendum(),
-                    MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
-                );
-                if (setAttrType) {
-                    // The type doesn't matter for a set usage. We just need
-                    // to return a defined type.
-                    return {
-                        type: AnyType.create(),
-                        isClassMember: false,
-                    };
-                }
-            } else {
-                assert(usage.method === 'del');
-                const delAttrType = getTypeFromClassMember(
-                    errorNode,
-                    classType,
-                    '__detattr__',
-                    { method: 'get' },
-                    new DiagnosticAddendum(),
-                    MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
-                );
-                if (delAttrType) {
-                    // The type doesn't matter for a delete usage. We just need
-                    // to return a defined type.
-                    return {
-                        type: AnyType.create(),
-                        isClassMember: false,
-                    };
-                }
+            const generalAttrType = applyGeneralAttributeAccess(classType, errorNode, usage);
+            if (generalAttrType) {
+                return {
+                    type: generalAttrType,
+                    isClassMember: false,
+                };
             }
         }
 
         diag.addMessage(Localizer.DiagnosticAddendum.memberUnknown().format({ name: memberName }));
+        return undefined;
+    }
+
+    // Applies special access methods "__get__", "__set__", or "__delete__".
+    function applyObjectAccessMethod(
+        type: Type,
+        memberInfo: ClassMember,
+        classType: ClassType,
+        isAccessedThroughObject: boolean,
+        errorNode: ExpressionNode,
+        memberName: string,
+        usage: EvaluatorUsage,
+        diag: DiagnosticAddendum
+    ): Type | undefined {
+        let isTypeValid = true;
+
+        type = doForSubtypes(type, (subtype) => {
+            if (isObject(subtype)) {
+                let accessMethodName: string;
+
+                if (usage.method === 'get') {
+                    accessMethodName = '__get__';
+                } else if (usage.method === 'set') {
+                    accessMethodName = '__set__';
+                } else {
+                    accessMethodName = '__delete__';
+                }
+
+                const memberClassType = subtype.classType;
+                const accessMethod = lookUpClassMember(
+                    memberClassType,
+                    accessMethodName,
+                    ClassMemberLookupFlags.SkipInstanceVariables
+                );
+
+                // Handle properties specially.
+                if (ClassType.isPropertyClass(subtype.classType)) {
+                    if (usage.method === 'set') {
+                        if (!accessMethod) {
+                            diag.addMessage(
+                                Localizer.DiagnosticAddendum.propertyMissingSetter().format({ name: memberName })
+                            );
+                            isTypeValid = false;
+                            return undefined;
+                        }
+                    } else if (usage.method === 'del') {
+                        if (!accessMethod) {
+                            diag.addMessage(
+                                Localizer.DiagnosticAddendum.propertyMissingDeleter().format({ name: memberName })
+                            );
+                            isTypeValid = false;
+                            return undefined;
+                        }
+                    }
+                }
+
+                if (accessMethod) {
+                    let accessMethodType = getTypeOfMember(accessMethod);
+                    const argList: FunctionArgument[] = [
+                        {
+                            argumentCategory: ArgumentCategory.Simple,
+                            type: subtype,
+                        },
+                        {
+                            argumentCategory: ArgumentCategory.Simple,
+                            type: isAccessedThroughObject ? ObjectType.create(classType) : NoneType.createInstance(),
+                        },
+                        {
+                            argumentCategory: ArgumentCategory.Simple,
+                            type: AnyType.create(),
+                        },
+                    ];
+
+                    // If it's an overloaded function, determine which overload to use.
+                    if (accessMethodType.category === TypeCategory.OverloadedFunction) {
+                        const overload = findOverloadedFunctionType(
+                            errorNode,
+                            argList,
+                            accessMethodType,
+                            /* expectedType */ undefined
+                        );
+                        if (overload) {
+                            accessMethodType = overload;
+                        }
+                    }
+
+                    if (accessMethodType && accessMethodType.category === TypeCategory.Function) {
+                        // Bind the accessor to the base object type.
+                        const boundMethodType = bindFunctionToClassOrObject(
+                            subtype,
+                            accessMethodType,
+                            /* treatAsClassMember */ false,
+                            errorNode
+                        );
+
+                        if (boundMethodType) {
+                            accessMethodType = boundMethodType as FunctionType;
+
+                            if (usage.method === 'get') {
+                                const returnType =
+                                    validateFunctionArguments(
+                                        errorNode,
+                                        argList.slice(1),
+                                        accessMethodType,
+                                        new TypeVarMap(),
+                                        /* skipUnknownArgCheck */ true,
+                                        /* inferReturnTypeIfNeeded */ true,
+                                        /* expectedType */ undefined
+                                    ).returnType || UnknownType.create();
+                                if (isClass(memberInfo!.classType)) {
+                                    return partiallySpecializeType(returnType, memberInfo!.classType);
+                                }
+                                return returnType;
+                            } else {
+                                if (usage.method === 'set') {
+                                    // Verify that the setter's parameter type matches
+                                    // the type of the value being assigned.
+                                    if (accessMethodType.details.parameters.length >= 2) {
+                                        const setValueType = accessMethodType.details.parameters[1].type;
+                                        if (!canAssignType(setValueType, usage.setType!, diag)) {
+                                            isTypeValid = false;
+                                            return undefined;
+                                        }
+                                    }
+                                }
+
+                                // The type isn't important for set or delete usage.
+                                // We just need to return some defined type.
+                                return AnyType.create();
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (usage.method === 'set') {
+                let enforceTargetType = false;
+
+                if (memberInfo!.symbol.hasTypedDeclarations()) {
+                    // If the member has a declared type, we will enforce it.
+                    enforceTargetType = true;
+                } else {
+                    // If the member has no declared type, we will enforce it
+                    // if this assignment isn't within the enclosing class. If
+                    // it is within the enclosing class, the assignment is used
+                    // to infer the type of the member.
+                    if (!memberInfo!.symbol.getDeclarations().some((decl) => decl.node === errorNode)) {
+                        enforceTargetType = true;
+                    }
+                }
+
+                if (enforceTargetType) {
+                    let effectiveType = subtype;
+
+                    // If the code is patching a method (defined on the class)
+                    // with an object-level function, strip the "self" parameter
+                    // off the original type. This is sometimes done for test
+                    // purposes to override standard behaviors of specific methods.
+                    if (isAccessedThroughObject) {
+                        if (!memberInfo!.isInstanceMember && subtype.category === TypeCategory.Function) {
+                            if (FunctionType.isClassMethod(subtype) || FunctionType.isInstanceMethod(subtype)) {
+                                effectiveType = stripFirstParameter(subtype);
+                            }
+                        }
+                    }
+
+                    return effectiveType;
+                }
+            }
+
+            return subtype;
+        });
+
+        return isTypeValid ? type : undefined;
+    }
+
+    // Applies the __getattr__, __setattr__ or __delattr__ method if present.
+    function applyGeneralAttributeAccess(
+        classType: ClassType,
+        errorNode: ExpressionNode,
+        usage: EvaluatorUsage
+    ): Type | undefined {
+        if (usage.method === 'get') {
+            // See if the class has a "__getattribute__" or "__getattr__" method.
+            // If so, arbitrary members are supported.
+            const getAttribType = getTypeFromClassMember(
+                errorNode,
+                classType,
+                '__getattribute__',
+                { method: 'get' },
+                new DiagnosticAddendum(),
+                MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
+            );
+
+            if (getAttribType && getAttribType.category === TypeCategory.Function) {
+                return getFunctionEffectiveReturnType(getAttribType);
+            }
+
+            const getAttrType = getTypeFromClassMember(
+                errorNode,
+                classType,
+                '__getattr__',
+                { method: 'get' },
+                new DiagnosticAddendum(),
+                MemberAccessFlags.SkipForMethodLookup
+            );
+            if (getAttrType && getAttrType.category === TypeCategory.Function) {
+                return getFunctionEffectiveReturnType(getAttrType);
+            }
+        } else if (usage.method === 'set') {
+            const setAttrType = getTypeFromClassMember(
+                errorNode,
+                classType,
+                '__setattr__',
+                { method: 'get' },
+                new DiagnosticAddendum(),
+                MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
+            );
+            if (setAttrType) {
+                // The type doesn't matter for a set usage. We just need
+                // to return a defined type.
+                return AnyType.create();
+            }
+        } else {
+            assert(usage.method === 'del');
+            const delAttrType = getTypeFromClassMember(
+                errorNode,
+                classType,
+                '__detattr__',
+                { method: 'get' },
+                new DiagnosticAddendum(),
+                MemberAccessFlags.SkipForMethodLookup | MemberAccessFlags.SkipObjectBaseClass
+            );
+            if (delAttrType) {
+                // The type doesn't matter for a delete usage. We just need
+                // to return a defined type.
+                return AnyType.create();
+            }
+        }
+
         return undefined;
     }
 
@@ -4622,10 +4700,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         // Handle the built-in "super" call specially.
         if (node.leftExpression.nodeType === ParseNodeType.Name && node.leftExpression.value === 'super') {
-            return {
-                type: getTypeFromSuperCall(node),
-                node,
-            };
+            return getTypeFromSuperCall(node);
         }
 
         // Handle the special-case "reveal_type" call.
@@ -4669,7 +4744,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         );
     }
 
-    function getTypeFromSuperCall(node: CallNode): Type {
+    function getTypeFromSuperCall(node: CallNode): TypeResult {
         if (node.arguments.length > 2) {
             addError(Localizer.Diagnostic.superCallArgCount(), node.arguments[2]);
         }
@@ -4698,30 +4773,33 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         // Determine whether to further narrow the type.
-        let narrowedClassType: Type;
+        let bindToType: ClassType | ObjectType | undefined;
         if (node.arguments.length > 1) {
-            narrowedClassType = specializeType(
+            const secondArgType = specializeType(
                 getTypeOfExpression(node.arguments[1].valueExpression).type,
                 /* typeVarMap */ undefined
             );
 
             let reportError = false;
 
-            if (isAnyOrUnknown(narrowedClassType)) {
+            if (isAnyOrUnknown(secondArgType)) {
                 // Ignore unknown or any types.
-            } else if (isObject(narrowedClassType)) {
-                const childClassType = narrowedClassType.classType;
+            } else if (isObject(secondArgType)) {
                 if (isClass(targetClassType)) {
-                    if (!derivesFromClassRecursive(childClassType, targetClassType, /* ignoreUnknown */ true)) {
+                    if (
+                        !derivesFromClassRecursive(secondArgType.classType, targetClassType, /* ignoreUnknown */ true)
+                    ) {
                         reportError = true;
                     }
                 }
-            } else if (isClass(narrowedClassType)) {
+                bindToType = secondArgType;
+            } else if (isClass(secondArgType)) {
                 if (isClass(targetClassType)) {
-                    if (!derivesFromClassRecursive(narrowedClassType, targetClassType, /* ignoreUnknown */ true)) {
+                    if (!derivesFromClassRecursive(secondArgType, targetClassType, /* ignoreUnknown */ true)) {
                         reportError = true;
                     }
                 }
+                bindToType = secondArgType;
             } else {
                 reportError = true;
             }
@@ -4748,7 +4826,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 ClassMemberLookupFlags.SkipOriginalClass
             );
             if (lookupResults && isClass(lookupResults.classType)) {
-                return ObjectType.create(lookupResults.classType);
+                return {
+                    type: ObjectType.create(lookupResults.classType),
+                    node,
+                    bindToType,
+                };
             }
         }
 
@@ -4758,19 +4840,28 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             // If the class derives from one or more unknown classes,
             // return unknown here to prevent spurious errors.
             if (targetClassType.details.mro.some((mroBase) => isAnyOrUnknown(mroBase))) {
-                return UnknownType.create();
+                return {
+                    type: UnknownType.create(),
+                    node,
+                };
             }
 
             const baseClasses = targetClassType.details.baseClasses;
             if (baseClasses.length > 0) {
                 const baseClassType = baseClasses[0];
                 if (isClass(baseClassType)) {
-                    return ObjectType.create(baseClassType);
+                    return {
+                        type: ObjectType.create(baseClassType),
+                        node,
+                    };
                 }
             }
         }
 
-        return UnknownType.create();
+        return {
+            type: UnknownType.create(),
+            node,
+        };
     }
 
     function getTypeFromCallWithBaseType(
@@ -7488,13 +7579,18 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         // Create a helper lambda for object subtypes.
         const handleObjectSubtype = (subtype: ObjectType, bindToClassType?: ClassType) => {
+            let flags = MemberAccessFlags.SkipForMethodLookup;
+            if (bindToClassType) {
+                flags |= MemberAccessFlags.TreatAsClassMethod;
+            }
+
             const magicMethodType = getTypeFromObjectMember(
                 errorNode,
                 subtype,
                 magicMethodName,
                 { method: 'get' },
                 new DiagnosticAddendum(),
-                MemberAccessFlags.SkipForMethodLookup,
+                flags,
                 bindToClassType
             );
 
@@ -7565,11 +7661,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
     }
 
     function getTypeFromSet(node: SetNode, expectedType: Type | undefined): TypeResult {
-        const entryTypes = node.entries.map((entryNode) => {
-            if (entryNode.nodeType === ParseNodeType.ListComprehension) {
-                return getElementTypeFromListComprehension(entryNode);
+        const entryTypes: Type[] = [];
+        node.entries.forEach((entryNode, index) => {
+            if (index < maxEntriesToUseForInference || expectedType !== undefined) {
+                if (entryNode.nodeType === ParseNodeType.ListComprehension) {
+                    entryTypes.push(getElementTypeFromListComprehension(entryNode));
+                } else {
+                    entryTypes.push(getTypeOfExpression(entryNode).type);
+                }
             }
-            return getTypeOfExpression(entryNode).type;
         });
 
         // If there is an expected type, see if we can match it.
@@ -7654,7 +7754,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         // Infer the key and value types if possible.
-        node.entries.forEach((entryNode) => {
+        node.entries.forEach((entryNode, index) => {
+            if (index >= maxEntriesToUseForInference && !expectedType) {
+                return;
+            }
+
             let addUnknown = true;
 
             if (entryNode.nodeType === ParseNodeType.DictionaryKeyEntry) {
@@ -7826,11 +7930,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         const expectedEntryType = expectedType ? getListTypeArg(expectedType) : undefined;
 
-        let entryTypes = node.entries.map((entry) => {
-            if (entry.nodeType === ParseNodeType.ListComprehension) {
-                return getElementTypeFromListComprehension(entry, expectedEntryType);
+        let entryTypes: Type[] = [];
+        node.entries.forEach((entry, index) => {
+            if (index < maxEntriesToUseForInference || expectedType !== undefined) {
+                if (entry.nodeType === ParseNodeType.ListComprehension) {
+                    entryTypes.push(getElementTypeFromListComprehension(entry, expectedEntryType));
+                } else {
+                    entryTypes.push(getTypeOfExpression(entry, expectedEntryType).type);
+                }
             }
-            return getTypeOfExpression(entry, expectedEntryType).type;
         });
 
         // If there is an expected type, see if we can match it.
@@ -9983,21 +10091,59 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         const fgetSymbol = Symbol.createWithType(SymbolFlags.ClassMember, fget);
         fields.set('fget', fgetSymbol);
 
-        // Fill in the __get__ method.
-        const getFunction = FunctionType.createInstance('__get__', '', FunctionTypeFlags.SynthesizedMethod);
-        getFunction.details.parameters.push({
+        // Fill in the __get__ method with an overload.
+        const getFunction1 = FunctionType.createInstance(
+            '__get__',
+            '',
+            FunctionTypeFlags.SynthesizedMethod | FunctionTypeFlags.Overloaded
+        );
+        getFunction1.details.parameters.push({
             category: ParameterCategory.Simple,
             name: 'self',
-            type: fget.details.parameters.length > 0 ? fget.details.parameters[0].type : AnyType.create(),
-        });
-        getFunction.details.parameters.push({
-            category: ParameterCategory.Simple,
-            name: 'obj',
             type: propertyObject,
         });
-        getFunction.details.declaredReturnType = fget.details.declaredReturnType;
-        getFunction.details.declaration = fget.details.declaration;
-        const getSymbol = Symbol.createWithType(SymbolFlags.ClassMember, getFunction);
+        getFunction1.details.parameters.push({
+            category: ParameterCategory.Simple,
+            name: 'obj',
+            type: NoneType.createInstance(),
+        });
+        getFunction1.details.parameters.push({
+            category: ParameterCategory.Simple,
+            name: 'type',
+            type: AnyType.create(),
+            hasDefault: true,
+            defaultType: AnyType.create(),
+        });
+        getFunction1.details.declaredReturnType = propertyObject;
+        getFunction1.details.declaration = fget.details.declaration;
+
+        const getFunction2 = FunctionType.createInstance(
+            '__get__',
+            '',
+            FunctionTypeFlags.SynthesizedMethod | FunctionTypeFlags.Overloaded
+        );
+        getFunction2.details.parameters.push({
+            category: ParameterCategory.Simple,
+            name: 'self',
+            type: propertyObject,
+        });
+        getFunction2.details.parameters.push({
+            category: ParameterCategory.Simple,
+            name: 'obj',
+            type: fget.details.parameters.length > 0 ? fget.details.parameters[0].type : AnyType.create(),
+        });
+        getFunction2.details.parameters.push({
+            category: ParameterCategory.Simple,
+            name: 'type',
+            type: AnyType.create(),
+            hasDefault: true,
+            defaultType: AnyType.create(),
+        });
+        getFunction2.details.declaredReturnType = fget.details.declaredReturnType;
+        getFunction2.details.declaration = fget.details.declaration;
+
+        const getFunctionOverload = OverloadedFunctionType.create([getFunction1, getFunction2]);
+        const getSymbol = Symbol.createWithType(SymbolFlags.ClassMember, getFunctionOverload);
         fields.set('__get__', getSymbol);
 
         // Fill in the getter, setter and deleter methods.
@@ -13143,12 +13289,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 return UnknownType.create();
             }
 
-            if (!resolvedDecl.isFinal && !resolvedDecl.isConstant && !resolvedDecl.typeAliasName) {
-                return UnknownType.create();
-            }
-
-            if (resolvedDecl.typeAliasName && !resolvedDecl.typeAliasAnnotation) {
-                isSpeculativeTypeAliasFromPyTypedFile = true;
+            if (!resolvedDecl.isFinal && !resolvedDecl.isConstant) {
+                if (!resolvedDecl.typeAliasName) {
+                    return UnknownType.create();
+                } else if (!resolvedDecl.typeAliasAnnotation) {
+                    isSpeculativeTypeAliasFromPyTypedFile = true;
+                }
             }
         }
 
@@ -13825,6 +13971,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     recursionCount + 1
                 );
             }
+        }
+
+        // Everything is assignable to an object.
+        if (ClassType.isBuiltIn(destType, 'object')) {
+            return true;
         }
 
         const destErrorType = reportErrorsUsingObjType ? ObjectType.create(destType) : destType;
@@ -14838,14 +14989,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             return true;
         }
 
-        // NoneType and ModuleType derive from object.
-        if (isNone(srcType) || isModule(srcType)) {
-            if (isObject(destType)) {
-                const destClassType = destType.classType;
-                if (ClassType.isBuiltIn(destClassType, 'object')) {
-                    return true;
-                }
-            }
+        if (isObject(destType) && ClassType.isBuiltIn(destType.classType, 'object')) {
+            // All types (including None, Module, OverloadedFunction) derive from object.
+            return true;
         }
 
         if (isNone(destType)) {
@@ -15656,14 +15802,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
     // If the memberType is an instance or class method, creates a new
     // version of the function that has the "self" or "cls" parameter bound
-    // to it. If treatAsClassMember is true, the function is treated like a
-    // class member even if it's not marked as such. That's needed to
+    // to it. If treatAsClassMethod is true, the function is treated like a
+    // class method even if it's not marked as such. That's needed to
     // special-case the __new__ magic method when it's invoked as a
     // constructor (as opposed to by name).
     function bindFunctionToClassOrObject(
         baseType: ClassType | ObjectType | undefined,
         memberType: Type,
-        treatAsClassMember: boolean,
+        treatAsClassMethod: boolean,
         errorNode: ParseNode | undefined = undefined
     ): Type | undefined {
         if (memberType.category === TypeCategory.Function) {
@@ -15671,11 +15817,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             // first parameter. This is used in cases like constructors.
             if (!baseType) {
                 return stripFirstParameter(memberType);
-            } else if (FunctionType.isInstanceMethod(memberType) && !treatAsClassMember) {
+            } else if (FunctionType.isInstanceMethod(memberType) && !treatAsClassMethod) {
                 if (isObject(baseType)) {
                     return partiallySpecializeFunctionForBoundClassOrObject(baseType, memberType, errorNode);
                 }
-            } else if (FunctionType.isClassMethod(memberType) || treatAsClassMember) {
+            } else if (FunctionType.isClassMethod(memberType) || treatAsClassMethod) {
                 return partiallySpecializeFunctionForBoundClassOrObject(
                     isClass(baseType) ? baseType : baseType.classType,
                     memberType,
@@ -15688,7 +15834,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 const boundMethod = bindFunctionToClassOrObject(
                     baseType,
                     overload,
-                    treatAsClassMember,
+                    treatAsClassMethod,
                     /* errorNode */ undefined
                 );
                 if (boundMethod) {
@@ -15702,7 +15848,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 // No overloads matched, so rebind with the errorNode
                 // to report the error(s) to the user.
                 memberType.overloads.forEach((overload) => {
-                    bindFunctionToClassOrObject(baseType, overload, treatAsClassMember, errorNode);
+                    bindFunctionToClassOrObject(baseType, overload, treatAsClassMethod, errorNode);
                 });
                 return undefined;
             }
@@ -15954,21 +16100,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     return printLiteralType(objType);
                 }
 
-                if (isProperty(type)) {
-                    const getterInfo = lookUpObjectMember(type, 'fget');
-                    if (getterInfo) {
-                        const getter = getTypeOfMember(getterInfo);
-                        if (getter.category === TypeCategory.Function) {
-                            const returnType = getFunctionEffectiveReturnType(getter);
-                            return `${printType(
-                                returnType,
-                                /* expandTypeAlias */ false,
-                                recursionCount + 1
-                            )} (property)`;
-                        }
-                    }
-                }
-
                 return printObjectTypeForClass(objType.classType, recursionCount + 1);
             }
 
@@ -16202,6 +16333,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         resolveAliasDeclaration,
         getTypeFromIterable,
         getTypedDictMembersForClass,
+        getGetterTypeFromProperty,
         getEffectiveTypeOfSymbol,
         getFunctionDeclaredReturnType,
         getFunctionInferredReturnType,
