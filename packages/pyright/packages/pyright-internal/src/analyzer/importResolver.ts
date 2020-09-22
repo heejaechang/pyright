@@ -69,7 +69,7 @@ interface PyTypedInfo {
 }
 
 export class ImportResolver {
-    private _configOptions: ConfigOptions;
+    protected _configOptions: ConfigOptions;
     private _cachedPythonSearchPaths = new Map<string, string[]>();
     private _cachedImportResults = new Map<string, CachedImportResults>();
     private _cachedTypeshedStdLibPath: string | undefined;
@@ -200,7 +200,7 @@ export class ImportResolver {
     }
 
     // Returns the implementation file(s) for the given stub file.
-    getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment): string[] {
+    getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment, _mapCompiled: boolean): string[] {
         const sourceFilePaths: string[] = [];
 
         // When ImportResolver resolves an import to a stub file, a second resolve is done

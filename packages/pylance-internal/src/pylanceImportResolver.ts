@@ -5,6 +5,8 @@
  * resolution of additional type stub paths.
  */
 
+import * as child_process from 'child_process';
+
 import { ImportedModuleDescriptor, ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { ImportResult, ImportType } from 'pyright-internal/analyzer/importResult';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
@@ -13,7 +15,9 @@ import {
     combinePaths,
     ensureTrailingDirectorySeparator,
     getDirectoryPath,
+    getFileName,
     normalizePath,
+    resolvePaths,
 } from 'pyright-internal/common/pathUtils';
 
 function getBundledTypeStubsPath(moduleDirectory?: string) {
@@ -50,6 +54,8 @@ export type ImportMetricsCallback = (results: ImportMetrics) => void;
 export class PylanceImportResolver extends ImportResolver {
     private _importMetrics = new ImportMetrics();
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
+    private _scrapedBuiltinsTempfile: string | undefined;
+    private _scrapedBuiltinsFailed = false;
 
     setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
         this._onImportMetricsCallback = callback;
@@ -82,12 +88,22 @@ export class PylanceImportResolver extends ImportResolver {
         return undefined;
     }
 
-    //override parents version to send stubStats for clearing the cache
     invalidateCache() {
         if (this._onImportMetricsCallback) {
             this._onImportMetricsCallback(this._importMetrics);
         }
         this._importMetrics = new ImportMetrics();
+
+        if (this._scrapedBuiltinsTempfile) {
+            try {
+                this.fileSystem.unlinkSync(this._scrapedBuiltinsTempfile);
+                // eslint-disable-next-line no-empty
+            } catch (e) {}
+
+            this._scrapedBuiltinsTempfile = undefined;
+            this._scrapedBuiltinsFailed = false;
+        }
+
         super.invalidateCache();
     }
 
@@ -95,6 +111,24 @@ export class PylanceImportResolver extends ImportResolver {
         const usage = this._importMetrics;
         this._importMetrics = new ImportMetrics();
         return usage;
+    }
+
+    getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment, mapCompiled: boolean): string[] {
+        // At the moment, source file mapping is filename to filename. If we want to support compiled
+        // modules more generally, we should pass down the full module information, look for the source
+        // file, and if it doesn't exist, give the real module name to the scraper. The below special
+        // cases this as a proof-of-concept to only handle builtins.pyi.
+        if (mapCompiled) {
+            // See SourceFile for this method of checking the file indentity as a builtin.
+            if (getFileName(stubFilePath) === 'builtins.pyi') {
+                const builtinsPath = this._scrapedBuiltinsPath();
+                if (builtinsPath) {
+                    return [builtinsPath];
+                }
+            }
+        }
+
+        return super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
     }
 
     protected addResultsToCache(
@@ -131,6 +165,49 @@ export class PylanceImportResolver extends ImportResolver {
             default: {
                 break;
             }
+        }
+    }
+
+    private _scrapedBuiltinsPath(): string | undefined {
+        if (this._scrapedBuiltinsFailed) {
+            return undefined;
+        }
+
+        if (this._scrapedBuiltinsTempfile) {
+            return this._scrapedBuiltinsTempfile;
+        }
+
+        if (!this._configOptions.pythonPath) {
+            return undefined;
+        }
+
+        try {
+            const commandLineArgs: string[] = [
+                '-W',
+                'ignore',
+                '-B',
+                '-E',
+                resolvePaths(this.fileSystem.getModulePath(), 'scripts', 'scrape_module.py'),
+            ];
+
+            const output = child_process.execFileSync(this._configOptions.pythonPath, commandLineArgs, {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+            });
+
+            if (!output) {
+                return undefined;
+            }
+
+            const tmpfile = this.fileSystem.tmpfile({ prefix: 'builtins', postfix: '.py' });
+            this.fileSystem.writeFileSync(tmpfile, output, 'utf8');
+
+            this._scrapedBuiltinsTempfile = tmpfile;
+            this._scrapedBuiltinsFailed = false;
+            return this._scrapedBuiltinsTempfile;
+        } catch (e) {
+            this._scrapedBuiltinsFailed = true;
+            return undefined;
         }
     }
 }
