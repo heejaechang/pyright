@@ -1184,6 +1184,12 @@ test('Enums2', () => {
     validateResults(analysisResults, 0);
 });
 
+test('Enums3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums3.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('CallbackPrototype1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackPrototype1.py']);
 
@@ -2290,4 +2296,10 @@ test('InitSubclass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['initsubclass1.py']);
 
     validateResults(analysisResults, 2);
+});
+
+test('None1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['none1.py']);
+
+    validateResults(analysisResults, 1);
 });
