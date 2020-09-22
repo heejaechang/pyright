@@ -43,7 +43,7 @@ import * as debug from 'pyright-internal/common/debug';
 import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
 import * as consts from 'pyright-internal/common/pathConsts';
-import { convertUriToPath, normalizeSlashes } from 'pyright-internal/common/pathUtils';
+import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import { Range } from 'pyright-internal/common/textRange';
 import {
@@ -175,20 +175,20 @@ class PylanceServer extends LanguageServerBase {
         try {
             const pythonSection = await this.getConfiguration(workspace.rootUri, pythonSectionName);
             if (pythonSection) {
-                serverSettings.pythonPath = normalizeSlashes(pythonSection.pythonPath);
-                serverSettings.venvPath = normalizeSlashes(pythonSection.venvPath);
+                serverSettings.pythonPath = resolvePaths(workspace.rootPath, pythonSection.pythonPath);
+                serverSettings.venvPath = resolvePaths(workspace.rootPath, pythonSection.venvPath);
             }
 
             const pythonAnalysisSection = await this.getConfiguration(workspace.rootUri, pythonAnalysisSectionName);
             if (pythonAnalysisSection) {
                 const typeshedPaths = pythonAnalysisSection.typeshedPaths;
                 if (typeshedPaths && Array.isArray(typeshedPaths) && typeshedPaths.length > 0) {
-                    serverSettings.typeshedPath = normalizeSlashes(typeshedPaths[0]);
+                    serverSettings.typeshedPath = resolvePaths(workspace.rootPath, typeshedPaths[0]);
                 }
 
                 const stubPath = pythonAnalysisSection.stubPath;
                 if (stubPath && isString(stubPath)) {
-                    serverSettings.stubPath = normalizeSlashes(stubPath);
+                    serverSettings.stubPath = resolvePaths(workspace.rootPath, stubPath);
                 }
 
                 const diagnosticSeverityOverrides = pythonAnalysisSection.diagnosticSeverityOverrides;
@@ -213,7 +213,7 @@ class PylanceServer extends LanguageServerBase {
 
                 const extraPaths = pythonAnalysisSection.extraPaths;
                 if (extraPaths && Array.isArray(extraPaths) && extraPaths.length > 0) {
-                    serverSettings.extraPaths = extraPaths.map((p) => normalizeSlashes(p));
+                    serverSettings.extraPaths = extraPaths.map((p) => resolvePaths(workspace.rootPath, p));
                 }
 
                 serverSettings.autoImportCompletions =
