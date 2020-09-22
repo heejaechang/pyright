@@ -190,7 +190,6 @@ import {
     lookUpObjectMember,
     makeTypeVarsConcrete,
     partiallySpecializeType,
-    printLiteralType,
     printLiteralValue,
     removeFalsinessFromType,
     removeTruthinessFromType,
@@ -623,6 +622,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
     let cancellationToken: CancellationToken | undefined;
     let isDiagnosticSuppressed = false;
     let flowIncompleteGeneration = 1;
+    let noneType: Type | undefined;
 
     const returnTypeInferenceContextStack: ReturnTypeInferenceContext[] = [];
     let returnTypeInferenceTypeCache: TypeCache | undefined;
@@ -789,6 +789,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         checkForCancellation();
 
         expectedType = transformPossibleRecursiveTypeAlias(expectedType);
+
+        // If we haven't already fetched the "NoneType" definition from the
+        // _typeshed stub, do so here. It would be better to fetch this when it's
+        // needed in canAssignType, but we don't have access to the parse tree
+        // at that point.
+        if (!noneType) {
+            noneType = getTypeshedType(node, 'NoneType') || AnyType.create();
+        }
 
         let typeResult: TypeResult | undefined;
         let reportExpectingTypeErrors = (flags & EvaluatorFlags.ExpectingType) !== 0;
@@ -1803,6 +1811,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 return subtype;
             }
 
+            if (isObject(subtype)) {
+                const classType = getClassFromPotentialTypeObject(subtype);
+                if (classType) {
+                    subtype = classType;
+                }
+            }
+
             const diag = new DiagnosticAddendum();
             if (isAnyOrUnknown(subtype)) {
                 return subtype;
@@ -2245,12 +2260,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
     function getTypingType(node: ParseNode, symbolName: string): Type | undefined {
         const fileInfo = getFileInfo(node);
-        const typingImportPath = fileInfo.typingModulePath;
-        if (!typingImportPath) {
+        return getTypeFromTypeshedModule(symbolName, fileInfo.typingModulePath);
+    }
+
+    function getTypeshedType(node: ParseNode, symbolName: string): Type | undefined {
+        const fileInfo = getFileInfo(node);
+        return getTypeFromTypeshedModule(symbolName, fileInfo.typeshedModulePath);
+    }
+
+    function getTypeFromTypeshedModule(symbolName: string, importPath: string | undefined) {
+        if (!importPath) {
             return undefined;
         }
 
-        const lookupResult = importLookup(typingImportPath);
+        const lookupResult = importLookup(importPath);
         if (!lookupResult) {
             return undefined;
         }
@@ -2464,6 +2487,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 const isPrivate = isPrivateOrProtectedName(nameValue);
 
                 if (
+                    TypeBase.isInstance(destType) &&
                     !isConstant &&
                     (!isPrivate || getFileInfo(nameNode).diagnosticRuleSet.reportPrivateUsage === 'none')
                 ) {
@@ -5661,6 +5685,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         Localizer.Diagnostic.noOverload().format({ expression: exprString }) + diagAddendum.getString(),
                         errorNode
                     );
+                    callResult.argumentErrors = true;
                 }
                 break;
             }
@@ -5682,6 +5707,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         Localizer.Diagnostic.typeNotIntantiable().format({ type: callType.details.name }),
                         errorNode
                     );
+                    callResult.argumentErrors = true;
                 }
                 break;
             }
@@ -5715,6 +5741,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         Localizer.Diagnostic.objectNotCallable().format({ type: printType(callType) }),
                         errorNode
                     );
+                    callResult.argumentErrors = true;
                 }
                 break;
             }
@@ -5748,6 +5775,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
                 if (returnTypes.length > 0) {
                     callResult.returnType = combineTypes(returnTypes);
+                } else {
+                    callResult.argumentErrors = true;
                 }
                 break;
             }
@@ -12291,6 +12320,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         isInstanceCheck: boolean,
         isPositiveTest: boolean
     ): Type {
+        if (isTypeVar(type)) {
+            // If it's a constrained TypeVar, treat it as a union for the
+            // purposes of narrowing.
+            type = getConcreteTypeFromTypeVar(type, /* convertConstraintsToUnion */ true);
+        }
+
         let effectiveType = doForSubtypes(type, (subtype) => {
             return transformTypeObjectToClass(subtype);
         });
@@ -14797,8 +14832,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     ) {
                         diag.addMessage(
                             Localizer.DiagnosticAddendum.literalAssignmentMismatch().format({
-                                sourceType: srcLiteral !== undefined ? printLiteralType(srcType) : printType(srcType),
-                                destType: printLiteralType(destType),
+                                sourceType: printType(srcType),
+                                destType: printType(destType),
                             })
                         );
 
@@ -14992,6 +15027,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         if (isObject(destType) && ClassType.isBuiltIn(destType.classType, 'object')) {
             // All types (including None, Module, OverloadedFunction) derive from object.
             return true;
+        }
+
+        // Are we trying to assign None to a protocol?
+        if (isNone(srcType) && isObject(destType) && ClassType.isProtocolClass(destType.classType)) {
+            if (noneType && isClass(noneType)) {
+                return canAssignClassToProtocol(destType.classType, noneType, diag, typeVarMap, flags, recursionCount);
+            }
         }
 
         if (isNone(destType)) {
@@ -15566,7 +15608,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             if (srcType.details.boundType) {
                 // If the source type is a type var itself and has a bound type,
                 // convert it to that bound type.
-                effectiveSrcType = getConcreteTypeFromTypeVar(srcType, recursionCount + 1);
+                effectiveSrcType = getConcreteTypeFromTypeVar(
+                    srcType,
+                    /* convertConstraintsToUnion */ false,
+                    recursionCount + 1
+                );
             } else if (srcType.details.constraints) {
                 effectiveSrcType = combineTypes(srcType.details.constraints);
             } else {
@@ -16091,16 +16137,19 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
 
             case TypeCategory.Class: {
-                return 'Type[' + printObjectTypeForClass(type, recursionCount + 1) + ']';
+                if (type.literalValue !== undefined) {
+                    return `Type[Literal[${printLiteralValue(type)}]]`;
+                }
+
+                return `Type[${printObjectTypeForClass(type, recursionCount + 1)}]`;
             }
 
             case TypeCategory.Object: {
-                const objType = type;
-                if (objType.classType.literalValue !== undefined) {
-                    return printLiteralType(objType);
+                if (type.classType.literalValue !== undefined) {
+                    return `Literal[${printLiteralValue(type.classType)}]`;
                 }
 
-                return printObjectTypeForClass(objType.classType, recursionCount + 1);
+                return printObjectTypeForClass(type.classType, recursionCount + 1);
             }
 
             case TypeCategory.Function: {
