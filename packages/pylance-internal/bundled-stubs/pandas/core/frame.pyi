@@ -10,7 +10,7 @@ from pandas._typing import num, SeriesAxisType, AxisType, Dtype, DtypeNp, Label,
 from pandas.core.generic import NDFrame as NDFrame
 from pandas.core.groupby import DataFrameGroupBy as DataFrameGroupBy
 from pandas.core.groupby.grouper import Grouper
-from pandas.core.indexes.api import Index as Index
+from pandas.core.indexes.api import Index as Index, MultiIndex as MultiIndex
 from pandas.core.series import Series as Series
 from pandas.io.formats import console as console, format as fmt
 from pandas.io.formats.style import Styler as Styler
@@ -72,7 +72,7 @@ class DataFrame(NDFrame):
     def __init__(
         self,
         data: Optional[Union[_ListLike, DataFrame, Dict[_str, Any]]] = ...,
-        index: Optional[_ListLike] = ...,
+        index: Optional[Union[Index, _ListLike]] = ...,
         columns: Optional[_ListLike] = ...,
         dtype = ...,
         copy: _bool = ...,
@@ -616,10 +616,10 @@ See the :ref:`user guide <basics.reindexing>` for more.
         inplace: _bool = ...,
         errors: Union[_str, Literal["ignore", "raise"]] = ...,
     ) -> DataFrame: ...
-    # looks like rename is missing an index arg?
     @overload
     def rename(
         self,
+        index: Optional[Union[Dict[Union[_str, int], _str], Callable]] = ...,
         mapper: Optional[Callable],
         axis: Optional[AxisType] = ...,
         copy: _bool = ...,
@@ -630,7 +630,8 @@ See the :ref:`user guide <basics.reindexing>` for more.
     @overload
     def rename(
         self,
-        columns: Optional[Dict[_str, _str]],
+        index: Optional[Union[Dict[Union[_str, int], _str], Callable]] = ...,
+        columns: Optional[Union[Callable, Dict[Union[int,_str], _str]]],
         axis: Optional[AxisType] = ...,
         copy: _bool = ...,
         inplace: _bool = ...,
@@ -2775,7 +2776,7 @@ ValueError: columns overlap but no suffix specified:
     @property
     def iloc(self) -> _iLocIndexerFrame: ...
     @property
-    def index(self) -> Index[int]: ...
+    def index(self) -> Index: ...
     @index.setter
     def index(self, idx: Index) -> None: ...
     @property
@@ -2921,7 +2922,7 @@ ValueError: columns overlap but no suffix specified:
         level: Optional[Level] = ...,
         fill_value: Optional[float] = ...,
     ) -> DataFrame: ...
-    def droplevel(self, level: Level = ..., axis: AxisType = ...) -> DataFrame: ...
+    def droplevel(self, level: Union[Level, List[Level]] = ..., axis: AxisType = ...) -> DataFrame: ...
     def eq(self, other, axis: AxisType = ..., level: Optional[Level] = ...) -> DataFrame: ...
     def equals(self, other: Union[Series[Dtype], DataFrame]) -> _bool: ...
     def ewm(

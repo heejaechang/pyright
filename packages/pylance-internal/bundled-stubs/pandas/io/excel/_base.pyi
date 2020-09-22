@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Optional, Sequence, Union, overload
 def read_excel(
     filepath: str,
     sheet_name: Optional[Sequence[Union[int, str]]],
-    header: Union[int, Sequence[int]] = ...,
+    header: Optional[Union[int, Sequence[int]]] = ...,
     names: Optional[Sequence[str]] = ...,
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
@@ -17,7 +17,7 @@ def read_excel(
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
     false_values: Optional[Sequence[Scalar]] = ...,
-    skiprows: Optional[Sequence[int]] = ...,
+    skiprows: Optional[Union[Sequence[int], int, Callable]] = ...,
     nrows: Optional[int] = ...,
     na_values = ...,
     keep_default_na: bool = ...,
@@ -112,8 +112,12 @@ true_values : list, default None
     Values to consider as True.
 false_values : list, default None
     Values to consider as False.
-skiprows : list-like
-    Rows to skip at the beginning (0-indexed).
+skiprows : list-like, int, or callable, optional
+    Line numbers to skip (0-indexed) or number of lines to skip (int) at the start of the file.
+
+    If callable, the callable function will be evaluated against the row indices, returning True
+    if the row should be skipped and False otherwise. An example of a valid callable argument
+    would be lambda x: x in [0, 2].
 nrows : int, default None
     Number of rows to parse.
 
@@ -268,7 +272,7 @@ Comment lines in the excel input file can be skipped using the `comment` kwarg
 def read_excel(
     filepath: str,
     sheet_name: Union[int, str] = ...,
-    header: Union[int, Sequence[int]] = ...,
+    header: Optional[Union[int, Sequence[int]]] = ...,
     names: Optional[Sequence[str]] = ...,
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
@@ -278,7 +282,7 @@ def read_excel(
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
     false_values: Optional[Sequence[Scalar]] = ...,
-    skiprows: Optional[Sequence[int]] = ...,
+    skiprows: Optional[Union[Sequence[int], int, Callable]] = ...,
     nrows: Optional[int] = ...,
     na_values = ...,
     keep_default_na: bool = ...,
