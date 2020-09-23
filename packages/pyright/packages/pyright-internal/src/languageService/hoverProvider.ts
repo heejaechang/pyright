@@ -268,7 +268,10 @@ export class HoverProvider {
         const classText = `${node.value}(${functionParts[0].join(', ')})`;
 
         this._addResultsPart(parts, '(class) ' + classText, true);
-        this._addDocumentationPartForType(sourceMapper, parts, initMethodType, declaration);
+        const addedDoc = this._addDocumentationPartForType(sourceMapper, parts, initMethodType, declaration);
+        if (!addedDoc) {
+            this._addDocumentationPartForType(sourceMapper, parts, classType, declaration);
+        }
         return true;
     }
 
@@ -295,7 +298,7 @@ export class HoverProvider {
         parts: HoverTextPart[],
         type: Type,
         resolvedDecl: DeclarationBase | undefined
-    ) {
+    ): boolean {
         const docStrings: (string | undefined)[] = [];
 
         if (isModule(type)) {
@@ -311,11 +314,15 @@ export class HoverProvider {
             docStrings.push(getFunctionDocStringFromDeclaration(resolvedDecl as FunctionDeclaration, sourceMapper));
         }
 
+        let addedDoc = false;
         for (const docString of docStrings) {
             if (docString) {
+                addedDoc = true;
                 this._addDocumentationResultsPart(parts, docString);
             }
         }
+
+        return addedDoc;
     }
 
     private static _addDocumentationResultsPart(parts: HoverTextPart[], docString?: string) {
