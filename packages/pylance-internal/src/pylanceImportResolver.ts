@@ -193,9 +193,11 @@ export class PylanceImportResolver extends ImportResolver {
             const output = child_process.execFileSync(this._configOptions.pythonPath, commandLineArgs, {
                 encoding: 'utf8',
                 stdio: ['ignore', 'pipe', 'ignore'],
+                timeout: 10000,
             });
 
             if (!output) {
+                this._scrapedBuiltinsFailed = true;
                 return undefined;
             }
 
