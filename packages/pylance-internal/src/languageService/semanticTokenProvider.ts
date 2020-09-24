@@ -268,6 +268,10 @@ class TokenWalker extends ParseTreeWalker {
             return this._cachedNodeTokenInfo.get(node);
         }
 
+        if (!this._evaluator.isNodeReachable(node)) {
+            return undefined;
+        }
+
         const declarations = this._evaluator.getDeclarationsForNameNode(node);
         if (declarations && declarations.length > 0) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(declarations[0], /* resolveLocalNames */ true);
