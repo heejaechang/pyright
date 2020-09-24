@@ -345,7 +345,6 @@ class TokenWalker extends ParseTreeWalker {
                     }
                     case DeclarationType.Alias:
                         return { type: TokenTypes.module, modifiers: TokenModifiers.none };
-                        break;
                 }
             }
         } else {
