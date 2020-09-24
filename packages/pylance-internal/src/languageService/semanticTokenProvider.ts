@@ -344,16 +344,7 @@ class TokenWalker extends ParseTreeWalker {
                         break;
                     }
                     case DeclarationType.Alias:
-                        if (node.parent?.nodeType === ParseNodeType.ModuleName) {
-                            // Handle 'module' in 'import module'
-                            return { type: TokenTypes.module, modifiers: TokenModifiers.none };
-                        } else {
-                            // Handle 'module' in 'module.func()'
-                            const type = this._evaluator.getType(node);
-                            if (type?.category === TypeCategory.Module) {
-                                return { type: TokenTypes.module, modifiers: TokenModifiers.none };
-                            }
-                        }
+                        return { type: TokenTypes.module, modifiers: TokenModifiers.none };
                         break;
                 }
             }
