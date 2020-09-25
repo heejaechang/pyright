@@ -64,15 +64,15 @@ enum TokenTypes {
 
 enum TokenModifiers {
     none = 0,
-    declaration = 1,
-    static = 2,
-    abstract = 4,
-    async = 8,
-    documentation = 16,
-    typeHint = 32,
-    typeHintComment = 64,
-    readonly = 128,
-    decorator = 256,
+    declaration = 1 << 0,
+    static = 1 << 1,
+    abstract = 1 << 2,
+    async = 1 << 3,
+    documentation = 1 << 4,
+    typeHint = 1 << 5,
+    typeHintComment = 1 << 6,
+    readonly = 1 << 7,
+    decorator = 1 << 8,
 }
 
 interface TokenInfo {
