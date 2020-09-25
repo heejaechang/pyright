@@ -98,6 +98,9 @@ Pylance extension does not launch language server on its own. However, you may n
 -   [Jest](https://jestjs.io/) is the test runner.
 -   Use [ts-mockito](https://www.npmjs.com/package/ts-mockito) for mocking.
 -   To run or debug tests in current file use `Pylance jest current file` task.
+-   To run all Pylance+Pyright tests: `npx lerna run --scope=pylance-internal --scope=pyright-internal --concurrency=1 test`
+-   To run all Pylance tests: `npx lerna run --scope=pylance-internal --concurrency=1 test`
+-   To run all Pyright tests: `npx lerna run --scope=pyright-internal --concurrency=1 test`
 -   Useful extensions: `Jest` (from Orta)
 
 ## Debugging IntelliCode CLI
