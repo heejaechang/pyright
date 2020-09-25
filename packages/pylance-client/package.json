@@ -197,6 +197,10 @@
             {
                 "id": "typeHintComment",
                 "description": "inside a comment style type annotation"
+            },
+            {
+                "id": "decorator",
+                "description": "inside a decorator"
             }
         ],
         "semanticTokenScopes": [
@@ -214,6 +218,12 @@
                     ],
                     "*.typeHintComment": [
                         "comment.typehint.type.notation.python"
+                    ],
+                    "function.decorator": [
+                        "meta.function.decorator.python"
+                    ],
+                    "class.decorator": [
+                        "meta.function.decorator.python"
                     ]
                 }
             }
