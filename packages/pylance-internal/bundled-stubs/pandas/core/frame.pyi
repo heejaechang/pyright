@@ -30,11 +30,11 @@ _bool = bool
 
 class _iLocIndexerFrame(_iLocIndexer):
     @overload
-    def __getitem__(self, idx: Tuple[int, int]) -> Dtype: ...
+    def __getitem__(self, idx: Tuple[int, int]) -> Scalar: ...
     @overload
     def __getitem__(self, idx: Union[IndexType, slice, Tuple[IndexType, IndexType]]) -> DataFrame: ...
     @overload
-    def __getitem__(self, idx: Union[int, Tuple[IndexType, int, Tuple[int, IndexType]]]) -> Series[Dtype]: ...
+    def __getitem__(self, idx: Union[int, Tuple[IndexType, int, Tuple[int, IndexType]]]) -> Series: ...
     def __setitem__(
         self,
         idx: Union[
@@ -337,7 +337,7 @@ str
     def __setitem__(self, key, value): ...
     def query(self, expr: _str, inplace: _bool = ..., **kwargs) -> DataFrame: ...
     def eval(self, expr: _str, inplace: _bool = ..., **kwargs) : ...
-    def selectDTypes(
+    def select_dtypes(
         self, include: Optional[Union[_str, List[_str]]] = ..., exclude: Optional[Union[_str, List[_str]]] = ...,
     ) -> DataFrame: ...
     def insert(self, loc: int, column, value: Union[int, _ListLike], allow_duplicates: _bool = ...,) -> None: ...
@@ -631,8 +631,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
     def rename(
         self,
         index: Optional[Union[Dict[Union[_str, int], _str], Callable]] = ...,
-        columns: Optional[Union[Callable, Dict[Union[int,_str], _str]]],
-        axis: Optional[AxisType] = ...,
+        columns: Optional[Union[Callable, Dict[Union[int,_str], _str]]] = ...,
         copy: _bool = ...,
         inplace: _bool = ...,
         level: Optional[Level] = ...,
@@ -1227,7 +1226,7 @@ Examples
     @overload
     def reset_index(
         self,
-        level: Level = ...,
+        level: Union[Level, Sequence[Level]] = ...,
         drop: _bool = ...,
         col_level: Union[int, _str] = ...,
         col_fill: Hashable = ...,
@@ -1237,7 +1236,7 @@ Examples
     @overload
     def reset_index(
         self,
-        level: Level = ...,
+        level: Union[Level, Sequence[Level]] = ...,
         drop: _bool = ...,
         col_level: Union[int, _str] = ...,
         col_fill: Hashable = ...,
@@ -1247,7 +1246,7 @@ Examples
     @overload
     def reset_index(
         self,
-        level: Level = ...,
+        level: Union[Level, Sequence[Level]] = ...,
         drop: _bool = ...,
         *,
         col_level: Union[int, _str] = ...,
@@ -1256,7 +1255,7 @@ Examples
     @overload
     def reset_index(
         self,
-        level: Level = ...,
+        level: Union[Level, Sequence[Level]] = ...,
         drop: _bool = ...,
         inplace: Optional[_bool] = ...,
         col_level: Union[int, _str] = ...,

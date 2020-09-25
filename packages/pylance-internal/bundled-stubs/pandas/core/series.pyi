@@ -188,15 +188,15 @@ starting from the end of the object, just like with Python lists.
     def index(self) -> Union[Index[int], MultiIndex]: ...
     @overload
     def reset_index(
-        self, level: Optional[Level], drop: Literal[True], name: Optional[object] = ..., inplace: _bool = ...,
+        self, level: Optional[Union[Level, Sequence[Level]]], drop: Literal[True], name: Optional[object] = ..., inplace: _bool = ...,
     ) -> Series[S1]: ...
     @overload
     def reset_index(
-        self, level: Optional[Level] = ..., name: Optional[object] = ..., inplace: _bool = ..., *, drop: Literal[True]
+        self, level: Optional[Union[Level, Sequence[Level]]] = ..., name: Optional[object] = ..., inplace: _bool = ..., *, drop: Literal[True]
     ) -> Series[S1]: ...
     @overload
     def reset_index(
-        self, level: Optional[Level] = ..., drop: _bool = ..., name: Optional[object] = ..., inplace: _bool = ...,
+        self, level: Optional[Union[Level, Sequence[Level]]] = ..., drop: _bool = ..., name: Optional[object] = ..., inplace: _bool = ...,
     ) -> DataFrame: ...
     @overload
     def to_string(
