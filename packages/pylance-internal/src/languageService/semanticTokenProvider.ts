@@ -382,14 +382,15 @@ class TokenWalker extends ParseTreeWalker {
                         }
                         break;
                     }
-                    case DeclarationType.Alias:
-                        let modifier = this._getDecoratorModifiers(node);
+                    case DeclarationType.Alias: {
+                        const modifier = this._getDecoratorModifiers(node);
                         return { type: TokenTypes.module, modifiers: modifier };
+                    }
                 }
             }
         } else {
             // Handle 'module' in 'package.module.MyClass()'
-            let modifier = this._getDecoratorModifiers(node);
+            const modifier = this._getDecoratorModifiers(node);
             const type = this._evaluator.getType(node);
             if (type?.category === TypeCategory.Module) {
                 return { type: TokenTypes.module, modifiers: modifier };
