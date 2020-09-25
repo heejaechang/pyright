@@ -22,6 +22,7 @@ import { throwIfCancellationRequested } from 'pyright-internal/common/cancellati
 import { convertOffsetsToRange, convertOffsetToPosition } from 'pyright-internal/common/positionUtils';
 import { doRangesOverlap, Range } from 'pyright-internal/common/textRange';
 import {
+    DecoratorNode,
     ModuleNameNode,
     NameNode,
     ParseNode,
@@ -63,14 +64,15 @@ enum TokenTypes {
 
 enum TokenModifiers {
     none = 0,
-    declaration = 1,
-    static = 2,
-    abstract = 4,
-    async = 8,
-    documentation = 16,
-    typeHint = 32,
-    typeHintComment = 64,
-    readonly = 128,
+    declaration = 1 << 0,
+    static = 1 << 1,
+    abstract = 1 << 2,
+    async = 1 << 3,
+    documentation = 1 << 4,
+    typeHint = 1 << 5,
+    typeHintComment = 1 << 6,
+    readonly = 1 << 7,
+    decorator = 1 << 8,
 }
 
 interface TokenInfo {
@@ -118,6 +120,7 @@ export class SemanticTokenProvider {
             'typeHint',
             'typeHintComment',
             'readonly',
+            'decorator',
         ];
 
         return { tokenTypes, tokenModifiers };
@@ -245,6 +248,36 @@ class TokenWalker extends ParseTreeWalker {
         return TokenTypes.parameter;
     }
 
+    private _getEnclosingDecorator(node: ParseNode): DecoratorNode | undefined {
+        let curNode = node.parent;
+        while (curNode) {
+            if (curNode.nodeType === ParseNodeType.Decorator) {
+                return curNode;
+            }
+
+            if (
+                curNode.nodeType === ParseNodeType.Class ||
+                curNode.nodeType === ParseNodeType.Function ||
+                curNode.nodeType === ParseNodeType.Parameter ||
+                curNode.nodeType === ParseNodeType.Argument
+            ) {
+                return undefined;
+            }
+
+            curNode = curNode.parent;
+        }
+
+        return undefined;
+    }
+
+    private _getDecoratorModifiers(node: NameNode): TokenModifiers {
+        if (this._getEnclosingDecorator(node) !== undefined) {
+            return TokenModifiers.decorator;
+        } else {
+            return TokenModifiers.none;
+        }
+    }
+
     private _getFunctionTokenType(node: NameNode): TokenTypes {
         if (isDunderName(node.value)) {
             return TokenTypes.magicFunction;
@@ -288,22 +321,23 @@ class TokenWalker extends ParseTreeWalker {
                             modifiers: typeAnnotationModifiers,
                         };
                     case DeclarationType.Class: {
+                        const decoratorModifiers = this._getDecoratorModifiers(node);
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
                             return {
                                 type: TokenTypes.enum,
-                                modifiers: typeAnnotationModifiers,
+                                modifiers: typeAnnotationModifiers | decoratorModifiers,
                             };
                         } else {
                             return {
                                 type: TokenTypes.class,
-                                modifiers: typeAnnotationModifiers,
+                                modifiers: typeAnnotationModifiers | decoratorModifiers,
                             };
                         }
                     }
                     case DeclarationType.Function: {
                         let tokenType = TokenTypes.function;
-                        let modifier = TokenModifiers.none;
+                        let modifier = this._getDecoratorModifiers(node);
 
                         const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl);
                         if (declaredType) {
@@ -328,13 +362,14 @@ class TokenWalker extends ParseTreeWalker {
                         return { type: tokenType, modifiers: modifier };
                     }
                     case DeclarationType.Variable: {
+                        const modifier = this._getDecoratorModifiers(node);
                         const enclosingClass = getEnclosingClass(resolvedDecl.node, /* stopAtFunction */ true);
                         if (enclosingClass) {
                             const classTypeInfo = this._evaluator.getTypeOfClass(enclosingClass);
                             if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
-                                return { type: TokenTypes.enumMember, modifiers: TokenModifiers.none };
+                                return { type: TokenTypes.enumMember, modifiers: modifier };
                             } else {
-                                return { type: TokenTypes.member, modifiers: TokenModifiers.none };
+                                return { type: TokenTypes.member, modifiers: modifier };
                             }
                         } else {
                             // To improve: in 'self.field', 'field' should be a member instead of a variable
@@ -342,20 +377,23 @@ class TokenWalker extends ParseTreeWalker {
                             // if all you have is a line somewhere self.field = 1, then it doesn't know it's a field
                             return {
                                 type: TokenTypes.variable,
-                                modifiers: isConstantName(node.value) ? TokenModifiers.readonly : TokenModifiers.none,
+                                modifiers: isConstantName(node.value) ? modifier | TokenModifiers.readonly : modifier,
                             };
                         }
                         break;
                     }
-                    case DeclarationType.Alias:
-                        return { type: TokenTypes.module, modifiers: TokenModifiers.none };
+                    case DeclarationType.Alias: {
+                        const modifier = this._getDecoratorModifiers(node);
+                        return { type: TokenTypes.module, modifiers: modifier };
+                    }
                 }
             }
         } else {
             // Handle 'module' in 'package.module.MyClass()'
+            const modifier = this._getDecoratorModifiers(node);
             const type = this._evaluator.getType(node);
             if (type?.category === TypeCategory.Module) {
-                return { type: TokenTypes.module, modifiers: TokenModifiers.none };
+                return { type: TokenTypes.module, modifiers: modifier };
             } else if (node.parent?.nodeType === ParseNodeType.ModuleName) {
                 // Handle 'package' or 'sub' in 'from package.sub.module import MyClass'
                 // In a from import statement, we can only get the type for the last name part
