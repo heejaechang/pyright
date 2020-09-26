@@ -30,9 +30,9 @@ helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'sem1',
         tokens: [
-            { type: 'function' },
-            { type: 'function', modifiers: ['async'] },
-            { type: 'variable' },
+            { type: 'function', modifiers: ['declaration'] },
+            { type: 'function', modifiers: ['async', 'declaration'] },
+            { type: 'variable', modifiers: ['declaration'] },
             { type: 'function' },
         ],
     },

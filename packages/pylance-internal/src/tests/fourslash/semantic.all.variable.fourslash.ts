@@ -8,6 +8,9 @@
 helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'marker',
-        tokens: [{ type: 'variable' }, { type: 'variable', modifiers: ['readonly'] }],
+        tokens: [
+            { type: 'variable', modifiers: ['declaration'] },
+            { type: 'variable', modifiers: ['readonly', 'declaration'] },
+        ],
     },
 ]);
