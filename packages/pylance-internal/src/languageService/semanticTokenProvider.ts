@@ -313,31 +313,44 @@ class TokenWalker extends ParseTreeWalker {
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
                         return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
-                    case DeclarationType.Parameter:
-                        return { type: this._getParameterTokenType(resolvedDecl), modifiers: TokenModifiers.none };
+                    case DeclarationType.Parameter: {
+                        const declarationModifiers =
+                            node.parent?.nodeType === ParseNodeType.Parameter
+                                ? TokenModifiers.declaration
+                                : TokenModifiers.none;
+                        return { type: this._getParameterTokenType(resolvedDecl), modifiers: declarationModifiers };
+                    }
                     case DeclarationType.SpecialBuiltInClass:
                         return {
                             type: TokenTypes.class,
                             modifiers: typeAnnotationModifiers,
                         };
                     case DeclarationType.Class: {
+                        const declarationModifiers =
+                            node.parent?.nodeType === ParseNodeType.Class
+                                ? TokenModifiers.declaration
+                                : TokenModifiers.none;
                         const decoratorModifiers = this._getDecoratorModifiers(node);
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
                             return {
                                 type: TokenTypes.enum,
-                                modifiers: typeAnnotationModifiers | decoratorModifiers,
+                                modifiers: typeAnnotationModifiers | decoratorModifiers | declarationModifiers,
                             };
                         } else {
                             return {
                                 type: TokenTypes.class,
-                                modifiers: typeAnnotationModifiers | decoratorModifiers,
+                                modifiers: typeAnnotationModifiers | decoratorModifiers | declarationModifiers,
                             };
                         }
                     }
                     case DeclarationType.Function: {
                         let tokenType = TokenTypes.function;
-                        let modifier = this._getDecoratorModifiers(node);
+                        const declarationModifiers =
+                            node.parent?.nodeType === ParseNodeType.Function
+                                ? TokenModifiers.declaration
+                                : TokenModifiers.none;
+                        let modifier = this._getDecoratorModifiers(node) | declarationModifiers;
 
                         const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl);
                         if (declaredType) {
@@ -362,7 +375,9 @@ class TokenWalker extends ParseTreeWalker {
                         return { type: tokenType, modifiers: modifier };
                     }
                     case DeclarationType.Variable: {
-                        const modifier = this._getDecoratorModifiers(node);
+                        const declarationModifiers =
+                            resolvedDecl.node.id === node.id ? TokenModifiers.declaration : TokenModifiers.none;
+                        const modifier = this._getDecoratorModifiers(node) | declarationModifiers;
                         const enclosingClass = getEnclosingClass(resolvedDecl.node, /* stopAtFunction */ true);
                         if (enclosingClass) {
                             const classTypeInfo = this._evaluator.getTypeOfClass(enclosingClass);

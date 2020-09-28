@@ -20,6 +20,10 @@ helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'start',
         endMarker: 'end',
-        tokens: [{ type: 'class' }, { type: 'function' }, { type: 'class' }],
+        tokens: [
+            { type: 'class', modifiers: ['declaration'] },
+            { type: 'function', modifiers: ['declaration'] },
+            { type: 'class', modifiers: ['declaration'] },
+        ],
     },
 ]);
