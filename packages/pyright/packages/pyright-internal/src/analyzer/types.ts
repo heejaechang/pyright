@@ -1002,11 +1002,13 @@ export namespace FunctionType {
             category: ParameterCategory.VarArgList,
             name: 'args',
             type: useUnknown ? UnknownType.create() : AnyType.create(),
+            hasDeclaredType: !useUnknown,
         });
         FunctionType.addParameter(functionType, {
             category: ParameterCategory.VarArgDictionary,
             name: 'kwargs',
             type: useUnknown ? UnknownType.create() : AnyType.create(),
+            hasDeclaredType: !useUnknown,
         });
     }
 
@@ -1404,6 +1406,23 @@ export function isOverloadedFunction(type: Type): type is OverloadedFunctionType
     return type.category === TypeCategory.OverloadedFunction;
 }
 
+export function getTypeAliasInfo(type: Type) {
+    if (type.typeAliasInfo) {
+        return type.typeAliasInfo;
+    }
+
+    if (
+        isTypeVar(type) &&
+        type.details.recursiveTypeAliasName &&
+        type.details.boundType &&
+        type.details.boundType.typeAliasInfo
+    ) {
+        return type.details.boundType.typeAliasInfo;
+    }
+
+    return undefined;
+}
+
 export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolean {
     if (type1.category !== type2.category) {
         return false;
@@ -1657,7 +1676,7 @@ export function isUnionableType(subtypes: Type[]): boolean {
 // the same, only one is returned. If they differ, they
 // are combined into a UnionType. NeverTypes are filtered out.
 // If no types remain in the end, a NeverType is returned.
-export function combineTypes(types: Type[]): Type {
+export function combineTypes(types: Type[], maxSubtypeCount?: number): Type {
     // Filter out any "Never" types.
     types = types.filter((type) => type.category !== TypeCategory.Never);
     if (types.length === 0) {
@@ -1709,14 +1728,23 @@ export function combineTypes(types: Type[]): Type {
     }
 
     const newUnionType = UnionType.create();
+    let hitMaxSubtypeCount = false;
 
     expandedTypes.forEach((t, index) => {
         if (index === 0) {
             UnionType.addType(newUnionType, t);
         } else {
-            _addTypeIfUnique(newUnionType, t);
+            if (maxSubtypeCount === undefined || newUnionType.subtypes.length < maxSubtypeCount) {
+                _addTypeIfUnique(newUnionType, t);
+            } else {
+                hitMaxSubtypeCount = true;
+            }
         }
     });
+
+    if (hitMaxSubtypeCount) {
+        return AnyType.create();
+    }
 
     // If only one type remains, convert it from a union to a simple type.
     if (newUnionType.subtypes.length === 1) {

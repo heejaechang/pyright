@@ -350,6 +350,12 @@ test('TypeNarrowing17', () => {
     validateResults(analysisResults, 8);
 });
 
+test('TypeNarrowing18', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing18.py']);
+
+    validateResults(analysisResults, 0, 0, 10);
+});
+
 test('CircularBaseClass', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circularBaseClass.py']);
 
@@ -471,7 +477,7 @@ test('Function3', () => {
     // Analyze with Python 3.8 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
-    validateResults(analysisResults38, 11);
+    validateResults(analysisResults38, 12);
 });
 
 test('Function4', () => {
@@ -900,6 +906,12 @@ test('Generators9', () => {
     validateResults(analysisResults, 2);
 });
 
+test('Generators10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators10.py']);
+
+    validateResults(analysisResults, 0);
+});
+
 test('Coroutines1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines1.py']);
 
@@ -1090,6 +1102,12 @@ test('TypeAlias8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias8.py']);
 
     validateResults(analysisResults, 4);
+});
+
+test('TypeAlias9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias9.py']);
+
+    validateResults(analysisResults, 0, 0, 4);
 });
 
 test('Dictionary1', () => {
@@ -1405,6 +1423,12 @@ test('NameBindings2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['nameBindings2.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('NameBindings3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['nameBindings3.py']);
+
+    validateResults(analysisResults, 3);
 });
 
 test('GenericTypes1', () => {
@@ -2308,4 +2332,10 @@ test('None1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['none1.py']);
 
     validateResults(analysisResults, 1);
+});
+
+test('Constructor1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor1.py']);
+
+    validateResults(analysisResults, 0);
 });

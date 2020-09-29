@@ -16,6 +16,7 @@ Pyright can be run as either a VS Code extension or as a node-based command-line
 | -t, --typeshed-path DIRECTORY       | Use typeshed type stubs at this location (2)         |
 | -v, --venv-path DIRECTORY           | Directory that contains virtual environments (3)     |
 | --verbose                           | Emit verbose diagnostics                             |
+| --verifytypes IMPORT                | Verify completeness of types in py.typed package     |
 | --version                           | Print pyright version                                |
 | -w, --watch                         | Continue to run and watch for changes (4)            |
 
@@ -63,6 +64,7 @@ Each Diagnostic is formatted output in the following format:
     file: string,
     severity: 'error' | 'warning' | 'information',
     message: string,
+    rule?: string,
     range: {
         start: {
             line: number,
