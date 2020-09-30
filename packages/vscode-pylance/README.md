@@ -106,6 +106,20 @@ Pylance provides users with the ability to customize their Python language suppo
 Semantic highlighting
 =====================
 
+Visual Studio Code uses TextMate grammars as the main tokenization engine. TextMate grammars work on a single file as input and break it up based on lexical rules expressed in regular expressions.
+
+Semantic tokenization allows language servers to provide additional token information based on the language server's knowledge on how to resolve symbols in the context of a project. Themes can opt-in to use semantic tokens to improve and refine the syntax highlighting from grammars. The editor applies the highlighting from semantic tokens on top of the highlighting from grammars.
+
+Here's an example of what semantic highlighting can add:
+
+Without semantic highlighting:
+
+![ screencast ](semantic-disabled.png)
+
+With semantic highlighting:
+
+![ screencast ](semantic-enabled.png)
+
 Semantic colors can be customized in settings.json by associating the Pylance semantic token types and modifiers with the desired colors.
 
 - Semantic token types
