@@ -114,7 +114,7 @@ Semantic colors can be customized in settings.json by associating the Pylance se
     - function, member
     - module
     - intrinsic
-    - magicFunction
+    - magicFunction (dunder methods)
     - selfParameter, clsParameter
 
 - Semantic token modifiers
