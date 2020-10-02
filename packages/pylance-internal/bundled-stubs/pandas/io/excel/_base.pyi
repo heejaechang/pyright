@@ -1,18 +1,18 @@
 import abc
-from pandas._typing import Scalar
+from pandas._typing import DType, Scalar
 from pandas.core.frame import DataFrame as DataFrame
-from typing import Any, Callable, Dict, Optional, Sequence, Union, overload
+from typing import Any, Callable, Dict, Literal, Optional, Sequence, Union, overload
 
 @overload
 def read_excel(
     filepath: str,
-    sheet_name: Optional[Sequence[Union[int, str]]],
+    sheet_name: Optional[Sequence[str]],
     header: Optional[Union[int, Sequence[int]]] = ...,
     names: Optional[Sequence[str]] = ...,
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any]] = ...,
+    dtype: Union[str, Dict[str, Any], DType] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
@@ -29,7 +29,7 @@ def read_excel(
     skipfooter: int = ...,
     convert_float: bool = ...,
     mangle_dupe_cols: bool = ...,
-) -> Dict[Union[int, str], DataFrame]:
+) -> Dict[str, DataFrame]:
     """
 Read an Excel file into a pandas DataFrame.
 
@@ -271,13 +271,69 @@ Comment lines in the excel input file can be skipped using the `comment` kwarg
 @overload
 def read_excel(
     filepath: str,
+    sheet_name: Sequence[int],
+    header: Optional[Union[int, Sequence[int]]] = ...,
+    names: Optional[Sequence[str]] = ...,
+    index_col: Optional[Union[int, Sequence[int]]] = ...,
+    usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
+    squeeze: bool = ...,
+    dtype: Union[str, Dict[str, Any], DType] = ...,
+    engine: Optional[str] = ...,
+    converters: Optional[Dict[Union[int, str], Callable]] = ...,
+    true_values: Optional[Sequence[Scalar]] = ...,
+    false_values: Optional[Sequence[Scalar]] = ...,
+    skiprows: Optional[Union[Sequence[int], int, Callable]] = ...,
+    nrows: Optional[int] = ...,
+    na_values = ...,
+    keep_default_na: bool = ...,
+    verbose: bool = ...,
+    parse_dates: Union[bool, Sequence, Dict[str, Sequence]] = ...,
+    date_parser: Optional[Callable] = ...,
+    thousands: Optional[str] = ...,
+    comment: Optional[str] = ...,
+    skipfooter: int = ...,
+    convert_float: bool = ...,
+    mangle_dupe_cols: bool = ...,
+) -> Dict[int, DataFrame]: ...
+
+@overload
+def read_excel(
+    filepath: str,
+    sheet_name: Sequence[Union[int, str]],
+    header: Optional[Union[int, Sequence[int]]] = ...,
+    names: Optional[Sequence[str]] = ...,
+    index_col: Optional[Union[int, Sequence[int]]] = ...,
+    usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
+    squeeze: bool = ...,
+    dtype: Union[str, Dict[str, Any], DType] = ...,
+    engine: Optional[str] = ...,
+    converters: Optional[Dict[Union[int, str], Callable]] = ...,
+    true_values: Optional[Sequence[Scalar]] = ...,
+    false_values: Optional[Sequence[Scalar]] = ...,
+    skiprows: Optional[Union[Sequence[int], int, Callable]] = ...,
+    nrows: Optional[int] = ...,
+    na_values = ...,
+    keep_default_na: bool = ...,
+    verbose: bool = ...,
+    parse_dates: Union[bool, Sequence, Dict[str, Sequence]] = ...,
+    date_parser: Optional[Callable] = ...,
+    thousands: Optional[str] = ...,
+    comment: Optional[str] = ...,
+    skipfooter: int = ...,
+    convert_float: bool = ...,
+    mangle_dupe_cols: bool = ...,
+) -> Dict[Union[int, str], DataFrame]: ...
+
+@overload
+def read_excel(
+    filepath: str,
     sheet_name: Union[int, str] = ...,
     header: Optional[Union[int, Sequence[int]]] = ...,
     names: Optional[Sequence[str]] = ...,
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any]] = ...,
+    dtype: Union[str, Dict[str, Any], DType] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,

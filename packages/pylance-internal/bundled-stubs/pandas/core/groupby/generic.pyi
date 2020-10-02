@@ -1,7 +1,7 @@
 from matplotlib.axes import Axes as PlotAxes, SubplotBase as AxesSubplot
 import numpy as np
 import sys
-from pandas._typing import FrameOrSeries as FrameOrSeries, AxisType, Dtype, Level
+from pandas._typing import FrameOrSeries as FrameOrSeries, AxisType, Dtype, Level, F
 from pandas.core.frame import DataFrame as DataFrame
 from pandas.core.groupby.groupby import GroupBy as GroupBy #, get_groupby as get_groupby
 from pandas.core.groupby.grouper import Grouper as Grouper
@@ -186,7 +186,7 @@ See :ref:`groupby.aggregate.named` for more.
     @overload
     def agg(self, arg: Dict, *args, **kwargs) -> DataFrame: ...
     @overload
-    def agg(self, arg: Callable[[], Any], *args, **kwargs) -> DataFrame: ...
+    def agg(self, arg: F, *args, **kwargs) -> DataFrame: ...
     def transform(self, func, *args, **kwargs): ...
     def filter(self, func: Callable, dropna: bool = ..., *args, **kwargs) -> DataFrame:
         """Return a copy of a DataFrame excluding elements from groups that
