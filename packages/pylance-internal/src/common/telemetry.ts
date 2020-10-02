@@ -7,7 +7,7 @@
 import { sha256 } from 'hash.js';
 import { Connection } from 'vscode-languageserver/node';
 
-import { assert } from 'pyright-internal/common/debug';
+import { assert, getSerializableError } from 'pyright-internal/common/debug';
 import { CompletionResults, ModuleContext } from 'pyright-internal/languageService/completionProvider';
 
 import { VERSION } from './constants';
@@ -15,6 +15,7 @@ import { VERSION } from './constants';
 export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
     ANALYSIS_COMPLETE = 'analysis_complete',
+    ANALYSIS_EXCEPTION = 'analysis_exception',
     INTELLICODE_ENABLED = 'intellicode_enabled',
     INTELLICODE_COMPLETION_ITEM_SELECTED = 'intellicode_completion_item_selected',
     INTELLICODE_MODEL_LOAD_FAILED = 'intellicode_model_load_failed',
@@ -47,7 +48,7 @@ export class TelemetryEvent {
 
     constructor(eventName: string, ex?: Error) {
         this.EventName = formatEventName(eventName);
-        this.Exception = ex;
+        this.Exception = getSerializableError(ex);
     }
 
     clone(): TelemetryEvent {
