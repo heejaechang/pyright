@@ -776,6 +776,13 @@ export class PackageTypeVerifier {
                 const cachedTypeInfo = this._typeCache.get(type.details.fullName);
                 if (cachedTypeInfo) {
                     typeInfo = cachedTypeInfo;
+                } else if (ClassType.isBuiltIn(type)) {
+                    // Don't bother type-checking built-in types.
+                    typeInfo = {
+                        isFullyKnown: true,
+                        diag: diag,
+                        classFields: undefined,
+                    };
                 } else {
                     // Create a dummy entry in the cache to handle recursion. We'll replace
                     // this once we fully analyze this class type.
@@ -841,6 +848,7 @@ export class PackageTypeVerifier {
                                 currentSymbol,
                                 typeStack
                             );
+
                             if (mroClassInfo.classFields) {
                                 // Determine which base class contributed this ancestor class to the MRO.
                                 // We want to determine whether that base class is a public class within
@@ -885,18 +893,57 @@ export class PackageTypeVerifier {
                         }
                     });
 
+                    // Add information for the metaclass.
+                    if (type.details.effectiveMetaclass) {
+                        if (!isClass(type.details.effectiveMetaclass)) {
+                            diag.addMessage(`Type for metaclass is unknown`);
+                            isKnown = false;
+                        } else if (!ClassType.isBuiltIn(type.details.effectiveMetaclass)) {
+                            const metaclassInfo = this._validateClassTypeIsCompletelyKnown(
+                                type.details.effectiveMetaclass,
+                                publicSymbolMap,
+                                currentSymbol,
+                                typeStack
+                            );
+
+                            const metaclassDiag = new DiagnosticAddendum();
+                            let isMetaclassKnown = true;
+                            if (!metaclassInfo.isFullyKnown) {
+                                metaclassDiag.addAddendum(metaclassInfo.diag);
+                                isMetaclassKnown = false;
+                            }
+
+                            metaclassInfo.classFields?.forEach((info) => {
+                                if (!info.isFullyKnown) {
+                                    metaclassDiag.addAddendum(info.diag);
+                                    isMetaclassKnown = false;
+                                }
+                            });
+
+                            if (!isMetaclassKnown) {
+                                metaclassDiag.addMessage(
+                                    `Type of metaclass "${type.details.effectiveMetaclass.details.fullName}" is partially unknown`
+                                );
+                                diag.addAddendum(metaclassDiag);
+                                isKnown = false;
+                            }
+                        }
+                    }
+
+                    // Add information for base classes.
                     type.details.baseClasses.forEach((baseClass, index) => {
                         const baseClassDiag = new DiagnosticAddendum();
                         if (!isClass(baseClass)) {
                             baseClassDiag.addMessage(`Type unknown for base class ${index + 1}`);
                             isKnown = false;
-                        } else {
+                        } else if (!ClassType.isBuiltIn(baseClass)) {
                             const classInfo = this._validateClassTypeIsCompletelyKnown(
                                 baseClass,
                                 publicSymbolMap,
                                 currentSymbol,
                                 typeStack
                             );
+
                             if (!classInfo.isFullyKnown) {
                                 baseClassDiag.addMessage(
                                     `Type partially unknown for base class "${this._program.printType(
