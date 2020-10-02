@@ -458,10 +458,6 @@ class PylanceServer extends LanguageServerBase {
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
         super.onAnalysisCompletedHandler(results);
 
-        if (results.error) {
-            this._telemetry.sendExceptionTelemetry(TelemetryEventName.ANALYSIS_EXCEPTION, results.error);
-        }
-
         if (results.diagnostics.length === 0 && results.filesRequiringAnalysis > 0 && results.elapsedTime === 0) {
             // This is not from actual analysis
             return;
@@ -469,7 +465,7 @@ class PylanceServer extends LanguageServerBase {
 
         const te = this._analysisTracker.updateTelemetry(results);
         if (te) {
-            this._telemetry.sendTelemetry(te);
+            this._connection.telemetry.logEvent(te);
 
             //send import metrics
             let shouldSend = false;
