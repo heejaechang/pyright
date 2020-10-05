@@ -109,76 +109,16 @@
             ],
         },
         marker4: {
-            codeActions: [
-                {
-                    title: `Add import TestLibSubModuleFunction from testLib.stubFile`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import TestLibSubModuleFunction from testLib.stubFile',
-                        command: 'python.addImport',
-                        arguments: [
-                            '\\test1.py',
-                            JSON.stringify(positionRange4),
-                            'TestLibSubModuleFunction',
-                            'testLib.stubFile',
-                        ],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker5: {
-            codeActions: [
-                {
-                    title: `Add import TestLibNestedType from testLib.nested`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import TestLibNestedType from testLib.nested',
-                        command: 'python.addImport',
-                        arguments: [
-                            '\\test1.py',
-                            JSON.stringify(positionRange5),
-                            'TestLibNestedType',
-                            'testLib.nested',
-                        ],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker6: {
-            codeActions: [
-                {
-                    title: `Add import TestLibNestedSubModuleType from testLib.nested.regularFile`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import TestLibNestedSubModuleType from testLib.nested.regularFile',
-                        command: 'python.addImport',
-                        arguments: [
-                            '\\test1.py',
-                            JSON.stringify(positionRange6),
-                            'TestLibNestedSubModuleType',
-                            'testLib.nested.regularFile',
-                        ],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker7: {
-            codeActions: [
-                {
-                    title: `Add import TestLibStubFileType from testLib.noInit.stubFile`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import TestLibStubFileType from testLib.noInit.stubFile',
-                        command: 'python.addImport',
-                        arguments: [
-                            '\\test1.py',
-                            JSON.stringify(positionRange7),
-                            'TestLibStubFileType',
-                            'testLib.noInit.stubFile',
-                        ],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker8: {
             codeActions: [

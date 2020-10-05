@@ -2,20 +2,23 @@
 // @indexerwithoutstdlib: true
 
 // @filename: test1.py
-//// [|/*result*/|]a = [|/*marker*/SubModType|]
+//// [|/*result*/|]a = [|/*marker*/TestType|]
+
+// @filename: testLib/__init__.pyi
+// @library: true
+//// from testLib2 import TestType
 
 // @filename: testLib/__init__.py
 // @library: true
-//// from testLib.subModules import SubModType
-//// __all__ = ['SubModeType']
+//// from testLib2 import TestType
 
-// @filename: testLib/subModules.pyi
+// @filename: testLib2/__init__.pyi
 // @library: true
-//// class SubModType: ...
+//// class TestType: ...
 
-// @filename: testLib/subModules.py
+// @filename: testLib2/__init__.py
 // @library: true
-//// class SubModType:
+//// class TestType:
 ////     pass
 
 {
@@ -26,10 +29,10 @@
     await helper.verifyInvokeCodeAction(
         {
             marker: {
-                title: 'Add import SubModType from testLib.subModules',
+                title: 'Add import TestType from testLib2',
                 edits: [
-                    { range: resultRange, newText: 'from testLib.subModules import SubModType\n\n\n' },
-                    { range: markerRange, newText: 'SubModType' },
+                    { range: resultRange, newText: 'from testLib2 import TestType\n\n\n' },
+                    { range: markerRange, newText: 'TestType' },
                 ],
             },
         },

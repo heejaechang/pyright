@@ -94,24 +94,6 @@
                         arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', undefined],
                     },
                 },
-                {
-                    title: `Add import stubFile from testLib`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import stubFile from testLib',
-                        command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', 'testLib'],
-                    },
-                },
-                {
-                    title: `Add import stubFile from testLib.noInit`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import stubFile from testLib.noInit',
-                        command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', 'testLib.noInit'],
-                    },
-                },
             ],
         },
         marker2: {
@@ -128,30 +110,10 @@
             ],
         },
         marker3: {
-            codeActions: [
-                {
-                    title: `Add import nested from testLib`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import nested from testLib',
-                        command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange3), 'nested', 'testLib'],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker4: {
-            codeActions: [
-                {
-                    title: `Add import regularFile from testLib.nested`,
-                    kind: Consts.CodeActionKind.QuickFix,
-                    command: {
-                        title: 'Add import regularFile from testLib.nested',
-                        command: 'python.addImport',
-                        arguments: ['\\test1.py', JSON.stringify(positionRange4), 'regularFile', 'testLib.nested'],
-                    },
-                },
-            ],
+            codeActions: [],
         },
         marker5: {
             codeActions: [

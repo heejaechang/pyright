@@ -3,6 +3,7 @@
 **/out/**
 **/typeshed-fallback/**
 **/bundled-stubs/**
+**/bundled-indices/**
 
 # These files are compared exactly.
 packages/pylance-pythia/src/tests/baseline/**/*.json
