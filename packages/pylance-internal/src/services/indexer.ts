@@ -26,7 +26,12 @@ import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/con
 import { ConsoleInterface, log, LogLevel } from 'pyright-internal/common/console';
 import * as debug from 'pyright-internal/common/debug';
 import { LogTracker } from 'pyright-internal/common/logTracker';
-import { combinePaths, comparePaths, ensureTrailingDirectorySeparator } from 'pyright-internal/common/pathUtils';
+import {
+    combinePaths,
+    comparePaths,
+    ensureTrailingDirectorySeparator,
+    normalizeSlashes,
+} from 'pyright-internal/common/pathUtils';
 import { getPythonVersionStrings, PythonVersion } from 'pyright-internal/common/pythonVersion';
 import * as StringUtils from 'pyright-internal/common/stringUtils';
 import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/documentSymbolProvider';
@@ -482,7 +487,7 @@ function readStdLibIndices(
         const map = new Map<string, IndexResults>();
 
         json.forEach((indices) => {
-            map.set(combinePaths(stdLibPath, indices[0]), {
+            map.set(combinePaths(stdLibPath, normalizeSlashes(indices[0])), {
                 privateOrProtected: indices[1][0],
                 symbols: indices[1][1].map((d) => convert(d)),
             });
@@ -501,7 +506,11 @@ function readStdLibIndices(
             externallyVisible: data[1],
             kind: data[2],
             alias: alias
-                ? { originalName: alias[0], modulePath: combinePaths(stdLibPath!, alias[1]), kind: alias[2] }
+                ? {
+                      originalName: alias[0],
+                      modulePath: normalizeSlashes(combinePaths(stdLibPath!, alias[1])),
+                      kind: alias[2],
+                  }
                 : undefined,
             range: undefined,
             selectionRange: undefined,
@@ -531,7 +540,10 @@ function writeStdLibIndices(
         const results = map.get(filePath)!;
         const symbols = results.symbols as IndexSymbolData[];
 
-        indices.push([filePath.substring(prefixLength), [results.privateOrProtected, symbols.map((d) => convert(d))]]);
+        indices.push([
+            normalizeIndexPath(filePath.substring(prefixLength)),
+            [results.privateOrProtected, symbols.map((d) => convert(d))],
+        ]);
     }
 
     // We can give indentation option to stringify to make json file more git friendly.
@@ -554,8 +566,15 @@ function writeStdLibIndices(
             data.name,
             data.externallyVisible,
             data.kind,
-            alias ? [alias.originalName, alias.modulePath.substring(prefixLength), alias.kind] : undefined,
+            alias
+                ? [alias.originalName, normalizeIndexPath(alias.modulePath.substring(prefixLength)), alias.kind]
+                : undefined,
         ];
+    }
+
+    // Normalize slash so indexes on disk are identical when produced on different platforms.
+    function normalizeIndexPath(path: string) {
+        return path.replace(/[\\/]/g, '/');
     }
 }
 
