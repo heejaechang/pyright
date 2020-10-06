@@ -14,8 +14,19 @@ on:
       - main
 
 jobs:
+  cancel:
+    if: github.repository == 'microsoft/pyrx' && github.event_name == 'pull_request'
+    runs-on: ubuntu-18.04
+    name: Cancel previous runs
+
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.5.0
+        with:
+          access_token: ${{ github.token }}
+
   typecheck:
-    if: github.repository == 'microsoft/pyright'
+    if: github.repository == 'microsoft/pyrx'
     runs-on: ubuntu-18.04
     name: Typecheck
 
@@ -26,15 +37,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # Don't cache on Windows; the cache ends up being very large and
-      # the Windows implementation of the cache task uses a much slower archiver.
       - name: Get npm cache directory
-        if: runner.os != 'Windows'
         id: npm-cache
         run: |
           echo "::set-output name=dir::$(npm config get cache)"
       - uses: actions/cache@v2
-        if: runner.os != 'Windows'
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -43,12 +50,14 @@ jobs:
 
       - run: npm install
 
-      - run: npx lerna exec --stream --no-bail -- tsc --noEmit
+      - run: npx tsc --noEmit
+      - run: npx lerna exec --stream --no-bail --ignore=pyright-root --concurrency=4 -- tsc --noEmit
+      - run: npx gulp --tasks
 
-  style:
-    if: github.repository == 'microsoft/pyright'
+  hygiene:
+    if: github.repository == 'microsoft/pyrx'
     runs-on: ubuntu-18.04
-    name: Style
+    name: Hygiene
 
     steps:
       - uses: actions/checkout@v2
@@ -75,13 +84,27 @@ jobs:
 
       - run: npm run check
 
+      - run: npm run createindices
+        working-directory: packages/pylance-internal
+
+      - name: Check diff after createindices
+        run: git diff --exit-code --name-only
+
   test:
+    if: github.repository == 'microsoft/pyrx'
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-10.15, windows-2019, ubuntu-18.04]
+        package:
+          - name: pylance-internal
+            path: packages/pylance-internal
+          - name: pyright-internal
+            path: packages/pyright/packages/pyright-internal
+          - name: vscode-pylance
+            path: packages/vscode-pylance
+        os: [ubuntu-18.04, windows-2019, macos-10.15]
 
-    name: Test ${{ matrix.os }}
+    name: Test (${{ matrix.package.name }} ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: typecheck
 
@@ -92,11 +115,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      # Don't cache on Windows; the cache ends up being very large and
+      # the Windows implementation of the cache task uses a much slower archiver.
       - name: Get npm cache directory
+        if: runner.os != 'Windows'
         id: npm-cache
         run: |
           echo "::set-output name=dir::$(npm config get cache)"
       - uses: actions/cache@v2
+        if: runner.os != 'Windows'
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -105,49 +132,23 @@ jobs:
 
       - run: npm install
 
-      - name: npm test (pyright-internal)
-        run: npm test
-        working-directory: packages/pyright-internal
-
-  build:
-    runs-on: ubuntu-18.04
-    name: Build
-    needs: typecheck
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2-beta
+      - uses: GabrielBB/xvfb-action@v1.4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          run: npm test
+          working-directory: ${{ matrix.package.path }}
+        if: ${{ contains(matrix.package.path, 'vscode') }}
 
-      - name: Get npm cache directory
-        id: npm-cache
-        run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - run: npm install
-
-      - run: npm publish --dry-run
-        working-directory: packages/pyright
-
-      - run: npm run package
-        working-directory: packages/vscode-pyright
+      - run: npm test
+        working-directory: ${{ matrix.package.path }}
+        if: ${{ ! contains(matrix.package.path, 'vscode') }}
 
   required:
     runs-on: ubuntu-18.04
     name: Required
     needs:
       - typecheck
-      - style
+      - hygiene
       - test
-      - build
 
     steps:
       - run: echo All required jobs succeeded.

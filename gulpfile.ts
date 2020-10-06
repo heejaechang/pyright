@@ -66,14 +66,34 @@ async function setPyrightCommit() {
     });
 }
 
-async function buildGitVersion(prBuildId?: string): Promise<string> {
+async function getExactVersion(): Promise<string | undefined> {
     const gitInfo = await gitDescribe('.', { match: '*.*.*', dirtySemver: false });
-    assert.ok(gitInfo.semver, `A valid SemVer should have been parsed from git describe, parsed: ${gitInfo.raw}`);
 
-    if (gitInfo.distance) {
-        // Bump patch version to ensure the current version is semantically after the previous tag.
-        gitInfo.semver.patch++;
+    if (!gitInfo.semver || gitInfo.distance) {
+        return undefined;
     }
+
+    return gitInfo.semver.format();
+}
+
+async function buildGitVersion(prBuildId?: string): Promise<string> {
+    const exact = await getExactVersion();
+    if (exact) {
+        assert.ok(!prBuildId, `Got prBuildId for exact git tag: ${exact}`);
+        return exact;
+    }
+
+    // Only match stable releases.
+    const gitInfo = await gitDescribe('.', {
+        match: '*.*.*',
+        dirtySemver: false,
+        customArguments: ['--exclude=*-*'],
+    });
+    assert.ok(gitInfo.semver, `A valid SemVer should have been parsed from git describe, parsed: ${gitInfo.raw}`);
+    assert.ok(gitInfo.distance, `Parsed version is exact: ${gitInfo.raw}`);
+
+    // Bump patch version to ensure the current version is semantically after the previous tag.
+    gitInfo.semver.patch++;
 
     if (prBuildId) {
         return `${gitInfo.semver.format()}-pr.${prBuildId}`;

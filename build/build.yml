@@ -5,10 +5,12 @@ trigger:
       - main
       - refs/tags/*
 
-pr:
-  autoCancel: true
-  branches:
-    include: ['master', 'main']
+pr: none
+
+# pr:
+#   autoCancel: true
+#   branches:
+#     include: ['master', 'main']
 
 variables:
   - template: templates/globals.yml

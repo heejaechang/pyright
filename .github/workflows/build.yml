@@ -1,0 +1,143 @@
+name: 'Build'
+
+env:
+  NODE_VERSION: '12' # Shipped with VS Code.
+  ARTIFACT_NAME_VSIX: vsix
+  ARTIFACT_NAME_PYLANCE_PKG: pylance
+  ARTIFACT_NAME_PYTHIA_PKG: pythia
+  VSIX_NAME: vscode-pylance.vsix
+  PYLANCE_PKG_NAME: pylance.tgz
+  PYTHIA_PKG_NAME: pylance-pythia.tgz
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      # CalVer tags without 'v' prefix
+      - '20[0-9][0-9].[0-9]+.[0-9]+'
+      - '20[0-9][0-9].[0-9]+.[0-9]+-*'
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  build:
+    if: github.repository == 'microsoft/pyrx'
+    runs-on: ubuntu-18.04
+    name: Build
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - run: npm install
+
+      - run: npx gulp setVersion
+        if: github.event_name != 'pull_request'
+
+      - run: npx gulp setVersion --prBuildId ${{ github.run_id }}
+        if: github.event_name == 'pull_request'
+
+      - name: VSIX
+        working-directory: packages/vscode-pylance
+        run: npx vsce package -o ${{ env.VSIX_NAME }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ARTIFACT_NAME_VSIX }}
+          path: packages/vscode-pylance/${{ env.VSIX_NAME }}
+
+      - name: Pylance NPM package
+        working-directory: packages/pylance
+        run: |
+          npm pack
+          mv pylance-*.tgz ${{ env.PYLANCE_PKG_NAME }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ARTIFACT_NAME_PYLANCE_PKG }}
+          path: packages/pylance/${{ env.PYLANCE_PKG_NAME }}
+
+      - name: Pythia
+        working-directory: packages/pylance-pythia
+        run: |
+          npm pack
+          mv pylance-pythia-*.tgz ${{ env.PYTHIA_PKG_NAME }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ARTIFACT_NAME_PYTHIA_PKG }}
+          path: packages/pylance-pythia/${{ env.PYTHIA_PKG_NAME }}
+
+  create_release:
+    if: github.repository == 'microsoft/pyrx' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-18.04
+    name: Create release
+    needs: [build]
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      # TODO: If the release already exists (tag created via the GUI), reuse it.
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: true
+          prerelease: ${{ contains(github.ref, '-') }}
+
+      - name: Upload VSIX
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/${{ env.ARTIFACT_NAME_VSIX }}/${{ env.VSIX_NAME }}
+          asset_name: ${{ env.VSIX_NAME }}
+          asset_content_type: application/zip
+
+      - name: Upload Pylance package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/${{ env.ARTIFACT_NAME_PYLANCE_PKG }}/${{ env.PYLANCE_PKG_NAME }}
+          asset_name: ${{ env.PYLANCE_PKG_NAME }}
+          asset_content_type: application/gzip
+
+      - name: Upload Pythia package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/${{ env.ARTIFACT_NAME_PYTHIA_PKG }}/${{ env.PYTHIA_PKG_NAME }}
+          asset_name: ${{ env.PYTHIA_PKG_NAME }}
+          asset_content_type: application/gzip

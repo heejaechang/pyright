@@ -21,7 +21,7 @@
         "webpack": "webpack --mode development --env development --progress",
         "webpack-dev": "npm run clean && webpack --mode development --env development --watch --info-verbosity verbose --progress",
         "clean": "shx rm -rf ./dist ./out",
-        "prepublishOnly": "npm run clean && npm run build"
+        "prepack": "npm run clean && npm run build"
     },
     "devDependencies": {
         "@types/node": "~12.12.54",

@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  VSIX_NAME: vscode-pylance.vsix
+  BLOB_CONTAINER_NAME: pylance-insiders
+  BLOB_NAME: vscode-pylance-${{ github.event.release.tag_name }}.vsix
+
+jobs:
+  publish_extension:
+    # if: github.repository == 'microsoft/pyrx' && !github.event.release.prerelease
+    if: false
+    runs-on: ubuntu-18.04
+    name: Publish extension to marketplace
+
+    steps:
+      - name: Download VSIX
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: microsoft
+          repo: pyrx
+          tag: ${{ github.event.release.tag_name }}
+          file: ${{ env.VSIX_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish VSIX
+        run: npx vsce publish --packagePath ${{ env.VSIX_NAME }} --pat ${{ secrets.VSCE_TOKEN }} --noVerify
+
+  upload_to_insiders:
+    if: github.repository == 'microsoft/pyrx'
+    runs-on: ubuntu-18.04
+    name: Upload to insiders
+
+    steps:
+      - name: Download VSIX
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: microsoft
+          repo: pyrx
+          tag: ${{ github.event.release.tag_name }}
+          file: ${{ env.VSIX_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Upload to Blob Storage
+        run: az storage blob upload --file ${{ env.VSIX_NAME }} --account-name pvsc --container-name ${{ env.BLOB_CONTAINER_NAME }} --name ${{ env.BLOB_NAME }} --auth-mode login
+
+      - name: Get URL to uploaded VSIX
+        run: az storage blob url --account-name pvsc --container-name ${{ env.BLOB_CONTAINER_NAME }} --name ${{ env.BLOB_NAME }} --auth-mode login

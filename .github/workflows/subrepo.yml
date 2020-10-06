@@ -12,10 +12,11 @@ on:
 
 jobs:
   check:
+    if: github.repository == 'microsoft/pyrx'
     runs-on: ubuntu-18.04
 
     steps:
-      - uses: actions/checkout@v2-beta
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
