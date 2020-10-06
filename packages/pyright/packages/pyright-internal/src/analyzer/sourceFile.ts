@@ -39,7 +39,7 @@ import { DocumentHighlightProvider } from '../languageService/documentHighlightP
 import { DocumentSymbolProvider, IndexOptions, IndexResults } from '../languageService/documentSymbolProvider';
 import { HoverProvider, HoverResults } from '../languageService/hoverProvider';
 import { performQuickAction } from '../languageService/quickActions';
-import { ReferencesProvider, ReferencesResult } from '../languageService/referencesProvider';
+import { ReferenceCallback, ReferencesProvider, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpProvider, SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { Localizer } from '../localization/localize';
 import { ModuleNode } from '../parser/parseNodes';
@@ -677,6 +677,7 @@ export class SourceFile {
         sourceMapper: SourceMapper,
         position: Position,
         evaluator: TypeEvaluator,
+        reporter: ReferenceCallback | undefined,
         token: CancellationToken
     ): ReferencesResult | undefined {
         // If we have no completed analysis job, there's nothing to do.
@@ -690,6 +691,7 @@ export class SourceFile {
             this._filePath,
             position,
             evaluator,
+            reporter,
             token
         );
     }
@@ -729,18 +731,17 @@ export class SourceFile {
         );
     }
 
-    addSymbolsForDocument(symbolList: SymbolInformation[], query: string, token: CancellationToken) {
+    getSymbolsForDocument(query: string, token: CancellationToken) {
         // If we have no completed analysis job, there's nothing to do.
         if (!this._parseResults && !this._cachedIndexResults) {
-            return;
+            return [];
         }
 
-        DocumentSymbolProvider.addSymbolsForDocument(
+        return DocumentSymbolProvider.getSymbolsForDocument(
             this.getCachedIndexResults(),
             this._parseResults,
             this._filePath,
             query,
-            symbolList,
             token
         );
     }

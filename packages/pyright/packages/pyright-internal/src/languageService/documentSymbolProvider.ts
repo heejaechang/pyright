@@ -52,6 +52,8 @@ export interface IndexOptions {
     indexingForAutoImportMode: boolean;
 }
 
+export type WorkspaceSymbolCallback = (symbols: SymbolInformation[]) => void;
+
 export function includeAliasDeclarationInIndex(
     importLookup: ImportLookup,
     modulePath: string,
@@ -109,22 +111,25 @@ export function getIndexAliasData(
 const similarityLimit = 0.5;
 
 export class DocumentSymbolProvider {
-    static addSymbolsForDocument(
+    static getSymbolsForDocument(
         indexResults: IndexResults | undefined,
         parseResults: ParseResults | undefined,
         filePath: string,
         query: string,
-        symbolList: SymbolInformation[],
         token: CancellationToken
-    ) {
+    ): SymbolInformation[] {
+        const symbolList: SymbolInformation[] = [];
+
         if (!indexResults && !parseResults) {
-            return;
+            return symbolList;
         }
 
         const indexSymbolData =
             (indexResults?.symbols as IndexSymbolData[]) ??
             DocumentSymbolProvider.indexSymbols(parseResults!, { indexingForAutoImportMode: false }, token);
+
         appendWorkspaceSymbolsRecursive(indexSymbolData, filePath, query, '', symbolList, token);
+        return symbolList;
     }
 
     static addHierarchicalSymbolsForDocument(

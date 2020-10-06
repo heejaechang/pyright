@@ -47,9 +47,9 @@ import {
 } from '../languageService/autoImporter';
 import { CallHierarchyProvider } from '../languageService/callHierarchyProvider';
 import { CompletionResults } from '../languageService/completionProvider';
-import { IndexOptions, IndexResults } from '../languageService/documentSymbolProvider';
+import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
-import { ReferencesResult } from '../languageService/referencesProvider';
+import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
@@ -1096,16 +1096,17 @@ export class Program {
         });
     }
 
-    getReferencesForPosition(
+    reportReferencesForPosition(
         filePath: string,
         position: Position,
         includeDeclaration: boolean,
+        reporter: ReferenceCallback,
         token: CancellationToken
-    ): DocumentRange[] | undefined {
-        return this._runEvaluatorWithCancellationToken(token, () => {
+    ) {
+        this._runEvaluatorWithCancellationToken(token, () => {
             const sourceFileInfo = this._getSourceFileInfoFromPath(filePath);
             if (!sourceFileInfo) {
-                return undefined;
+                return;
             }
 
             const invokedFromUserFile = this._isUserCode(sourceFileInfo);
@@ -1116,11 +1117,12 @@ export class Program {
                 this._createSourceMapper(execEnv),
                 position,
                 this._evaluator!,
+                reporter,
                 token
             );
 
             if (!referencesResult) {
-                return undefined;
+                return;
             }
 
             // Do we need to do a global search as well?
@@ -1167,19 +1169,18 @@ export class Program {
                             continue;
                         }
 
-                        const tempResult: ReferencesResult = {
-                            requiresGlobalSearch: referencesResult.requiresGlobalSearch,
-                            nodeAtOffset: referencesResult.nodeAtOffset,
-                            symbolName: referencesResult.symbolName,
-                            declarations: referencesResult.declarations,
-                            locations: [],
-                        };
+                        const tempResult = new ReferencesResult(
+                            referencesResult.requiresGlobalSearch,
+                            referencesResult.nodeAtOffset,
+                            referencesResult.symbolName,
+                            referencesResult.declarations
+                        );
 
                         declFileInfo.sourceFile.addReferences(tempResult, includeDeclaration, this._evaluator!, token);
                         for (const loc of tempResult.locations) {
                             // Include declarations only. And throw away any references
                             if (loc.path === decl.path && doesRangeContain(decl.range, loc.range)) {
-                                referencesResult.locations.push(loc);
+                                referencesResult.addLocations(loc);
                             }
                         }
                     }
@@ -1187,8 +1188,6 @@ export class Program {
             } else {
                 sourceFileInfo.sourceFile.addReferences(referencesResult, includeDeclaration, this._evaluator!, token);
             }
-
-            return referencesResult.locations;
         });
     }
 
@@ -1247,8 +1246,8 @@ export class Program {
         });
     }
 
-    addSymbolsForWorkspace(symbolList: SymbolInformation[], query: string, token: CancellationToken) {
-        return this._runEvaluatorWithCancellationToken(token, () => {
+    reportSymbolsForWorkspace(query: string, reporter: WorkspaceSymbolCallback, token: CancellationToken) {
+        this._runEvaluatorWithCancellationToken(token, () => {
             // Don't do a search if the query is empty. We'll return
             // too many results in this case.
             if (!query) {
@@ -1266,7 +1265,10 @@ export class Program {
                     this._bindFile(sourceFileInfo);
                 }
 
-                sourceFileInfo.sourceFile.addSymbolsForDocument(symbolList, query, token);
+                const symbolList = sourceFileInfo.sourceFile.getSymbolsForDocument(query, token);
+                if (symbolList.length > 0) {
+                    reporter(symbolList);
+                }
 
                 // This operation can consume significant memory, so check
                 // for situations where we need to discard the type cache.
@@ -1440,6 +1442,7 @@ export class Program {
                 this._createSourceMapper(execEnv),
                 position,
                 this._evaluator!,
+                undefined,
                 token
             );
 
@@ -1502,6 +1505,7 @@ export class Program {
             this._createSourceMapper(execEnv),
             position,
             this._evaluator!,
+            undefined,
             token
         );
 
@@ -1538,6 +1542,7 @@ export class Program {
             this._createSourceMapper(execEnv),
             position,
             this._evaluator!,
+            undefined,
             token
         );
 
@@ -1593,6 +1598,7 @@ export class Program {
             this._createSourceMapper(execEnv),
             position,
             this._evaluator!,
+            undefined,
             token
         );
 
