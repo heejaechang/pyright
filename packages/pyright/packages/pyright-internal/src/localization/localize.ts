@@ -267,6 +267,7 @@ export namespace Localizer {
         export const expectedCloseBrace = () => getRawString('Diagnostic.expectedCloseBrace');
         export const expectedCloseParen = () => getRawString('Diagnostic.expectedCloseParen');
         export const expectedColon = () => getRawString('Diagnostic.expectedColon');
+        export const expectedDecoratorExpr = () => getRawString('Diagnostic.expectedDecoratorExpr');
         export const expectedDecoratorName = () => getRawString('Diagnostic.expectedDecoratorName');
         export const expectedDecoratorNewline = () => getRawString('Diagnostic.expectedDecoratorNewline');
         export const expectedDelExpr = () => getRawString('Diagnostic.expectedDelExpr');
@@ -475,6 +476,7 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.privateUsedOutsideOfClass'));
         export const privateUsedOutsideOfModule = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.privateUsedOutsideOfModule'));
+        export const propertyStaticOrClassMethod = () => getRawString('Diagnostic.propertyStaticOrClassMethod');
         export const protectedUsedOutsideOfClass = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protectedUsedOutsideOfClass'));
         export const protocolIllegal = () => getRawString('Diagnostic.protocolIllegal');
@@ -564,6 +566,7 @@ export namespace Localizer {
         export const typedDictTotalParam = () => getRawString('Diagnostic.typedDictTotalParam');
         export const typeExpectedClass = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.typeExpectedClass'));
+        export const typeGuardArgCount = () => getRawString('Diagnostic.typeGuardArgCount');
         export const typeNotAwaitable = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.typeNotAwaitable'));
         export const typeNotCallable = () =>

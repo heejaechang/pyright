@@ -2084,6 +2084,11 @@ export class Binder extends ParseTreeWalker {
                 ) {
                     return this._isNarrowingExpression(expression.arguments[0].valueExpression, expressionList);
                 }
+
+                // Is this potentially a call to a user-defined type guard function?
+                if (expression.arguments.length >= 1) {
+                    return this._isNarrowingExpression(expression.arguments[0].valueExpression, expressionList);
+                }
             }
         }
 
@@ -2722,8 +2727,8 @@ export class Binder extends ParseTreeWalker {
                 // a decorator that tells us otherwise.
                 isInstanceMember = true;
                 for (const decorator of methodNode.decorators) {
-                    if (decorator.leftExpression.nodeType === ParseNodeType.Name) {
-                        const decoratorName = decorator.leftExpression.value;
+                    if (decorator.expression.nodeType === ParseNodeType.Name) {
+                        const decoratorName = decorator.expression.value;
 
                         if (decoratorName === 'staticmethod') {
                             // A static method doesn't have a "self" or "cls" parameter.
@@ -2808,6 +2813,7 @@ export class Binder extends ParseTreeWalker {
             TypeAlias: true,
             OrderedDict: true,
             Concatenate: true,
+            TypeGuard: true,
         };
 
         const assignedName = assignedNameNode.value;
