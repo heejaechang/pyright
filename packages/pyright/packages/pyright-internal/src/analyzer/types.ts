@@ -536,13 +536,12 @@ export namespace ClassType {
         return !!(classType.details.flags & ClassTypeFlags.PartiallyConstructed);
     }
 
+    export function getAliasClass(classType: ClassType): ClassType {
+        return classType.details.aliasClass || classType;
+    }
+
     export function getTypeParameters(classType: ClassType) {
-        // If this is a special class, use the alias class' type
-        // parameters instead.
-        if (classType.details.aliasClass) {
-            return classType.details.aliasClass.details.typeParameters;
-        }
-        return classType.details.typeParameters;
+        return getAliasClass(classType).details.typeParameters;
     }
 
     export function hasUnknownBaseClass(classType: ClassType) {
@@ -1273,6 +1272,9 @@ export interface TypeVarDetails {
 
     // Used for recursive type aliases.
     recursiveTypeAliasName?: string;
+
+    // Type parameters for a recursive type alias.
+    recursiveTypeParameters?: TypeVarType[];
 }
 
 export interface TypeVarType extends TypeBase {
@@ -1558,6 +1560,10 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
 
             if (type1.scopeId !== type2TypeVar.scopeId) {
                 return false;
+            }
+
+            if (type1.details === type2TypeVar.details) {
+                return true;
             }
 
             if (type1.details.name !== type2TypeVar.details.name) {
