@@ -199,8 +199,12 @@ Name: population, dtype: int64
     def to_dict(self) -> Dict[_str, Any]: ...
     @overload
     def to_dict(
-        self, orient: Union[_str, Literal["dict", "list", "series", "split", "records", "index"]] = ..., into: Hashable = ...,
+        self, orient: Literal["records"] = ..., into: Hashable = ...,
     ) -> List[Dict[_str, Any]]: ...
+    @overload
+    def to_dict(
+        self, orient: Union[_str, Literal["dict", "list", "series", "split", "index"]] = ..., into: Hashable = ...,
+    ) -> Dict[_str, Any]: ...
     def to_gbq(self, destination_table, project_id=..., chunksize=..., reauth=..., if_exists=..., auth_local_webserver=..., table_schema=..., location=..., progress_bar=..., credentials=...) -> None: ...
     @classmethod
     def from_records(cls, data, index=..., exclude=..., columns=..., coerce_float=..., nrows=...) -> DataFrame: ...
@@ -646,7 +650,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
         limit: int = ...,
         downcast: Optional[Dict] = ...,
         *,
-        inplace: Literal[True]
+        inplace: Literal[True] = ...
     ) -> None:
         """Fill NA/NaN values using the specified method.
 
