@@ -2,6 +2,9 @@
 
 // @filename: sem.py
 //// [|/*marker*/|]
+//// from [|typing|] import [|ClassVar|], [|Dict|], [|List|]
+//// import [|typing|]
+////
 //// class [|MyClass|]:
 ////     pass
 ////
@@ -14,14 +17,27 @@
 ////
 //// def [|other_func|]([|a|]: [|int|], [|b|]: [|str|]) -> [|MyClass|]:
 ////     return [|MyClass|]()
+////
+//// [|more_var|]: [|ClassVar|][[|Dict|][[|str|], [|typing|].[|Type|][[|MyClass|]]]] = {}
+////
+//// def [|more_func|]([|nums|]: [|List|][[|int|]]):
+////     pass
 
 helper.verifySemanticTokens([
     {
         fileOrStartMarker: 'marker',
         tokens: [
+            { type: 'module' },
+            { type: 'class' },
+            { type: 'variable' },
+            { type: 'variable' },
+            { type: 'module' },
+            // MyClass
             { type: 'class', modifiers: ['declaration'] },
+            // my_var
             { type: 'variable', modifiers: ['declaration'] },
             { type: 'class', modifiers: ['typeHintComment'] },
+            // my_func
             { type: 'function', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
@@ -29,8 +45,10 @@ helper.verifySemanticTokens([
             { type: 'class', modifiers: ['typeHintComment'] },
             { type: 'class', modifiers: ['typeHintComment'] },
             { type: 'class' },
+            // other_var
             { type: 'variable', modifiers: ['declaration'] },
             { type: 'class', modifiers: ['typeHint'] },
+            // other_func
             { type: 'function', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
             { type: 'class', modifiers: ['typeHint'] },
@@ -38,6 +56,19 @@ helper.verifySemanticTokens([
             { type: 'class', modifiers: ['typeHint'] },
             { type: 'class', modifiers: ['typeHint'] },
             { type: 'class' },
+            // more_var
+            { type: 'variable', modifiers: ['declaration'] },
+            { type: 'class', modifiers: ['typeHint'] },
+            { type: 'variable', modifiers: ['typeHint'] },
+            { type: 'class', modifiers: ['typeHint'] },
+            { type: 'module', modifiers: ['typeHint'] },
+            { type: 'class', modifiers: ['typeHint'] },
+            { type: 'class', modifiers: ['typeHint'] },
+            // more_func
+            { type: 'function', modifiers: ['declaration'] },
+            { type: 'parameter', modifiers: ['declaration'] },
+            { type: 'variable', modifiers: ['typeHint'] },
+            { type: 'class', modifiers: ['typeHint'] },
         ],
     },
 ]);

@@ -377,7 +377,8 @@ class TokenWalker extends ParseTreeWalker {
                     case DeclarationType.Variable: {
                         const declarationModifiers =
                             resolvedDecl.node.id === node.id ? TokenModifiers.declaration : TokenModifiers.none;
-                        const modifier = this._getDecoratorModifiers(node) | declarationModifiers;
+                        const modifier =
+                            this._getDecoratorModifiers(node) | declarationModifiers | typeAnnotationModifiers;
                         const enclosingClass = getEnclosingClass(resolvedDecl.node, /* stopAtFunction */ true);
                         if (enclosingClass) {
                             const classTypeInfo = this._evaluator.getTypeOfClass(enclosingClass);
@@ -398,7 +399,7 @@ class TokenWalker extends ParseTreeWalker {
                         break;
                     }
                     case DeclarationType.Alias: {
-                        const modifier = this._getDecoratorModifiers(node);
+                        const modifier = this._getDecoratorModifiers(node) | typeAnnotationModifiers;
                         return { type: TokenTypes.module, modifiers: modifier };
                     }
                 }
