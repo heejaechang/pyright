@@ -820,6 +820,12 @@ test('DataClass10', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('DataClass11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass11.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('Callable1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable1.py']);
 
@@ -919,6 +925,12 @@ test('TypeVar3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar3.py']);
 
     TestUtils.validateResults(analysisResults, 6);
+});
+
+test('TypeVar4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar4.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Annotated1', () => {
