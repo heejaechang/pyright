@@ -79,7 +79,7 @@ import { convertWorkspaceEdits } from './common/textEditUtils';
 import { DocumentRange, Position } from './common/textRange';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
 import { CompletionItemData, CompletionResults } from './languageService/completionProvider';
-import { DocumentSymbolProvider, WorkspaceSymbolCallback } from './languageService/documentSymbolProvider';
+import { convertToFlatSymbols, WorkspaceSymbolCallback } from './languageService/documentSymbolProvider';
 import { convertHoverResults } from './languageService/hoverProvider';
 import { ReferenceCallback } from './languageService/referencesProvider';
 import { Localizer } from './localization/localize';
@@ -511,7 +511,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return symbolList;
             }
 
-            return DocumentSymbolProvider.convertToFlatSymbols(params.textDocument.uri, symbolList);
+            return convertToFlatSymbols(params.textDocument.uri, symbolList);
         });
 
         this._connection.onWorkspaceSymbol(async (params, token, _, resultReporter) => {

@@ -106,6 +106,16 @@ export function getIndexAliasData(
     };
 }
 
+export function convertToFlatSymbols(documentUri: string, symbolList: DocumentSymbol[]): SymbolInformation[] {
+    const flatSymbols: SymbolInformation[] = [];
+
+    for (const symbol of symbolList) {
+        appendToFlatSymbolsRecursive(flatSymbols, documentUri, symbol);
+    }
+
+    return flatSymbols;
+}
+
 // We'll use a somewhat-arbitrary cutoff value here to determine
 // whether it's sufficiently similar.
 const similarityLimit = 0.5;
@@ -157,16 +167,6 @@ export class DocumentSymbolProvider {
         collectSymbolIndexData(parseResults, parseResults.parseTree, options, indexSymbolData, token);
 
         return indexSymbolData;
-    }
-
-    static convertToFlatSymbols(documentUri: string, symbolList: DocumentSymbol[]): SymbolInformation[] {
-        const flatSymbols: SymbolInformation[] = [];
-
-        for (const symbol of symbolList) {
-            appendToFlatSymbolsRecursive(flatSymbols, documentUri, symbol);
-        }
-
-        return flatSymbols;
     }
 }
 
