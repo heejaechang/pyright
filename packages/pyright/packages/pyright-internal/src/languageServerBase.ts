@@ -79,7 +79,7 @@ import { convertWorkspaceEdits } from './common/textEditUtils';
 import { DocumentRange, Position } from './common/textRange';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
 import { CompletionItemData, CompletionResults } from './languageService/completionProvider';
-import { WorkspaceSymbolCallback } from './languageService/documentSymbolProvider';
+import { DocumentSymbolProvider, WorkspaceSymbolCallback } from './languageService/documentSymbolProvider';
 import { convertHoverResults } from './languageService/hoverProvider';
 import { ReferenceCallback } from './languageService/referencesProvider';
 import { Localizer } from './localization/localize';
@@ -169,6 +169,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasWatchFileCapability = false;
     protected _hasActiveParameterCapability = false;
     protected _hasSignatureLabelOffsetCapability = false;
+    protected _hasHierarchicalDocumentSymbolCapability = false;
     protected _supportsUnnecessaryDiagnosticTag = false;
     protected _defaultClientConfig: any;
 
@@ -506,7 +507,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             const symbolList: DocumentSymbol[] = [];
             workspace.serviceInstance.addSymbolsForDocument(filePath, symbolList, token);
-            return symbolList;
+            if (this._hasHierarchicalDocumentSymbolCapability) {
+                return symbolList;
+            }
+
+            return DocumentSymbolProvider.convertToFlatSymbols(params.textDocument.uri, symbolList);
         });
 
         this._connection.onWorkspaceSymbol(async (params, token, _, resultReporter) => {
@@ -893,6 +898,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             ?.activeParameterSupport;
         this._hasSignatureLabelOffsetCapability = !!capabilities.textDocument?.signatureHelp?.signatureInformation
             ?.parameterInformation?.labelOffsetSupport;
+        this._hasHierarchicalDocumentSymbolCapability = !!capabilities.textDocument?.documentSymbol
+            ?.hierarchicalDocumentSymbolSupport;
         const supportedDiagnosticTags = capabilities.textDocument?.publishDiagnostics?.tagSupport?.valueSet || [];
         this._supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(
             (tag) => tag === DiagnosticTag.Unnecessary
