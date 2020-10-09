@@ -12,7 +12,7 @@
 import { CancellationToken, Hover, MarkupKind } from 'vscode-languageserver';
 
 import { Declaration, DeclarationBase, DeclarationType, FunctionDeclaration } from '../analyzer/declaration';
-import { convertDocStringToMarkdown } from '../analyzer/docStringToMarkdown';
+import { convertDocStringToMarkdown, convertDocStringToPlainText } from '../analyzer/docStringConversion';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { SourceMapper } from '../analyzer/sourceMapper';
 import {
@@ -35,6 +35,7 @@ import {
 } from '../analyzer/types';
 import { ClassMemberLookupFlags, isProperty, lookUpClassMember } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
+import { assert } from '../common/debug';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import { Position, Range } from '../common/textRange';
 import { TextRange } from '../common/textRange';
@@ -346,8 +347,10 @@ export class HoverProvider {
         if (docString) {
             if (format === MarkupKind.Markdown) {
                 this._addResultsPart(parts, convertDocStringToMarkdown(docString));
+            } else if (format === MarkupKind.PlainText) {
+                this._addResultsPart(parts, convertDocStringToPlainText(docString));
             } else {
-                this._addResultsPart(parts, docString);
+                assert(false, `Unsupported markup type: ${format}`);
             }
         }
     }
@@ -370,8 +373,10 @@ export function convertHoverResults(format: MarkupKind, hoverResults: HoverResul
             if (part.python) {
                 if (format === MarkupKind.Markdown) {
                     return '```python\n' + part.text + '\n```\n';
+                } else if (format === MarkupKind.PlainText) {
+                    return part.text + '\n\n';
                 } else {
-                    return part.text + '\n';
+                    assert(false, `Unsupported markup type: ${format}`);
                 }
             }
             return part.text;

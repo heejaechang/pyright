@@ -17,15 +17,12 @@
 ////         pass
 
 // @ts-ignore
-await helper.verifyCompletion('exact', {
+await helper.verifyCompletion('exact', 'markdown', {
     marker: {
         completions: [
             {
                 label: 'MyShadow',
-                documentation: {
-                    kind: 'markdown',
-                    value: '```\nfrom testLib import MyShadow\n```',
-                },
+                documentation: '```\nfrom testLib import MyShadow\n```',
                 detail: 'Auto-import',
             },
         ],

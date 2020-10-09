@@ -807,6 +807,7 @@ export class TestState {
 
     async verifyCompletion(
         verifyMode: _.FourSlashCompletionVerificationMode,
+        docFormat: MarkupKind,
         map: {
             [marker: string]: {
                 completions: _.FourSlashCompletionItem[];
@@ -834,6 +835,7 @@ export class TestState {
                 filePath,
                 completionPosition,
                 this.workspace.rootPath,
+                docFormat,
                 CancellationToken.None
             );
 
@@ -868,12 +870,18 @@ export class TestState {
                         assert.equal(actual.detail, expected.detail);
                         if (expectedCompletions[i].documentation !== undefined) {
                             if (actual.documentation === undefined) {
-                                this.program.resolveCompletionItem(filePath, actual, undefined, CancellationToken.None);
+                                this.program.resolveCompletionItem(
+                                    filePath,
+                                    actual,
+                                    docFormat,
+                                    undefined,
+                                    CancellationToken.None
+                                );
                             }
 
                             if (MarkupContent.is(actual.documentation)) {
-                                assert.equal(actual.documentation.value, expected.documentation?.value);
-                                assert.equal(actual.documentation.kind, expected.documentation?.kind);
+                                assert.equal(actual.documentation.value, expected.documentation);
+                                assert.equal(actual.documentation.kind, docFormat);
                             } else {
                                 assert.fail(
                                     `Unexpected type of contents object "${actual.documentation}", should be MarkupContent.`

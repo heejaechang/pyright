@@ -293,21 +293,29 @@ export class AnalyzerService {
         filePath: string,
         position: Position,
         workspacePath: string,
+        format: MarkupKind,
         token: CancellationToken
     ): Promise<CompletionResults | undefined> {
         return this._program.getCompletionsForPosition(
             filePath,
             position,
             workspacePath,
+            format,
             this._backgroundAnalysisProgram.getIndexing(filePath),
             token
         );
     }
 
-    resolveCompletionItem(filePath: string, completionItem: CompletionItem, token: CancellationToken) {
+    resolveCompletionItem(
+        filePath: string,
+        completionItem: CompletionItem,
+        format: MarkupKind,
+        token: CancellationToken
+    ) {
         this._program.resolveCompletionItem(
             filePath,
             completionItem,
+            format,
             this._backgroundAnalysisProgram.getIndexing(filePath),
             token
         );

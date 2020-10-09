@@ -27,7 +27,7 @@ declare namespace _ {
     interface FourSlashCompletionItem {
         label: string;
         insertionText?: string;
-        documentation?: { kind: string; value: string };
+        documentation?: string;
         detail?: string;
     }
 
@@ -152,6 +152,7 @@ declare namespace _ {
         verifyHover(kind: string, map: { [marker: string]: string }): void;
         verifyCompletion(
             verifyMode: FourSlashCompletionVerificationMode,
+            docFormat: string,
             map: {
                 [marker: string]: {
                     completions: FourSlashCompletionItem[];

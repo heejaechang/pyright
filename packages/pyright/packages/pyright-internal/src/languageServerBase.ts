@@ -86,8 +86,6 @@ import { ReferenceCallback } from './languageService/referencesProvider';
 import { Localizer } from './localization/localize';
 import { WorkspaceMap } from './workspaceMap';
 
-const SUPPORTED_MARKUPKIND = [MarkupKind.PlainText, MarkupKind.Markdown];
-
 export interface ServerSettings {
     venvPath?: string;
     pythonPath?: string;
@@ -174,6 +172,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasSignatureLabelOffsetCapability = false;
     protected _hasHierarchicalDocumentSymbolCapability = false;
     protected _hoverContentFormat: MarkupKind = MarkupKind.PlainText;
+    protected _completionDocFormat: MarkupKind = MarkupKind.PlainText;
     protected _supportsUnnecessaryDiagnosticTag = false;
     protected _defaultClientConfig: any;
 
@@ -658,7 +657,12 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             const completionItemData = params.data as CompletionItemData;
             if (completionItemData && completionItemData.filePath) {
                 const workspace = await this.getWorkspaceForFile(completionItemData.workspacePath);
-                workspace.serviceInstance.resolveCompletionItem(completionItemData.filePath, params, token);
+                workspace.serviceInstance.resolveCompletionItem(
+                    completionItemData.filePath,
+                    params,
+                    this._completionDocFormat,
+                    token
+                );
             }
             return params;
         });
@@ -882,7 +886,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         workspacePath: string,
         token: CancellationToken
     ): Promise<CompletionResults | undefined> {
-        return workspace.serviceInstance.getCompletionsForPosition(filePath, position, workspacePath, token);
+        return workspace.serviceInstance.getCompletionsForPosition(
+            filePath,
+            position,
+            workspacePath,
+            this._completionDocFormat,
+            token
+        );
     }
 
     updateSettingsForAllWorkspaces(): void {
@@ -909,13 +919,10 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             ?.parameterInformation?.labelOffsetSupport;
         this._hasHierarchicalDocumentSymbolCapability = !!capabilities.textDocument?.documentSymbol
             ?.hierarchicalDocumentSymbolSupport;
-        this._hoverContentFormat = MarkupKind.PlainText;
-        for (const format of capabilities.textDocument?.hover?.contentFormat ?? []) {
-            if (SUPPORTED_MARKUPKIND.includes(format)) {
-                this._hoverContentFormat = format;
-                break;
-            }
-        }
+        this._hoverContentFormat = this._getCompatibleMarkupKind(capabilities.textDocument?.hover?.contentFormat);
+        this._completionDocFormat = this._getCompatibleMarkupKind(
+            capabilities.textDocument?.completion?.completionItem?.documentationFormat
+        );
         const supportedDiagnosticTags = capabilities.textDocument?.publishDiagnostics?.tagSupport?.valueSet || [];
         this._supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(
             (tag) => tag === DiagnosticTag.Unnecessary
@@ -1106,6 +1113,18 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             default:
                 return LogLevel.Info;
         }
+    }
+
+    private _getCompatibleMarkupKind(clientSupportedFormats: MarkupKind[] | undefined) {
+        const serverSupportedFormats = [MarkupKind.PlainText, MarkupKind.Markdown];
+
+        for (const format of clientSupportedFormats ?? []) {
+            if (serverSupportedFormats.includes(format)) {
+                return format;
+            }
+        }
+
+        return MarkupKind.PlainText;
     }
 
     private async _getProgressReporter(

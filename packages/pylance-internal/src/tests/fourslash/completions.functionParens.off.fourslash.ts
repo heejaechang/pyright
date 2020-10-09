@@ -6,7 +6,7 @@
 // TODO: Why does 'exact' not work?
 
 // @ts-ignore
-await helper.verifyCompletion('included', {
+await helper.verifyCompletion('included', 'markdown', {
     marker: {
         completions: [
             {
