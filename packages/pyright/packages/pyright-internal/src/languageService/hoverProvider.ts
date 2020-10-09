@@ -35,7 +35,7 @@ import {
 } from '../analyzer/types';
 import { ClassMemberLookupFlags, isProperty, lookUpClassMember } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
-import { assert } from '../common/debug';
+import { fail } from '../common/debug';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import { Position, Range } from '../common/textRange';
 import { TextRange } from '../common/textRange';
@@ -350,7 +350,7 @@ export class HoverProvider {
             } else if (format === MarkupKind.PlainText) {
                 this._addResultsPart(parts, convertDocStringToPlainText(docString));
             } else {
-                assert(false, `Unsupported markup type: ${format}`);
+                fail(`Unsupported markup type: ${format}`);
             }
         }
     }
@@ -376,7 +376,7 @@ export function convertHoverResults(format: MarkupKind, hoverResults: HoverResul
                 } else if (format === MarkupKind.PlainText) {
                     return part.text + '\n\n';
                 } else {
-                    assert(false, `Unsupported markup type: ${format}`);
+                    fail(`Unsupported markup type: ${format}`);
                 }
             }
             return part.text;

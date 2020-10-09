@@ -64,7 +64,7 @@ import {
 } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
-import { assert } from '../common/debug';
+import { fail } from '../common/debug';
 import { TextEditAction } from '../common/editAction';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import * as StringUtils from '../common/stringUtils';
@@ -1332,7 +1332,7 @@ export class CompletionProvider {
                                     value: plainTextString,
                                 };
                             } else {
-                                assert(false, `Unsupported markup type: ${this._format}`);
+                                fail(`Unsupported markup type: ${this._format}`);
                             }
                         }
                     }
@@ -1346,7 +1346,7 @@ export class CompletionProvider {
                 } else if (this._format === MarkupKind.PlainText) {
                     autoImportText = `from ${autoImportSource} import ${name}`;
                 } else {
-                    assert(false, `Unsupported markup type: ${this._format}`);
+                    fail(`Unsupported markup type: ${this._format}`);
                 }
             }
 
@@ -1472,7 +1472,7 @@ export class CompletionProvider {
                     };
                 }
             } else {
-                assert(false, `Unsupported markup type: ${this._format}`);
+                fail(`Unsupported markup type: ${this._format}`);
             }
 
             if (textEdit) {
