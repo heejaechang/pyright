@@ -70,7 +70,11 @@ describe('IntelliCode model loader', () => {
             expect(realFs.existsSync(path.join(icFolder, ModelFileName))).toBeTrue();
             verify(mockedTelemetry.sendTelemetry(anything())).never();
         } finally {
-            tmpFolder.removeCallback();
+            try {
+                tmpFolder.removeCallback();
+            } catch (e) {
+                console.log(`Failed to remove tmpdir: ${e}`);
+            }
         }
     });
 
