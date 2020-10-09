@@ -501,6 +501,17 @@ class PylanceServer extends LanguageServerBase {
             convertUriToPath(params.textDocument.uri)
         )) as PylanceWorkspaceServiceInstance;
 
+        if (completionList && this._hasVisualStudioExtensionsCapability) {
+            // See this for the unicode designations as understood by Visual Studio:
+            // https://docs.microsoft.com/en-us/dotnet/api/system.globalization.unicodecategory
+            // Any characters not in those classes will cause VS to dismiss the completion list.
+            const designations = ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Lo', 'Me', 'Nd', 'Nl', 'No', 'Pc'];
+            (completionList as any)._vsext_continueCharacters = designations.map((val) => ({
+                type: 'unicodeClass',
+                unicodeClass: val,
+            }));
+        }
+
         if (completionList && workspace.completeFunctionParens && !token.isCancellationRequested) {
             for (const c of completionList.items) {
                 if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
