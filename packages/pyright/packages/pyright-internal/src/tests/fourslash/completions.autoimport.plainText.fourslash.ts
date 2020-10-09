@@ -1,23 +1,19 @@
 /// <reference path="fourslash.ts" />
-// @indexerwithoutstdlib: true
 
 // @filename: test1.py
 //// Test[|/*marker*/|]
 
-// @filename: testLib/__init__.py
-// @library: true
+// @filename: test2.py
 //// class Test:
 ////     pass
-////
-//// __all__ = ['Test']
 
 // @ts-ignore
-await helper.verifyCompletion('included', 'markdown', {
+await helper.verifyCompletion('included', 'plaintext', {
     marker: {
         completions: [
             {
                 label: 'Test',
-                documentation: '```\nfrom testLib import Test\n```',
+                documentation: 'from test2 import Test',
                 detail: 'Auto-import',
             },
         ],
