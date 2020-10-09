@@ -35,6 +35,7 @@ import {
     InitializeParams,
     InitializeResult,
     Location,
+    MarkupKind,
     ParameterInformation,
     RemoteWindow,
     SignatureHelpTriggerKind,
@@ -84,6 +85,8 @@ import { convertHoverResults } from './languageService/hoverProvider';
 import { ReferenceCallback } from './languageService/referencesProvider';
 import { Localizer } from './localization/localize';
 import { WorkspaceMap } from './workspaceMap';
+
+const SUPPORTED_MARKUPKIND = [MarkupKind.PlainText, MarkupKind.Markdown];
 
 export interface ServerSettings {
     venvPath?: string;
@@ -170,6 +173,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasActiveParameterCapability = false;
     protected _hasSignatureLabelOffsetCapability = false;
     protected _hasHierarchicalDocumentSymbolCapability = false;
+    protected _hoverContentFormat: MarkupKind = MarkupKind.PlainText;
     protected _supportsUnnecessaryDiagnosticTag = false;
     protected _defaultClientConfig: any;
 
@@ -540,8 +544,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             };
 
             const workspace = await this.getWorkspaceForFile(filePath);
-            const hoverResults = workspace.serviceInstance.getHoverForPosition(filePath, position, token);
-            return convertHoverResults(hoverResults);
+            const hoverResults = workspace.serviceInstance.getHoverForPosition(
+                filePath,
+                position,
+                this._hoverContentFormat,
+                token
+            );
+            return convertHoverResults(this._hoverContentFormat, hoverResults);
         });
 
         this._connection.onDocumentHighlight(async (params, token) => {
@@ -900,6 +909,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             ?.parameterInformation?.labelOffsetSupport;
         this._hasHierarchicalDocumentSymbolCapability = !!capabilities.textDocument?.documentSymbol
             ?.hierarchicalDocumentSymbolSupport;
+        this._hoverContentFormat = MarkupKind.PlainText;
+        for (const format of capabilities.textDocument?.hover?.contentFormat ?? []) {
+            if (SUPPORTED_MARKUPKIND.includes(format)) {
+                this._hoverContentFormat = format;
+                break;
+            }
+        }
         const supportedDiagnosticTags = capabilities.textDocument?.publishDiagnostics?.tagSupport?.valueSet || [];
         this._supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(
             (tag) => tag === DiagnosticTag.Unnecessary

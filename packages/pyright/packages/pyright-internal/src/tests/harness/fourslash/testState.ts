@@ -19,6 +19,7 @@ import {
     DocumentHighlightKind,
     ExecuteCommandParams,
     MarkupContent,
+    MarkupKind,
     TextEdit,
     WorkspaceEdit,
 } from 'vscode-languageserver';
@@ -731,7 +732,7 @@ export class TestState {
         }
     }
 
-    verifyHover(map: { [marker: string]: { value: string; kind: string } }): void {
+    verifyHover(kind: MarkupKind, map: { [marker: string]: { value: string } }): void {
         // Do not force analyze, it can lead to test passing while it doesn't work in product
         for (const range of this.getRanges()) {
             const name = this.getMarkerName(range.marker!);
@@ -743,7 +744,8 @@ export class TestState {
             const rangePos = this.convertOffsetsToRange(range.fileName, range.pos, range.end);
 
             const actual = convertHoverResults(
-                this.program.getHoverForPosition(range.fileName, rangePos.start, CancellationToken.None)
+                kind,
+                this.program.getHoverForPosition(range.fileName, rangePos.start, kind, CancellationToken.None)
             );
             assert.ok(actual);
 
@@ -751,7 +753,7 @@ export class TestState {
 
             if (MarkupContent.is(actual!.contents)) {
                 assert.equal(actual!.contents.value, expected.value);
-                assert.equal(actual!.contents.kind, expected.kind);
+                assert.equal(actual!.contents.kind, kind);
             } else {
                 assert.fail(`Unexpected type of contents object "${actual!.contents}", should be MarkupContent.`);
             }

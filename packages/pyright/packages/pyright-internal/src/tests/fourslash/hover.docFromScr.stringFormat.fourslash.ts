@@ -30,57 +30,46 @@
 //// const [|/*marker17*/htmlWithSingleQuotes|] = '''<!DOCTYPE html><html lang="en">\n<head><title>Title's</title></head></html>'''
 //// const [|/*marker18*/htmlWithTripleEscapedQuotes|] = '''<!DOCTYPE html><html lang="en">\n<head><title>Title\'\'\'s</title></head></html>'''
 
-helper.verifyHover({
-    marker1: { value: `\`\`\`python\n(variable) emptySingleQuotes: Literal['']\n\`\`\`\n`, kind: 'markdown' },
-    marker2: { value: `\`\`\`python\n(variable) emptyDoubleQuotes: Literal['']\n\`\`\`\n`, kind: 'markdown' },
-    marker3: { value: `\`\`\`python\n(variable) emptyTripleQuotes: Literal['']\n\`\`\`\n`, kind: 'markdown' },
-    marker4: { value: `\`\`\`python\n(variable) emptyTripleDoubleQuotes: Literal['']\n\`\`\`\n`, kind: 'markdown' },
-    marker5: { value: `\`\`\`python\n(variable) simpleSingleQuotes: Literal['a']\n\`\`\`\n`, kind: 'markdown' },
-    marker6: { value: `\`\`\`python\n(variable) simpleDoubleQuotes: Literal['b']\n\`\`\`\n`, kind: 'markdown' },
+helper.verifyHover('markdown', {
+    marker1: { value: `\`\`\`python\n(variable) emptySingleQuotes: Literal['']\n\`\`\`\n` },
+    marker2: { value: `\`\`\`python\n(variable) emptyDoubleQuotes: Literal['']\n\`\`\`\n` },
+    marker3: { value: `\`\`\`python\n(variable) emptyTripleQuotes: Literal['']\n\`\`\`\n` },
+    marker4: { value: `\`\`\`python\n(variable) emptyTripleDoubleQuotes: Literal['']\n\`\`\`\n` },
+    marker5: { value: `\`\`\`python\n(variable) simpleSingleQuotes: Literal['a']\n\`\`\`\n` },
+    marker6: { value: `\`\`\`python\n(variable) simpleDoubleQuotes: Literal['b']\n\`\`\`\n` },
     marker7: {
         value: `\`\`\`python\n(variable) simpleTripleQuotes: Literal['''foo\nbar''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker8: {
         value: `\`\`\`python\n(variable) simpleTripleDoubleQuotes: Literal['''foo\nbar''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
 
     marker9: {
         value: `\`\`\`python\n(variable) singleQuotesWithEscapedQuote: Literal['\\'']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker10: {
         value: `\`\`\`python\n(variable) doubleQuotesWithEscapedQuote: Literal['\"']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker11: {
         value: `\`\`\`python\n(variable) tripleQuotesWithEscapedQuote: Literal['''\n\\'\\'\\'''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker12: {
         value: `\`\`\`python\n(variable) tripleDoubleQuotesWithEscapedQuote: Literal['''\n\"\"\"''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
-    marker13: { value: `\`\`\`python\n(variable) singleQuotesWithDouble: Literal['"']\n\`\`\`\n`, kind: 'markdown' },
+    marker13: { value: `\`\`\`python\n(variable) singleQuotesWithDouble: Literal['"']\n\`\`\`\n` },
     marker14: {
         value: `\`\`\`python\n(variable) singleQuotesWithTripleDouble: Literal['"""']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker15: {
         value: `\`\`\`python\n(variable) singleTripleQuoteWithSingleAndDoubleQuote: Literal[' \\'"\\' ']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker16: {
         value: `\`\`\`python\n(variable) html: Literal['''<!DOCTYPE html><html lang="en">\n<head><title>Title</title></head></html>''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker17: {
         value: `\`\`\`python\n(variable) htmlWithSingleQuotes: Literal['''<!DOCTYPE html><html lang="en">\n<head><title>Title's</title></head></html>''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
     marker18: {
         value: `\`\`\`python\n(variable) htmlWithTripleEscapedQuotes: Literal['''<!DOCTYPE html><html lang="en">\n<head><title>Title\\'\\'\\'s</title></head></html>''']\n\`\`\`\n`,
-        kind: 'markdown',
     },
 });

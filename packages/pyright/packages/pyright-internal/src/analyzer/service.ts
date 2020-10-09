@@ -20,6 +20,7 @@ import {
     CallHierarchyItem,
     CallHierarchyOutgoingCall,
     DocumentHighlight,
+    MarkupKind,
 } from 'vscode-languageserver-types';
 
 import { BackgroundAnalysisBase } from '../backgroundAnalysisBase';
@@ -263,8 +264,13 @@ export class AnalyzerService {
         this._program.reportSymbolsForWorkspace(query, reporter, token);
     }
 
-    getHoverForPosition(filePath: string, position: Position, token: CancellationToken): HoverResults | undefined {
-        return this._program.getHoverForPosition(filePath, position, token);
+    getHoverForPosition(
+        filePath: string,
+        position: Position,
+        format: MarkupKind,
+        token: CancellationToken
+    ): HoverResults | undefined {
+        return this._program.getHoverForPosition(filePath, position, format, token);
     }
 
     getDocumentHighlight(

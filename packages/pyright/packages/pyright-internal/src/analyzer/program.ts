@@ -14,6 +14,7 @@ import {
     CallHierarchyItem,
     CallHierarchyOutgoingCall,
     DocumentHighlight,
+    MarkupKind,
 } from 'vscode-languageserver-types';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
@@ -1277,7 +1278,12 @@ export class Program {
         });
     }
 
-    getHoverForPosition(filePath: string, position: Position, token: CancellationToken): HoverResults | undefined {
+    getHoverForPosition(
+        filePath: string,
+        position: Position,
+        format: MarkupKind,
+        token: CancellationToken
+    ): HoverResults | undefined {
         return this._runEvaluatorWithCancellationToken(token, () => {
             const sourceFileInfo = this._getSourceFileInfoFromPath(filePath);
             if (!sourceFileInfo) {
@@ -1290,6 +1296,7 @@ export class Program {
             return sourceFileInfo.sourceFile.getHoverForPosition(
                 this._createSourceMapper(execEnv, /* mapCompiled */ true),
                 position,
+                format,
                 this._evaluator!,
                 token
             );

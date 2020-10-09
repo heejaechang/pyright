@@ -14,10 +14,9 @@
 //// validator = Validator()
 //// validator.[|/*marker2*/is_valid|]('hello')
 
-helper.verifyHover({
-    marker1: { value: '```python\n(class) Validator\n```\nThe validator class', kind: 'markdown' },
+helper.verifyHover('markdown', {
+    marker1: { value: '```python\n(class) Validator\n```\nThe validator class' },
     marker2: {
         value: '```python\n(method) is_valid: (text: str) -> bool\n```\nChecks if the input string is valid.',
-        kind: 'markdown',
     },
 });

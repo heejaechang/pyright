@@ -149,7 +149,7 @@ declare namespace _ {
             },
             verifyCodeActionCount?: boolean
         ): Promise<any>;
-        verifyHover(map: { [marker: string]: { value: string; kind: string } }): void;
+        verifyHover(kind: string, map: { [marker: string]: { value: string } }): void;
         verifyCompletion(
             verifyMode: FourSlashCompletionVerificationMode,
             map: {
@@ -219,6 +219,11 @@ declare namespace _ {
 declare var helper: _.Fourslash;
 
 declare namespace Consts {
+    export namespace MarkupKind {
+        export const PlainText = 'plaintext';
+        export const Markdown = 'markdown';
+    }
+
     export namespace CodeActionKind {
         export const QuickFix = 'quickfix';
         export const Refactor = 'refactor';
