@@ -42,7 +42,5 @@
 //// p.[|/*marker*/clean_fields|]()
 
 helper.verifyHover('markdown', {
-    marker: {
-        value: '```python\n(method) clean_fields: () -> None\n```\nclean\\_fields docs',
-    },
+    marker: '```python\n(method) clean_fields: () -> None\n```\nclean\\_fields docs',
 });

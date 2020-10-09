@@ -23,9 +23,7 @@
 // This will cause shadow file to be injected.
 helper.openFile(helper.getMarkerByName('hover').fileName);
 helper.verifyHover('markdown', {
-    hover: {
-        value: '```python\n(method) method: () -> Unknown\n```\ndoc string',
-    },
+    hover: '```python\n(method) method: () -> Unknown\n```\ndoc string',
 });
 
 // @ts-ignore

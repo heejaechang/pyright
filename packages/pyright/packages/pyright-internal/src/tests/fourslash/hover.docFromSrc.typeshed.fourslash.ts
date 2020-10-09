@@ -16,8 +16,6 @@
 //// print(requests.[|/*marker*/head|](''))
 
 helper.verifyHover('markdown', {
-    marker: {
-        value:
-            '```python\n(function) head: (url: str | bytes, **kwargs: Unknown) -> Response\n```\nSends a &lt;HEAD&gt; request.',
-    },
+    marker:
+        '```python\n(function) head: (url: str | bytes, **kwargs: Unknown) -> Response\n```\nSends a &lt;HEAD&gt; request.',
 });

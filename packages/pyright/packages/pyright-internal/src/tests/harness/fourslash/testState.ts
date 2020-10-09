@@ -732,12 +732,12 @@ export class TestState {
         }
     }
 
-    verifyHover(kind: MarkupKind, map: { [marker: string]: { value: string } }): void {
+    verifyHover(kind: MarkupKind, map: { [marker: string]: string }): void {
         // Do not force analyze, it can lead to test passing while it doesn't work in product
         for (const range of this.getRanges()) {
             const name = this.getMarkerName(range.marker!);
             const expected = map[name];
-            if (!expected) {
+            if (expected === undefined) {
                 continue;
             }
 
@@ -752,7 +752,7 @@ export class TestState {
             assert.deepEqual(actual!.range, rangePos);
 
             if (MarkupContent.is(actual!.contents)) {
-                assert.equal(actual!.contents.value, expected.value);
+                assert.equal(actual!.contents.value, expected);
                 assert.equal(actual!.contents.kind, kind);
             } else {
                 assert.fail(`Unexpected type of contents object "${actual!.contents}", should be MarkupContent.`);

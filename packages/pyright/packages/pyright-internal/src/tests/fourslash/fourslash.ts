@@ -149,7 +149,7 @@ declare namespace _ {
             },
             verifyCodeActionCount?: boolean
         ): Promise<any>;
-        verifyHover(kind: string, map: { [marker: string]: { value: string } }): void;
+        verifyHover(kind: string, map: { [marker: string]: string }): void;
         verifyCompletion(
             verifyMode: FourSlashCompletionVerificationMode,
             map: {
