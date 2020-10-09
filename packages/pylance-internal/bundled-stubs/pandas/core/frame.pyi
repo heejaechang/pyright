@@ -650,7 +650,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
         limit: int = ...,
         downcast: Optional[Dict] = ...,
         *,
-        inplace: Literal[True] = ...
+        inplace: Literal[True]
     ) -> None:
         """Fill NA/NaN values using the specified method.
 
@@ -757,7 +757,7 @@ Only replace the first NaN element.
         limit: int = ...,
         downcast: Optional[Dict] = ...,
         *,
-        inplace: Literal[False]
+        inplace: Literal[False] = ...
     ) -> DataFrame: ...
     @overload
     def fillna(
