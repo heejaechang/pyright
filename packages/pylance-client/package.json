@@ -235,7 +235,7 @@
         "webpack-dev": "npm run clean && webpack --mode development --watch --info-verbosity verbose --progress"
     },
     "devDependencies": {
-        "@types/vscode": "^1.48.0",
+        "@types/vscode": "~1.48.0",
         "clean-webpack-plugin": "^3.0.0",
         "copy-webpack-plugin": "^6.2.1",
         "native-ext-loader": "^2.3.0",
