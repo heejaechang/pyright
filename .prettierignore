@@ -14,4 +14,4 @@ packages/vscode-pylance/README.md
 # Prettier doesn't support a hierarchy of ignore files, so copy pyright's rules here.
 packages/pyright/**/*.json
 packages/pyright/**/*.md
-packages/pyright/**/.github/**
+packages/pyright/**/.github/ISSUE_TEMPLATE/**
