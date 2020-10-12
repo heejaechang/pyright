@@ -3,13 +3,11 @@ import * as cp from 'child_process';
 import { default as detectIndent } from 'detect-indent';
 import * as fsExtra from 'fs-extra';
 import { gitDescribe } from 'git-describe';
-import { default as globImpl } from 'glob';
 import { SemVer } from 'semver';
 import type { TaskFunction } from 'undertaker';
 import * as util from 'util';
 import * as yargs from 'yargs';
 
-const glob = util.promisify(globImpl);
 const exec = util.promisify(cp.exec);
 
 async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void) {

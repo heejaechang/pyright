@@ -18,8 +18,8 @@ const scripts = path.resolve(packages, 'pylance-internal', 'scripts');
 const onnxRoot = require(path.resolve(packages, 'pylance-internal', 'build', 'findonnx'));
 const onnxBin = path.join(onnxRoot, 'bin');
 
-/**@type {(env: string | undefined) => import('webpack').Configuration}*/
-module.exports = (env) => {
+/**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
+module.exports = (_, { mode }) => {
     // CopyPlugin is typed based on the wrong webpack version, so use any[] to ignore it.
     /** @type {any} */
     const plugins = [
@@ -35,12 +35,7 @@ module.exports = (env) => {
         }),
     ];
 
-    // TODO: Remove this when webpack-cli 4 merges --mode and --env.
-    if (env !== 'development' && env !== 'production') {
-        throw new Error(`Please provide either "--env development" or "--env production" -- got ${env}`);
-    }
-
-    if (env === 'production') {
+    if (mode === 'production') {
         plugins.push(
             new JavaScriptObfuscator(
                 {
@@ -50,7 +45,7 @@ module.exports = (env) => {
                     splitStrings: true,
                     splitStringsChunkLength: 10,
                     stringArray: true,
-                    stringArrayEncoding: 'base64',
+                    stringArrayEncoding: ['base64'],
                     stringArrayThreshold: 0.75,
                 },
                 [
@@ -74,7 +69,7 @@ module.exports = (env) => {
             libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate: '../[resource-path]',
         },
-        devtool: env === 'development' ? 'source-map' : false,
+        devtool: mode === 'development' ? 'source-map' : false,
         stats: {
             all: false,
             errors: true,
