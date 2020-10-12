@@ -4,9 +4,6 @@ import { default as detectIndent } from 'detect-indent';
 import * as fsExtra from 'fs-extra';
 import { gitDescribe } from 'git-describe';
 import { default as globImpl } from 'glob';
-import ncu from 'npm-check-updates';
-import { default as PQueue } from 'p-queue';
-import * as path from 'path';
 import { SemVer } from 'semver';
 import type { TaskFunction } from 'undertaker';
 import * as util from 'util';
@@ -122,58 +119,4 @@ export const setVersion: TaskFunction = async () => {
     await setAllVersions(to);
 
     await setPyrightCommit();
-};
-
-export const updateAllDeps: TaskFunction = async () => {
-    const argv = yargs.options({
-        transitive: { type: 'boolean' },
-    }).argv;
-
-    const queue = new PQueue({ concurrency: 4 });
-
-    const lernaFile = await fsExtra.readFile('lerna.json', 'utf-8');
-
-    const lernaConfig: { packages: string[] } = JSON.parse(lernaFile);
-
-    const matches = await Promise.all(lernaConfig.packages.map((pattern) => glob(pattern + '/package.json')));
-    const allPackages = ['package.json'].concat(...matches);
-
-    await Promise.all(
-        allPackages.map(async (packageFile) => {
-            packageFile = path.resolve(packageFile);
-            const packagePath = path.dirname(packageFile);
-            const packageName = path.basename(packagePath);
-
-            console.log(`${packageName}: updating with ncu`);
-            await ncu.run({
-                packageFile: packageFile,
-                target: 'minor',
-                upgrade: true,
-                reject: ['@types/vscode', 'vsce', 'onnxruntime'],
-            });
-
-            if (argv.transitive) {
-                console.log(`${packageName}: removing package-lock.json and node_modules`);
-                await fsExtra.remove(path.join(packagePath, 'package-lock.json'));
-                await fsExtra.remove(path.join(packagePath, 'node_modules'));
-            }
-
-            await queue.add(async () => {
-                console.log(`${packageName}: reinstalling package`);
-                await exec('npm install', {
-                    cwd: packagePath,
-                    env: {
-                        ...process.env,
-                        SKIP_LERNA_BOOTSTRAP: 'yes',
-                        SKIP_GET_ONNX: argv.transitive ? 'yes' : undefined,
-                    },
-                });
-            });
-        })
-    );
-
-    if (argv.transitive) {
-        console.log('pylance-internal: re-running npm install for onnxruntime');
-        await exec('npm install', { cwd: 'packages/pylance-internal' });
-    }
 };

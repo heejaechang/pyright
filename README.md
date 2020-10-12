@@ -178,11 +178,11 @@ On other OSs, follow `git-subrepo`'s README.
 To update all dependencies in the project to their latest compatible versions, run:
 
 ```sh
-npx gulp updateAllDeps
+npm run update:all
 ```
 
 This will use npm-check-updates to bump the version, then run `npm install` in all packages.
-That this process does not update VSCE or the VS Code API package (as updating these
+That this process does not update the VS Code API package (as updating it
 sets a minimum version for users and requires manual updates to the `"engines"` property
 in `package.json`), nor does it update `onnxruntime` (which we pin to a specific build).
 
@@ -191,7 +191,7 @@ in `package.json`), nor does it update `onnxruntime` (which we pin to a specific
 To update all dependencies including transitive deps, run:
 
 ```sh
-npx gulp updateAllDeps --transitive
+npm run update:all -- --transitive
 ```
 
 This works by removing the lock files and reinstalling everything. This has the potential
@@ -199,8 +199,8 @@ to cause merge issues.
 
 ### Manually checking for updates
 
-The `updateAllDeps` task only updates dependencies to compatible versions; it does not update
-anything to new major versions. To manually check for updates past what `updateAllDeps` does, you
+The `update:all` script only updates dependencies to compatible versions; it does not update
+anything to new major versions. To manually check for updates past what `update:all` does, you
 can just run `npm-check-updates` across all packages:
 
 ```sh
