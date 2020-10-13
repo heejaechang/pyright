@@ -25,6 +25,7 @@ import {
     SemanticTokensDeltaParams,
     SemanticTokensParams,
     SemanticTokensRangeParams,
+    SemanticTokensRefreshNotification,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
@@ -98,6 +99,7 @@ class PylanceServer extends LanguageServerBase {
     // TODO: the following settings are cached in getSettings() while they may be
     // set per workspace or folder. Figure out how can we maintain cache per resource.
     private _progressBarEnabled?: boolean;
+    private _hasSemanticTokensRefreshCapability?: boolean;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -259,6 +261,9 @@ class PylanceServer extends LanguageServerBase {
     updateSettingsForAllWorkspaces(): void {
         this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
+        if (this._hasSemanticTokensRefreshCapability) {
+            this._connection.sendNotification(SemanticTokensRefreshNotification.method);
+        }
     }
 
     protected initialize(
@@ -268,9 +273,13 @@ class PylanceServer extends LanguageServerBase {
     ): InitializeResult {
         const result = super.initialize(params, supportedCommands, supportedCodeActions);
 
-        const tokenLegend = SemanticTokenProvider.computeLegend(
-            params.capabilities as SemanticTokensClientCapabilities
-        );
+        const clientCaps = params.capabilities as SemanticTokensClientCapabilities;
+
+        // TODO: This capability is currently not working as expected, so ignore it for now
+        // https://github.com/microsoft/vscode-languageserver-node/issues/677
+        this._hasSemanticTokensRefreshCapability = true; // !!clientCaps.textDocument?.semanticTokens?.refreshNotification;
+
+        const tokenLegend = SemanticTokenProvider.computeLegend(clientCaps);
 
         result.capabilities.semanticTokensProvider = {
             legend: tokenLegend,
