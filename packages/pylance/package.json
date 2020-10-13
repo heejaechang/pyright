@@ -1,5 +1,5 @@
 {
-    "name": "pylance",
+    "name": "@pylance/pylance",
     "displayName": "Pylance",
     "description": "Type checker for the Python language",
     "version": "0.0.0",

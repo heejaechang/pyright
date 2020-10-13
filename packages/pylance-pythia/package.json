@@ -1,5 +1,5 @@
 {
-    "name": "pylance-pythia",
+    "name": "@pylance/pythia",
     "displayName": "Pythia",
     "description": "Pythia for Python repo analysis utility",
     "version": "0.0.0",
