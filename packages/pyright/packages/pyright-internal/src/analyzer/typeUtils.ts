@@ -1200,7 +1200,7 @@ export function getDeclaredGeneratorYieldType(functionType: FunctionType, iterat
                 ClassType.cloneForSpecialization(
                     iteratorType,
                     [generatorTypeArgs[0]],
-                    /* isTypeArgumentExplicit */ false
+                    /* isTypeArgumentExplicit */ true
                 )
             );
         }
@@ -1526,7 +1526,7 @@ function _specializeClassType(
     return ClassType.cloneForSpecialization(
         classType,
         newTypeArgs,
-        /* isTypeArgumentExplicit */ false,
+        /* isTypeArgumentExplicit */ true,
         /* skipAbstractClassTest */ undefined,
         newEffectiveTypeArgs
     );
