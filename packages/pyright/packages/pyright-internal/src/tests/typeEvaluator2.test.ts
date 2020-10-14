@@ -120,6 +120,12 @@ test('isInstance4', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('isInstance5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance5.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Unbound1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound1.py']);
 
@@ -136,6 +142,12 @@ test('Unbound3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound3.py']);
 
     TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Unbound4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound4.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('Assert1', () => {
