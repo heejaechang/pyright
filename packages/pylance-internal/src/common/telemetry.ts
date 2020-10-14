@@ -21,7 +21,10 @@ export enum TelemetryEventName {
     INTELLICODE_MODEL_LOAD_FAILED = 'intellicode_model_load_failed',
     INTELLICODE_ONNX_LOAD_FAILED = 'intellicode_onnx_load_failed',
     COMPLETION_METRICS = 'completion_metrics',
+    COMPLETION_COVERAGE = 'completion_coverage',
 }
+
+const statsDelayMs = 5 * 1000 * 60; // 5 minutes
 
 const languageServerEventPrefix = 'language_server/';
 // Exported for tests.
@@ -167,4 +170,68 @@ export function exceptionToString(e: any): string {
         (typeof e.message === 'string' ? e.message : undefined) ||
         JSON.stringify(e)
     );
+}
+
+export namespace CompletionCoverage {
+    enum Measure {
+        Successes = 'successes',
+        Failures = 'failures',
+        Total = 'total',
+        OverallSuccesses = 'overallSuccesses',
+        OverallFailures = 'overallFailures',
+        OverallTotal = 'overallTotal',
+    }
+
+    export class CompletionTelemetry {
+        private _timer: NodeJS.Timeout | undefined;
+        private _event: TelemetryEvent;
+
+        constructor(private _service: TelemetryService) {
+            this._event = new TelemetryEvent(TelemetryEventName.COMPLETION_COVERAGE);
+            this._initStats(this._event);
+        }
+
+        update(results: CompletionResults | undefined) {
+            if (!results?.completionList?.items.length) {
+                this._event.Measurements[Measure.Failures] += 1;
+            } else {
+                this._event.Measurements[Measure.Successes] += 1;
+            }
+
+            this._event.Measurements[Measure.Total] += 1;
+
+            if (this._timer) {
+                return;
+            }
+
+            this._timer = setTimeout(() => {
+                // Update accumulations
+                this._event.Measurements[Measure.OverallSuccesses] += this._event.Measurements[Measure.Successes];
+                this._event.Measurements[Measure.OverallFailures] += this._event.Measurements[Measure.Failures];
+                this._event.Measurements[Measure.OverallTotal] += this._event.Measurements[Measure.Total];
+
+                this._service.sendTelemetry(this._event);
+
+                // Clear window stats
+                this._event.Measurements[Measure.Successes] = 0;
+                this._event.Measurements[Measure.Failures] = 0;
+                this._event.Measurements[Measure.Total] = 0;
+
+                // Reset timer
+                if (this._timer) {
+                    clearTimeout(this._timer);
+                    this._timer = undefined;
+                }
+            }, statsDelayMs);
+        }
+
+        private _initStats(event: TelemetryEvent) {
+            event.Measurements[Measure.Successes] = 0;
+            event.Measurements[Measure.Failures] = 0;
+            event.Measurements[Measure.Total] = 0;
+            event.Measurements[Measure.OverallSuccesses] = 0;
+            event.Measurements[Measure.OverallFailures] = 0;
+            event.Measurements[Measure.OverallTotal] = 0;
+        }
+    }
 }

@@ -66,6 +66,7 @@ import { LogService } from './common/logger';
 import { Platform } from './common/platform';
 import {
     addMeasurementsToEvent,
+    CompletionCoverage,
     StubTelemetry,
     TelemetryEvent,
     TelemetryEventName,
@@ -92,6 +93,7 @@ export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstanc
 class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
+    private _completionCoverage: CompletionCoverage.CompletionTelemetry;
     private _telemetry: TelemetryService;
     private _logger: LogService;
     private _platform: Platform;
@@ -126,6 +128,7 @@ class PylanceServer extends LanguageServerBase {
         this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
+        this._completionCoverage = new CompletionCoverage.CompletionTelemetry(this._telemetry);
         this._logger = new LogService(this.console as ConsoleWithLogLevel);
         this._platform = new Platform();
 
@@ -449,6 +452,8 @@ class PylanceServer extends LanguageServerBase {
         );
 
         StubTelemetry.sendStubCompletionTelemetryForMissingTypes(completionResults, this._telemetry);
+
+        this._completionCoverage.update(completionResults);
 
         return completionResults;
     }
