@@ -6,6 +6,7 @@ on:
 
 env:
   VSIX_NAME: vscode-pylance.vsix
+  PYLANCE_PKG_NAME: pylance.tgz
   BLOB_CONTAINER_NAME: pylance-insiders
   BLOB_NAME: vscode-pylance-${{ github.event.release.tag_name }}.vsix
 
@@ -54,3 +55,40 @@ jobs:
 
       - name: Get URL to uploaded VSIX
         run: az storage blob url --account-name pvsc --container-name ${{ env.BLOB_CONTAINER_NAME }} --name ${{ env.BLOB_NAME }} --auth-mode login
+
+  publish_azdo:
+    if: github.repository == 'microsoft/pyrx'
+    runs-on: ubuntu-18.04
+    name: Publish package to DevDiv package feed
+
+    steps:
+      - name: Download package
+        uses: i3h/download-release-asset@v1
+        with:
+          owner: microsoft
+          repo: pyrx
+          tag: ${{ github.event.release.tag_name }}
+          file: ${{ env.PYLANCE_PKG_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # AZURE_DEVOPS_PACKAGE_TOKEN is the base64 encoded access token. See here to create it:
+      # https://devdiv.visualstudio.com/DevDiv/_packaging?_a=connect&feed=Pylance
+      - name: Create .npmrc
+        run: cat << EOF > .npmrc
+          ; begin auth token
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/:username=devdiv
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/:_password=${{ secrets.AZURE_DEVOPS_PACKAGE_TOKEN }}
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/:email=npm requires email to be set but doesn't use the value
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/:username=devdiv
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/:_password=${{ secrets.AZURE_DEVOPS_PACKAGE_TOKEN }}
+          //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/:email=npm requires email to be set but doesn't use the value
+          ; end auth token
+          EOF
+
+      - name: Publish stable
+        if: ${{ !github.event.release.prerelease }}
+        run: npm publish ${{ env.PYLANCE_PKG_NAME }}
+
+      - name: Publish prerelease
+        if: ${{ github.event.release.prerelease }}
+        run: npm publish ${{ env.PYLANCE_PKG_NAME }} --tag pre
