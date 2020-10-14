@@ -1,9 +1,9 @@
 {
     "name": "@pylance/pylance",
     "displayName": "Pylance",
-    "description": "Type checker for the Python language",
+    "description": "A performant, feature-rich language server for Python",
     "version": "0.0.0",
-    "license": "MIT",
+    "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
         "name": "Microsoft Corporation"
     },
