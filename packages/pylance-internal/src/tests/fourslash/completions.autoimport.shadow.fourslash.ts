@@ -22,6 +22,7 @@ await helper.verifyCompletion('exact', 'markdown', {
         completions: [
             {
                 label: 'MyShadow',
+                kind: Consts.CompletionItemKind.Class,
                 documentation: '```\nfrom testLib import MyShadow\n```',
                 detail: 'Auto-import',
             },

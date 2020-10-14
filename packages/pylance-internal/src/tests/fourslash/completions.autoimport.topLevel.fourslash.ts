@@ -15,6 +15,7 @@ await helper.verifyCompletion('included', 'markdown', {
         completions: [
             {
                 label: 'os',
+                kind: Consts.CompletionItemKind.Module,
                 documentation: '```\nimport os\n```',
                 detail: 'Auto-import',
             },
@@ -30,6 +31,7 @@ await helper.verifyCompletion('included', 'markdown', {
         completions: [
             {
                 label: 'sys',
+                kind: Consts.CompletionItemKind.Module,
                 documentation: '```\nimport sys\n```',
                 detail: 'Auto-import',
             },

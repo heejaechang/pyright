@@ -16,6 +16,7 @@ await helper.verifyCompletion('included', 'markdown', {
         completions: [
             {
                 label: 'print',
+                kind: Consts.CompletionItemKind.Function,
                 insertionText: 'print($0)',
             },
         ],
