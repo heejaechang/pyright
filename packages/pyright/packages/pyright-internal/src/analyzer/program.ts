@@ -1361,24 +1361,32 @@ export class Program {
             return undefined;
         }
 
-        const completionResult = this._runEvaluatorWithCancellationToken(token, () => {
-            this._bindFile(sourceFileInfo);
+        const completionResult = this._logTracker.log(
+            `completion at ${filePath}:${position.line}:${position.character}`,
+            (ls) => {
+                const result = this._runEvaluatorWithCancellationToken(token, () => {
+                    this._bindFile(sourceFileInfo);
 
-            const execEnv = this._configOptions.findExecEnvironment(filePath);
-            return sourceFileInfo.sourceFile.getCompletionsForPosition(
-                position,
-                workspacePath,
-                this._configOptions,
-                this._importResolver,
-                this._lookUpImport,
-                this._evaluator!,
-                format,
-                this._createSourceMapper(execEnv, /* mapCompiled */ true),
-                libraryMap,
-                () => this._buildModuleSymbolsMap(sourceFileInfo, !!libraryMap, token),
-                token
-            );
-        });
+                    const execEnv = this._configOptions.findExecEnvironment(filePath);
+                    return sourceFileInfo.sourceFile.getCompletionsForPosition(
+                        position,
+                        workspacePath,
+                        this._configOptions,
+                        this._importResolver,
+                        this._lookUpImport,
+                        this._evaluator!,
+                        format,
+                        this._createSourceMapper(execEnv, /* mapCompiled */ true),
+                        libraryMap,
+                        () => this._buildModuleSymbolsMap(sourceFileInfo, !!libraryMap, token),
+                        token
+                    );
+                });
+
+                ls.add(`found ${result?.completionList?.items.length ?? 'null'} items`);
+                return result;
+            }
+        );
 
         if (!completionResult?.completionList || !this._extension?.completionListExtension) {
             return completionResult;
