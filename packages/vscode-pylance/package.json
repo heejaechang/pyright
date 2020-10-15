@@ -669,6 +669,7 @@
         "@types/vscode": "~1.48.0",
         "clean-webpack-plugin": "^3.0.0",
         "copy-webpack-plugin": "^6.2.1",
+        "javascript-obfuscator": "^2.6.0",
         "jest": "^26.5.3",
         "jest-cli": "^26.5.3",
         "jest-environment-node": "^26.5.2",
@@ -678,14 +679,14 @@
         "shx": "^0.3.2",
         "source-map-support": "^0.5.19",
         "ts-jest": "^26.4.1",
-        "ts-loader": "^8.0.4",
+        "ts-loader": "^8.0.5",
         "ts-mockito": "^2.6.1",
         "tsconfig-paths-webpack-plugin": "^3.3.0",
         "typescript": "^4.0.3",
         "vsce": "^1.81.1",
         "vscode-test": "^1.4.0",
-        "webpack": "^5.0.0",
+        "webpack": "^5.1.2",
         "webpack-cli": "^4.0.0",
-        "webpack-obfuscator": "^2.5.0"
+        "webpack-obfuscator": "^3.0.0-beta.0"
     }
 }
