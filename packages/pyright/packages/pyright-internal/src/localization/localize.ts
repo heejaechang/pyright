@@ -234,6 +234,7 @@ export namespace Localizer {
         export const defaultValueNotEllipsis = () => getRawString('Diagnostic.defaultValueNotEllipsis');
         export const dictInAnnotation = () => getRawString('Diagnostic.dictInAnnotation');
         export const dictKeyValuePairs = () => getRawString('Diagnostic.dictKeyValuePairs');
+        export const dictUnpackIsNotMapping = () => getRawString('Diagnostic.dictUnpackIsNotMapping');
         export const delTargetExpr = () => getRawString('Diagnostic.delTargetExpr');
         export const dictExpandIllegalInComprehension = () =>
             getRawString('Diagnostic.dictExpandIllegalInComprehension');
@@ -611,6 +612,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeVarUnknownParam'));
         export const typeVarUsedByOuterScope = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeVarUsedByOuterScope'));
+        export const typeVarUsedOnlyOnce = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeVarUsedOnlyOnce'));
         export const typeVarVariance = () => getRawString('Diagnostic.typeVarVariance');
         export const unaccessedClass = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.unaccessedClass'));

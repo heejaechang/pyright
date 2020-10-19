@@ -884,22 +884,13 @@ export namespace FunctionType {
             type.flags,
             type.details.docString
         );
-        const startParam = deleteFirstParam ? 1 : 0;
 
-        newFunction.details = {
-            name: type.details.name,
-            moduleName: type.details.moduleName,
-            flags: type.details.flags,
-            parameters: type.details.parameters.slice(startParam),
-            declaredReturnType: type.details.declaredReturnType,
-            declaration: type.details.declaration,
-            builtInName: type.details.builtInName,
-            docString: type.details.docString,
-        };
+        newFunction.details = { ...type.details };
 
         // If we strip off the first parameter, this is no longer an
         // instance method or class method.
         if (deleteFirstParam) {
+            newFunction.details.parameters = type.details.parameters.slice(1);
             newFunction.details.flags &= ~(FunctionTypeFlags.ConstructorMethod | FunctionTypeFlags.ClassMethod);
             newFunction.details.flags |= FunctionTypeFlags.StaticMethod;
             newFunction.ignoreFirstParamOfDeclaration = true;
@@ -911,7 +902,9 @@ export namespace FunctionType {
 
         if (type.specializedTypes) {
             newFunction.specializedTypes = {
-                parameterTypes: type.specializedTypes.parameterTypes.slice(startParam),
+                parameterTypes: deleteFirstParam
+                    ? type.specializedTypes.parameterTypes.slice(1)
+                    : type.specializedTypes.parameterTypes,
                 returnType: type.specializedTypes.returnType,
             };
         }
@@ -1281,11 +1274,13 @@ export interface TypeVarType extends TypeBase {
     category: TypeCategory.TypeVar;
     details: TypeVarDetails;
 
-    // An id that uniquely identifies the scope in which this TypeVar is
-    // defined. Valid scopes include classes or functions. The scopeId
-    // is a string formatted as <name>.<nodeId> where nodeId is the
-    // parse node of a class or function declaration.
-    scopeId?: string;
+    // An ID that uniquely identifies the scope in which this TypeVar is
+    // defined. It corresponds to the parse node ID of the class or
+    // function.
+    scopeId?: number;
+
+    // String formatted as <name>.<scopeId>.
+    scopeName?: string;
 }
 
 export namespace TypeVarType {
@@ -1313,14 +1308,15 @@ export namespace TypeVarType {
         return newInstance;
     }
 
-    export function cloneForScopeId(type: TypeVarType, nodeId: number) {
+    export function cloneForScopeId(type: TypeVarType, scopeId: number) {
         const newInstance: TypeVarType = { ...type };
-        newInstance.scopeId = makeScopeId(type.details.name, nodeId);
+        newInstance.scopeName = makeScopeName(type.details.name, scopeId);
+        newInstance.scopeId = scopeId;
         return newInstance;
     }
 
-    export function makeScopeId(name: string, nodeId: number) {
-        return `${name}.${nodeId.toString()}`;
+    export function makeScopeName(name: string, scopeId: number) {
+        return `${name}.${scopeId.toString()}`;
     }
 
     function create(name: string, isParamSpec: boolean, isSynthesized: boolean, typeFlags: TypeFlags) {
