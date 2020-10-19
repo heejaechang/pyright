@@ -344,6 +344,8 @@ export class Checker extends ParseTreeWalker {
 
         this._scopedNodes.push(node);
 
+        this._validateFunctionTypeVarUsage(node);
+
         if (functionTypeResult && functionTypeResult.decoratedType.category === TypeCategory.OverloadedFunction) {
             const overloads = functionTypeResult.decoratedType.overloads;
             if (overloads.length > 1) {
@@ -790,6 +792,55 @@ export class Checker extends ParseTreeWalker {
 
         // Don't explore further.
         return false;
+    }
+
+    // Verifies that each local type variable is used more than once.
+    private _validateFunctionTypeVarUsage(node: FunctionNode) {
+        // Skip this check entirely if it's disabled.
+        if (this._fileInfo.diagnosticRuleSet.reportInvalidTypeVarUse === 'none') {
+            return;
+        }
+
+        const localTypeVarUsage = new Map<string, NameNode[]>();
+
+        const nameWalker = new ParseTreeUtils.NameNodeWalker((nameNode) => {
+            const nameType = this._evaluator.getType(nameNode);
+            if (nameType && isTypeVar(nameType)) {
+                if (nameType.scopeId === node.id) {
+                    if (!localTypeVarUsage.has(nameType.details.name)) {
+                        localTypeVarUsage.set(nameType.details.name, [nameNode]);
+                    } else {
+                        localTypeVarUsage.get(nameType.details.name)!.push(nameNode);
+                    }
+                }
+            }
+        });
+
+        // Find all of the local type variables in signature.
+        node.parameters.forEach((param) => {
+            const annotation = param.typeAnnotation || param.typeAnnotationComment;
+            if (annotation) {
+                nameWalker.walk(annotation);
+            }
+        });
+
+        if (node.returnTypeAnnotation) {
+            nameWalker.walk(node.returnTypeAnnotation);
+        }
+
+        // Report errors for all local type variables that appear only once.
+        localTypeVarUsage.forEach((nameNodes) => {
+            if (nameNodes.length === 1) {
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportInvalidTypeVarUse,
+                    DiagnosticRule.reportInvalidTypeVarUse,
+                    Localizer.Diagnostic.typeVarUsedOnlyOnce().format({
+                        name: nameNodes[0].value,
+                    }),
+                    nameNodes[0]
+                );
+            }
+        });
     }
 
     private _validateOverloadConsistency(
@@ -1963,8 +2014,7 @@ export class Checker extends ParseTreeWalker {
 
         doForSubtypes(type, (subtype) => {
             if (isTypeVar(subtype) && subtype.details.isContravariant) {
-                const scopeId = TypeVarType.makeScopeId(subtype.details.name, nodeId);
-                if (subtype.scopeId !== scopeId) {
+                if (subtype.scopeId !== nodeId) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.typeVarIsContravariant().format({ name: subtype.details.name })
                     );
@@ -1982,8 +2032,7 @@ export class Checker extends ParseTreeWalker {
 
         doForSubtypes(type, (subtype) => {
             if (isTypeVar(subtype) && subtype.details.isCovariant) {
-                const scopeId = TypeVarType.makeScopeId(subtype.details.name, nodeId);
-                if (subtype.scopeId !== scopeId) {
+                if (subtype.scopeId !== nodeId) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.typeVarIsCovariant().format({ name: subtype.details.name })
                     );

@@ -756,6 +756,12 @@ test('Tuples9', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Tuples10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples10.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
@@ -1023,13 +1029,19 @@ test('TypeAlias8', () => {
 test('TypeAlias9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias9.py']);
 
-    TestUtils.validateResults(analysisResults, 0, 0, 4);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('TypeAlias10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias10.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('Dictionary1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dictionary1.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Dictionary2', () => {
