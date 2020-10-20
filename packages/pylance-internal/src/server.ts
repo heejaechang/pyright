@@ -25,7 +25,7 @@ import {
     SemanticTokensDeltaParams,
     SemanticTokensParams,
     SemanticTokensRangeParams,
-    SemanticTokensRefreshNotification,
+    SemanticTokensRefreshRequest,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
@@ -265,7 +265,7 @@ class PylanceServer extends LanguageServerBase {
         this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
         if (this._hasSemanticTokensRefreshCapability) {
-            this._connection.sendNotification(SemanticTokensRefreshNotification.method);
+            this._connection.sendRequest(SemanticTokensRefreshRequest.method);
         }
     }
 
