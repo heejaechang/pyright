@@ -287,8 +287,7 @@ class PylanceServer extends LanguageServerBase {
                 },
             };
 
-            this._hasSemanticTokensRefreshCapability =
-                params.capabilities.workspace?.semanticTokens?.refreshSupport ?? false;
+            this._hasSemanticTokensRefreshCapability = !!params.capabilities.workspace?.semanticTokens?.refreshSupport;
         }
 
         return result;
