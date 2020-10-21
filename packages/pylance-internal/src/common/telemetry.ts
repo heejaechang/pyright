@@ -7,8 +7,9 @@
 import { sha256 } from 'hash.js';
 import { Connection } from 'vscode-languageserver/node';
 
+import { isString } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';
-import { CompletionResults, ModuleContext } from 'pyright-internal/languageService/completionProvider';
+import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
 
 import { VERSION } from './constants';
 
@@ -112,11 +113,11 @@ export namespace StubTelemetry {
     ) {
         if (
             results?.completionList?.items.length === 0 &&
-            results.moduleContext?.lastKnownModule &&
-            results.moduleContext.lastKnownModule.length > 0
+            results.memberAccessInfo?.lastKnownModule &&
+            results.memberAccessInfo.lastKnownModule.length > 0
         ) {
             const event = new TelemetryEvent(TelemetryEventName.COMPLETION_METRICS);
-            addModuleInfoToEvent(event, results.moduleContext);
+            addModuleInfoToEvent(event, results.memberAccessInfo);
 
             //delay sending completion telemetry until user is done typing
             //we don't really want to send data on partially typed words, and most likely
@@ -131,21 +132,23 @@ export namespace StubTelemetry {
     }
 }
 
-export function addModuleInfoToEvent(te: TelemetryEvent, moduleContext: ModuleContext) {
-    for (const [key, value] of Object.entries(moduleContext)) {
-        const strValue: string = ((value as string) ?? '').toLocaleLowerCase();
-        if (strValue && strValue.length > 0) {
-            const hash = sha256().update(strValue);
-            te.Properties[key + 'Hash'] = hash.digest('hex');
+export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: MemberAccessInfo) {
+    for (const [key, value] of Object.entries(memberAccessInfo)) {
+        if (isString(value)) {
+            const strValue = value.toLowerCase();
+            if (strValue && strValue.length > 0) {
+                const hash = sha256().update(strValue);
+                te.Properties[key + 'Hash'] = hash.digest('hex');
 
-            // if (process.env.NODE_ENV === 'development') {
-            //     te.Properties[key] = strValue;
-            // }
+                // if (process.env.NODE_ENV === 'development') {
+                //     te.Properties[key] = strValue;
+                // }
+            }
         }
     }
 
-    if (moduleContext && moduleContext?.lastKnownModule) {
-        const packageName = moduleContext?.lastKnownModule.split('.')[0].toLocaleLowerCase();
+    if (memberAccessInfo && memberAccessInfo?.lastKnownModule) {
+        const packageName = memberAccessInfo?.lastKnownModule.split('.')[0].toLowerCase();
         const packageHash = sha256().update(packageName);
         te.Properties['packageHash'] = packageHash.digest('hex');
         // if (process.env.NODE_ENV === 'development') {
@@ -192,6 +195,12 @@ export namespace CompletionCoverage {
         }
 
         update(results: CompletionResults | undefined) {
+            // limit our completion stats to member completions which
+            // are the only type to have a memberAccessInfo
+            if (!results?.memberAccessInfo) {
+                return;
+            }
+
             if (!results?.completionList?.items.length) {
                 this._event.Measurements[Measure.Failures] += 1;
             } else {
