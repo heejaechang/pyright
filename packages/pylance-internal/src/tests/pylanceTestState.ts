@@ -8,7 +8,6 @@ import {
 } from 'vscode-languageserver/node';
 
 import { Range as PositionRange } from 'pyright-internal/common/textRange';
-import { TokenType } from 'pyright-internal/parser/tokenizerTypes';
 import { FourSlashData, Range } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
 import { HostSpecificFeatures, TestState } from 'pyright-internal/tests/harness/fourslash/testState';
 import { stringify } from 'pyright-internal/tests/harness/utils';

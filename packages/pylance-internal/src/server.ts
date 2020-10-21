@@ -20,13 +20,11 @@ import {
     InsertTextFormat,
     Position,
     SemanticTokens,
-    SemanticTokensClientCapabilities,
     SemanticTokensDelta,
     SemanticTokensDeltaParams,
     SemanticTokensParams,
     SemanticTokensRangeParams,
     SemanticTokensRefreshRequest,
-    TokenFormat,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
