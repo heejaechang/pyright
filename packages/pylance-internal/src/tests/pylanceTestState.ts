@@ -4,9 +4,11 @@ import {
     SemanticTokens,
     SemanticTokensClientCapabilities,
     SemanticTokensLegend,
+    TokenFormat,
 } from 'vscode-languageserver/node';
 
 import { Range as PositionRange } from 'pyright-internal/common/textRange';
+import { TokenType } from 'pyright-internal/parser/tokenizerTypes';
 import { FourSlashData, Range } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
 import { HostSpecificFeatures, TestState } from 'pyright-internal/tests/harness/fourslash/testState';
 import { stringify } from 'pyright-internal/tests/harness/utils';
@@ -93,51 +95,53 @@ export class PylanceTestState extends TestState {
         // Technically, only the types/modifiers understood by the language
         // server are needed, but might as well include the complete list
         // (as of writing) for future proofing.
-        const clientCapabilities = {
-            textDocument: {
-                semanticTokens: {
-                    dynamicRegistration: false,
-                    tokenTypes: [
-                        'namespace',
-                        'type',
-                        'class',
-                        'enum',
-                        'interface',
-                        'struct',
-                        'typeParameter',
-                        'parameter',
-                        'variable',
-                        'property',
-                        'enumMember',
-                        'event',
-                        'function',
-                        'member',
-                        'macro',
-                        'keyword',
-                        'modifier',
-                        'comment',
-                        'string',
-                        'number',
-                        'regexp',
-                        'operator',
-                    ],
-                    tokenModifiers: [
-                        'declaration',
-                        'definition',
-                        'readonly',
-                        'static',
-                        'deprecated',
-                        'abstract',
-                        'async',
-                        'modification',
-                        'documentation',
-                        'defaultLibrary',
-                    ],
+        const clientCapabilities: SemanticTokensClientCapabilities = {
+            formats: [TokenFormat.Relative],
+            tokenTypes: [
+                'namespace',
+                'type',
+                'class',
+                'enum',
+                'interface',
+                'struct',
+                'typeParameter',
+                'parameter',
+                'variable',
+                'property',
+                'enumMember',
+                'event',
+                'function',
+                'member',
+                'macro',
+                'keyword',
+                'modifier',
+                'comment',
+                'string',
+                'number',
+                'regexp',
+                'operator',
+            ],
+            tokenModifiers: [
+                'declaration',
+                'definition',
+                'readonly',
+                'static',
+                'deprecated',
+                'abstract',
+                'async',
+                'modification',
+                'documentation',
+                'defaultLibrary',
+            ],
+            requests: {
+                full: {
+                    delta: true,
                 },
+                range: true,
             },
         };
 
-        return SemanticTokenProvider.computeLegend(clientCapabilities as SemanticTokensClientCapabilities);
+        return SemanticTokenProvider.computeLegend(clientCapabilities);
     }
 
     private _decodeSemanticTokens(tokens: SemanticTokens, legend: SemanticTokensLegend): DecodedSemanticToken[] {
