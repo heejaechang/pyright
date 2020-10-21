@@ -1231,8 +1231,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     memberName,
                     usage,
                     new DiagnosticAddendum(),
-                    memberAccessFlags,
-                    classType
+                    memberAccessFlags
                 );
                 isMetaclassMember = true;
             }
@@ -3746,8 +3745,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         memberName: string,
         usage: EvaluatorUsage,
         diag: DiagnosticAddendum,
-        flags: MemberAccessFlags,
-        bindToClass?: ClassType
+        flags: MemberAccessFlags
     ): ClassMemberLookup | undefined {
         // If this is a special type (like "List") that has an alias class (like
         // "list"), switch to the alias, which defines the members.
@@ -5173,10 +5171,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             '',
                             '',
                             ClassTypeFlags.None,
-                            errorNode.id,
+                            getTypeSourceId(errorNode),
                             type.classType,
                             type.classType
                         );
+                        newClassType.details.baseClasses.push(getBuiltInType(errorNode, 'object'));
+                        computeMroLinearization(newClassType);
                         type = newClassType;
                     }
                     break;
@@ -5651,14 +5651,25 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         if (!validatedTypes && argList.length > 0) {
-            const fileInfo = getFileInfo(errorNode);
-            addDiagnostic(
-                fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                DiagnosticRule.reportGeneralTypeIssues,
-                Localizer.Diagnostic.constructorNoArgs().format({ type: type.details.name }),
-                errorNode
-            );
-        } else if (!returnType) {
+            // Suppress this error if the class was instantiated from a custom
+            // metaclass because it's likely that it's a false positive.
+            const isCustomMetaclass =
+                !!type.details.effectiveMetaclass &&
+                isClass(type.details.effectiveMetaclass) &&
+                !ClassType.isBuiltIn(type.details.effectiveMetaclass);
+
+            if (!isCustomMetaclass) {
+                const fileInfo = getFileInfo(errorNode);
+                addDiagnostic(
+                    fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                    DiagnosticRule.reportGeneralTypeIssues,
+                    Localizer.Diagnostic.constructorNoArgs().format({ type: type.details.name }),
+                    errorNode
+                );
+            }
+        }
+
+        if (!returnType) {
             returnType = applyExpectedTypeForConstructor(type, expectedType);
         }
 
@@ -6720,7 +6731,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(errorNode, fileInfo.moduleName, className),
             fileInfo.moduleName,
             ClassTypeFlags.EnumClass,
-            errorNode.id,
+            getTypeSourceId(errorNode),
             /* declaredMetaclass */ undefined,
             enumClass.details.effectiveMetaclass
         );
@@ -6814,7 +6825,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     getClassFullName(errorNode, fileInfo.moduleName, className),
                     fileInfo.moduleName,
                     classFlags,
-                    errorNode.id,
+                    getTypeSourceId(errorNode),
                     /* declaredMetaclass */ undefined,
                     baseClass.details.effectiveMetaclass
                 );
@@ -6883,7 +6894,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(errorNode, fileInfo.moduleName, className),
             fileInfo.moduleName,
             ClassTypeFlags.None,
-            errorNode.id,
+            getTypeSourceId(errorNode),
             /* declaredMetaclass */ undefined,
             arg1Type.classType.details.effectiveMetaclass
         );
@@ -6934,7 +6945,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(errorNode, fileInfo.moduleName, className),
             fileInfo.moduleName,
             ClassTypeFlags.TypedDictClass,
-            errorNode.id,
+            getTypeSourceId(errorNode),
             /* declaredMetaclass */ undefined,
             typedDictClass.details.effectiveMetaclass
         );
@@ -7103,7 +7114,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(errorNode, fileInfo.moduleName, className),
             fileInfo.moduleName,
             ClassTypeFlags.None,
-            errorNode.id,
+            getTypeSourceId(errorNode),
             /* declaredMetaclass */ undefined,
             isClass(namedTupleType) ? namedTupleType.details.effectiveMetaclass : UnknownType.create()
         );
@@ -7458,22 +7469,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         expectedType: Type | undefined,
         flags: EvaluatorFlags
     ): TypeResult {
-        let leftExpression = node.leftExpression;
+        const leftExpression = node.leftExpression;
+        let rightExpression = node.rightExpression;
 
         // If this is a comparison and the left expression is also a comparison,
         // we need to change the behavior to accommodate python's "chained
         // comparisons" feature.
         if (comparisonOperatorMap[node.operator]) {
             if (
-                node.leftExpression.nodeType === ParseNodeType.BinaryOperation &&
-                !node.leftExpression.parenthesized &&
-                comparisonOperatorMap[node.leftExpression.operator]
+                rightExpression.nodeType === ParseNodeType.BinaryOperation &&
+                !rightExpression.parenthesized &&
+                comparisonOperatorMap[rightExpression.operator]
             ) {
-                // Evaluate the left expression so it is type checked.
-                getTypeFromBinaryOperation(node.leftExpression, expectedType, flags);
+                // Evaluate the right expression so it is type checked.
+                getTypeFromBinaryOperation(rightExpression, expectedType, flags);
 
-                // Use the right side of the left expression for comparison purposes.
-                leftExpression = node.leftExpression.rightExpression;
+                // Use the left side of the right expression for comparison purposes.
+                rightExpression = rightExpression.leftExpression;
             }
         }
 
@@ -7483,7 +7495,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         const expectedOperandType =
             node.operator === OperatorType.Or || node.operator === OperatorType.And ? expectedType : undefined;
         let leftType = makeTypeVarsConcrete(getTypeOfExpression(leftExpression, expectedOperandType).type);
-        let rightType = makeTypeVarsConcrete(getTypeOfExpression(node.rightExpression, expectedOperandType).type);
+        let rightType = makeTypeVarsConcrete(getTypeOfExpression(rightExpression, expectedOperandType).type);
 
         // Is this a "|" operator used in a context where it is supposed to be
         // interpreted as a union operator?
@@ -9151,7 +9163,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(node, fileInfo.moduleName, assignedName),
             fileInfo.moduleName,
             ClassTypeFlags.BuiltInClass | ClassTypeFlags.SpecialBuiltIn,
-            node.id,
+            /* typeSourceId */ undefined,
             /* declaredMetaclass */ undefined,
             /* effectiveMetaclass */ undefined
         );
@@ -9477,7 +9489,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             getClassFullName(node, fileInfo.moduleName, node.name.value),
             fileInfo.moduleName,
             classFlags,
-            node.id,
+            /* typeSourceId */ undefined,
             /* declaredMetaclass */ undefined,
             /* effectiveMetaclass */ undefined,
             ParseTreeUtils.getDocString(node.suite.statements)
@@ -10503,7 +10515,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         decoratorNode,
                         decoratorType.details.name,
                         inputFunctionType,
-                        decoratorNode.id
+                        getTypeSourceId(decoratorNode)
                     );
                 } else {
                     return UnknownType.create();
@@ -14009,20 +14021,26 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         }
 
                         if (type) {
-                            const isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
-
                             if (decl.type === DeclarationType.Variable) {
-                                const isEnum = isObject(type) && ClassType.isEnumClass(type.classType);
+                                let isConstant = decl.type === DeclarationType.Variable && !!decl.isConstant;
+
+                                // Treat enum values declared within an enum class as though they are const even
+                                // though they may not be named as such.
+                                if (
+                                    isObject(type) &&
+                                    ClassType.isEnumClass(type.classType) &&
+                                    isDeclInEnumClass(decl)
+                                ) {
+                                    isConstant = true;
+                                }
 
                                 // If the symbol is private or constant, we can retain the literal
-                                // value. Otherwise, strip them off to make the type less specific,
-                                // allowing other values to be assigned to it in subclasses.
+                                // value. Otherwise, strip literal values to widen the type.
                                 if (
                                     TypeBase.isInstance(type) &&
                                     !isTypeAlias &&
                                     !isPrivate &&
                                     !isConstant &&
-                                    !isEnum &&
                                     !isFinalVar
                                 ) {
                                     type = stripLiteralValue(type);
@@ -14107,6 +14125,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         return undefined;
+    }
+
+    function isDeclInEnumClass(decl: VariableDeclaration): boolean {
+        const classNode = ParseTreeUtils.getEnclosingClass(decl.node, /* stopAtFunction */ true);
+        if (!classNode) {
+            return false;
+        }
+
+        const classInfo = getTypeOfClass(classNode);
+        if (!classInfo) {
+            return false;
+        }
+
+        return ClassType.isEnumClass(classInfo.classType);
     }
 
     // Returns the return type of the function. If the type is explicitly provided in
@@ -16992,6 +17024,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         return undefined;
+    }
+
+    // Create an ID that is based on the file and the location
+    // within the file. This allows us to disambiguate between
+    // different types that don't have unique names (those that
+    // are not created with class declarations).
+    function getTypeSourceId(node: ParseNode): TypeSourceId {
+        const fileInfo = getFileInfo(node);
+
+        return `${fileInfo.moduleName}-${node.start.toString()}`;
     }
 
     return {

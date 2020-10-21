@@ -799,7 +799,7 @@ test('DataClass4', () => {
 test('DataClass5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass5.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('DataClass6', () => {
@@ -941,12 +941,6 @@ test('TypeVar3', () => {
 
 test('TypeVar4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar4.py']);
-
-    TestUtils.validateResults(analysisResults, 4);
-});
-
-test('TypeVar5', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar5.py']);
 
     TestUtils.validateResults(analysisResults, 4);
 });
