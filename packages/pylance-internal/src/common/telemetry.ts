@@ -4,7 +4,7 @@
  * Definitions of services available.
  */
 
-import { sha256 } from 'hash.js';
+import { createHash } from 'crypto';
 import { Connection } from 'vscode-languageserver/node';
 
 import { isString } from 'pyright-internal/common/core';
@@ -137,7 +137,7 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
         if (isString(value)) {
             const strValue = value.toLowerCase();
             if (strValue && strValue.length > 0) {
-                const hash = sha256().update(strValue);
+                const hash = createHash('sha256').update(strValue);
                 te.Properties[key + 'Hash'] = hash.digest('hex');
 
                 // if (process.env.NODE_ENV === 'development') {
@@ -149,7 +149,7 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
 
     if (memberAccessInfo && memberAccessInfo?.lastKnownModule) {
         const packageName = memberAccessInfo?.lastKnownModule.split('.')[0].toLowerCase();
-        const packageHash = sha256().update(packageName);
+        const packageHash = createHash('sha256').update(packageName);
         te.Properties['packageHash'] = packageHash.digest('hex');
         // if (process.env.NODE_ENV === 'development') {
         //     te.Properties['package'] = packageName;
