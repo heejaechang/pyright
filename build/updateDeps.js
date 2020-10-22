@@ -13,7 +13,16 @@ async function main() {
     }).argv;
 
     process.env.SKIP_GET_ONNX = 'yes';
-    await updateAll(argv.transitive, ['@types/vscode', 'onnxruntime']);
+    await updateAll(argv.transitive, [
+        // These packages impact compatibility with VS Code and other users;
+        // ensure they remained pinned exactly.
+        '@types/vscode',
+        'vscode-jsonrpc',
+        'vscode-languageclient',
+        'vscode-languageserver',
+        'vscode-languageserver-types',
+        'onnxruntime',
+    ]);
     process.env.SKIP_GET_ONNX = undefined;
 
     if (argv.transitive) {
