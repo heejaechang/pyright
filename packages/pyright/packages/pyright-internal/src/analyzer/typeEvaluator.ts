@@ -7499,7 +7499,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         // Is this a "|" operator used in a context where it is supposed to be
         // interpreted as a union operator?
-        if (node.operator === OperatorType.BitwiseOr) {
+        if (
+            node.operator === OperatorType.BitwiseOr &&
+            !customMetaclassSupportsMethod(leftType, '__or__') &&
+            !customMetaclassSupportsMethod(rightType, '__ror__')
+        ) {
             let adjustedRightType = rightType;
             if (!isNone(leftType) && isNone(rightType) && TypeBase.isInstance(rightType)) {
                 // Handle the special case where "None" is being added to the union
@@ -7552,6 +7556,24 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             type: validateBinaryOperation(node.operator, leftType, rightType, node, expectedType),
             node,
         };
+    }
+
+    function customMetaclassSupportsMethod(type: Type, methodName: string): boolean {
+        if (!isClass(type)) {
+            return false;
+        }
+
+        const metaclass = type.details.effectiveMetaclass;
+        if (!metaclass || !isClass(metaclass)) {
+            return false;
+        }
+
+        if (ClassType.isBuiltIn(metaclass, 'type')) {
+            return false;
+        }
+
+        const memberInfo = lookUpClassMember(metaclass, methodName);
+        return !!memberInfo;
     }
 
     function getTypeFromAugmentedAssignment(node: AugmentedAssignmentNode, expectedType: Type | undefined): Type {
@@ -7670,14 +7692,26 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
                     // Handle the general case.
                     const magicMethodName = bitwiseOperatorMap[operator][0];
-                    const result = getTypeFromMagicMethodReturn(
+                    let resultType = getTypeFromMagicMethodReturn(
                         leftSubtype,
                         [rightSubtype],
                         magicMethodName,
                         errorNode,
                         expectedType
                     );
-                    if (!result) {
+                    if (resultType) {
+                        return resultType;
+                    }
+
+                    const altMagicMethodName = bitwiseOperatorMap[operator][1];
+                    resultType = getTypeFromMagicMethodReturn(
+                        rightSubtype,
+                        [leftSubtype],
+                        altMagicMethodName,
+                        errorNode,
+                        expectedType
+                    );
+                    if (!resultType) {
                         diag.addMessage(
                             Localizer.Diagnostic.typeNotSupportBinaryOperator().format({
                                 operator: ParseTreeUtils.printOperator(operator),
@@ -7686,8 +7720,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             })
                         );
                     }
-
-                    return result;
+                    return resultType;
                 });
             });
         } else if (comparisonOperatorMap[operator]) {
@@ -10682,31 +10715,36 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         });
 
         // Verify parameters for fset.
-        if (errorNode.parameters.length >= 2) {
-            const typeAnnotation = getTypeAnnotationForParameter(errorNode, 1);
-            if (typeAnnotation) {
-                // Verify consistency of the type.
-                const fgetType = getGetterTypeFromProperty(classType, /* inferTypeIfNeeded */ false);
-                if (fgetType && !isAnyOrUnknown(fgetType)) {
-                    const fsetType = getTypeOfAnnotation(typeAnnotation);
+        // We'll skip this test if the diagnostic rule is disabled because it
+        // can be somewhat expensive, especially in code that is not annotated.
+        const fileInfo = getFileInfo(errorNode);
+        if (fileInfo.diagnosticRuleSet.reportPropertyTypeMismatch !== 'none') {
+            if (errorNode.parameters.length >= 2) {
+                const typeAnnotation = getTypeAnnotationForParameter(errorNode, 1);
+                if (typeAnnotation) {
+                    // Verify consistency of the type.
+                    const fgetType = getGetterTypeFromProperty(classType, /* inferTypeIfNeeded */ false);
+                    if (fgetType && !isAnyOrUnknown(fgetType)) {
+                        const fsetType = getTypeOfAnnotation(typeAnnotation);
 
-                    // The setter type should be assignable to the getter type.
-                    const diag = new DiagnosticAddendum();
-                    if (
-                        !canAssignType(
-                            fgetType,
-                            fsetType,
-                            diag,
-                            /* typeVarMap */ undefined,
-                            CanAssignFlags.DoNotSpecializeTypeVars
-                        )
-                    ) {
-                        addDiagnostic(
-                            getFileInfo(errorNode).diagnosticRuleSet.reportPropertyTypeMismatch,
-                            DiagnosticRule.reportPropertyTypeMismatch,
-                            Localizer.Diagnostic.setterGetterTypeMismatch() + diag.getString(),
-                            typeAnnotation
-                        );
+                        // The setter type should be assignable to the getter type.
+                        const diag = new DiagnosticAddendum();
+                        if (
+                            !canAssignType(
+                                fgetType,
+                                fsetType,
+                                diag,
+                                /* typeVarMap */ undefined,
+                                CanAssignFlags.DoNotSpecializeTypeVars
+                            )
+                        ) {
+                            addDiagnostic(
+                                fileInfo.diagnosticRuleSet.reportPropertyTypeMismatch,
+                                DiagnosticRule.reportPropertyTypeMismatch,
+                                Localizer.Diagnostic.setterGetterTypeMismatch() + diag.getString(),
+                                typeAnnotation
+                            );
+                        }
                     }
                 }
             }
@@ -10953,9 +10991,15 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
     }
 
     function inferFunctionReturnType(node: FunctionNode, isAbstract: boolean): Type | undefined {
-        // This shouldn't be called if there is a declared return type.
         const returnAnnotation = node.returnTypeAnnotation || node.functionAnnotationComment?.returnTypeAnnotation;
-        assert(!returnAnnotation);
+
+        // This shouldn't be called if there is a declared return type, but it
+        // can happen if there are unexpected cycles between decorators and
+        // classes that they decorate. We'll just return an undefined type
+        // in this case.
+        if (returnAnnotation) {
+            return undefined;
+        }
 
         // Is this type already cached?
         let inferredReturnType = readTypeCache(node.suite);
@@ -12757,17 +12801,17 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
 
             if (testExpression.arguments.length >= 1) {
-                const functionType = getTypeOfExpression(testExpression.leftExpression).type;
+                const arg0Expr = testExpression.arguments[0].valueExpression;
+                if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
+                    const functionType = getTypeOfExpression(testExpression.leftExpression).type;
 
-                // Does this look like it's a custom type guard function?
-                if (
-                    isFunction(functionType) &&
-                    functionType.details.declaredReturnType &&
-                    isObject(functionType.details.declaredReturnType) &&
-                    ClassType.isBuiltIn(functionType.details.declaredReturnType.classType, 'TypeGuard')
-                ) {
-                    const arg0Expr = testExpression.arguments[0].valueExpression;
-                    if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
+                    // Does this look like it's a custom type guard function?
+                    if (
+                        isFunction(functionType) &&
+                        functionType.details.declaredReturnType &&
+                        isObject(functionType.details.declaredReturnType) &&
+                        ClassType.isBuiltIn(functionType.details.declaredReturnType.classType, 'TypeGuard')
+                    ) {
                         // Evaluate the type guard call expression.
                         const functionReturnType = getTypeOfExpression(testExpression).type;
                         if (
@@ -15684,6 +15728,18 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         flags: CanAssignFlags,
         recursionCount: number
     ) {
+        // Handle the special case where the dest type is a synthesized
+        // "self" for a protocol class.
+        if (
+            isTypeVar(destType) &&
+            destType.details.isSynthesized &&
+            destType.details.boundType &&
+            isObject(destType.details.boundType) &&
+            ClassType.isProtocolClass(destType.details.boundType.classType)
+        ) {
+            return true;
+        }
+
         // Call canAssignType once to perform any typeVarMap population.
         canAssignType(
             srcType,
