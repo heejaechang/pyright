@@ -71,6 +71,7 @@ import {
     TelemetryEvent,
     TelemetryEventName,
     TelemetryService,
+    trackPerf,
 } from './common/telemetry';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelSubFolder } from './intelliCode/models';
@@ -443,19 +444,28 @@ class PylanceServer extends LanguageServerBase {
         workspacePath: string,
         token: CancellationToken
     ): Promise<CompletionResults | undefined> {
-        const completionResults = await workspace.serviceInstance.getCompletionsForPosition(
-            filePath,
-            position,
-            workspacePath,
-            this._completionDocFormat,
-            token
+        const results = await trackPerf(
+            this._telemetry,
+            TelemetryEventName.COMPLETION_SLOW,
+            async (cm) => {
+                const completionResults = await workspace.serviceInstance.getCompletionsForPosition(
+                    filePath,
+                    position,
+                    workspacePath,
+                    this._completionDocFormat,
+                    token
+                );
+
+                cm.addCustomMeasure('completionItems', completionResults?.completionList?.items.length ?? -1);
+                return completionResults;
+            },
+            1000
         );
 
-        StubTelemetry.sendStubCompletionTelemetryForMissingTypes(completionResults, this._telemetry);
+        StubTelemetry.sendStubCompletionTelemetryForMissingTypes(results, this._telemetry);
+        this._completionCoverage.update(results);
 
-        this._completionCoverage.update(completionResults);
-
-        return completionResults;
+        return results;
     }
 
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {

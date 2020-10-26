@@ -9,6 +9,7 @@ import { Connection } from 'vscode-languageserver/node';
 
 import { isString } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';
+import { Duration, timingStats } from 'pyright-internal/common/timing';
 import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
 
 import { VERSION } from './constants';
@@ -23,6 +24,7 @@ export enum TelemetryEventName {
     INTELLICODE_ONNX_LOAD_FAILED = 'intellicode_onnx_load_failed',
     COMPLETION_METRICS = 'completion_metrics',
     COMPLETION_COVERAGE = 'completion_coverage',
+    COMPLETION_SLOW = 'completion_slow',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
@@ -241,6 +243,72 @@ export namespace CompletionCoverage {
             event.Measurements[Measure.OverallSuccesses] = 0;
             event.Measurements[Measure.OverallFailures] = 0;
             event.Measurements[Measure.OverallTotal] = 0;
+        }
+    }
+}
+
+export async function trackPerf<T>(
+    service: TelemetryService,
+    eventName: string,
+    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => Promise<T>,
+    thresholdInMS: number
+) {
+    const duration = new Duration();
+
+    const readCallCount = timingStats.readFileTime.callCount;
+    const tokenizeCallCount = timingStats.tokenizeFileTime.callCount;
+    const parseCallCount = timingStats.parseFileTime.callCount;
+    const resolveCallCount = timingStats.resolveImportsTime.callCount;
+    const bindCallCount = timingStats.bindTime.callCount;
+
+    const readTime = timingStats.readFileTime.totalTime;
+    const tokenizeTime = timingStats.tokenizeFileTime.totalTime;
+    const parseTime = timingStats.parseFileTime.totalTime;
+    const resolveTime = timingStats.resolveImportsTime.totalTime;
+    const bindTime = timingStats.bindTime.totalTime;
+
+    let map:
+        | {
+              [key: string]: number;
+          }
+        | undefined;
+
+    const customMeasures = {
+        addCustomMeasure(name: string, measure: number) {
+            if (!map) {
+                map = {};
+            }
+
+            map[`custom_${name}`] = measure;
+        },
+    };
+
+    try {
+        return await callback(customMeasures);
+    } finally {
+        const totalTime = duration.getDurationInMilliseconds();
+        if (totalTime > thresholdInMS) {
+            const event = new TelemetryEvent(eventName);
+
+            if (map) {
+                addMeasurementsToEvent(event, map);
+            }
+
+            event.Measurements['readFileCallCount'] = timingStats.readFileTime.callCount - readCallCount;
+            event.Measurements['tokenizeCallCount'] = timingStats.tokenizeFileTime.callCount - tokenizeCallCount;
+            event.Measurements['parseCallCount'] = timingStats.parseFileTime.callCount - parseCallCount;
+            event.Measurements['resolveCallCount'] = timingStats.resolveImportsTime.callCount - resolveCallCount;
+            event.Measurements['bindCallCount'] = timingStats.bindTime.callCount - bindCallCount;
+
+            event.Measurements['readFileTime'] = timingStats.readFileTime.totalTime - readTime;
+            event.Measurements['tokenizeTime'] = timingStats.tokenizeFileTime.totalTime - tokenizeTime;
+            event.Measurements['parseTime'] = timingStats.parseFileTime.totalTime - parseTime;
+            event.Measurements['resolveTime'] = timingStats.resolveImportsTime.totalTime - resolveTime;
+            event.Measurements['bindTime'] = timingStats.bindTime.totalTime - bindTime;
+
+            event.Measurements['totalTime'] = totalTime;
+
+            service.sendTelemetry(event);
         }
     }
 }
