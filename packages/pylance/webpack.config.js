@@ -47,6 +47,7 @@ module.exports = (_, { mode }) => {
                     stringArray: true,
                     stringArrayEncoding: ['base64'],
                     stringArrayThreshold: 0.75,
+                    transformObjectKeys: true,
                 },
                 [
                     // Chunks to not obfuscate.
