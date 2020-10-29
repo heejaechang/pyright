@@ -11,8 +11,8 @@ import { throwIfCancellationRequested } from 'pyright-internal/common/cancellati
 import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
+import { addImportSimilarityLimit, wellKnownAbbreviationMap } from '../common/importUtils';
 import { ServerCommand } from './commandController';
-import { addImportSimilarityLimit, wellKnownAbbreviationMap } from './commands';
 
 export class AddImportCommand implements ServerCommand {
     constructor(private _ls: LanguageServerInterface) {}
