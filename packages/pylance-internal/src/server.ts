@@ -62,6 +62,7 @@ import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
 import { mergeCommands } from './commands/multiCommand';
 import { PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
 import {
@@ -453,6 +454,7 @@ class PylanceServer extends LanguageServerBase {
                     position,
                     workspacePath,
                     this._completionDocFormat,
+                    wellKnownAbbreviationMap,
                     token
                 );
 

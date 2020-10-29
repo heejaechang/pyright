@@ -45,10 +45,11 @@ import {
     AutoImporter,
     AutoImportResult,
     buildModuleSymbolsMap,
+    getAutoImportCandidatesForAbbr,
     ModuleSymbolMap,
 } from '../languageService/autoImporter';
 import { CallHierarchyProvider } from '../languageService/callHierarchyProvider';
-import { CompletionResults } from '../languageService/completionProvider';
+import { AbbreviationMap, CompletionResults } from '../languageService/completionProvider';
 import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
@@ -955,7 +956,7 @@ export class Program {
         filePath: string,
         range: Range,
         similarityLimit: number,
-        nameMap: Map<string, string> | undefined,
+        nameMap: AbbreviationMap | undefined,
         libraryMap: Map<string, IndexResults> | undefined,
         token: CancellationToken
     ): AutoImportResult[] {
@@ -1002,13 +1003,10 @@ export class Program {
 
             const currentScope = getScopeForNode(currentNode);
             if (currentScope) {
-                const translatedWord = nameMap?.get(writtenWord);
-                if (translatedWord) {
-                    // No filter is needed since we only do exact match.
-                    const exactMatch = 1;
-                    results.push(
-                        ...autoImporter.getAutoImportCandidates(translatedWord, exactMatch, writtenWord, token)
-                    );
+                const info = nameMap?.get(writtenWord);
+                if (info) {
+                    // No scope filter is needed since we only do exact match.
+                    results.push(...getAutoImportCandidatesForAbbr(autoImporter, writtenWord, info, token));
                 }
 
                 results.push(
@@ -1354,6 +1352,7 @@ export class Program {
         position: Position,
         workspacePath: string,
         format: MarkupKind,
+        nameMap: AbbreviationMap | undefined,
         libraryMap: Map<string, IndexResults> | undefined,
         token: CancellationToken
     ): Promise<CompletionResults | undefined> {
@@ -1378,6 +1377,7 @@ export class Program {
                         this._evaluator!,
                         format,
                         this._createSourceMapper(execEnv, /* mapCompiled */ true),
+                        nameMap,
                         libraryMap,
                         () => this._buildModuleSymbolsMap(sourceFileInfo, !!libraryMap, token),
                         token

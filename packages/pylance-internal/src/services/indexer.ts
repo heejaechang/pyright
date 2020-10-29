@@ -133,7 +133,11 @@ export class Indexer {
                     stdLibIndices,
                     true,
                     1,
-                    new Map<string, number>([['sklearn', 2]])
+                    new Map<string, number>([
+                        ['sklearn', 2],
+                        ['matplotlib', 2],
+                        ['scipy', 2],
+                    ])
                 );
                 scanner.scan(token);
                 const map = scanner.getModuleFilesPerExecEnv();

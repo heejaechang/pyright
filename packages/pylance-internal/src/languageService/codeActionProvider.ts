@@ -15,7 +15,8 @@ import { getCharacterCount } from 'pyright-internal/common/stringUtils';
 import { Range } from 'pyright-internal/common/textRange';
 import { WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 
-import { addImportSimilarityLimit, Commands, wellKnownAbbreviationMap } from '../commands/commands';
+import { Commands } from '../commands/commands';
+import { addImportSimilarityLimit, wellKnownAbbreviationMap } from '../common/importUtils';
 
 export class CodeActionProvider {
     static async getCodeActionsForPosition(

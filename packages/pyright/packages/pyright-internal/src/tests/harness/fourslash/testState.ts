@@ -47,6 +47,7 @@ import { getStringComparer } from '../../../common/stringUtils';
 import { DocumentRange, Position, Range as PositionRange, rangesAreEqual, TextRange } from '../../../common/textRange';
 import { TextRangeCollection } from '../../../common/textRangeCollection';
 import { LanguageServerInterface, WorkspaceServiceInstance } from '../../../languageServerBase';
+import { AbbreviationInfo } from '../../../languageService/autoImporter';
 import { convertHoverResults } from '../../../languageService/hoverProvider';
 import { ParseResults } from '../../../parser/parser';
 import { Tokenizer } from '../../../parser/tokenizer';
@@ -817,7 +818,8 @@ export class TestState {
                     unknownMemberName?: string;
                 };
             };
-        }
+        },
+        abbrMap?: { [abbr: string]: AbbreviationInfo }
     ): Promise<void> {
         this._analyze();
 
@@ -836,6 +838,7 @@ export class TestState {
                 completionPosition,
                 this.workspace.rootPath,
                 docFormat,
+                abbrMap ? new Map<string, AbbreviationInfo>(Object.entries(abbrMap)) : undefined,
                 CancellationToken.None
             );
 
