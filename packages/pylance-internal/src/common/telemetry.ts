@@ -4,11 +4,13 @@
  * Definitions of services available.
  */
 
-import { sha256 } from 'hash.js';
+import { createHash } from 'crypto';
 import { Connection } from 'vscode-languageserver/node';
 
+import { isString } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';
-import { CompletionResults, ModuleContext } from 'pyright-internal/languageService/completionProvider';
+import { Duration, timingStats } from 'pyright-internal/common/timing';
+import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
 
 import { VERSION } from './constants';
 
@@ -22,6 +24,7 @@ export enum TelemetryEventName {
     INTELLICODE_ONNX_LOAD_FAILED = 'intellicode_onnx_load_failed',
     COMPLETION_METRICS = 'completion_metrics',
     COMPLETION_COVERAGE = 'completion_coverage',
+    COMPLETION_SLOW = 'completion_slow',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
@@ -112,11 +115,11 @@ export namespace StubTelemetry {
     ) {
         if (
             results?.completionList?.items.length === 0 &&
-            results.moduleContext?.lastKnownModule &&
-            results.moduleContext.lastKnownModule.length > 0
+            results.memberAccessInfo?.lastKnownModule &&
+            results.memberAccessInfo.lastKnownModule.length > 0
         ) {
             const event = new TelemetryEvent(TelemetryEventName.COMPLETION_METRICS);
-            addModuleInfoToEvent(event, results.moduleContext);
+            addModuleInfoToEvent(event, results.memberAccessInfo);
 
             //delay sending completion telemetry until user is done typing
             //we don't really want to send data on partially typed words, and most likely
@@ -131,22 +134,24 @@ export namespace StubTelemetry {
     }
 }
 
-export function addModuleInfoToEvent(te: TelemetryEvent, moduleContext: ModuleContext) {
-    for (const [key, value] of Object.entries(moduleContext)) {
-        const strValue: string = ((value as string) ?? '').toLocaleLowerCase();
-        if (strValue && strValue.length > 0) {
-            const hash = sha256().update(strValue);
-            te.Properties[key + 'Hash'] = hash.digest('hex');
+export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: MemberAccessInfo) {
+    for (const [key, value] of Object.entries(memberAccessInfo)) {
+        if (isString(value)) {
+            const strValue = value.toLowerCase();
+            if (strValue && strValue.length > 0) {
+                const hash = createHash('sha256').update(strValue);
+                te.Properties[key + 'Hash'] = hash.digest('hex');
 
-            // if (process.env.NODE_ENV === 'development') {
-            //     te.Properties[key] = strValue;
-            // }
+                // if (process.env.NODE_ENV === 'development') {
+                //     te.Properties[key] = strValue;
+                // }
+            }
         }
     }
 
-    if (moduleContext && moduleContext?.lastKnownModule) {
-        const packageName = moduleContext?.lastKnownModule.split('.')[0].toLocaleLowerCase();
-        const packageHash = sha256().update(packageName);
+    if (memberAccessInfo && memberAccessInfo?.lastKnownModule) {
+        const packageName = memberAccessInfo?.lastKnownModule.split('.')[0].toLowerCase();
+        const packageHash = createHash('sha256').update(packageName);
         te.Properties['packageHash'] = packageHash.digest('hex');
         // if (process.env.NODE_ENV === 'development') {
         //     te.Properties['package'] = packageName;
@@ -192,6 +197,12 @@ export namespace CompletionCoverage {
         }
 
         update(results: CompletionResults | undefined) {
+            // limit our completion stats to member completions which
+            // are the only type to have a memberAccessInfo
+            if (!results?.memberAccessInfo) {
+                return;
+            }
+
             if (!results?.completionList?.items.length) {
                 this._event.Measurements[Measure.Failures] += 1;
             } else {
@@ -232,6 +243,72 @@ export namespace CompletionCoverage {
             event.Measurements[Measure.OverallSuccesses] = 0;
             event.Measurements[Measure.OverallFailures] = 0;
             event.Measurements[Measure.OverallTotal] = 0;
+        }
+    }
+}
+
+export async function trackPerf<T>(
+    service: TelemetryService,
+    eventName: string,
+    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => Promise<T>,
+    thresholdInMS: number
+) {
+    const duration = new Duration();
+
+    const readCallCount = timingStats.readFileTime.callCount;
+    const tokenizeCallCount = timingStats.tokenizeFileTime.callCount;
+    const parseCallCount = timingStats.parseFileTime.callCount;
+    const resolveCallCount = timingStats.resolveImportsTime.callCount;
+    const bindCallCount = timingStats.bindTime.callCount;
+
+    const readTime = timingStats.readFileTime.totalTime;
+    const tokenizeTime = timingStats.tokenizeFileTime.totalTime;
+    const parseTime = timingStats.parseFileTime.totalTime;
+    const resolveTime = timingStats.resolveImportsTime.totalTime;
+    const bindTime = timingStats.bindTime.totalTime;
+
+    let map:
+        | {
+              [key: string]: number;
+          }
+        | undefined;
+
+    const customMeasures = {
+        addCustomMeasure(name: string, measure: number) {
+            if (!map) {
+                map = {};
+            }
+
+            map[`custom_${name}`] = measure;
+        },
+    };
+
+    try {
+        return await callback(customMeasures);
+    } finally {
+        const totalTime = duration.getDurationInMilliseconds();
+        if (totalTime > thresholdInMS) {
+            const event = new TelemetryEvent(eventName);
+
+            if (map) {
+                addMeasurementsToEvent(event, map);
+            }
+
+            event.Measurements['readFileCallCount'] = timingStats.readFileTime.callCount - readCallCount;
+            event.Measurements['tokenizeCallCount'] = timingStats.tokenizeFileTime.callCount - tokenizeCallCount;
+            event.Measurements['parseCallCount'] = timingStats.parseFileTime.callCount - parseCallCount;
+            event.Measurements['resolveCallCount'] = timingStats.resolveImportsTime.callCount - resolveCallCount;
+            event.Measurements['bindCallCount'] = timingStats.bindTime.callCount - bindCallCount;
+
+            event.Measurements['readFileTime'] = timingStats.readFileTime.totalTime - readTime;
+            event.Measurements['tokenizeTime'] = timingStats.tokenizeFileTime.totalTime - tokenizeTime;
+            event.Measurements['parseTime'] = timingStats.parseFileTime.totalTime - parseTime;
+            event.Measurements['resolveTime'] = timingStats.resolveImportsTime.totalTime - resolveTime;
+            event.Measurements['bindTime'] = timingStats.bindTime.totalTime - bindTime;
+
+            event.Measurements['totalTime'] = totalTime;
+
+            service.sendTelemetry(event);
         }
     }
 }

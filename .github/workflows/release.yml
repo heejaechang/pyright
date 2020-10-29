@@ -73,9 +73,15 @@ jobs:
 
       # AZURE_DEVOPS_PACKAGE_TOKEN is the base64 encoded access token. See here to create it:
       # https://devdiv.visualstudio.com/DevDiv/_packaging?_a=connect&feed=Pylance
-      - name: Create .npmrc
+      - name: Create .npmrc files
         run: |
           cat << EOF > .npmrc
+          registry=https://devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/ 
+                        
+          always-auth=true
+          EOF
+
+          cat << EOF > $HOME/.npmrc
           ; begin auth token
           //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/:username=devdiv
           //devdiv.pkgs.visualstudio.com/_packaging/Pylance/npm/registry/:_password=${{ secrets.AZURE_DEVOPS_PACKAGE_TOKEN }}

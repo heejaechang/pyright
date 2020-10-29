@@ -469,6 +469,12 @@ test('Protocol9', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Protocol10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol10.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('TypedDict1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict1.py']);
 
@@ -799,7 +805,7 @@ test('DataClass4', () => {
 test('DataClass5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass5.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('DataClass6', () => {
@@ -873,6 +879,20 @@ test('Unions2', () => {
     TestUtils.validateResults(analysisResults38, 0);
 });
 
+test('Unions3', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // Analyze with Python 3.9 settings. This will generate errors.
+    configOptions.defaultPythonVersion = PythonVersion.V3_9;
+    const analysisResults3_9 = TestUtils.typeAnalyzeSampleFiles(['unions3.py'], configOptions);
+    TestUtils.validateResults(analysisResults3_9, 1);
+
+    // Analyze with Python 3.10 settings.
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults3_10 = TestUtils.typeAnalyzeSampleFiles(['unions3.py'], configOptions);
+    TestUtils.validateResults(analysisResults3_10, 0);
+});
+
 test('ParamSpec1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -941,12 +961,6 @@ test('TypeVar3', () => {
 
 test('TypeVar4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar4.py']);
-
-    TestUtils.validateResults(analysisResults, 4);
-});
-
-test('TypeVar5', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar5.py']);
 
     TestUtils.validateResults(analysisResults, 4);
 });

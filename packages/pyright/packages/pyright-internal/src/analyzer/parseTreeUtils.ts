@@ -634,7 +634,7 @@ export function getEvaluationScopeNode(node: ParseNode): EvaluationScopeNode {
                             return curNode;
                         }
                     }
-                } else if (prevNode === curNode.expression) {
+                } else if (!prevNode || prevNode === curNode.expression) {
                     if (getScope(curNode) !== undefined) {
                         return curNode;
                     }
@@ -1033,17 +1033,4 @@ export function isAssignmentToDefaultsFollowingNamedTuple(callNode: ParseNode): 
     }
 
     return false;
-}
-
-// This simple parse tree walker calls a callback function
-// for each NameNode it encounters.
-export class NameNodeWalker extends ParseTreeWalker {
-    constructor(private _callback: (node: NameNode) => void) {
-        super();
-    }
-
-    visitName(node: NameNode) {
-        this._callback(node);
-        return true;
-    }
 }
