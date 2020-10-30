@@ -6,7 +6,7 @@
  */
 
 import { deepEqual } from 'assert';
-import { AbstractCancellationTokenSource, CancellationToken, SelectionRange, SymbolKind } from 'vscode-languageserver';
+import { AbstractCancellationTokenSource, CancellationToken, SymbolKind } from 'vscode-languageserver';
 import { MessageChannel, parentPort, threadId, Worker, workerData } from 'worker_threads';
 
 import { ImportResolver, ModuleNameAndType } from 'pyright-internal/analyzer/importResolver';
@@ -38,6 +38,7 @@ import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/
 
 import { deleteElement, getExecutionEnvironments, getOrAdd } from '../common/collectionUtils';
 import { mainFilename } from '../common/mainModuleFileName';
+import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from '../common/telemetry';
 import { PackageScanner } from '../packageScanner';
 import { createPylanceImportResolver } from '../pylanceImportResolver';
 
@@ -47,6 +48,7 @@ export class Indexer {
     private static _cancellationSourcePerWorkspace = new Map<string, AbstractCancellationTokenSource>();
 
     static requestIndexingFromBackgroundThread(
+        telemetry: TelemetryInterface,
         console: ConsoleInterface,
         configOptions: ConfigOptions,
         indices: Indices
@@ -58,7 +60,7 @@ export class Indexer {
         const source = createBackgroundThreadCancellationTokenSource();
         Indexer._cancellationSourcePerWorkspace.set(configOptions.projectRoot, source);
 
-        const worker = Indexer._getWorker(console, configOptions);
+        const worker = Indexer._getWorker(telemetry, console, configOptions);
 
         const { port1, port2 } = new MessageChannel();
         function disposeSource() {
@@ -339,7 +341,11 @@ export class Indexer {
         return true;
     }
 
-    private static _getWorker(console: ConsoleInterface, configOptions: ConfigOptions): Worker {
+    private static _getWorker(
+        telemetry: TelemetryInterface,
+        console: ConsoleInterface,
+        configOptions: ConfigOptions
+    ): Worker {
         let worker = Indexer._workerPerWorkspace.get(configOptions.projectRoot);
         if (worker !== undefined) {
             return worker;
@@ -361,6 +367,10 @@ export class Indexer {
                 case 'log': {
                     const logData = msg.data as LogData;
                     log(console, logData.level, logData.message);
+                    break;
+                }
+                case 'telemetry': {
+                    telemetry.sendTelemetry(msg.data as TelemetryEventInterface);
                     break;
                 }
                 default:
@@ -405,12 +415,22 @@ export class Indexer {
     }
 }
 
+const INDEX_THRESHOLD_MS = 20000;
+
 export class BackgroundIndexRunner extends BackgroundThreadBase {
+    private readonly _telemetry: TelemetryInterface;
+
     constructor() {
         super(workerData as InitializationData);
 
         const data = workerData as InitializationData;
         this.log(LogLevel.Info, `Indexer background runner(${threadId}) root directory: ${data.rootDirectory}`);
+
+        this._telemetry = {
+            sendTelemetry(event: TelemetryEventInterface) {
+                parentPort?.postMessage({ requestType: 'telemetry', data: event });
+            },
+        };
     }
 
     start() {
@@ -427,18 +447,29 @@ export class BackgroundIndexRunner extends BackgroundThreadBase {
 
                         const configOptions = createConfigOptionsFrom(msg.data.configOptions);
                         const importResolver = createPylanceImportResolver(this.fs, configOptions);
-                        const map = Indexer.indexLibraries(
-                            importResolver,
-                            configOptions,
-                            this.getConsole(),
-                            `IDX(${threadId})`,
-                            [],
-                            token
+                        const map = trackPerf(
+                            this._telemetry,
+                            TelemetryEventName.INDEX_SLOW,
+                            (cm) => {
+                                const result = Indexer.indexLibraries(
+                                    importResolver,
+                                    configOptions,
+                                    this.getConsole(),
+                                    `IDX(${threadId})`,
+                                    [],
+                                    token
+                                );
+
+                                let count = 0;
+                                result.forEach((value) => (count += value.size));
+                                this.log(LogLevel.Info, `Indexer done(${threadId}). indexed ${count} files`);
+
+                                cm.addCustomMeasure('count', count);
+                                return result;
+                            },
+                            INDEX_THRESHOLD_MS
                         );
 
-                        let count = 0;
-                        map.forEach((value) => (count += value.size));
-                        this.log(LogLevel.Info, `Indexer done(${threadId}). indexed ${count} files`);
                         port.postMessage({ requestType: 'done', data: [...map] });
                         parentPort?.close();
                     } catch (e) {
@@ -468,7 +499,7 @@ interface IndexRequest {
 }
 
 interface IndexResponse {
-    requestType: 'log' | 'done' | 'cancelled' | 'failed';
+    requestType: 'log' | 'telemetry' | 'done' | 'cancelled' | 'failed';
     data: any;
 }
 

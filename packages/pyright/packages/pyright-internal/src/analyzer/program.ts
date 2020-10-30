@@ -434,16 +434,16 @@ export class Program {
         });
     }
 
-    indexWorkspace(callback: (path: string, results: IndexResults) => void, token: CancellationToken) {
+    indexWorkspace(callback: (path: string, results: IndexResults) => void, token: CancellationToken): number {
         if (!this._configOptions.indexing) {
-            return;
+            return 0;
         }
 
-        let count = 0;
         return this._runEvaluatorWithCancellationToken(token, () => {
             // Go through all workspace files to create indexing data.
             // This will cause all files in the workspace to be parsed and bound. But
             // _handleMemoryHighUsage will make sure we don't OOM
+            let count = 0;
             for (const sourceFileInfo of this._sourceFileList) {
                 if (!this._isUserCode(sourceFileInfo)) {
                     continue;
@@ -454,7 +454,7 @@ export class Program {
                 if (results) {
                     if (++count > 2000) {
                         this._console.warn(`Workspace indexing has hit its upper limit: 2000 files`);
-                        return;
+                        return count;
                     }
 
                     callback(sourceFileInfo.sourceFile.getFilePath(), results);
@@ -462,6 +462,8 @@ export class Program {
 
                 this._handleMemoryHighUsage();
             }
+
+            return count;
         });
     }
 

@@ -7,7 +7,7 @@
 import { createHash } from 'crypto';
 import { Connection } from 'vscode-languageserver/node';
 
-import { isString } from 'pyright-internal/common/core';
+import { isString, isThenable } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';
 import { Duration, timingStats } from 'pyright-internal/common/timing';
 import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
@@ -25,6 +25,9 @@ export enum TelemetryEventName {
     COMPLETION_METRICS = 'completion_metrics',
     COMPLETION_COVERAGE = 'completion_coverage',
     COMPLETION_SLOW = 'completion_slow',
+    INDEX_SLOW = 'index_slow',
+    WORKSPACEINDEX_SLOW = 'workspaceindex_slow',
+    SEMANTICTOKENS_SLOW = 'semantictokens_slow',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
@@ -35,9 +38,15 @@ export function formatEventName(eventName: string): string {
     return `${languageServerEventPrefix}${eventName}`;
 }
 
+export interface TelemetryEventInterface {
+    readonly EventName: string;
+    readonly Properties: { [key: string]: string };
+    readonly Measurements: { [key: string]: number };
+}
+
 // Note: These names must match the expected values in the VSCode Python Extension
 // https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
-export class TelemetryEvent {
+export class TelemetryEvent implements TelemetryEventInterface {
     readonly EventName: string;
 
     readonly Properties: {
@@ -69,7 +78,11 @@ export class TelemetryEvent {
     }
 }
 
-export class TelemetryService {
+export interface TelemetryInterface {
+    sendTelemetry(event: TelemetryEventInterface): void;
+}
+
+export class TelemetryService implements TelemetryInterface {
     private _connection: Connection;
 
     constructor(connection: any) {
@@ -247,12 +260,24 @@ export namespace CompletionCoverage {
     }
 }
 
-export async function trackPerf<T>(
-    service: TelemetryService,
+export function trackPerf<T>(
+    service: TelemetryInterface,
     eventName: string,
     callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => Promise<T>,
     thresholdInMS: number
-) {
+): Promise<T>;
+export function trackPerf<T>(
+    service: TelemetryInterface,
+    eventName: string,
+    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T,
+    thresholdInMS: number
+): T;
+export function trackPerf<T>(
+    service: TelemetryInterface,
+    eventName: string,
+    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T | Promise<T>,
+    thresholdInMS: number
+): T | Promise<T> {
     const duration = new Duration();
 
     const readCallCount = timingStats.readFileTime.callCount;
@@ -283,9 +308,20 @@ export async function trackPerf<T>(
         },
     };
 
-    try {
-        return await callback(customMeasures);
-    } finally {
+    // This will only send telemetry when callback succeeded.
+    // Otherwise, it won't send (including cancellation case).
+    const result = callback(customMeasures);
+    if (isThenable(result)) {
+        return result.then((r) => {
+            recordTelemetry();
+            return r;
+        });
+    }
+
+    recordTelemetry();
+    return result;
+
+    function recordTelemetry() {
         const totalTime = duration.getDurationInMilliseconds();
         if (totalTime > thresholdInMS) {
             const event = new TelemetryEvent(eventName);
