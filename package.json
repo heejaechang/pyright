@@ -13,13 +13,14 @@
         "build:extension:dev": "cd packages/vscode-pylance && npm run webpack",
         "watch:extension": "cd packages/vscode-pylance && npm run webpack-dev",
         "build:extension:tests": "cd packages/vscode-pylance && npm run build:tests",
-        "check": "npm run check:syncpack && npm run check:eslint && npm run check:prettier",
+        "check": "npm run check:syncpack && npm run check:eslint && npm run check:prettier && npm run check:lockindent",
         "check:syncpack": "syncpack list-mismatches --source \"{,packages/*/,packages/pyright/packages/*/}package.json\"",
         "fix:syncpack": "syncpack fix-mismatches --source \"{,packages/*/,packages/pyright/packages/*/}package.json\" --indent \"    \" && npm run install:all",
         "check:eslint": "eslint .",
         "fix:eslint": "eslint --fix .",
         "check:prettier": "prettier -c .",
-        "fix:prettier": "prettier --write ."
+        "fix:prettier": "prettier --write .",
+        "check:lockindent": "node ./packages/pyright/build/checkLockIndent.js"
     },
     "devDependencies": {
         "@types/fs-extra": "^9.0.2",
