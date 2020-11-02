@@ -23,7 +23,7 @@ import {
 function getBundledTypeStubsPath(moduleDirectory?: string) {
     if (moduleDirectory) {
         moduleDirectory = normalizePath(moduleDirectory);
-        return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled-stubs');
+        return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled', 'stubs');
     }
 
     return undefined;

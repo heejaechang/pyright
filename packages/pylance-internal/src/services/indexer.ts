@@ -256,7 +256,8 @@ export class Indexer {
             if (!original) {
                 const jsonFile = combinePaths(
                     importResolver.fileSystem.getModulePath(),
-                    'bundled-indices',
+                    'bundled',
+                    'indices',
                     'stdlib.json'
                 );
 

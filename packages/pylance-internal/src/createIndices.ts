@@ -18,6 +18,6 @@ const configOptions = new ConfigOptions('.');
 const importResolver = new ImportResolver(fs, configOptions);
 const console = new StandardConsole();
 
-const stdlibPath = path.resolve(__dirname, '..', 'bundled-indices', 'stdlib.json');
+const stdlibPath = path.resolve(__dirname, '..', 'bundled', 'indices', 'stdlib.json');
 
 Indexer.generateStdLibIndices(importResolver, console, stdlibPath);
