@@ -315,13 +315,7 @@ export class AnalyzerService {
         format: MarkupKind,
         token: CancellationToken
     ) {
-        this._program.resolveCompletionItem(
-            filePath,
-            completionItem,
-            format,
-            this._backgroundAnalysisProgram.getIndexing(filePath),
-            token
-        );
+        this._program.resolveCompletionItem(filePath, completionItem, format, token);
     }
 
     performQuickAction(

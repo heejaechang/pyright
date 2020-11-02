@@ -1418,7 +1418,6 @@ export class Program {
         filePath: string,
         completionItem: CompletionItem,
         format: MarkupKind,
-        libraryMap: Map<string, IndexResults> | undefined,
         token: CancellationToken
     ) {
         return this._runEvaluatorWithCancellationToken(token, () => {
@@ -1437,8 +1436,6 @@ export class Program {
                 this._evaluator!,
                 format,
                 this._createSourceMapper(execEnv, /* mapCompiled */ true),
-                libraryMap,
-                () => this._buildModuleSymbolsMap(sourceFileInfo, !!libraryMap, token),
                 completionItem,
                 token
             );

@@ -819,9 +819,11 @@ export class SourceFile {
             evaluator,
             format,
             sourceMapper,
-            nameMap,
-            libraryMap,
-            moduleSymbolsCallback,
+            {
+                nameMap,
+                libraryMap,
+                getModuleSymbolsMap: moduleSymbolsCallback,
+            },
             token
         );
 
@@ -835,8 +837,6 @@ export class SourceFile {
         evaluator: TypeEvaluator,
         format: MarkupKind,
         sourceMapper: SourceMapper,
-        libraryMap: Map<string, IndexResults> | undefined,
-        moduleSymbolsCallback: () => ModuleSymbolMap,
         completionItem: CompletionItem,
         token: CancellationToken
     ) {
@@ -859,8 +859,6 @@ export class SourceFile {
             format,
             sourceMapper,
             undefined,
-            libraryMap,
-            moduleSymbolsCallback,
             token
         );
 
