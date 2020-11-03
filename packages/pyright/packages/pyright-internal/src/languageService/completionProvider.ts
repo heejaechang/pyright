@@ -200,6 +200,12 @@ export interface CompletionResults {
 
 export type AbbreviationMap = Map<string, AbbreviationInfo>;
 
+export interface AutoImportMaps {
+    nameMap?: AbbreviationMap;
+    libraryMap?: Map<string, IndexResults>;
+    getModuleSymbolsMap: () => ModuleSymbolMap;
+}
+
 interface RecentCompletionInfo {
     label: string;
     autoImportText: string;
@@ -250,9 +256,7 @@ export class CompletionProvider {
         private _evaluator: TypeEvaluator,
         private _format: MarkupKind,
         private _sourceMapper: SourceMapper,
-        private _nameMap: AbbreviationMap | undefined,
-        private _libraryMap: Map<string, IndexResults> | undefined,
-        private _moduleSymbolsCallback: () => ModuleSymbolMap,
+        private _autoImportMaps: AutoImportMaps | undefined,
         private _cancellationToken: CancellationToken
     ) {}
 
@@ -992,7 +996,11 @@ export class CompletionProvider {
     }
 
     private _getAutoImportCompletions(priorWord: string, completionList: CompletionList) {
-        const moduleSymbolMap = this._moduleSymbolsCallback();
+        if (!this._autoImportMaps) {
+            return;
+        }
+
+        const moduleSymbolMap = this._autoImportMaps.getModuleSymbolsMap();
         const excludes = completionList.items.filter((i) => !i.data?.autoImport).map((i) => i.label);
         const autoImporter = new AutoImporter(
             this._configOptions.findExecEnvironment(this._filePath),
@@ -1001,11 +1009,11 @@ export class CompletionProvider {
             this._position,
             excludes,
             moduleSymbolMap,
-            this._libraryMap
+            this._autoImportMaps.libraryMap
         );
 
         const results: AutoImportResult[] = [];
-        const info = this._nameMap?.get(priorWord);
+        const info = this._autoImportMaps.nameMap?.get(priorWord);
         if (info && priorWord.length > 1 && !excludes.some((e) => e === priorWord)) {
             results.push(...getAutoImportCandidatesForAbbr(autoImporter, priorWord, info, this._cancellationToken));
         }

@@ -259,7 +259,7 @@ class PylanceServer extends LanguageServerBase {
             return undefined;
         }
 
-        return new BackgroundAnalysis(this.console);
+        return new BackgroundAnalysis(this._telemetry, this.console);
     }
 
     updateSettingsForAllWorkspaces(): void {

@@ -29,7 +29,7 @@ import { createPylanceImportResolver } from '../pylanceImportResolver';
 import { Indexer } from '../services/indexer';
 import { PylanceTestState } from './pylanceTestState';
 
-const bundledStubsFolder = combinePaths(MODULE_PATH, normalizeSlashes('bundled-stubs'));
+const bundledStubsFolder = combinePaths(MODULE_PATH, 'bundled', 'stubs');
 
 class PylanceFeatures implements HostSpecificFeatures {
     importResolverFactory: ImportResolverFactory = createPylanceImportResolver;
@@ -78,7 +78,7 @@ describe('Pylance fourslash tests', () => {
     }
 
     // make sure default folders exist
-    const bundledStubsFolderPath = resolvePaths(__dirname, '../../bundled-stubs');
+    const bundledStubsFolderPath = resolvePaths(__dirname, '../../bundled/stubs');
     const typeshedFolderPath = resolvePaths(
         __dirname,
         '../../../pyright/packages/pyright-internal/' + consts.typeshedFallback

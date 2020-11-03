@@ -874,13 +874,7 @@ export class TestState {
                         assert.equal(actual.kind, expected.kind);
                         if (expectedCompletions[i].documentation !== undefined) {
                             if (actual.documentation === undefined) {
-                                this.program.resolveCompletionItem(
-                                    filePath,
-                                    actual,
-                                    docFormat,
-                                    undefined,
-                                    CancellationToken.None
-                                );
+                                this.program.resolveCompletionItem(filePath, actual, docFormat, CancellationToken.None);
                             }
 
                             if (MarkupContent.is(actual.documentation)) {

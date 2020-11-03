@@ -7,12 +7,13 @@
  */
 
 import { CancellationToken, SemanticTokens } from 'vscode-languageserver';
-import { MessageChannel, MessagePort, Worker, workerData } from 'worker_threads';
+import { MessageChannel, MessagePort, parentPort, Worker, workerData } from 'worker_threads';
 
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { Indices } from 'pyright-internal/analyzer/program';
 import {
     AnalysisRequest,
+    AnalysisResponse,
     BackgroundAnalysisBase,
     BackgroundAnalysisRunnerBase,
     InitializationData,
@@ -31,12 +32,13 @@ import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Range } from 'pyright-internal/common/textRange';
 
 import { mainFilename } from './common/mainModuleFileName';
+import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from './common/telemetry';
 import { getSemanticTokens } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver } from './pylanceImportResolver';
 import { BackgroundIndexRunner, Indexer } from './services/indexer';
 
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
-    constructor(console: ConsoleInterface) {
+    constructor(private _telemetry: TelemetryInterface, console: ConsoleInterface) {
         super(console);
 
         const initialData: InitializationData = {
@@ -50,8 +52,21 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         this.setup(worker);
     }
 
+    protected onMessage(msg: AnalysisResponse) {
+        switch (msg.requestType) {
+            case 'telemetry': {
+                this._telemetry.sendTelemetry(msg.data as TelemetryEventInterface);
+                break;
+            }
+
+            default: {
+                super.onMessage(msg);
+            }
+        }
+    }
+
     startIndexing(configOptions: ConfigOptions, indices: Indices) {
-        Indexer.requestIndexingFromBackgroundThread(this.console, configOptions, indices);
+        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
     }
 
     refreshIndexing(configOptions: ConfigOptions, indices?: Indices) {
@@ -59,7 +74,7 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
             return;
         }
 
-        Indexer.requestIndexingFromBackgroundThread(this.console, configOptions, indices);
+        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
     }
 
     cancelIndexing(configOptions: ConfigOptions) {
@@ -93,9 +108,20 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
     }
 }
 
+const SEMANTICTOKENS_THRESHOLD_MS = 2000;
+const WORKSPACEINDEX_THRESHOLD_MS = 10000;
+
 class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
+    private readonly _telemetry: TelemetryInterface;
+
     constructor() {
         super();
+
+        this._telemetry = {
+            sendTelemetry(event: TelemetryEventInterface) {
+                parentPort?.postMessage({ requestType: 'telemetry', data: event });
+            },
+        };
     }
 
     protected onMessage(msg: AnalysisRequest) {
@@ -108,7 +134,17 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
                     const token = getCancellationTokenFromId(cancellationId);
                     throwIfCancellationRequested(token);
 
-                    return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+                    return trackPerf(
+                        this._telemetry,
+                        TelemetryEventName.SEMANTICTOKENS_SLOW,
+                        (cm) => {
+                            const tokens = getSemanticTokens(this.program, filePath, range, previousResultId, token);
+
+                            cm.addCustomMeasure('count', tokens.data.length);
+                            return tokens;
+                        },
+                        SEMANTICTOKENS_THRESHOLD_MS
+                    );
                 }, msg.port!);
                 break;
             }
@@ -125,10 +161,19 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
 
     protected processIndexing(port: MessagePort, token: CancellationToken) {
         try {
-            this.program.indexWorkspace((p, r) => {
-                this.log(LogLevel.Log, `Indexing Done: ${p}`);
-                this.reportIndex(port, { path: p, indexResults: r });
-            }, token);
+            trackPerf(
+                this._telemetry,
+                TelemetryEventName.WORKSPACEINDEX_SLOW,
+                (cm) => {
+                    const count = this.program.indexWorkspace((p, r) => {
+                        this.log(LogLevel.Log, `Indexing Done: ${p}`);
+                        this.reportIndex(port, { path: p, indexResults: r });
+                    }, token);
+
+                    cm.addCustomMeasure('count', count);
+                },
+                WORKSPACEINDEX_THRESHOLD_MS
+            );
         } catch (e) {
             if (OperationCanceledException.is(e)) {
                 return;

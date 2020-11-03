@@ -2,8 +2,7 @@
 **/dist/**
 **/out/**
 **/typeshed-fallback/**
-**/bundled-stubs/**
-**/bundled-indices/**
+**/bundled/**
 
 # These files are compared exactly.
 packages/pylance-pythia/src/tests/baseline/**/*.json
