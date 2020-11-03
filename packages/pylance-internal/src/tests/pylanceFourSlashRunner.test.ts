@@ -64,7 +64,7 @@ class PylanceFeatures implements HostSpecificFeatures {
         return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, range, token);
     }
     execute(ls: LanguageServerInterface, params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
-        const controller = new CommandController(ls);
+        const controller = new CommandController(ls, undefined);
         return controller.execute(params, token);
     }
 }

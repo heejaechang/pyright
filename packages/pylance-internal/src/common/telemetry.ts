@@ -28,6 +28,7 @@ export enum TelemetryEventName {
     INDEX_SLOW = 'index_slow',
     WORKSPACEINDEX_SLOW = 'workspaceindex_slow',
     SEMANTICTOKENS_SLOW = 'semantictokens_slow',
+    EXECUTE_COMMAND = 'execute_command',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes

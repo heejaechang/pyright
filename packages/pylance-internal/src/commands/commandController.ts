@@ -12,12 +12,24 @@ import { convertUriToPath } from 'pyright-internal/common/pathUtils';
 import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { Commands } from './commands';
 import { QuickActionCommand } from './quickActionCommand';
 
 export interface ServerCommand {
     execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any>;
 }
+
+const _userInitiatedTelemetryCommands: Set<string> = new Set([
+    PyrightCommands.createTypeStub,
+    PyrightCommands.orderImports,
+    PyrightCommands.addMissingOptionalToParam,
+    Commands.createTypeStub,
+    Commands.orderImports,
+    Commands.addMissingOptionalToParam,
+    Commands.removeUnusedImport,
+    Commands.addImport,
+]);
 
 export class CommandController extends PyrightCommandController {
     private _pylanceQuickAction: QuickActionCommand;
@@ -30,7 +42,7 @@ export class CommandController extends PyrightCommandController {
         [PyrightCommands.addMissingOptionalToParam, PyrightCommands.addMissingOptionalToParam],
     ]);
 
-    constructor(ls: LanguageServerInterface) {
+    constructor(ls: LanguageServerInterface, private _telemetry: TelemetryService | undefined) {
         super(ls);
 
         this._pylanceQuickAction = new QuickActionCommand(ls);
@@ -52,6 +64,8 @@ export class CommandController extends PyrightCommandController {
     }
 
     async execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any> {
+        this._sendUserInitiatedCommandTelemetry(cmdParams);
+
         switch (cmdParams.command) {
             case Commands.removeUnusedImport:
             case Commands.addImport:
@@ -92,5 +106,13 @@ export class CommandController extends PyrightCommandController {
         }
 
         return result;
+    }
+
+    private _sendUserInitiatedCommandTelemetry(cmdParams: ExecuteCommandParams) {
+        if (this._telemetry && _userInitiatedTelemetryCommands.has(cmdParams.command)) {
+            const te = new TelemetryEvent(TelemetryEventName.EXECUTE_COMMAND);
+            te.Properties['name'] = cmdParams.command;
+            this._telemetry.sendTelemetry(te);
+        }
     }
 }

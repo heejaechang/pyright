@@ -128,9 +128,9 @@ class PylanceServer extends LanguageServerBase {
             this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)),
             `Unable to locate typeshed fallback folder at '${rootDirectory}'`
         );
-        this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
+        this._controller = new CommandController(this, this._telemetry);
         this._completionCoverage = new CompletionCoverage.CompletionTelemetry(this._telemetry);
         this._logger = new LogService(this.console as ConsoleWithLogLevel);
         this._platform = new Platform();
