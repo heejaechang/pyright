@@ -11,6 +11,7 @@ import {
     CodeActionKind,
     CodeActionParams,
     Command,
+    CompletionItem,
     CompletionItemKind,
     CompletionList,
     CompletionParams,
@@ -55,7 +56,7 @@ import {
     WorkspaceServiceInstance,
 } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
-import { CompletionResults } from 'pyright-internal/languageService/completionProvider';
+import { CompletionItemData, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
@@ -528,15 +529,7 @@ class PylanceServer extends LanguageServerBase {
 
         if (completionList && workspace.completeFunctionParens && !token.isCancellationRequested) {
             for (const c of completionList.items) {
-                if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
-                    c.insertText = (c.insertText ?? c.label) + '($0)';
-                    c.insertTextFormat = InsertTextFormat.Snippet;
-                    c.command = mergeCommands(c.command, {
-                        title: '',
-                        command: Commands.triggerParameterHints,
-                        arguments: [params.textDocument.uri],
-                    });
-                }
+                updateInsertTextForAutoParensIfNeeded(c, params.textDocument.uri);
             }
         }
         return completionList;
@@ -603,6 +596,23 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
         }
 
         return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+    }
+}
+
+export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, textDocumentUri: string) {
+    const aliasContext = (item.data as CompletionItemData)?.isInImport;
+    if (aliasContext) {
+        return;
+    }
+
+    if (item.kind === CompletionItemKind.Function || item.kind === CompletionItemKind.Method) {
+        item.insertText = (item.insertText ?? item.label) + '($0)';
+        item.insertTextFormat = InsertTextFormat.Snippet;
+        item.command = mergeCommands(item.command, {
+            title: '',
+            command: Commands.triggerParameterHints,
+            arguments: [textDocumentUri],
+        });
     }
 }
 

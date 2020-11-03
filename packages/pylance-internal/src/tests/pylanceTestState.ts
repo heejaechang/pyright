@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
     CancellationToken,
+    CompletionItem,
     SemanticTokens,
     SemanticTokensClientCapabilities,
     SemanticTokensLegend,
@@ -12,6 +13,7 @@ import { HostSpecificFeatures, TestState } from 'pyright-internal/tests/harness/
 import { stringify } from 'pyright-internal/tests/harness/utils';
 
 import { getSemanticTokens, SemanticTokenProvider } from '../languageService/semanticTokenProvider';
+import { updateInsertTextForAutoParensIfNeeded } from '../server';
 
 export interface DecodedSemanticToken {
     line: number;
@@ -206,5 +208,14 @@ export class PylanceTestState extends TestState {
             });
         }
         return expectedTokens;
+    }
+
+    protected verifyCompletionItem(expected: _.FourSlashCompletionItem, actual: CompletionItem) {
+        if (this.rawConfigJson?.completeFunctionParens) {
+            updateInsertTextForAutoParensIfNeeded(actual, '');
+        }
+
+        super.verifyCompletionItem(expected, actual);
+        assert.strictEqual(actual.insertText, expected.insertionText);
     }
 }

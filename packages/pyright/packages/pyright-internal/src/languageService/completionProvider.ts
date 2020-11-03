@@ -184,6 +184,7 @@ export interface CompletionItemData {
     position: Position;
     autoImportText?: string;
     symbolLabel?: string;
+    isInImport?: boolean;
 }
 
 // MemberAccessInfo attempts to gather info for unknown types
@@ -217,6 +218,7 @@ interface Edits {
 }
 
 interface SymbolDetail {
+    isInImport?: boolean;
     autoImportSource?: string;
     autoImportAlias?: string;
     objectThrough?: ObjectType;
@@ -224,6 +226,7 @@ interface SymbolDetail {
 }
 
 interface CompletionDetail {
+    isInImport?: boolean;
     typeDetail?: string;
     documentation?: string;
     autoImportText?: string;
@@ -634,7 +637,7 @@ export class CompletionProvider {
             const objectThrough: ObjectType | undefined = isObject(specializedLeftType)
                 ? specializedLeftType
                 : undefined;
-            this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, objectThrough, completionList);
+            this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, false, objectThrough, completionList);
 
             // If we don't know this type, look for a module we should stub
             if (!leftType || isUnknown(leftType) || isUnbound(leftType)) {
@@ -1074,6 +1077,7 @@ export class CompletionProvider {
                     return !importFromNode.imports.find((imp) => imp.name.value === name);
                 },
                 priorWord,
+                true,
                 undefined,
                 completionList
             );
@@ -1154,7 +1158,14 @@ export class CompletionProvider {
             let scope = AnalyzerNodeInfo.getScope(curNode);
             if (scope) {
                 while (scope) {
-                    this._addSymbolsForSymbolTable(scope.symbolTable, () => true, priorWord, undefined, completionList);
+                    this._addSymbolsForSymbolTable(
+                        scope.symbolTable,
+                        () => true,
+                        priorWord,
+                        false,
+                        undefined,
+                        completionList
+                    );
                     scope = scope.parent;
                 }
 
@@ -1178,6 +1189,7 @@ export class CompletionProvider {
                                             .some((decl) => decl.type === DeclarationType.Variable);
                                     },
                                     priorWord,
+                                    false,
                                     undefined,
                                     completionList
                                 );
@@ -1196,6 +1208,7 @@ export class CompletionProvider {
         symbolTable: SymbolTable,
         includeSymbolCallback: (name: string) => boolean,
         priorWord: string,
+        isInImport: boolean,
         objectThrough: ObjectType | undefined,
         completionList: CompletionList
     ) {
@@ -1209,6 +1222,7 @@ export class CompletionProvider {
                 if (!completionList.items.some((item) => item.label === name)) {
                     this._addSymbol(name, symbol, priorWord, completionList, {
                         objectThrough,
+                        isInImport,
                     });
                 }
             }
@@ -1369,6 +1383,7 @@ export class CompletionProvider {
 
             this._addNameToCompletionList(detail.autoImportAlias ?? name, itemKind, priorWord, completionList, {
                 autoImportText,
+                isInImport: detail.isInImport,
                 edits: detail.edits,
             });
         } else {
@@ -1377,6 +1392,7 @@ export class CompletionProvider {
             if (synthesizedType) {
                 const itemKind: CompletionItemKind = CompletionItemKind.Variable;
                 this._addNameToCompletionList(name, itemKind, priorWord, completionList, {
+                    isInImport: detail.isInImport,
                     edits: detail.edits,
                 });
             }
@@ -1425,6 +1441,11 @@ export class CompletionProvider {
             filePath: this._filePath,
             position: this._position,
         };
+
+        if (detail?.isInImport) {
+            completionItemData.isInImport = true;
+        }
+
         completionItem.data = completionItemData;
 
         if (detail?.autoImportText) {
