@@ -139,6 +139,7 @@ export class Indexer {
                         ['sklearn', 2],
                         ['matplotlib', 2],
                         ['scipy', 2],
+                        ['django', 2],
                     ])
                 );
                 scanner.scan(token);
