@@ -503,6 +503,7 @@ export interface TypeEvaluator {
     getTypedDictMembersForClass: (classType: ClassType) => Map<string, TypedDictEntry>;
     getGetterTypeFromProperty: (propertyClass: ClassType, inferTypeIfNeeded: boolean) => Type | undefined;
     markNamesAccessed: (node: ParseNode, names: string[]) => void;
+    getScopeIdForNode: (node: ParseNode) => string;
 
     getEffectiveTypeOfSymbol: (symbol: Symbol) => Type;
     getFunctionDeclaredReturnType: (node: FunctionNode) => Type | undefined;
@@ -3370,7 +3371,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 if (type.scopeId === undefined) {
                     const enclosingScope = ParseTreeUtils.getEnclosingClassOrFunction(node);
                     if (enclosingScope) {
-                        type = TypeVarType.cloneForScopeId(type, enclosingScope.id);
+                        type = TypeVarType.cloneForScopeId(type, getScopeIdForNode(enclosingScope));
                     } else {
                         fail('AssociateTypeVarsWithCurrentScope flag was set but enclosing scope not found');
                     }
@@ -3388,6 +3389,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         return { type, node, isResolutionCyclical };
+    }
+
+    // Creates an ID that identifies this parse node in a way that will
+    // not change each time the file is parsed (unless, of course, the
+    // file contents change).
+    function getScopeIdForNode(node: ParseNode): string {
+        const fileInfo = getFileInfo(node);
+        return `${fileInfo.filePath}.${node.start.toString()}`;
     }
 
     // Walks up the parse tree to find a function or class that provides
@@ -3584,7 +3593,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         setSymbolAccessed(getFileInfo(node), symbol, node.memberName);
                     }
 
-                    type = getEffectiveTypeOfSymbol(symbol);
+                    type = getEffectiveTypeOfSymbolForUsage(symbol, /* usageNode */ undefined, /* useLastDecl */ true)
+                        .type;
 
                     // If the type resolved to "unbound", treat it as "unknown" in
                     // the case of a module reference because if it's truly unbound,
@@ -3716,7 +3726,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
     function getClassFromPotentialTypeObject(potentialTypeObject: Type): Type {
         if (isObject(potentialTypeObject)) {
             const objectClass = potentialTypeObject.classType;
-            if (ClassType.isBuiltIn(objectClass, 'Type')) {
+            if (ClassType.isBuiltIn(objectClass, 'Type') || ClassType.isBuiltIn(objectClass, 'type')) {
                 const typeArgs = objectClass.typeArguments;
 
                 if (typeArgs && typeArgs.length > 0) {
@@ -5033,7 +5043,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
             subtype = makeTypeVarsConcrete(subtype);
             let isTypeObject = false;
-            if (isObject(subtype) && ClassType.isBuiltIn(subtype.classType, 'Type')) {
+            if (
+                isObject(subtype) &&
+                (ClassType.isBuiltIn(subtype.classType, 'Type') || ClassType.isBuiltIn(subtype.classType, 'type'))
+            ) {
                 subtype = getClassFromPotentialTypeObject(subtype);
                 isTypeObject = true;
             }
@@ -9846,7 +9859,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                                     /* isParamSpec */ false,
                                     /* isSynthesized */ true
                                 );
-                                return TypeVarType.cloneForScopeId(typeVar, node.id);
+                                return TypeVarType.cloneForScopeId(typeVar, getScopeIdForNode(node));
                             });
                         }
                     }
@@ -10366,8 +10379,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         /* isParamSpec */ false,
                         /* isSynthesized */ true
                     );
-                    clsType.scopeName = TypeVarType.makeScopeName(clsType.details.name, containingClassNode.id);
-                    clsType.scopeId = containingClassNode.id;
+                    const scopeId = getScopeIdForNode(containingClassNode);
+                    clsType.scopeName = TypeVarType.makeScopeName(clsType.details.name, scopeId);
+                    clsType.scopeId = scopeId;
 
                     clsType.details.boundType = selfSpecializeClassType(
                         containingClassType,
@@ -10380,8 +10394,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         /* isParamSpec */ false,
                         /* isSynthesized */ true
                     );
-                    selfType.scopeName = TypeVarType.makeScopeName(selfType.details.name, containingClassNode.id);
-                    selfType.scopeId = containingClassNode.id;
+                    const scopeId = getScopeIdForNode(containingClassNode);
+                    selfType.scopeName = TypeVarType.makeScopeName(selfType.details.name, scopeId);
+                    selfType.scopeId = scopeId;
 
                     selfType.details.boundType = ObjectType.create(
                         selfSpecializeClassType(containingClassType, /* setSkipAbstractClassTest */ true)
@@ -11535,20 +11550,19 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         function isContextual(node: ParseNode) {
             // Parameters are contextual only for lambdas.
-            if (
-                node.nodeType === ParseNodeType.Parameter &&
-                node.parent &&
-                node.parent.nodeType === ParseNodeType.Lambda
-            ) {
+            if (node.nodeType === ParseNodeType.Parameter && node.parent?.nodeType === ParseNodeType.Lambda) {
                 return true;
             }
 
             // Arguments are contextual only for call nodes.
-            if (
-                node.nodeType === ParseNodeType.Argument &&
-                node.parent &&
-                node.parent.nodeType === ParseNodeType.Call
-            ) {
+            if (node.nodeType === ParseNodeType.Argument && node.parent?.nodeType === ParseNodeType.Call) {
+                return true;
+            }
+
+            // All nodes within a type annotation need to be evaluated
+            // contextually so we pass the "type expected" flag to
+            // the evaluator.
+            if (node.parent?.nodeType === ParseNodeType.TypeAnnotation) {
                 return true;
             }
 
@@ -12982,42 +12996,48 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             return filteredTypes.map((t) => ObjectType.create(t));
         };
 
-        if (isInstanceCheck && isObject(effectiveType)) {
-            const filteredType = filterType(effectiveType.classType);
-            return combineTypes(filteredType);
-        } else if (!isInstanceCheck && isClass(effectiveType)) {
-            const filteredType = filterType(effectiveType);
-            return combineTypes(filteredType);
-        } else if (effectiveType.category === TypeCategory.Union) {
-            let remainingTypes: Type[] = [];
+        const anyOrUnknownSubstitutions: Type[] = [];
+        const anyOrUnknown: Type[] = [];
 
-            effectiveType.subtypes.forEach((t) => {
-                if (isAnyOrUnknown(t)) {
-                    // Any types always remain for both positive and negative
-                    // checks because we can't say anything about them.
-                    remainingTypes.push(t);
-                } else if (isInstanceCheck && isObject(t)) {
-                    remainingTypes = remainingTypes.concat(filterType(t.classType));
-                } else if (!isInstanceCheck && isClass(t)) {
-                    remainingTypes = remainingTypes.concat(filterType(t));
+        const filteredType = doForSubtypes(effectiveType, (subtype) => {
+            if (isInstanceCheck && isObject(subtype)) {
+                return combineTypes(filterType(subtype.classType));
+            } else if (!isInstanceCheck && isClass(subtype)) {
+                return combineTypes(filterType(subtype));
+            } else if (isPositiveTest && isAnyOrUnknown(subtype)) {
+                // If this is a positive test and the effective type is Any or
+                // Unknown, we can assume that the type matches one of the
+                // specified types.
+                if (isInstanceCheck) {
+                    anyOrUnknownSubstitutions.push(
+                        combineTypes(classTypeList.map((classType) => ObjectType.create(classType)))
+                    );
                 } else {
-                    // All other types are never instances of a class.
-                    if (!isPositiveTest) {
-                        remainingTypes.push(t);
-                    }
+                    anyOrUnknownSubstitutions.push(combineTypes(classTypeList));
                 }
-            });
 
-            return combineTypes(remainingTypes);
-        } else if (isInstanceCheck && isPositiveTest && isAnyOrUnknown(effectiveType)) {
-            // If this is a positive test for isinstance and the effective
-            // type is Any or Unknown, we can assume that the type matches
-            // one of the specified types.
-            type = combineTypes(classTypeList.map((classType) => ObjectType.create(classType)));
+                anyOrUnknown.push(subtype);
+                return undefined;
+            }
+
+            return isPositiveTest ? undefined : subtype;
+        });
+
+        // If the result is Any/Unknown and contains no other subtypes and
+        // we have substitutions for Any/Unknown, use those instead. We don't
+        // want to apply this if the filtering produced something other than
+        // Any/Unknown. For example, if the statement is "isinstance(x, list)"
+        // and the type of x is "List[str] | int | Any", the result should be
+        // "List[str]", not "List[str] | List[Unknown]".
+        if (isNever(filteredType) && anyOrUnknownSubstitutions.length > 0) {
+            return combineTypes(anyOrUnknownSubstitutions);
         }
 
-        // Return the original type.
-        return type;
+        if (anyOrUnknown.length > 0) {
+            return combineTypes([filteredType, ...anyOrUnknown]);
+        }
+
+        return filteredType;
     }
 
     // Attempts to narrow a type (make it more constrained) based on an "in" or
@@ -13283,10 +13303,19 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
         }
 
-        // Handle "tuple" specially, since it needs to act like "Tuple"
-        // in Python 3.9 and newer.
-        if (ClassType.isBuiltIn(classType, 'tuple')) {
-            return createSpecialType(classType, typeArgs, undefined);
+        const fileInfo = getFileInfo(errorNode);
+        if (fileInfo.isStubFile || fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_9) {
+            // Handle "type" specially, since it needs to act like "Type"
+            // in Python 3.9 and newer.
+            if (ClassType.isBuiltIn(classType, 'type')) {
+                return createSpecialType(classType, typeArgs, 1);
+            }
+
+            // Handle "tuple" specially, since it needs to act like "Tuple"
+            // in Python 3.9 and newer.
+            if (ClassType.isBuiltIn(classType, 'tuple')) {
+                return createSpecialType(classType, typeArgs, undefined);
+            }
         }
 
         let typeArgCount = typeArgs ? typeArgs.length : 0;
@@ -14027,7 +14056,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         return getEffectiveTypeOfSymbolForUsage(symbol).type;
     }
 
-    function getEffectiveTypeOfSymbolForUsage(symbol: Symbol, usageNode?: NameNode): EffectiveTypeResult {
+    function getEffectiveTypeOfSymbolForUsage(
+        symbol: Symbol,
+        usageNode?: NameNode,
+        useLastDecl = false
+    ): EffectiveTypeResult {
         // If there's a declared type, it takes precedence over inferred types.
         if (symbol.hasTypedDeclarations()) {
             return {
@@ -14043,8 +14076,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         const isFinalVar = isFinalVariable(symbol);
         let isResolutionCyclical = false;
 
-        decls.forEach((decl) => {
-            let considerDecl = true;
+        decls.forEach((decl, index) => {
+            // If useLastDecl is true, consider only the last declaration.
+            let considerDecl = !useLastDecl || index === decls.length - 1;
+
             if (usageNode !== undefined) {
                 if (decl.type !== DeclarationType.Alias) {
                     // Is the declaration in the same execution scope as the "usageNode" node?
@@ -15375,7 +15410,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         // Is the src a specialized "Type" object?
-        if (isObject(srcType) && ClassType.isBuiltIn(srcType.classType, 'Type')) {
+        if (
+            isObject(srcType) &&
+            (ClassType.isBuiltIn(srcType.classType, 'Type') || ClassType.isBuiltIn(srcType.classType, 'type'))
+        ) {
             const srcTypeArgs = srcType.classType.typeArguments;
             if (srcTypeArgs && srcTypeArgs.length >= 1) {
                 if (isAnyOrUnknown(srcTypeArgs[0])) {
@@ -15435,7 +15473,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             const destClassType = destType.classType;
 
             // Is the dest a generic "type" object?
-            if (ClassType.isBuiltIn(destClassType, 'type')) {
+            if (ClassType.isBuiltIn(destClassType, 'type') && !destClassType.isTypeArgumentExplicit) {
                 if (
                     isClass(srcType) ||
                     srcType.category === TypeCategory.Function ||
@@ -15446,7 +15484,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
 
             // Is the dest a specialized "Type" object?
-            if (ClassType.isBuiltIn(destClassType, 'Type')) {
+            if (
+                ClassType.isBuiltIn(destClassType, 'Type') ||
+                (ClassType.isBuiltIn(destClassType, 'type') && destClassType.isTypeArgumentExplicit)
+            ) {
                 const destTypeArgs = destClassType.typeArguments;
                 if (destTypeArgs && destTypeArgs.length >= 1) {
                     if (isAnyOrUnknown(destTypeArgs[0])) {
@@ -17131,6 +17172,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         getTypedDictMembersForClass,
         getGetterTypeFromProperty,
         markNamesAccessed,
+        getScopeIdForNode,
         getEffectiveTypeOfSymbol,
         getFunctionDeclaredReturnType,
         getFunctionInferredReturnType,
