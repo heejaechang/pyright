@@ -285,9 +285,10 @@ export class AnalyzerService {
     getSignatureHelpForPosition(
         filePath: string,
         position: Position,
+        format: MarkupKind,
         token: CancellationToken
     ): SignatureHelpResults | undefined {
-        return this._program.getSignatureHelpForPosition(filePath, position, token);
+        return this._program.getSignatureHelpForPosition(filePath, position, format, token);
     }
 
     getCompletionsForPosition(
