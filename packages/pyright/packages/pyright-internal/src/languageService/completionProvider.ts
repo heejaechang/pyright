@@ -927,7 +927,13 @@ export class CompletionProvider {
                 this._addLiteralValuesForTargetType(declaredTypeOfTarget, priorText, postText, completionList);
             }
         } else {
-            this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
+            // Make sure we are not inside of the string literal.
+            debug.assert(parseNode.nodeType === ParseNodeType.String);
+
+            const offset = convertPositionToOffset(this._position, this._parseResults.tokenizerOutput.lines)!;
+            if (!TextRange.contains(parseNode, offset)) {
+                this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
+            }
         }
 
         return { completionList };
