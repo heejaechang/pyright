@@ -42,7 +42,7 @@ export async function run(_testRoot: string, callback: TestRunnerCallback): Prom
             moduleNameMapper: JSON.stringify(pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' })),
             globals: JSON.stringify({
                 'ts-jest': {
-                    tsConfig: path.join(rootDir, 'tsconfig.json'),
+                    tsconfig: path.join(rootDir, 'tsconfig.json'),
                 },
             }),
             forceExit: true,
