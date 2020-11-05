@@ -31,8 +31,8 @@ abstract class BannerBase {
     abstract show(): Promise<void>;
 }
 
-function getActivatePylanceBannerSettingKey(version: string): string {
-    return `ActivatePylanceBanner2-${version}`;
+function getActivatePylanceBannerSettingKey(_version: string): string {
+    return `ActivatePylanceBanner3`;
 }
 
 // Prompt for Pylance when extension is installed.
