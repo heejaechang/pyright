@@ -18,4 +18,6 @@ export enum Commands {
     intelliCodeLoadExtension = 'python.intellicode.loadLanguageServerExtension',
     runCommands = 'pylance.runCommands',
     triggerParameterHints = 'pylance.triggerParameterHints',
+    extractMethod = 'pylance.extractMethod',
+    extractVariable = 'pylance.extractVariable',
 }

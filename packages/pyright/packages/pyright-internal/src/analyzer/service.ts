@@ -13,7 +13,6 @@ import {
     CancellationToken,
     CompletionItem,
     DocumentSymbol,
-    SymbolInformation,
 } from 'vscode-languageserver';
 import { TextDocumentContentChangeEvent } from 'vscode-languageserver-textdocument';
 import {
@@ -57,6 +56,7 @@ import { BackgroundAnalysisProgram, BackgroundAnalysisProgramFactory } from './b
 import { ImportedModuleDescriptor, ImportResolver, ImportResolverFactory } from './importResolver';
 import { MaxAnalysisTime } from './program';
 import { findPythonSearchPaths, getPythonPathFromPythonInterpreter } from './pythonPathUtils';
+import { TypeEvaluator } from './typeEvaluator';
 
 export const configFileNames = ['pyrightconfig.json', 'mspythonconfig.json'];
 
@@ -307,6 +307,10 @@ export class AnalyzerService {
             this._backgroundAnalysisProgram.getIndexing(filePath),
             token
         );
+    }
+
+    getEvaluator(): TypeEvaluator | undefined {
+        return this._program.evaluator;
     }
 
     resolveCompletionItem(

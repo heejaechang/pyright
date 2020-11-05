@@ -663,6 +663,7 @@ export class TestState {
                 );
             }
         }
+        return commandResult;
     }
 
     async verifyInvokeCodeAction(

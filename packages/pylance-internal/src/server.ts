@@ -88,9 +88,11 @@ const pythonAnalysisSectionName = 'python.analysis';
 
 export interface PylanceServerSettings extends ServerSettings {
     completeFunctionParens?: boolean;
+    enableExtractCodeAction?: boolean;
 }
 export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstance {
     completeFunctionParens?: boolean;
+    enableExtractCodeAction?: boolean;
 }
 
 class PylanceServer extends LanguageServerBase {
@@ -118,7 +120,7 @@ class PylanceServer extends LanguageServerBase {
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
             progressReporterFactory: reporterFactory,
-            supportedCodeActions: [CodeActionKind.QuickFix],
+            supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
         });
 
         // root directory will be used for 2 different purpose.
@@ -179,6 +181,7 @@ class PylanceServer extends LanguageServerBase {
             autoImportCompletions: true,
             indexing: false,
             completeFunctionParens: false,
+            enableExtractCodeAction: false,
         };
 
         try {
@@ -242,6 +245,8 @@ class PylanceServer extends LanguageServerBase {
                 serverSettings.completeFunctionParens =
                     pythonAnalysisSection.completeFunctionParens ?? serverSettings.completeFunctionParens;
                 serverSettings.indexing = pythonAnalysisSection.indexing ?? serverSettings.indexing;
+                serverSettings.enableExtractCodeAction =
+                    pythonAnalysisSection.enableExtractCodeAction ?? serverSettings.enableExtractCodeAction;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
@@ -421,7 +426,7 @@ class PylanceServer extends LanguageServerBase {
         this.recordUserInteractionTime();
 
         const filePath = convertUriToPath(params.textDocument.uri);
-        const workspace = await this.getWorkspaceForFile(filePath);
+        const workspace = (await this.getWorkspaceForFile(filePath)) as PylanceWorkspaceServiceInstance;
         const actions1 = await PyrightCodeActionProvider.getCodeActionsForPosition(
             workspace,
             filePath,
@@ -540,7 +545,7 @@ class PylanceServer extends LanguageServerBase {
         rootPath: string
     ): PylanceWorkspaceServiceInstance {
         const src = super.createWorkspaceServiceInstance(workspace, rootPath);
-        return { ...src, completeFunctionParens: false };
+        return { ...src, completeFunctionParens: false, enableExtractCodeAction: false };
     }
 
     async updateSettingsForWorkspace(
@@ -551,6 +556,8 @@ class PylanceServer extends LanguageServerBase {
         await super.updateSettingsForWorkspace(workspace, serverSettings);
         (workspace as PylanceWorkspaceServiceInstance).completeFunctionParens = !!(serverSettings as PylanceServerSettings)
             .completeFunctionParens;
+        (workspace as PylanceWorkspaceServiceInstance).enableExtractCodeAction = !!(serverSettings as PylanceServerSettings)
+            .enableExtractCodeAction;
 
         if (workspace.disableLanguageServices) {
             return;
