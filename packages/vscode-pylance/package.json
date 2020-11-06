@@ -628,7 +628,7 @@
             },
             {
                 "id": "builtin",
-                "description": "function or class is a builtin"
+                "description": "built-in identifier"
             }
         ],
         "semanticTokenScopes": [
