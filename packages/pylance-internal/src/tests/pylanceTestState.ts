@@ -134,7 +134,7 @@ export class PylanceTestState extends TestState {
                 rangedTokenInfo.tokens
             );
 
-            assert.deepStrictEqual(actualTokens, expectedTokens);
+            assert.deepStrictEqual(actualTokens, expectedTokens, `Incorrect tokens in file ${startMarker.fileName}`);
         }
     }
 

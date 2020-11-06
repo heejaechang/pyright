@@ -625,6 +625,10 @@
             {
                 "id": "decorator",
                 "description": "inside a decorator"
+            },
+            {
+                "id": "builtin",
+                "description": "function or class is a builtin"
             }
         ],
         "semanticTokenScopes": [
