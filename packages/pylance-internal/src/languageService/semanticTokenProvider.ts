@@ -73,6 +73,7 @@ enum TokenModifiers {
     typeHintComment = 1 << 6,
     readonly = 1 << 7,
     decorator = 1 << 8,
+    builtin = 1 << 9,
 }
 
 interface TokenInfo {
@@ -121,6 +122,7 @@ export class SemanticTokenProvider {
             'typeHintComment',
             'readonly',
             'decorator',
+            'builtin',
         ];
 
         return { tokenTypes, tokenModifiers };
@@ -286,6 +288,10 @@ class TokenWalker extends ParseTreeWalker {
         }
     }
 
+    private _getBuiltinModifiers(moduleName: string): TokenModifiers {
+        return moduleName === 'builtins' ? TokenModifiers.builtin : TokenModifiers.none;
+    }
+
     private _getTypeAnnotationModifiers(node: NameNode): TokenModifiers {
         if (isWithinAnnotationComment(node)) {
             return TokenModifiers.typeHintComment;
@@ -309,6 +315,7 @@ class TokenWalker extends ParseTreeWalker {
         if (declarations && declarations.length > 0) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(declarations[0], /* resolveLocalNames */ true);
             if (resolvedDecl) {
+                const builtinModifiers = this._getBuiltinModifiers(resolvedDecl.moduleName);
                 const typeAnnotationModifiers = this._getTypeAnnotationModifiers(node);
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
@@ -323,7 +330,7 @@ class TokenWalker extends ParseTreeWalker {
                     case DeclarationType.SpecialBuiltInClass:
                         return {
                             type: TokenTypes.class,
-                            modifiers: typeAnnotationModifiers,
+                            modifiers: typeAnnotationModifiers | builtinModifiers,
                         };
                     case DeclarationType.Class: {
                         const declarationModifiers =
@@ -332,15 +339,17 @@ class TokenWalker extends ParseTreeWalker {
                                 : TokenModifiers.none;
                         const decoratorModifiers = this._getDecoratorModifiers(node);
                         const classTypeInfo = this._evaluator.getTypeOfClass(resolvedDecl.node);
+                        const tokenModifiers =
+                            typeAnnotationModifiers | decoratorModifiers | declarationModifiers | builtinModifiers;
                         if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
                             return {
                                 type: TokenTypes.enum,
-                                modifiers: typeAnnotationModifiers | decoratorModifiers | declarationModifiers,
+                                modifiers: tokenModifiers,
                             };
                         } else {
                             return {
                                 type: TokenTypes.class,
-                                modifiers: typeAnnotationModifiers | decoratorModifiers | declarationModifiers,
+                                modifiers: tokenModifiers,
                             };
                         }
                     }
@@ -350,7 +359,7 @@ class TokenWalker extends ParseTreeWalker {
                             node.parent?.nodeType === ParseNodeType.Function
                                 ? TokenModifiers.declaration
                                 : TokenModifiers.none;
-                        let modifier = this._getDecoratorModifiers(node) | declarationModifiers;
+                        let modifier = this._getDecoratorModifiers(node) | declarationModifiers | builtinModifiers;
 
                         const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl);
                         if (declaredType) {
@@ -378,7 +387,10 @@ class TokenWalker extends ParseTreeWalker {
                         const declarationModifiers =
                             resolvedDecl.node.id === node.id ? TokenModifiers.declaration : TokenModifiers.none;
                         const modifier =
-                            this._getDecoratorModifiers(node) | declarationModifiers | typeAnnotationModifiers;
+                            this._getDecoratorModifiers(node) |
+                            declarationModifiers |
+                            typeAnnotationModifiers |
+                            builtinModifiers;
                         const enclosingClass = getEnclosingClass(resolvedDecl.node, /* stopAtFunction */ true);
                         if (enclosingClass) {
                             const classTypeInfo = this._evaluator.getTypeOfClass(enclosingClass);

@@ -104,7 +104,7 @@ helper.verifySemanticTokens([
             { type: 'function', modifiers: ['decorator'] },
             { type: 'variable' },
             { type: 'variable', modifiers: ['readonly'] },
-            { type: 'class' },
+            { type: 'class', modifiers: ['builtin'] },
             { type: 'function' },
             { type: 'function', modifiers: ['declaration'] },
         ],
