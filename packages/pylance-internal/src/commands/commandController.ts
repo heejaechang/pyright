@@ -31,6 +31,8 @@ const _userInitiatedTelemetryCommands: Set<string> = new Set([
     Commands.addMissingOptionalToParam,
     Commands.removeUnusedImport,
     Commands.addImport,
+    Commands.extractMethod,
+    Commands.extractVariable,
 ]);
 
 export class CommandController extends PyrightCommandController {
