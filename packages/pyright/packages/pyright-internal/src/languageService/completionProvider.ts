@@ -931,7 +931,7 @@ export class CompletionProvider {
             debug.assert(parseNode.nodeType === ParseNodeType.String);
 
             const offset = convertPositionToOffset(this._position, this._parseResults.tokenizerOutput.lines)!;
-            if (!TextRange.contains(parseNode, offset)) {
+            if (offset <= parentNode.start || TextRange.getEnd(parseNode) <= offset) {
                 this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
             }
         }
