@@ -11,6 +11,7 @@ enum CannotExtractReason {
     ContainsReturnExpression = 'Cannot extract return',
     ContainsMultipleReturns = 'Cannot extract multiple returns',
     ReturnShouldBeLastStatement = 'Return should be last statement',
+    ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
 // @filename: TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py
@@ -514,3 +515,35 @@ def new_func():
     return 1 + 3`,
     ],
 });
+
+// @filename: TestCompleteIfElse.py
+////def function(name: str):
+////    [|/*marker36*/if name == 'john':
+////        print('hello john')
+////    elif name == 'mark':
+////        print('hello mark')|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker36', {
+    ['file:///TestCompleteIfElse.py']: [
+        `new_func(name)`,
+        `\n
+def new_func( name ):
+    if name == 'john':
+        print('hello john')
+    elif name == 'mark':
+        print('hello mark')`,
+    ],
+});
+
+// @filename: TestPartialElseShouldThrow.py
+////def function(name: str):
+////    if name == 'john':
+////        print('hello john')
+////    [|/*marker37*/elif name == 'mark':
+////        print('hello mark')|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker37', {
+        ['file:///TestPartialElseShouldThrow.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.ContainsPartialIfElseStatement);

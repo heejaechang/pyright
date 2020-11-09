@@ -11,6 +11,7 @@ enum ExtractVariableCannotExtractReason {
     ContainsReturnExpression = 'Cannot extract return',
     ContainsMultipleReturns = 'Cannot extract multiple returns',
     ReturnShouldBeLastStatement = 'Return should be last statement',
+    ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
 // @filename: testBasicExpression.py

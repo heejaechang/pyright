@@ -57,6 +57,7 @@ export enum CannotExtractReason {
     ContainsReturnExpression = 'Cannot extract return',
     ContainsMultipleReturns = 'Cannot extract multiple returns',
     ReturnShouldBeLastStatement = 'Return should be last statement',
+    ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
 const Indention = '    ';
@@ -435,6 +436,15 @@ export class ExtractMethodProvider {
             return CannotExtractReason.ContainsYieldExpression;
         }
 
+        const orphandIfElse = extractedNodes.some(
+            (node) =>
+                node?.nodeType === ParseNodeType.If &&
+                node.parent?.nodeType === ParseNodeType.If &&
+                !selectionContainsNode(selectionRange, parentNode)
+        );
+        if (orphandIfElse) {
+            return CannotExtractReason.ContainsPartialIfElseStatement;
+        }
         return CannotExtractReason.None;
     }
 
