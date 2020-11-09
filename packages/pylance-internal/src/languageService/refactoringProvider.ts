@@ -628,9 +628,11 @@ export class ExtractMethodProvider {
         if (node && node.nodeType === ParseNodeType.StatementList) {
             return false;
         } else if (
-            // If we are an left nameNode in an assignment or call, we are not an expression
+            // If we are an left nameNode in an assignment or call,or we are not an expression
             // ie. |print|("hello") or  |a| = 1 + 2
-            (node?.parent?.nodeType === ParseNodeType.Assignment || node?.parent?.nodeType === ParseNodeType.Call) &&
+            (node?.parent?.nodeType === ParseNodeType.Assignment ||
+                node?.parent?.nodeType === ParseNodeType.AugmentedAssignment ||
+                node?.parent?.nodeType === ParseNodeType.Call) &&
             node.parent.leftExpression.id === node.id
         ) {
             return false;

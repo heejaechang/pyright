@@ -92,3 +92,12 @@ await helper.verifyExtractVariable('marker7', {
 await helper.verifyExtractVariable('marker8', {
     ['file:///TestUniqueVariableNameInModule.py']: [`new_var1`, `new_var1 = 2 + 3\n    `],
 });
+
+// @filename: testAugmentedAssignmentShouldThrow.py
+//// def f():
+////    [|/*marker9*/b|] += 1
+////    return b
+// @ts-ignore
+await expect(
+    helper.verifyExtractVariable('marker9', { ['file:///testAugmentedAssignmentShouldThrow.py']: [] })
+).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
