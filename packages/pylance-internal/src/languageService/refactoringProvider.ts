@@ -636,6 +636,8 @@ export class ExtractMethodProvider {
             node.parent.leftExpression.id === node.id
         ) {
             return false;
+        } else if (node && node.nodeType === ParseNodeType.Argument) {
+            return true;
         }
 
         const isExpression = node && isExpressionNode(node);

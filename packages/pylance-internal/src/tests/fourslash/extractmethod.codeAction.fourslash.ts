@@ -547,3 +547,21 @@ await expect(
         ['file:///TestPartialElseShouldThrow.py']: [],
     })
 ).rejects.toThrowError(CannotExtractReason.ContainsPartialIfElseStatement);
+
+// @filename: TestExtractArgumentShouldHaveReturn.py
+//// from werkzeug import url_quote
+////
+//// def function(anchor):
+////     hello = ''
+////     if anchor is not None:
+////         hello += url_quote([|/*marker38*/anchor|])
+////     return hello
+// @ts-ignore
+await helper.verifyExtractMethod('marker38', {
+    ['file:///TestExtractArgumentShouldHaveReturn.py']: [
+        `new_func(anchor)`,
+        `\n
+def new_func( anchor ):
+    return anchor`,
+    ],
+});
