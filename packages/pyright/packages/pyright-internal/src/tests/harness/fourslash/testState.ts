@@ -355,12 +355,18 @@ export class TestState {
     }
 
     // Opens a file given its 0-based index or fileName
-    openFile(indexOrName: number | string, content?: string): void {
+    openFile(indexOrName: number | string): void {
         const fileToOpen: FourSlashFile = this._findFile(indexOrName);
         fileToOpen.fileName = normalizeSlashes(fileToOpen.fileName);
         this.activeFile = fileToOpen;
 
         this.program.setFileOpened(this.activeFile.fileName, 1, [{ text: fileToOpen.content }]);
+    }
+
+    openFiles(indexOrNames: (number | string)[]): void {
+        for (const indexOrName of indexOrNames) {
+            this.openFile(indexOrName);
+        }
     }
 
     printCurrentFileState(showWhitespace: boolean, makeCaretVisible: boolean) {

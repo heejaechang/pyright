@@ -168,7 +168,8 @@ declare namespace _ {
 
         moveCaretRight(count: number): void;
 
-        openFile(indexOrName: number | string, content?: string): void;
+        openFile(indexOrName: number | string): void;
+        openFiles(indexOrNames: (number | string)[]): void;
 
         verifyDiagnostics(map?: { [marker: string]: { category: string; message: string } }): void;
         verifyCodeActions(

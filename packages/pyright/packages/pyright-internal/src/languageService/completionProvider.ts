@@ -356,26 +356,65 @@ export class CompletionProvider {
             }
 
             if (curNode.nodeType === ParseNodeType.Name) {
-                // Are we within a "from X import Y as Z" statement and
-                // more specifically within the "Y"?
-                if (curNode.parent && curNode.parent.nodeType === ParseNodeType.ModuleName) {
-                    return this._getImportModuleCompletions(curNode.parent);
-                } else if (curNode.parent && curNode.parent.nodeType === ParseNodeType.ImportFromAs) {
-                    const parentNode = curNode.parent.parent;
-
-                    if (parentNode && parentNode.nodeType === ParseNodeType.ImportFrom) {
-                        if (curNode.parent.name === curNode) {
-                            return this._getImportFromCompletions(parentNode, priorWord);
-                        } else {
-                            return this._getImportFromCompletions(parentNode, '');
+                if (curNode.parent) {
+                    if (curNode.parent.nodeType === ParseNodeType.ImportAs && curNode.parent.alias === curNode) {
+                        // Are we within a "import Y as [Z]"?
+                        return undefined;
+                    } else if (curNode.parent.nodeType === ParseNodeType.ModuleName) {
+                        // Are we within a "import Y as [<empty>]"?
+                        if (
+                            curNode.parent.parent &&
+                            curNode.parent.parent.nodeType === ParseNodeType.ImportAs &&
+                            !curNode.parent.parent.alias &&
+                            TextRange.getEnd(curNode.parent.parent) < offset
+                        ) {
+                            return undefined;
                         }
+
+                        // Are we within a "from X import Y as Z" statement and
+                        // more specifically within the "Y"?
+                        return this._getImportModuleCompletions(curNode.parent);
+                    } else if (curNode.parent.nodeType === ParseNodeType.ImportFromAs) {
+                        if (curNode.parent.alias === curNode) {
+                            // Are we within a "from X import Y as [Z]"?
+                            return undefined;
+                        }
+
+                        const parentNode = curNode.parent.parent;
+                        if (parentNode && parentNode.nodeType === ParseNodeType.ImportFrom) {
+                            // Are we within a "from X import Y as [<empty>]"?
+                            if (!curNode.parent.alias && TextRange.getEnd(curNode.parent) < offset) {
+                                return undefined;
+                            } else if (curNode.parent.name === curNode) {
+                                return this._getImportFromCompletions(parentNode, priorWord);
+                            } else {
+                                return this._getImportFromCompletions(parentNode, '');
+                            }
+                        }
+                    } else if (
+                        curNode.parent.nodeType === ParseNodeType.MemberAccess &&
+                        curNode === curNode.parent.memberName
+                    ) {
+                        return this._getMemberAccessCompletions(curNode.parent.leftExpression, priorWord);
+                    } else if (curNode.parent.nodeType === ParseNodeType.Except && curNode === curNode.parent.name) {
+                        return undefined;
+                    } else if (curNode.parent.nodeType === ParseNodeType.Function && curNode === curNode.parent.name) {
+                        return undefined;
+                    } else if (curNode.parent.nodeType === ParseNodeType.Parameter && curNode === curNode.parent.name) {
+                        return undefined;
+                    } else if (curNode.parent.nodeType === ParseNodeType.Class && curNode === curNode.parent.name) {
+                        return undefined;
+                    } else if (
+                        curNode.parent.nodeType === ParseNodeType.For &&
+                        TextRange.contains(curNode.parent.targetExpression, curNode.start)
+                    ) {
+                        return undefined;
+                    } else if (
+                        curNode.parent.nodeType === ParseNodeType.ListComprehensionFor &&
+                        TextRange.contains(curNode.parent.targetExpression, curNode.start)
+                    ) {
+                        return undefined;
                     }
-                } else if (
-                    curNode.parent &&
-                    curNode.parent.nodeType === ParseNodeType.MemberAccess &&
-                    curNode === curNode.parent.memberName
-                ) {
-                    return this._getMemberAccessCompletions(curNode.parent.leftExpression, priorWord);
                 }
             }
 
@@ -387,8 +426,45 @@ export class CompletionProvider {
                 return this._getExpressionCompletions(curNode, priorWord, priorText, postText);
             }
 
-            if (curNode.nodeType === ParseNodeType.Suite || curNode.nodeType === ParseNodeType.Module) {
+            if (curNode.nodeType === ParseNodeType.Suite) {
+                if (
+                    curNode.parent &&
+                    curNode.parent.nodeType === ParseNodeType.Except &&
+                    !curNode.parent.name &&
+                    curNode.parent.typeExpression &&
+                    TextRange.getEnd(curNode.parent.typeExpression) < offset &&
+                    offset <= curNode.parent.exceptSuite.start
+                ) {
+                    // except Exception as [<empty>]
+                    return undefined;
+                }
+
+                if (
+                    curNode.parent &&
+                    curNode.parent.nodeType === ParseNodeType.Class &&
+                    (!curNode.parent.name || !curNode.parent.name.value) &&
+                    curNode.parent.arguments.length === 0 &&
+                    offset <= curNode.parent.suite.start
+                ) {
+                    // class [<empty>]
+                    return undefined;
+                }
+
                 return this._getStatementCompletions(curNode, priorWord, priorText, postText);
+            }
+
+            if (curNode.nodeType === ParseNodeType.Module) {
+                return this._getStatementCompletions(curNode, priorWord, priorText, postText);
+            }
+
+            if (
+                curNode.nodeType === ParseNodeType.Parameter &&
+                curNode.length === 0 &&
+                curNode.parent &&
+                curNode.parent.nodeType === ParseNodeType.Lambda
+            ) {
+                // lambda [<empty>] or lambda x, [<empty>]
+                return undefined;
             }
 
             if (!curNode.parent) {
