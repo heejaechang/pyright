@@ -356,65 +356,12 @@ export class CompletionProvider {
             }
 
             if (curNode.nodeType === ParseNodeType.Name) {
-                if (curNode.parent) {
-                    if (curNode.parent.nodeType === ParseNodeType.ImportAs && curNode.parent.alias === curNode) {
-                        // Are we within a "import Y as [Z]"?
-                        return undefined;
-                    } else if (curNode.parent.nodeType === ParseNodeType.ModuleName) {
-                        // Are we within a "import Y as [<empty>]"?
-                        if (
-                            curNode.parent.parent &&
-                            curNode.parent.parent.nodeType === ParseNodeType.ImportAs &&
-                            !curNode.parent.parent.alias &&
-                            TextRange.getEnd(curNode.parent.parent) < offset
-                        ) {
-                            return undefined;
-                        }
-
-                        // Are we within a "from X import Y as Z" statement and
-                        // more specifically within the "Y"?
-                        return this._getImportModuleCompletions(curNode.parent);
-                    } else if (curNode.parent.nodeType === ParseNodeType.ImportFromAs) {
-                        if (curNode.parent.alias === curNode) {
-                            // Are we within a "from X import Y as [Z]"?
-                            return undefined;
-                        }
-
-                        const parentNode = curNode.parent.parent;
-                        if (parentNode && parentNode.nodeType === ParseNodeType.ImportFrom) {
-                            // Are we within a "from X import Y as [<empty>]"?
-                            if (!curNode.parent.alias && TextRange.getEnd(curNode.parent) < offset) {
-                                return undefined;
-                            } else if (curNode.parent.name === curNode) {
-                                return this._getImportFromCompletions(parentNode, priorWord);
-                            } else {
-                                return this._getImportFromCompletions(parentNode, '');
-                            }
-                        }
-                    } else if (
-                        curNode.parent.nodeType === ParseNodeType.MemberAccess &&
-                        curNode === curNode.parent.memberName
-                    ) {
-                        return this._getMemberAccessCompletions(curNode.parent.leftExpression, priorWord);
-                    } else if (curNode.parent.nodeType === ParseNodeType.Except && curNode === curNode.parent.name) {
-                        return undefined;
-                    } else if (curNode.parent.nodeType === ParseNodeType.Function && curNode === curNode.parent.name) {
-                        return undefined;
-                    } else if (curNode.parent.nodeType === ParseNodeType.Parameter && curNode === curNode.parent.name) {
-                        return undefined;
-                    } else if (curNode.parent.nodeType === ParseNodeType.Class && curNode === curNode.parent.name) {
-                        return undefined;
-                    } else if (
-                        curNode.parent.nodeType === ParseNodeType.For &&
-                        TextRange.contains(curNode.parent.targetExpression, curNode.start)
-                    ) {
-                        return undefined;
-                    } else if (
-                        curNode.parent.nodeType === ParseNodeType.ListComprehensionFor &&
-                        TextRange.contains(curNode.parent.targetExpression, curNode.start)
-                    ) {
-                        return undefined;
-                    }
+                // This condition is little different than others since it does its own
+                // tree walk up to find context and let outer tree walk up to proceed if it can't find
+                // one to show completion.
+                const result = this._tryGetNameCompletions(curNode, offset, priorWord);
+                if (result || result === undefined) {
+                    return result;
                 }
             }
 
@@ -520,6 +467,92 @@ export class CompletionProvider {
             // cached, so it's not as bad as it might seem.
             this.getCompletionsForPosition();
         }
+    }
+
+    private _tryGetNameCompletions(curNode: NameNode, offset: number, priorWord: string) {
+        if (!curNode.parent) {
+            return false;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.ImportAs && curNode.parent.alias === curNode) {
+            // Are we within a "import Y as [Z]"?
+            return undefined;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.ModuleName) {
+            // Are we within a "import Y as [<empty>]"?
+            if (
+                curNode.parent.parent &&
+                curNode.parent.parent.nodeType === ParseNodeType.ImportAs &&
+                !curNode.parent.parent.alias &&
+                TextRange.getEnd(curNode.parent.parent) < offset
+            ) {
+                return undefined;
+            }
+
+            // Are we within a "from X import Y as Z" statement and
+            // more specifically within the "Y"?
+            return this._getImportModuleCompletions(curNode.parent);
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.ImportFromAs) {
+            if (curNode.parent.alias === curNode) {
+                // Are we within a "from X import Y as [Z]"?
+                return undefined;
+            }
+
+            const parentNode = curNode.parent.parent;
+            if (parentNode && parentNode.nodeType === ParseNodeType.ImportFrom) {
+                // Are we within a "from X import Y as [<empty>]"?
+                if (!curNode.parent.alias && TextRange.getEnd(curNode.parent) < offset) {
+                    return undefined;
+                }
+
+                if (curNode.parent.name === curNode) {
+                    return this._getImportFromCompletions(parentNode, priorWord);
+                }
+
+                return this._getImportFromCompletions(parentNode, '');
+            }
+
+            return false;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.MemberAccess && curNode === curNode.parent.memberName) {
+            return this._getMemberAccessCompletions(curNode.parent.leftExpression, priorWord);
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.Except && curNode === curNode.parent.name) {
+            return undefined;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.Function && curNode === curNode.parent.name) {
+            return undefined;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.Parameter && curNode === curNode.parent.name) {
+            return undefined;
+        }
+
+        if (curNode.parent.nodeType === ParseNodeType.Class && curNode === curNode.parent.name) {
+            return undefined;
+        }
+
+        if (
+            curNode.parent.nodeType === ParseNodeType.For &&
+            TextRange.contains(curNode.parent.targetExpression, curNode.start)
+        ) {
+            return undefined;
+        }
+
+        if (
+            curNode.parent.nodeType === ParseNodeType.ListComprehensionFor &&
+            TextRange.contains(curNode.parent.targetExpression, curNode.start)
+        ) {
+            return undefined;
+        }
+
+        return false;
     }
 
     private _isWithinComment(offset: number): boolean {
