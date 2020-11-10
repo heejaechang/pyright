@@ -25,20 +25,47 @@
 //// def method(p, p2:[|/*marker10*/|]):
 ////     pass
 
-// @ts-ignore
-await helper.verifyCompletion('exact', 'markdown', {
-    marker1: { completions: [] },
-    marker2: { completions: [] },
-    marker3: { completions: [] },
-    marker4: { completions: [] },
-    marker5: { completions: [] },
-    marker6: { completions: [] },
-    marker7: { completions: [] },
-    marker9: { completions: [] },
-});
+// @filename: test1.py
+//// class A:
+////     def a1[|/*marker11*/|]
+////
+////     def a2[|/*marker12*/|]():
+////         pass
+////
+////     def method(p[|/*marker13*/|]):
+////         pass
+////     def method(p:[|/*marker14*/|]):
+////         pass
+////
+////     def method(p, p2[|/*marker15*/|]):
+////         pass
+////     def method(p, p2:[|/*marker16*/|]):
+////         pass
 
-// @ts-ignore
-await helper.verifyCompletion('included', 'markdown', {
-    marker8: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
-    marker10: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
-});
+{
+    helper.openFiles(helper.getMarkers().map((m) => m.fileName));
+
+    // @ts-ignore
+    await helper.verifyCompletion('exact', 'markdown', {
+        marker1: { completions: [] },
+        marker2: { completions: [] },
+        marker3: { completions: [] },
+        marker4: { completions: [] },
+        marker5: { completions: [] },
+        marker6: { completions: [] },
+        marker7: { completions: [] },
+        marker9: { completions: [] },
+        marker11: { completions: [] },
+        marker12: { completions: [] },
+        marker13: { completions: [] },
+        marker15: { completions: [] },
+    });
+
+    // @ts-ignore
+    await helper.verifyCompletion('included', 'markdown', {
+        marker8: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
+        marker10: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
+        marker14: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
+        marker16: { completions: [{ label: 'str', kind: Consts.CompletionItemKind.Class }] },
+    });
+}
