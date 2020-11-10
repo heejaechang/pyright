@@ -2,7 +2,7 @@
     "name": "pylance-internal",
     "displayName": "Pylance",
     "description": "Pylance language server",
-    "version": "0.0.0",
+    "version": "9999.0.0-dev",
     "private": true,
     "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
