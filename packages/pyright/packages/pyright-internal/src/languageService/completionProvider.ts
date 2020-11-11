@@ -72,6 +72,7 @@ import { comparePositions, Position } from '../common/textRange';
 import { TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
 import {
+    DecoratorNode,
     ErrorExpressionCategory,
     ErrorNode,
     ExpressionNode,
@@ -527,6 +528,10 @@ export class CompletionProvider {
         }
 
         if (curNode.parent.nodeType === ParseNodeType.Function && curNode === curNode.parent.name) {
+            if (curNode.parent.decorators?.some((d) => this._isOverload(d))) {
+                return this._getMethodOverloadsCompletions(curNode);
+            }
+
             return undefined;
         }
 
@@ -632,6 +637,10 @@ export class CompletionProvider {
 
             case ErrorExpressionCategory.MissingFunctionParameterList: {
                 if (node.child && node.child.nodeType === ParseNodeType.Name) {
+                    if (node.decorators?.some((d) => this._isOverload(d))) {
+                        return this._getMethodOverloadsCompletions(node.child);
+                    }
+
                     // Determine if the partial name is a method that's overriding
                     // a method in a base class.
                     return this._getMethodOverrideCompletions(node.child);
@@ -643,12 +652,85 @@ export class CompletionProvider {
         return undefined;
     }
 
+    private _isOverload(d: DecoratorNode): unknown {
+        return d.expression.nodeType === ParseNodeType.Name && d.expression.value === 'overload';
+    }
+
     private _createSingleKeywordCompletionList(keyword: string): CompletionResults {
         const completionItem = CompletionItem.create(keyword);
         completionItem.kind = CompletionItemKind.Keyword;
         completionItem.sortText = this._makeSortText(SortCategory.LikelyKeyword, keyword);
         const completionList = CompletionList.create([completionItem]);
         return { completionList };
+    }
+
+    private _getMethodOverloadsCompletions(partialName: NameNode): CompletionResults | undefined {
+        const symbolTable = getSymbolTable(this._evaluator, partialName);
+        if (!symbolTable) {
+            return undefined;
+        }
+
+        const completionList = CompletionList.create();
+
+        const enclosingFunc = ParseTreeUtils.getEnclosingFunction(partialName);
+        symbolTable.forEach((symbol, name) => {
+            const decl = getLastTypedDeclaredForSymbol(symbol);
+            if (!decl || decl.type !== DeclarationType.Function) {
+                return;
+            }
+
+            if (!decl.node.decorators.some((d) => this._isOverload(d))) {
+                // Only consider ones that have overload decorator.
+                return;
+            }
+
+            const decls = symbol.getDeclarations();
+            if (decls.length === 1 && decls.some((d) => d.node === enclosingFunc)) {
+                // Don't show itself.
+                return;
+            }
+
+            const isSimilar = StringUtils.computeCompletionSimilarity(partialName.value, name) > similarityLimit;
+            if (isSimilar) {
+                const range: Range = {
+                    start: { line: this._position.line, character: this._position.character - partialName.length },
+                    end: { line: this._position.line, character: this._position.character },
+                };
+
+                const textEdit = TextEdit.replace(range, decl.node.name.value);
+                this._addSymbol(name, symbol, partialName.value, completionList, { edits: { textEdit } });
+            }
+        });
+
+        return { completionList };
+
+        function getSymbolTable(evaluator: TypeEvaluator, partialName: NameNode) {
+            const enclosingClass = ParseTreeUtils.getEnclosingClass(partialName, false);
+            if (enclosingClass) {
+                const classResults = evaluator.getTypeOfClass(enclosingClass);
+                if (!classResults) {
+                    return undefined;
+                }
+
+                const symbolTable = new Map<string, Symbol>();
+                for (const mroClass of classResults.classType.details.mro) {
+                    if (isClass(mroClass)) {
+                        getMembersForClass(mroClass, symbolTable, false);
+                    }
+                }
+
+                return symbolTable;
+            }
+
+            // For function overload, we only care about top level functions
+            const moduleNode = ParseTreeUtils.getEnclosingModule(partialName);
+            if (moduleNode) {
+                const moduleScope = AnalyzerNodeInfo.getScope(moduleNode);
+                return moduleScope?.symbolTable;
+            }
+
+            return undefined;
+        }
     }
 
     private _getMethodOverrideCompletions(partialName: NameNode): CompletionResults | undefined {
