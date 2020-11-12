@@ -126,7 +126,7 @@ module.exports = (_, { mode }) => {
                               },
                           }),
                       ]
-                    : '...',
+                    : undefined,
             splitChunks: {
                 cacheGroups: {
                     defaultVendors: {
