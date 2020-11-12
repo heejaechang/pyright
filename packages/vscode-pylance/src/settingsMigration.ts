@@ -41,7 +41,7 @@ export async function migrateV1Settings(config: AppConfiguration, shell: Applica
 }
 
 export async function migrateSetting(fromName: string, toName: string, config: AppConfiguration): Promise<boolean> {
-    const toSetting = config.inspect<any>(toName);
+    const toSetting = config.inspect<any>('python', toName);
     if (
         toSetting?.globalValue !== undefined ||
         toSetting?.workspaceValue !== undefined ||
@@ -50,7 +50,7 @@ export async function migrateSetting(fromName: string, toName: string, config: A
         return false; // Already migrated or otherwise exists.
     }
 
-    const fromSetting = config.inspect<any>(fromName);
+    const fromSetting = config.inspect<any>('python', fromName);
     if (!fromSetting) {
         return false; // Nothing to migrate.
     }
@@ -70,7 +70,7 @@ export async function migrateSetting(fromName: string, toName: string, config: A
     }
 
     if (target && value) {
-        await config.updateSetting(toName, value, target);
+        await config.updateSetting('python', toName, value, target);
         return true;
     }
     return false;

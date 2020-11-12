@@ -13,7 +13,7 @@ import {
 import { AppConfiguration } from './types/appConfig';
 import { ApplicationShell } from './types/appShell';
 import { BrowserService } from './types/browser';
-import { CommandManager } from './types/commandManager';
+import { Command, CommandManager } from './types/commandManager';
 
 abstract class BannerBase {
     protected disabledInCurrentSession = false;
@@ -87,16 +87,26 @@ export class ActivatePylanceBanner extends BannerBase {
 
     private async enableLanguageServer(): Promise<void> {
         // Figure out which one to set.
-        const inspect = this.appConfig.inspect<string>(LanguageServerSettingName);
+        const inspect = this.appConfig.inspect<string>('python', LanguageServerSettingName);
         // If setting is specified per folder, we leave it alone. Scope of the setting is `window`.
         // If LS is specified in both workspace and global, we change nearest one, i.e. the workspace.
         if (inspect?.workspaceValue) {
-            await this.appConfig.updateSetting(LanguageServerSettingName, PylanceName, ConfigurationTarget.Workspace);
+            await this.appConfig.updateSetting(
+                'python',
+                LanguageServerSettingName,
+                PylanceName,
+                ConfigurationTarget.Workspace
+            );
         } else {
             // Global or not specified. Apply new value in the global scope.
-            await this.appConfig.updateSetting(LanguageServerSettingName, PylanceName, ConfigurationTarget.Global);
+            await this.appConfig.updateSetting(
+                'python',
+                LanguageServerSettingName,
+                PylanceName,
+                ConfigurationTarget.Global
+            );
         }
-        await this.cmdManager.executeCommand('workbench.action.reloadWindow');
+        await this.cmdManager.executeCommand(Command.ReloadWindow);
     }
 }
 

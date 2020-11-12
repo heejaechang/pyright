@@ -40,6 +40,20 @@
             "type": "object",
             "title": "Pylance",
             "properties": {
+                "pylance.insidersChannel": {
+                    "type": "string",
+                    "default": "off",
+                    "description": "Pylance insiders download channel.",
+                    "enum": [
+                        "off",
+                        "daily"
+                    ],
+                    "enumDescriptions": [
+                        "Do not check for insiders updates.",
+                        "Automatically check for and install insiders updates daily."
+                    ],
+                    "scope": "application"
+                },
                 "python.analysis.completeFunctionParens": {
                     "type": "boolean",
                     "default": false,
@@ -692,5 +706,9 @@
         "webpack": "^5.2.0",
         "webpack-cli": "^4.1.0",
         "webpack-obfuscator": "^3.0.0"
+    },
+    "dependencies": {
+        "@azure/storage-blob": "^12.2.1",
+        "semver": "^7.3.2"
     }
 }

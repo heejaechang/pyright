@@ -7,6 +7,7 @@ export namespace Common {
     export const yes = localize('Common.Yes', 'Yes');
     export const no = localize('Common.No', 'No');
     export const remindMeLater = localize('Common.remindMeLater', 'Remind me later');
+    export const reload = localize('Common.reload', 'ReminReload');
 }
 
 export namespace LanguageServer {
@@ -27,6 +28,22 @@ export namespace LanguageServer {
     export const settingsMigrationError = localize(
         'LanguageServer.settingsMigrationError',
         'The following settings could not be migrated:'
+    );
+}
+
+export namespace Insiders {
+    export const downloadingInsiders = localize(
+        'Insiders.downloadingInsiders',
+        'Downloading Pylance insiders build...'
+    );
+    export const installingInsiders = localize('Insiders.installingInsiders', 'Installing Pylance insiders build...');
+    export const installedInsiders = localize(
+        'Insiders.installedInsiders',
+        'Please reload Visual Studio Code to use the insiders build of Pylance.'
+    );
+    export const downgradeInsiders = localize(
+        'Insiders.downgrade',
+        'Your Pylance insiders channel is set to "off", but you still have an insiders build installed. Would you like to install the latest stable build of Pylance?'
     );
 }
 
