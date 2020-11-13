@@ -20,16 +20,27 @@ import {
     resolvePaths,
 } from 'pyright-internal/common/pathUtils';
 
-function getBundledTypeStubsPath(moduleDirectory?: string) {
-    if (moduleDirectory) {
-        moduleDirectory = normalizePath(moduleDirectory);
-        return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled', 'stubs');
-    }
+// Limit native module stub resolution to 'site-packages'
+// for both performance and possible PII reasons.
+const nativeModulesRoot = 'site-packages';
 
-    return undefined;
+function getBundledTypeStubsPath(moduleDirectory: string) {
+    return getStubsPath(moduleDirectory, 'stubs');
+}
+
+function getBundledNativeStubsPath(moduleDirectory: string) {
+    return getStubsPath(moduleDirectory, 'native-stubs');
+}
+
+function getStubsPath(moduleDirectory: string, stubType: string) {
+    moduleDirectory = normalizePath(moduleDirectory);
+    return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled', stubType);
 }
 
 export class ImportMetrics {
+    private readonly _currentModules: Set<string> = new Set();
+    private readonly _reportedModules: Set<string> = new Set();
+
     thirdPartyImportTotal = 0;
     thirdPartyImportStubs = 0;
     localImportTotal = 0;
@@ -47,15 +58,38 @@ export class ImportMetrics {
             this.builtinImportStubs === 0
         );
     }
+
+    public reset() {
+        this.thirdPartyImportTotal = 0;
+        this.thirdPartyImportStubs = 0;
+        this.localImportTotal = 0;
+        this.localImportStubs = 0;
+        this.builtinImportTotal = 0;
+        this.builtinImportStubs = 0;
+    }
+
+    public addNativeModule(moduleName: string): void {
+        if (!this._reportedModules.has(moduleName)) {
+            this._currentModules.add(moduleName);
+        }
+    }
+
+    public getAndResetNativeModuleNames(): string[] {
+        this._currentModules.forEach((m) => this._reportedModules.add(m));
+        const moduleNames = [...this._currentModules];
+        this._currentModules.clear();
+        return moduleNames;
+    }
 }
 
 export type ImportMetricsCallback = (results: ImportMetrics) => void;
 
 export class PylanceImportResolver extends ImportResolver {
-    private _importMetrics = new ImportMetrics();
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
     private _scrapedBuiltinsTempfile: string | undefined;
     private _scrapedBuiltinsFailed = false;
+
+    readonly importMetrics = new ImportMetrics();
 
     setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
         this._onImportMetricsCallback = callback;
@@ -77,7 +111,13 @@ export class PylanceImportResolver extends ImportResolver {
             const stubsPath = getBundledTypeStubsPath(this.fileSystem.getModulePath());
             if (stubsPath) {
                 importFailureInfo.push(`Looking in bundled stubs path '${stubsPath}'`);
-                const result = this.resolveAbsoluteImport(stubsPath, moduleDescriptor, importName, importFailureInfo);
+                const result = this.resolveAbsoluteImport(
+                    stubsPath,
+                    execEnv,
+                    moduleDescriptor,
+                    importName,
+                    importFailureInfo
+                );
                 if (result && result.isImportFound) {
                     // We will treat bundled stubs files as "third party".
                     result.importType = ImportType.ThirdParty;
@@ -88,11 +128,32 @@ export class PylanceImportResolver extends ImportResolver {
         return undefined;
     }
 
+    protected resolveNativeImportEx(
+        libraryFilePath: string,
+        importName: string,
+        importFailureInfo: string[] = []
+    ): string | undefined {
+        // We limit resolution to site-packages only.
+        if (libraryFilePath.indexOf(nativeModulesRoot) < 0) {
+            return;
+        }
+
+        this.importMetrics.addNativeModule(importName);
+        const nativeStubsPath = getBundledNativeStubsPath(this.fileSystem.getModulePath());
+        const stub = this.findNativeStub(libraryFilePath, nativeStubsPath);
+        if (stub) {
+            return stub;
+        }
+
+        const importFailed = `Unable to find stub for native module ${importName}, file ${libraryFilePath} in ${nativeStubsPath}`;
+        importFailureInfo.push(importFailed);
+    }
+
     invalidateCache() {
         if (this._onImportMetricsCallback) {
-            this._onImportMetricsCallback(this._importMetrics);
+            this._onImportMetricsCallback(this.importMetrics);
         }
-        this._importMetrics = new ImportMetrics();
+        this.importMetrics.reset();
 
         if (this._scrapedBuiltinsTempfile) {
             try {
@@ -105,12 +166,6 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         super.invalidateCache();
-    }
-
-    getAndResetImportMetrics(): ImportMetrics {
-        const usage = this._importMetrics;
-        this._importMetrics = new ImportMetrics();
-        return usage;
     }
 
     getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment, mapCompiled: boolean): string[] {
@@ -148,18 +203,18 @@ export class PylanceImportResolver extends ImportResolver {
 
         switch (importResult.importType) {
             case ImportType.ThirdParty: {
-                this._importMetrics.thirdPartyImportTotal += 1;
-                this._importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
+                this.importMetrics.thirdPartyImportTotal += 1;
+                this.importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.Local: {
-                this._importMetrics.localImportTotal += 1;
-                this._importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
+                this.importMetrics.localImportTotal += 1;
+                this.importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.BuiltIn: {
-                this._importMetrics.builtinImportTotal += 1;
-                this._importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
+                this.importMetrics.builtinImportTotal += 1;
+                this.importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             default: {
@@ -211,6 +266,29 @@ export class PylanceImportResolver extends ImportResolver {
             this._scrapedBuiltinsFailed = true;
             return undefined;
         }
+    }
+
+    private findNativeStub(libraryFilePath: string, nativeStubsPath: string): string | undefined {
+        // Maps native module path under nativeModulesRoot to pre-scraped stubs.
+        // libraryFilePath: .../site-packages/numpy/core/_multiarray_umath.cp36-win_amd64.pyd
+        // stubPath: bundled/native-stubs/numpy/core/_multiarray_umath.pyi
+        const nativeRootIndex = libraryFilePath.indexOf(nativeModulesRoot);
+        if (nativeRootIndex < 0) {
+            return;
+        }
+        // numpy/core/_multiarray_umath.cp36-win_amd64.pyd
+        const pathUnderNativeRoot = libraryFilePath.substr(nativeRootIndex + nativeModulesRoot.length + 1);
+        // _multiarray_umath.cp36-win_amd64.pyd
+        const fileName = getFileName(pathUnderNativeRoot);
+        // _multiarray_umath
+        const moduleName = this.getNativeModuleName(fileName);
+        if (!moduleName) {
+            return;
+        }
+        const moduleFolder = getDirectoryPath(pathUnderNativeRoot);
+        // bundled/native-stubs/numpy/core/_multiarray_umath.pyi
+        const stubFilePath = combinePaths(nativeStubsPath, moduleFolder, `${moduleName}.pyi`);
+        return this.fileSystem.existsSync(stubFilePath) ? stubFilePath : undefined;
     }
 }
 

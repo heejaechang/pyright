@@ -67,6 +67,7 @@ import { LogService } from './common/logger';
 import { Platform } from './common/platform';
 import {
     addMeasurementsToEvent,
+    addNativeModuleInfoToEvent,
     CompletionCoverage,
     StubTelemetry,
     TelemetryEvent,
@@ -486,28 +487,7 @@ class PylanceServer extends LanguageServerBase {
             return;
         }
 
-        const te = this._analysisTracker.updateTelemetry(results);
-        if (te) {
-            this._telemetry.sendTelemetry(te);
-
-            //send import metrics
-            let shouldSend = false;
-            const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
-            this._workspaceMap.forEach((workspace) => {
-                const resolver = workspace.serviceInstance.getImportResolver();
-                if (resolver instanceof PylanceImportResolver) {
-                    const importMetrics = resolver.getAndResetImportMetrics();
-                    if (!importMetrics.isEmpty()) {
-                        addMeasurementsToEvent(importEvent, importMetrics);
-                        shouldSend = true;
-                    }
-                }
-            });
-
-            if (shouldSend) {
-                this._telemetry.sendTelemetry(importEvent);
-            }
-        }
+        this.sendTelemetry(results);
     }
 
     protected async onCompletion(
@@ -570,6 +550,38 @@ class PylanceServer extends LanguageServerBase {
     private async _updateGlobalSettings(): Promise<void> {
         const pythonAnalysis = await this.getConfiguration(undefined, pythonAnalysisSectionName);
         this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
+    }
+
+    private sendTelemetry(results: AnalysisResults): void {
+        const te = this._analysisTracker.updateTelemetry(results);
+        if (!te) {
+            return;
+        }
+        this._telemetry.sendTelemetry(te);
+
+        //send import metrics
+        let shouldSend = false;
+        const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
+        const nativeModules: Set<string> = new Set();
+
+        this._workspaceMap.forEach((workspace) => {
+            const resolver = workspace.serviceInstance.getImportResolver();
+            if (resolver instanceof PylanceImportResolver) {
+                if (!resolver.importMetrics.isEmpty()) {
+                    addMeasurementsToEvent(importEvent, resolver.importMetrics);
+                    shouldSend = true;
+                }
+                const nativeModuleNames = resolver.importMetrics.getAndResetNativeModuleNames();
+                nativeModuleNames.forEach((m) => nativeModules.add(m));
+            }
+        });
+
+        if (shouldSend) {
+            if (nativeModules.size > 0) {
+                addNativeModuleInfoToEvent(importEvent, [...nativeModules]);
+            }
+            this._telemetry.sendTelemetry(importEvent);
+        }
     }
 }
 

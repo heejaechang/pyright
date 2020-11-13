@@ -1,13 +1,26 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+# WARNING: DO run scraper from 32-bit command line or else output may be UTF-16.
+#
+# Scraping most modules does not require search path. Example:
+#     c:\python3\python -W ignore -B -E scrape_module.py lxml.etree > etree.pyi
+#
+# However, some compiled modules do need explicit search path. For example, cv2 is
+# actually compiled 'cv2.cp36-win_amd64.pyd' under 'site-packages/cv2'. Thus the
+# compiled module is actually cv2.cv2 (which cv2 imports via *). So for the scraped
+# stub to work cv2.cv2 has to be scraped but stored in 'native-stubs' as cv2.
+#
+# Scraping then requires explicit search path to local cv2.cv2.
+#     c:\python3\python -W ignore -B -E scrape_module.py cv2.cv2 C:\Python3\Lib\site-packages > cv2.pyi
+#
+
 import ast
 import builtins
 import importlib
 import inspect
 import io
 import keyword
-import re
 import sys
 import tokenize
 import warnings
@@ -18,6 +31,35 @@ if sys.version_info[0] < 3:
 
 class InspectWarning(UserWarning):
     pass
+
+
+def get_module_version(module):
+    try:
+        return getattr(module, "__version__")
+    except AttributeError:
+        return "unspecified"
+
+
+def print_module_version(module):
+    module_name = getattr(module, "__name__")
+    module_version = get_module_version(module)
+
+    library_name = module_name.split(".")[0]
+    library = importlib.import_module(library_name)
+    library_version = get_module_version(library)
+
+    print(
+        "# Python: "
+        + sys.version
+        + "\n# Library: "
+        + library_name
+        + ", version: "
+        + library_version
+        + "\n# Module: "
+        + module_name
+        + ", version: "
+        + module_version
+    )
 
 
 def can_eval(s):
@@ -99,7 +141,7 @@ class DefaultRepr(object):
         self.v = v
 
     def __repr__(self):
-        return v
+        return self.v
 
 
 ELLIPSIS_DEFAULT = DefaultRepr("...")
@@ -399,7 +441,13 @@ LIES_ABOUT_MODULE = frozenset(
 # we need to forcibly rename them.
 # TODO: Which of these are still needed?
 SYS_INFO_TYPES = frozenset(
-    ("float_info", "hash_info", "int_info", "thread_info", "version_info",)
+    (
+        "float_info",
+        "hash_info",
+        "int_info",
+        "thread_info",
+        "version_info",
+    )
 )
 
 VALUE_REPR_FIX = {
@@ -437,6 +485,7 @@ class Signature(object):
         "__floordiv__": "int",
         "__ge__": "bool",
         "__get__": "__T__",
+        "__getattr__": "typing.Any",
         "__getattribute__": "typing.Any",
         "__getitem__": "typing.Any",
         "__getnewargs__": "typing.Tuple[__T__]",
@@ -884,9 +933,10 @@ class MemberInfo(object):
         line = "def " + str(self.signature)
 
         restype = self.signature.restype
-        if restype is not None:
-            line += " -> " + restype
+        if restype is None:
+            restype = "typing.Any"
 
+        line += " -> " + restype
         yield line + ":"
 
         if self.documentation:
@@ -935,11 +985,13 @@ CLASS_MEMBER_SUBSTITUTE = {
 }
 
 
-def do_import(module_name):
+def do_import(module_name, search_path=None):
     """
     Imports a module by name and returns the module.
     If the import fails, the exception is analyzed for a fix and retried.
     """
+    if search_path:
+        sys.path.insert(0, search_path)
 
     try:
         return importlib.import_module(module_name)
@@ -955,6 +1007,9 @@ def do_import(module_name):
             importlib.import_module("tkinter")
         else:
             raise
+    finally:
+        if search_path:
+            del sys.path[0]
 
     return importlib.import_module(module_name)
 
@@ -972,11 +1027,12 @@ def mro_contains(mro, name, value):
 
 
 class ScrapeState(object):
-    def __init__(self, module_name):
+    def __init__(self, module_name, search_path=None):
         self.root_module = None
         self.module_name = module_name
-        self.module = do_import(self.module_name)
+        self.module = do_import(self.module_name, search_path)
         self.members = []
+        print_module_version(self.module)
 
     def collect_top_level_members(self):
         self._collect_members(self.module, self.members, MODULE_MEMBER_SUBSTITUTE, None)
@@ -1105,6 +1161,25 @@ class ScrapeState(object):
                         scope_alias=scope_alias,
                     )
                 )
+        if not "__getattr__" in existing_names:
+            value = (
+                self.__getattr__dummy if scope else ScrapeState.__getattr__dummy_module
+            )
+            members.append(
+                MemberInfo(
+                    "__getattr__",
+                    value,
+                    scope=None,
+                    module=self.module_name,
+                )
+            )
+
+    def __getattr__dummy(self, name):
+        pass
+
+    @classmethod
+    def __getattr__dummy_module(name):
+        pass
 
     def _should_add_value(self, value):
         try:
@@ -1151,8 +1226,9 @@ class ScrapeState(object):
 
 def main():
     module_name = sys.argv[1] if len(sys.argv) > 1 else "builtins"
+    search_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    state = ScrapeState(module_name)
+    state = ScrapeState(module_name, search_path)
     state.collect_top_level_members()
 
     state.members[:] = [m for m in state.members if m.name not in keyword.kwlist]

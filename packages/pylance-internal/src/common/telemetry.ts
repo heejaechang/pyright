@@ -148,14 +148,12 @@ export namespace StubTelemetry {
     }
 }
 
-export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: MemberAccessInfo) {
+export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: MemberAccessInfo): void {
     for (const [key, value] of Object.entries(memberAccessInfo)) {
         if (isString(value)) {
             const strValue = value.toLowerCase();
             if (strValue && strValue.length > 0) {
-                const hash = createHash('sha256').update(strValue);
-                te.Properties[key + 'Hash'] = hash.digest('hex');
-
+                te.Properties[key + 'Hash'] = hashString(strValue);
                 // if (process.env.NODE_ENV === 'development') {
                 //     te.Properties[key] = strValue;
                 // }
@@ -165,14 +163,20 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
 
     if (memberAccessInfo && memberAccessInfo?.lastKnownModule) {
         const packageName = memberAccessInfo?.lastKnownModule.split('.')[0].toLowerCase();
-        const packageHash = createHash('sha256').update(packageName);
-        te.Properties['packageHash'] = packageHash.digest('hex');
+        te.Properties['packageHash'] = hashString(packageName);
         // if (process.env.NODE_ENV === 'development') {
         //     te.Properties['package'] = packageName;
         // }
     }
+}
 
-    return te;
+export function addNativeModuleInfoToEvent(te: TelemetryEvent, moduleNames: string[]): void {
+    const nativeModules = moduleNames.map((n) => hashString(n)).join(' ');
+    te.Properties['NativeModules'] = nativeModules;
+}
+
+export function hashString(strValue: string): string {
+    return createHash('sha256').update(strValue).digest('hex');
 }
 
 export function getExceptionMessage(e: any): string {
