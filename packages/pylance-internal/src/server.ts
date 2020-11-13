@@ -21,12 +21,11 @@ import {
     InsertTextFormat,
     Position,
     SemanticTokens,
-    SemanticTokensClientCapabilities,
     SemanticTokensDelta,
     SemanticTokensDeltaParams,
     SemanticTokensParams,
     SemanticTokensRangeParams,
-    SemanticTokensRefreshNotification,
+    SemanticTokensRefreshRequest,
     WorkspaceFolder,
 } from 'vscode-languageserver/node';
 import { isMainThread } from 'worker_threads';
@@ -273,7 +272,7 @@ class PylanceServer extends LanguageServerBase {
         this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
         if (this._hasSemanticTokensRefreshCapability) {
-            this._connection.sendNotification(SemanticTokensRefreshNotification.method);
+            this._connection.sendRequest(SemanticTokensRefreshRequest.method).ignoreErrors();
         }
     }
 
@@ -284,21 +283,20 @@ class PylanceServer extends LanguageServerBase {
     ): InitializeResult {
         const result = super.initialize(params, supportedCommands, supportedCodeActions);
 
-        const clientCaps = params.capabilities as SemanticTokensClientCapabilities;
+        const clientSemanticTokensCaps = params.capabilities.textDocument?.semanticTokens;
+        if (clientSemanticTokensCaps) {
+            const tokenLegend = SemanticTokenProvider.computeLegend(clientSemanticTokensCaps);
 
-        // TODO: This capability is currently not working as expected, so ignore it for now
-        // https://github.com/microsoft/vscode-languageserver-node/issues/677
-        this._hasSemanticTokensRefreshCapability = true; // !!clientCaps.textDocument?.semanticTokens?.refreshNotification;
+            result.capabilities.semanticTokensProvider = {
+                legend: tokenLegend,
+                range: true,
+                full: {
+                    delta: true,
+                },
+            };
 
-        const tokenLegend = SemanticTokenProvider.computeLegend(clientCaps);
-
-        result.capabilities.semanticTokensProvider = {
-            legend: tokenLegend,
-            range: true,
-            full: {
-                delta: true,
-            },
-        };
+            this._hasSemanticTokensRefreshCapability = !!params.capabilities.workspace?.semanticTokens?.refreshSupport;
+        }
 
         return result;
     }
