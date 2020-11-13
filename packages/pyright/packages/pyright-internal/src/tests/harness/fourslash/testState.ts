@@ -95,6 +95,7 @@ export class TestState {
     readonly fs: vfs.TestFileSystem;
     readonly workspace: WorkspaceServiceInstance;
     readonly console: ConsoleInterface;
+    readonly rawConfigJson: any | undefined;
 
     // The current caret position in the active file
     currentCaretPosition = 0;
@@ -125,14 +126,13 @@ export class TestState {
         for (const file of testData.files) {
             // if one of file is configuration file, set config options from the given json
             if (this._isConfig(file, ignoreCase)) {
-                let configJson: any;
                 try {
-                    configJson = JSON.parse(file.content);
+                    this.rawConfigJson = JSON.parse(file.content);
                 } catch (e) {
                     throw new Error(`Failed to parse test ${file.fileName}: ${e.message}`);
                 }
 
-                configOptions.initializeFromJson(configJson, 'basic', nullConsole);
+                configOptions.initializeFromJson(this.rawConfigJson, 'basic', nullConsole);
                 this._applyTestConfigOptions(configOptions);
             } else {
                 files[file.fileName] = new vfs.File(file.content, { meta: file.fileOptions, encoding: 'utf8' });
@@ -355,12 +355,18 @@ export class TestState {
     }
 
     // Opens a file given its 0-based index or fileName
-    openFile(indexOrName: number | string, content?: string): void {
+    openFile(indexOrName: number | string): void {
         const fileToOpen: FourSlashFile = this._findFile(indexOrName);
         fileToOpen.fileName = normalizeSlashes(fileToOpen.fileName);
         this.activeFile = fileToOpen;
 
         this.program.setFileOpened(this.activeFile.fileName, 1, [{ text: fileToOpen.content }]);
+    }
+
+    openFiles(indexOrNames: (number | string)[]): void {
+        for (const indexOrName of indexOrNames) {
+            this.openFile(indexOrName);
+        }
     }
 
     printCurrentFileState(showWhitespace: boolean, makeCaretVisible: boolean) {
@@ -663,6 +669,7 @@ export class TestState {
                 );
             }
         }
+        return commandResult;
     }
 
     async verifyInvokeCodeAction(
@@ -869,17 +876,16 @@ export class TestState {
                         }
 
                         const actual: CompletionItem = result.completionList.items[actualIndex];
-                        assert.equal(actual.label, expected.label);
-                        assert.equal(actual.detail, expected.detail);
-                        assert.equal(actual.kind, expected.kind);
-                        if (expectedCompletions[i].documentation !== undefined) {
+                        this.verifyCompletionItem(expected, actual);
+
+                        if (expected.documentation !== undefined) {
                             if (actual.documentation === undefined) {
                                 this.program.resolveCompletionItem(filePath, actual, docFormat, CancellationToken.None);
                             }
 
                             if (MarkupContent.is(actual.documentation)) {
-                                assert.equal(actual.documentation.value, expected.documentation);
-                                assert.equal(actual.documentation.kind, docFormat);
+                                assert.strictEqual(actual.documentation.value, expected.documentation);
+                                assert.strictEqual(actual.documentation.kind, docFormat);
                             } else {
                                 assert.fail(
                                     `Unexpected type of contents object "${actual.documentation}", should be MarkupContent.`
@@ -911,7 +917,9 @@ export class TestState {
                     }
                 }
             } else {
-                assert.fail('Failed to get completions');
+                if (verifyMode !== 'exact' || expectedCompletions.length > 0) {
+                    assert.fail('Failed to get completions');
+                }
             }
 
             if (map[markerName].memberAccessInfo !== undefined && result?.memberAccessInfo !== undefined) {
@@ -935,17 +943,21 @@ export class TestState {
         }
     }
 
-    verifySignature(map: {
-        [marker: string]: {
-            noSig?: boolean;
-            signatures?: {
-                label: string;
-                parameters: string[];
-            }[];
-            activeParameters?: (number | undefined)[];
-            callHasParameters?: boolean;
-        };
-    }): void {
+    verifySignature(
+        docFormat: MarkupKind,
+        map: {
+            [marker: string]: {
+                noSig?: boolean;
+                signatures?: {
+                    label: string;
+                    parameters: string[];
+                    documentation?: string;
+                }[];
+                activeParameters?: (number | undefined)[];
+                callHasParameters?: boolean;
+            };
+        }
+    ): void {
         this._analyze();
 
         for (const marker of this.getMarkers()) {
@@ -959,7 +971,12 @@ export class TestState {
             const expected = map[name];
             const position = this.convertOffsetToPosition(fileName, marker.position);
 
-            const actual = this.program.getSignatureHelpForPosition(fileName, position, CancellationToken.None);
+            const actual = this.program.getSignatureHelpForPosition(
+                fileName,
+                position,
+                docFormat,
+                CancellationToken.None
+            );
 
             if (expected.noSig) {
                 assert.equal(actual, undefined);
@@ -983,6 +1000,15 @@ export class TestState {
                 });
 
                 assert.deepEqual(actualParameters, expectedSig.parameters);
+
+                if (expectedSig.documentation === undefined) {
+                    assert.equal(sig.documentation, undefined);
+                } else {
+                    assert.deepEqual(sig.documentation, {
+                        kind: docFormat,
+                        value: expectedSig.documentation,
+                    });
+                }
             });
 
             assert.deepEqual(
@@ -1547,5 +1573,11 @@ export class TestState {
                 );
             }
         }
+    }
+
+    protected verifyCompletionItem(expected: _.FourSlashCompletionItem, actual: CompletionItem) {
+        assert.strictEqual(actual.label, expected.label);
+        assert.strictEqual(actual.detail, expected.detail);
+        assert.strictEqual(actual.kind, expected.kind);
     }
 }

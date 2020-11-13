@@ -12,15 +12,33 @@ import { convertUriToPath } from 'pyright-internal/common/pathUtils';
 import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
+import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { Commands } from './commands';
+import { ExtractMethodCommand } from './extractMethodCommand';
+import { ExtractVariableCommand } from './extractVariableCommand';
 import { QuickActionCommand } from './quickActionCommand';
 
 export interface ServerCommand {
     execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any>;
 }
 
+const _userInitiatedTelemetryCommands: Set<string> = new Set([
+    PyrightCommands.createTypeStub,
+    PyrightCommands.orderImports,
+    PyrightCommands.addMissingOptionalToParam,
+    Commands.createTypeStub,
+    Commands.orderImports,
+    Commands.addMissingOptionalToParam,
+    Commands.removeUnusedImport,
+    Commands.addImport,
+    Commands.extractMethod,
+    Commands.extractVariable,
+]);
+
 export class CommandController extends PyrightCommandController {
     private _pylanceQuickAction: QuickActionCommand;
+    private _extractMethod: ExtractMethodCommand;
+    private _extractVariable: ExtractVariableCommand;
     private _pyrightCommandMap = new Map<string, string>([
         [Commands.createTypeStub, PyrightCommands.createTypeStub],
         [Commands.orderImports, PyrightCommands.orderImports],
@@ -30,10 +48,12 @@ export class CommandController extends PyrightCommandController {
         [PyrightCommands.addMissingOptionalToParam, PyrightCommands.addMissingOptionalToParam],
     ]);
 
-    constructor(ls: LanguageServerInterface) {
+    constructor(ls: LanguageServerInterface, private _telemetry: TelemetryService | undefined) {
         super(ls);
 
         this._pylanceQuickAction = new QuickActionCommand(ls);
+        this._extractMethod = new ExtractMethodCommand(ls);
+        this._extractVariable = new ExtractVariableCommand(ls);
     }
 
     static supportedCommands() {
@@ -48,14 +68,24 @@ export class CommandController extends PyrightCommandController {
             Commands.addImport,
             Commands.intelliCodeCompletionItemCommand,
             Commands.intelliCodeLoadExtension,
+            Commands.extractMethod,
+            Commands.extractVariable,
         ];
     }
 
     async execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any> {
+        this._sendUserInitiatedCommandTelemetry(cmdParams);
+
         switch (cmdParams.command) {
             case Commands.removeUnusedImport:
             case Commands.addImport:
                 return await this._pylanceQuickAction.execute(cmdParams, token);
+            case Commands.extractMethod: {
+                return await this._extractMethod.execute(cmdParams, token);
+            }
+            case Commands.extractVariable: {
+                return await this._extractVariable.execute(cmdParams, token);
+            }
         }
 
         const pyrightCommand = this._pyrightCommandMap.get(cmdParams.command);
@@ -92,5 +122,13 @@ export class CommandController extends PyrightCommandController {
         }
 
         return result;
+    }
+
+    private _sendUserInitiatedCommandTelemetry(cmdParams: ExecuteCommandParams) {
+        if (this._telemetry && _userInitiatedTelemetryCommands.has(cmdParams.command)) {
+            const te = new TelemetryEvent(TelemetryEventName.EXECUTE_COMMAND);
+            te.Properties['name'] = cmdParams.command;
+            this._telemetry.sendTelemetry(te);
+        }
     }
 }

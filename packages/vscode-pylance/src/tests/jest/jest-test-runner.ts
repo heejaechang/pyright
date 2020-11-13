@@ -13,9 +13,10 @@ const fromRoot = (...subPaths: string[]): string => path.resolve(rootDir, ...sub
 const srcRoot = fromRoot('src');
 const outDir = fromRoot('out');
 const testEnvDir = fromRoot('out', 'vscode-pylance', 'src', 'tests');
+const tsconfig = fromRoot('tsconfig.json');
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { compilerOptions } = require(fromRoot('tsconfig.json'));
+const { compilerOptions } = require(tsconfig);
 
 console.log(`Extension src root: ${srcRoot}`);
 console.log(`Extension out dir: ${outDir}`);
@@ -30,7 +31,7 @@ export async function run(_testRoot: string, callback: TestRunnerCallback): Prom
 
     try {
         const argv: Config.Argv = {
-            rootDir: path.resolve(srcRoot, 'tests'),
+            rootDir,
             verbose: true,
             colors: true,
             transform: JSON.stringify({ '^.+\\.ts$': 'ts-jest' }),
@@ -42,7 +43,7 @@ export async function run(_testRoot: string, callback: TestRunnerCallback): Prom
             moduleNameMapper: JSON.stringify(pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/' })),
             globals: JSON.stringify({
                 'ts-jest': {
-                    tsConfig: path.join(rootDir, 'tsconfig.json'),
+                    tsconfig,
                 },
             }),
             forceExit: true,

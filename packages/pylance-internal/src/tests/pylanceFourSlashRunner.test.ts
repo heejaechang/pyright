@@ -7,6 +7,7 @@
  */
 
 import * as path from 'path';
+import { PylanceWorkspaceServiceInstance } from 'src/server';
 import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { ImportResolverFactory } from 'pyright-internal/analyzer/importResolver';
@@ -61,10 +62,15 @@ class PylanceFeatures implements HostSpecificFeatures {
         range: Range,
         token: CancellationToken
     ): Promise<CodeAction[]> {
-        return CodeActionProvider.getCodeActionsForPosition(workspace, filePath, range, token);
+        return CodeActionProvider.getCodeActionsForPosition(
+            workspace as PylanceWorkspaceServiceInstance,
+            filePath,
+            range,
+            token
+        );
     }
     execute(ls: LanguageServerInterface, params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
-        const controller = new CommandController(ls);
+        const controller = new CommandController(ls, undefined);
         return controller.execute(params, token);
     }
 }

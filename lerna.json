@@ -1,4 +1,4 @@
 {
     "packages": ["packages/*", "packages/pyright/packages/*"],
-    "version": "0.0.0"
+    "version": "9999.0.0-dev"
 }

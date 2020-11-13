@@ -11,16 +11,18 @@ import { Commands as PyrightCommands } from 'pyright-internal/commands/commands'
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
 import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
+import { convertRangeToTextRange } from 'pyright-internal/common/positionUtils';
 import { getCharacterCount } from 'pyright-internal/common/stringUtils';
 import { Range } from 'pyright-internal/common/textRange';
-import { WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 
+import { PylanceWorkspaceServiceInstance } from '../../src/server';
 import { Commands } from '../commands/commands';
 import { addImportSimilarityLimit, wellKnownAbbreviationMap } from '../common/importUtils';
+import { CannotExtractReason, ExtractMethodProvider } from './refactoringProvider';
 
 export class CodeActionProvider {
     static async getCodeActionsForPosition(
-        workspace: WorkspaceServiceInstance,
+        workspace: PylanceWorkspaceServiceInstance,
         filePath: string,
         range: Range,
         token: CancellationToken
@@ -114,6 +116,42 @@ export class CodeActionProvider {
                     return addImportCompare(left, right);
                 })
             );
+        }
+
+        if (workspace.enableExtractCodeAction) {
+            const parseResults = workspace.serviceInstance.getParseResult(filePath);
+            if (parseResults) {
+                const textRange = convertRangeToTextRange(range, parseResults.tokenizerOutput.lines);
+                if (textRange) {
+                    const tryExtractMethodResults = ExtractMethodProvider.canExtractMethod(
+                        parseResults,
+                        textRange,
+                        workspace.serviceInstance.getEvaluator()
+                    );
+                    if (tryExtractMethodResults.failedReason === CannotExtractReason.None) {
+                        const title = `Extract method`;
+                        codeActions.push(
+                            CodeAction.create(
+                                title,
+                                Command.create(title, Commands.extractMethod, filePath, range),
+                                CodeActionKind.RefactorExtract
+                            )
+                        );
+                    }
+
+                    const tryExtractVariableResults = ExtractMethodProvider.canExtractVariable(parseResults, textRange);
+                    if (tryExtractVariableResults.failedReason === CannotExtractReason.None) {
+                        const title = `Extract variable`;
+                        codeActions.push(
+                            CodeAction.create(
+                                title,
+                                Command.create(title, Commands.extractVariable, filePath, range),
+                                CodeActionKind.RefactorExtract
+                            )
+                        );
+                    }
+                }
+            }
         }
 
         return codeActions;

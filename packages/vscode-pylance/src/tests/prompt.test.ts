@@ -5,7 +5,7 @@ import { ActivatePylanceBanner } from '../banners';
 import { PylanceName } from '../common/utils';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
-import { CommandManager } from '../types/commandManager';
+import { Command, CommandManager } from '../types/commandManager';
 import { TestMemento } from './testUtil';
 
 let appShellMock: ApplicationShell;
@@ -105,18 +105,19 @@ describe('Prompt to use Pylance', () => {
                 Promise.resolve(banner.LabelYes)
             );
 
-            when(appConfigMock.inspect<string | undefined>('languageServer')).thenReturn({
+            when(appConfigMock.inspect<string | undefined>('python', 'languageServer')).thenReturn({
                 key: 'languageServer',
                 globalValue: s.globalValue,
                 workspaceValue: s.workspaceValue,
             });
 
             await banner.show();
-            const [setting, value, target] = capture(appConfigMock.updateSetting).first();
+            const [section, setting, value, target] = capture(appConfigMock.updateSetting).first();
+            expect(section).toEqual('python');
             expect(setting).toEqual('languageServer');
             expect(value).toEqual(PylanceName);
             expect(target).toEqual(s.expectedTarget);
-            verify(cmdMock.executeCommand('workbench.action.reloadWindow')).once();
+            verify(cmdMock.executeCommand(Command.ReloadWindow)).once();
         });
     });
 
@@ -131,8 +132,8 @@ describe('Prompt to use Pylance', () => {
     });
 
     function makeBanner(lsType?: string): ActivatePylanceBanner {
-        when(appConfigMock.getSetting<string>('languageServer')).thenReturn(lsType ?? 'Jedi');
-        when(appConfigMock.updateSetting(anyString(), anything())).thenReturn(Promise.resolve());
+        when(appConfigMock.getSetting<string>('python', 'languageServer')).thenReturn(lsType ?? 'Jedi');
+        when(appConfigMock.updateSetting('python', anyString(), anything())).thenReturn(Promise.resolve());
         return new ActivatePylanceBanner(
             instance(appShellMock),
             instance(appConfigMock),

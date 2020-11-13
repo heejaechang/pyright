@@ -11,27 +11,50 @@ import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
 import { ApplicationShellImpl } from './common/appShell';
 import { licenseErrorText } from './common/license';
 import { loadLocalizedStrings } from './common/localize';
+import { PersistentStateFactoryImpl } from './common/persistentState';
 import { setExtensionRoot } from './common/utils';
+import { InsidersImpl } from './insiders';
+import { BlobStorageImpl } from './insiders/blobStorage';
 import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
 import { BrowserServiceImpl } from './types/browser';
-import { CommandManagerImpl } from './types/commandManager';
+import { Command, CommandManagerImpl } from './types/commandManager';
 
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
     checkHostApp();
-    const version = getExtensionVersion(context);
-
     setExtensionRoot(context.extensionPath);
     loadLocalizedStrings();
 
-    const serverPath = path.join(context.extensionPath, 'dist');
+    const version = getExtensionVersion(context);
+    const config = new AppConfigurationImpl();
+    const appShell = new ApplicationShellImpl();
+    const persistentState = new PersistentStateFactoryImpl(context.globalState, context.workspaceState);
+    const blobStorage = new BlobStorageImpl();
+    const commandManager = new CommandManagerImpl();
+    const insiders = new InsidersImpl(
+        version,
+        context.extensionPath,
+        config,
+        appShell,
+        persistentState,
+        blobStorage,
+        commandManager
+    );
+
     showActivatePylanceBanner(context, version).ignoreErrors();
     showPylanceSurveyBanner(context, version).ignoreErrors();
-    migrateV1Settings(new AppConfigurationImpl(), new ApplicationShellImpl()).ignoreErrors();
+    migrateV1Settings(config, appShell).ignoreErrors();
+
+    insiders.onStartup().ignoreErrors();
+    vscode.workspace.onDidChangeConfiguration(
+        (e) => insiders.onChange(e).ignoreErrors(),
+        undefined,
+        context.subscriptions
+    );
 
     registerCommand(context, Commands.runCommands, (...args: vscode.Command[]) => {
         args.forEach((c) => {
-            vscode.commands.executeCommand(c.command, ...(c.arguments ?? []));
+            commandManager.executeCommand(c.command as any, ...(c.arguments ?? []));
         });
     });
 
@@ -42,13 +65,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         });
 
         if (hintsEnabled.get<boolean | undefined>('enabled')) {
-            vscode.commands.executeCommand('editor.action.triggerParameterHints');
+            commandManager.executeCommand(Command.TriggerParameterHints);
         }
     });
 
     return {
         languageServerFolder: async () => ({
-            path: serverPath,
+            path: path.join(context.extensionPath, 'dist'),
             version,
         }),
     };

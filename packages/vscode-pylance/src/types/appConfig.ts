@@ -16,23 +16,22 @@ export interface SettingInspection<T> {
     languageIds?: string[];
 }
 
+export type Section = 'python' | 'pylance';
+
 export interface AppConfiguration {
-    getSetting<T = undefined>(name: string): T | undefined;
-    updateSetting(name: string, value: any, target?: ConfigurationTarget): Promise<void>;
-    inspect<T = undefined>(key: string): SettingInspection<T | undefined> | undefined;
+    getSetting<T = undefined>(section: Section, name: string): T | undefined;
+    updateSetting(section: Section, name: string, value: any, target?: ConfigurationTarget): Promise<void>;
+    inspect<T = undefined>(section: Section, key: string): SettingInspection<T | undefined> | undefined;
 }
 
 export class AppConfigurationImpl implements AppConfiguration {
-    getSetting<T = undefined>(name: string): T | undefined {
-        return this.pythonConfig.get<T>(name);
+    getSetting<T = undefined>(section: Section, name: string): T | undefined {
+        return workspace.getConfiguration(section).get<T>(name);
     }
-    async updateSetting(name: string, value: any, target?: ConfigurationTarget): Promise<void> {
-        await this.pythonConfig.update(name, value, target);
+    async updateSetting(section: Section, name: string, value: any, target?: ConfigurationTarget): Promise<void> {
+        await workspace.getConfiguration(section).update(name, value, target);
     }
-    inspect<T = undefined>(key: string): SettingInspection<T | undefined> | undefined {
-        return this.pythonConfig.inspect<T>(key);
-    }
-    private get pythonConfig(): WorkspaceConfiguration {
-        return workspace.getConfiguration('python');
+    inspect<T = undefined>(section: Section, key: string): SettingInspection<T | undefined> | undefined {
+        return workspace.getConfiguration(section).inspect<T>(key);
     }
 }

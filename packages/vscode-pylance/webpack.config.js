@@ -6,6 +6,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const JavaScriptObfuscator = require('webpack-obfuscator');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const outPath = path.resolve(__dirname, 'dist');
 const packages = path.resolve(__dirname, '..');
@@ -114,6 +115,18 @@ module.exports = (_, { mode }) => {
         },
         optimization: {
             usedExports: true,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            //@ts-ignore
+            minimizer:
+                mode === 'production'
+                    ? [
+                          new TerserPlugin({
+                              terserOptions: {
+                                  keep_fnames: /AbortSignal/, // Work around node-fetch@2 bug.
+                              },
+                          }),
+                      ]
+                    : undefined,
             splitChunks: {
                 cacheGroups: {
                     defaultVendors: {

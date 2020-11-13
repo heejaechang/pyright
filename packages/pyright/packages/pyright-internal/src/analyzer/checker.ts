@@ -112,9 +112,8 @@ import {
     isProperty,
     isTupleClass,
     lookUpClassMember,
-    makeTypeVarsConcrete,
+    makeTopLevelTypeVarsConcrete,
     partiallySpecializeType,
-    specializeType,
     transformPossibleRecursiveTypeAlias,
     transformTypeObjectToClass,
 } from './typeUtils';
@@ -292,7 +291,8 @@ export class Checker extends ParseTreeWalker {
                 if (annotationNode) {
                     const paramType = functionTypeResult.functionType.details.parameters[index].type;
                     const diag = new DiagnosticAddendum();
-                    if (this._containsCovariantTypeVar(paramType, node.id, diag)) {
+                    const scopeId = this._evaluator.getScopeIdForNode(node);
+                    if (this._containsCovariantTypeVar(paramType, scopeId, diag)) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
@@ -485,7 +485,7 @@ export class Checker extends ParseTreeWalker {
 
                     // Specialize the return type in case it contains references to type variables.
                     // These will be replaced with the corresponding constraint or bound types.
-                    const specializedDeclaredType = specializeType(declaredReturnType, undefined);
+                    const specializedDeclaredType = makeTopLevelTypeVarsConcrete(declaredReturnType);
                     if (!this._evaluator.canAssignType(specializedDeclaredType, returnType, diagAddendum)) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
@@ -1470,7 +1470,7 @@ export class Checker extends ParseTreeWalker {
             let isSupported = true;
 
             doForSubtypes(type, (subtype) => {
-                subtype = makeTypeVarsConcrete(subtype);
+                subtype = makeTopLevelTypeVarsConcrete(subtype);
 
                 switch (subtype.category) {
                     case TypeCategory.Any:
@@ -1597,7 +1597,12 @@ export class Checker extends ParseTreeWalker {
             const filteredTypes: Type[] = [];
 
             for (const filterType of classTypeList) {
-                const filterIsSuperclass = ClassType.isDerivedFrom(varType, filterType);
+                // Handle the special case where the variable type is a TypedDict and
+                // we're filtering against 'dict'. TypedDict isn't derived from dict,
+                // but at runtime, isinstance returns True.
+                const filterIsSuperclass =
+                    ClassType.isDerivedFrom(varType, filterType) ||
+                    (ClassType.isBuiltIn(filterType, 'dict') && ClassType.isTypedDictClass(varType));
                 const filterIsSubclass = ClassType.isDerivedFrom(filterType, varType);
 
                 // Normally, a class should never be both a subclass and a
@@ -1892,7 +1897,8 @@ export class Checker extends ParseTreeWalker {
                 }
 
                 const diag = new DiagnosticAddendum();
-                if (this._containsContravariantTypeVar(declaredReturnType, node.id, diag)) {
+                const scopeId = this._evaluator.getScopeIdForNode(node);
+                if (this._containsContravariantTypeVar(declaredReturnType, scopeId, diag)) {
                     this._evaluator.addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                         DiagnosticRule.reportGeneralTypeIssues,
@@ -1971,12 +1977,12 @@ export class Checker extends ParseTreeWalker {
         }
     }
 
-    private _containsContravariantTypeVar(type: Type, nodeId: number, diag: DiagnosticAddendum): boolean {
+    private _containsContravariantTypeVar(type: Type, scopeId: string, diag: DiagnosticAddendum): boolean {
         let isValid = true;
 
         doForSubtypes(type, (subtype) => {
             if (isTypeVar(subtype) && subtype.details.isContravariant) {
-                if (subtype.scopeId !== nodeId) {
+                if (subtype.scopeId !== scopeId) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.typeVarIsContravariant().format({ name: subtype.details.name })
                     );
@@ -1989,12 +1995,12 @@ export class Checker extends ParseTreeWalker {
         return !isValid;
     }
 
-    private _containsCovariantTypeVar(type: Type, nodeId: number, diag: DiagnosticAddendum): boolean {
+    private _containsCovariantTypeVar(type: Type, scopeId: string, diag: DiagnosticAddendum): boolean {
         let isValid = true;
 
         doForSubtypes(type, (subtype) => {
             if (isTypeVar(subtype) && subtype.details.isCovariant) {
-                if (subtype.scopeId !== nodeId) {
+                if (subtype.scopeId !== scopeId) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.typeVarIsCovariant().format({ name: subtype.details.name })
                     );

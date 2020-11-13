@@ -1,18 +1,23 @@
 import * as assert from 'assert';
 import {
     CancellationToken,
+    Command,
+    CompletionItem,
     SemanticTokens,
     SemanticTokensClientCapabilities,
     SemanticTokensLegend,
     TokenFormat,
+    WorkspaceEdit,
 } from 'vscode-languageserver/node';
 
 import { Range as PositionRange } from 'pyright-internal/common/textRange';
 import { FourSlashData, Range } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
 import { HostSpecificFeatures, TestState } from 'pyright-internal/tests/harness/fourslash/testState';
+//import * as host from 'pyright-internal/tests/harness/host';
 import { stringify } from 'pyright-internal/tests/harness/utils';
 
 import { getSemanticTokens, SemanticTokenProvider } from '../languageService/semanticTokenProvider';
+import { updateInsertTextForAutoParensIfNeeded } from '../server';
 
 export interface DecodedSemanticToken {
     line: number;
@@ -30,6 +35,60 @@ export class PylanceTestState extends TestState {
         hostSpecificFeatures?: HostSpecificFeatures
     ) {
         super(basePath, testData, mountPaths, hostSpecificFeatures);
+    }
+
+    async verifyExtractVariable(marker: string, files: { [filePath: string]: string[] }): Promise<any> {
+        const filename = this.getMarkerByName(marker).fileName;
+        const range = this.getPositionRange(marker);
+        const command = {
+            title: 'Extract Variable',
+            command: 'pylance.extractVariable',
+            arguments: [filename, range],
+        };
+
+        return await this.verifyPylanceCommand(command, files);
+    }
+
+    async verifyExtractMethod(marker: string, files: { [filePath: string]: string[] }): Promise<any> {
+        const filename = this.getMarkerByName(marker).fileName;
+        const range = this.getPositionRange(marker);
+        const command = {
+            title: 'Extract method',
+            command: 'pylance.extractMethod',
+            arguments: [filename, range],
+        };
+
+        return await this.verifyPylanceCommand(command, files);
+    }
+
+    async verifyPylanceCommand(command: Command, files: { [filePath: string]: string[] }): Promise<any> {
+        const emptyFiles = { ['']: `` };
+
+        // if (command?.arguments && command?.arguments[0]) {
+        //     host.HOST.log(command!.arguments[0]);
+        // }
+
+        const commandResult = await super.verifyCommand(command, emptyFiles);
+
+        const workspaceEditResult = commandResult as WorkspaceEdit;
+
+        if (workspaceEditResult.changes !== undefined) {
+            for (const [url, changes] of Object.entries(workspaceEditResult.changes)) {
+                let index = 0;
+                for (const change of changes) {
+                    const actualText = change.newText;
+                    const expectedText: string = Object.values(files[url])[index];
+                    if (actualText !== expectedText) {
+                        this.raiseError(
+                            `${command.title}\n${url} doesn't contain expected result:\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
+                        );
+                    }
+                    index++;
+                }
+            }
+        }
+
+        return commandResult;
     }
 
     verifySemanticTokens(
@@ -76,7 +135,7 @@ export class PylanceTestState extends TestState {
                 rangedTokenInfo.tokens
             );
 
-            assert.deepStrictEqual(actualTokens, expectedTokens);
+            assert.deepStrictEqual(actualTokens, expectedTokens, `Incorrect tokens in file ${startMarker.fileName}`);
         }
     }
 
@@ -209,5 +268,14 @@ export class PylanceTestState extends TestState {
             });
         }
         return expectedTokens;
+    }
+
+    protected verifyCompletionItem(expected: _.FourSlashCompletionItem, actual: CompletionItem) {
+        if (this.rawConfigJson?.completeFunctionParens) {
+            updateInsertTextForAutoParensIfNeeded(actual, '');
+        }
+
+        super.verifyCompletionItem(expected, actual);
+        assert.strictEqual(actual.insertText, expected.insertionText);
     }
 }

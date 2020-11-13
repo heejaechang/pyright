@@ -45,6 +45,6 @@ export const LanguageServerSettingName = 'languageServer';
 
 export function isPylanceDefaultLanguageServer(appConfig: AppConfiguration): boolean {
     // This check effective setting, we don't know where it is specified yet.
-    const ls = appConfig.getSetting<string>(LanguageServerSettingName);
+    const ls = appConfig.getSetting<string>('python', LanguageServerSettingName);
     return ls === PylanceName;
 }

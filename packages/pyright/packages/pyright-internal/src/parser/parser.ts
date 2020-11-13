@@ -245,7 +245,12 @@ export class Parser {
         } else if (parseTextMode === ParseTextMode.FunctionAnnotation) {
             parseTree = this._parseFunctionTypeAnnotation();
         } else {
-            parseTree = this._parseTestExpression(false);
+            const exprListResult = this._parseTestExpressionList();
+            if (exprListResult.parseError) {
+                parseTree = exprListResult.parseError;
+            } else {
+                parseTree = this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ false);
+            }
         }
 
         if (this._peekTokenType() === TokenType.NewLine) {
@@ -715,7 +720,12 @@ export class Parser {
         const nameToken = this._getTokenIfIdentifier();
         if (!nameToken) {
             this._addError(Localizer.Diagnostic.expectedFunctionName(), defToken);
-            return ErrorNode.create(defToken, ErrorExpressionCategory.MissingFunctionParameterList);
+            return ErrorNode.create(
+                defToken,
+                ErrorExpressionCategory.MissingFunctionParameterList,
+                undefined,
+                decorators
+            );
         }
 
         if (!this._consumeTokenIfType(TokenType.OpenParenthesis)) {
@@ -723,7 +733,8 @@ export class Parser {
             return ErrorNode.create(
                 nameToken,
                 ErrorExpressionCategory.MissingFunctionParameterList,
-                NameNode.create(nameToken)
+                NameNode.create(nameToken),
+                decorators
             );
         }
 
@@ -2801,7 +2812,7 @@ export class Parser {
     // expr_stmt: testlist_star_expr (annassign | augassign (yield_expr | testlist) |
     //                     ('=' (yield_expr | testlist_star_expr))*)
     // testlist_star_expr: (test|star_expr) (',' (test|star_expr))* [',']
-    // annassign: ':' test ['=' test]
+    // annassign: ':' test ['=' (yield_expr | testlist_star_expr)]
     // augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' |
     //             '<<=' | '>>=' | '**=' | '//=')
     private _parseExpressionStatement(): ExpressionNode {
@@ -2840,7 +2851,8 @@ export class Parser {
                 this._isParsingTypeAnnotation = true;
             }
 
-            const rightExpr = this._parseTestExpression(false);
+            const rightExpr =
+                this._tryParseYieldExpression() || this._parseTestExpression(/* allowAssignmentExpression */ false);
 
             this._isParsingTypeAnnotation = wasParsingTypeAnnotation;
 
@@ -2852,7 +2864,7 @@ export class Parser {
             return this._parseChainAssignments(leftExpr);
         }
 
-        if (!annotationExpr && Tokenizer.isOperatorAssignment(this._peekOperatorType())) {
+        if (Tokenizer.isOperatorAssignment(this._peekOperatorType())) {
             const operatorToken = this._getNextToken() as OperatorToken;
 
             const rightExpr =
@@ -2873,15 +2885,13 @@ export class Parser {
     }
 
     private _parseChainAssignments(leftExpr: ExpressionNode): ExpressionNode {
-        let rightExpr: ExpressionNode | undefined;
-        rightExpr = this._tryParseYieldExpression();
-        if (!rightExpr) {
-            rightExpr = this._parseTestOrStarListAsExpression(
+        let rightExpr =
+            this._tryParseYieldExpression() ||
+            this._parseTestOrStarListAsExpression(
                 /* allowAssignmentExpression */ false,
                 ErrorExpressionCategory.MissingExpression,
                 Localizer.Diagnostic.expectedAssignRightHandExpr()
             );
-        }
 
         if (rightExpr.nodeType === ParseNodeType.Error) {
             return AssignmentNode.create(leftExpr, rightExpr);
@@ -3425,7 +3435,7 @@ export class Parser {
 
     private _peekToken(count = 0): Token {
         if (this._tokenIndex + count < 0) {
-            this._tokenizerOutput!.tokens.getItemAt(0);
+            return this._tokenizerOutput!.tokens.getItemAt(0);
         }
 
         if (this._tokenIndex + count >= this._tokenizerOutput!.tokens.count) {

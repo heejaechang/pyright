@@ -2,7 +2,7 @@
     "name": "pylance-client",
     "displayName": "Pylance",
     "description": "Pylance extension to VS Code (FOR DEBUGGING ONLY)",
-    "version": "0.0.0",
+    "version": "9999.0.0-dev",
     "private": true,
     "license": "SEE LICENSE IN LICENSE.txt",
     "author": {
@@ -201,6 +201,10 @@
             {
                 "id": "decorator",
                 "description": "inside a decorator"
+            },
+            {
+                "id": "builtin",
+                "description": "built-in identifier"
             }
         ],
         "semanticTokenScopes": [

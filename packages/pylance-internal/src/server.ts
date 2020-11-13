@@ -11,6 +11,7 @@ import {
     CodeActionKind,
     CodeActionParams,
     Command,
+    CompletionItem,
     CompletionItemKind,
     CompletionList,
     CompletionParams,
@@ -54,7 +55,7 @@ import {
     WorkspaceServiceInstance,
 } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
-import { CompletionResults } from 'pyright-internal/languageService/completionProvider';
+import { CompletionItemData, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
@@ -86,9 +87,11 @@ const pythonAnalysisSectionName = 'python.analysis';
 
 export interface PylanceServerSettings extends ServerSettings {
     completeFunctionParens?: boolean;
+    enableExtractCodeAction?: boolean;
 }
 export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstance {
     completeFunctionParens?: boolean;
+    enableExtractCodeAction?: boolean;
 }
 
 class PylanceServer extends LanguageServerBase {
@@ -116,7 +119,7 @@ class PylanceServer extends LanguageServerBase {
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
             progressReporterFactory: reporterFactory,
-            supportedCodeActions: [CodeActionKind.QuickFix],
+            supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
         });
 
         // root directory will be used for 2 different purpose.
@@ -126,9 +129,9 @@ class PylanceServer extends LanguageServerBase {
             this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)),
             `Unable to locate typeshed fallback folder at '${rootDirectory}'`
         );
-        this._controller = new CommandController(this);
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
+        this._controller = new CommandController(this, this._telemetry);
         this._completionCoverage = new CompletionCoverage.CompletionTelemetry(this._telemetry);
         this._logger = new LogService(this.console as ConsoleWithLogLevel);
         this._platform = new Platform();
@@ -177,6 +180,7 @@ class PylanceServer extends LanguageServerBase {
             autoImportCompletions: true,
             indexing: false,
             completeFunctionParens: false,
+            enableExtractCodeAction: false,
         };
 
         try {
@@ -240,6 +244,8 @@ class PylanceServer extends LanguageServerBase {
                 serverSettings.completeFunctionParens =
                     pythonAnalysisSection.completeFunctionParens ?? serverSettings.completeFunctionParens;
                 serverSettings.indexing = pythonAnalysisSection.indexing ?? serverSettings.indexing;
+                serverSettings.enableExtractCodeAction =
+                    pythonAnalysisSection.enableExtractCodeAction ?? serverSettings.enableExtractCodeAction;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
@@ -418,7 +424,7 @@ class PylanceServer extends LanguageServerBase {
         this.recordUserInteractionTime();
 
         const filePath = convertUriToPath(params.textDocument.uri);
-        const workspace = await this.getWorkspaceForFile(filePath);
+        const workspace = (await this.getWorkspaceForFile(filePath)) as PylanceWorkspaceServiceInstance;
         const actions1 = await PyrightCodeActionProvider.getCodeActionsForPosition(
             workspace,
             filePath,
@@ -526,15 +532,7 @@ class PylanceServer extends LanguageServerBase {
 
         if (completionList && workspace.completeFunctionParens && !token.isCancellationRequested) {
             for (const c of completionList.items) {
-                if (c.kind === CompletionItemKind.Function || c.kind === CompletionItemKind.Method) {
-                    c.insertText = (c.insertText ?? c.label) + '($0)';
-                    c.insertTextFormat = InsertTextFormat.Snippet;
-                    c.command = mergeCommands(c.command, {
-                        title: '',
-                        command: Commands.triggerParameterHints,
-                        arguments: [params.textDocument.uri],
-                    });
-                }
+                updateInsertTextForAutoParensIfNeeded(c, params.textDocument.uri);
             }
         }
         return completionList;
@@ -545,7 +543,7 @@ class PylanceServer extends LanguageServerBase {
         rootPath: string
     ): PylanceWorkspaceServiceInstance {
         const src = super.createWorkspaceServiceInstance(workspace, rootPath);
-        return { ...src, completeFunctionParens: false };
+        return { ...src, completeFunctionParens: false, enableExtractCodeAction: false };
     }
 
     async updateSettingsForWorkspace(
@@ -556,6 +554,8 @@ class PylanceServer extends LanguageServerBase {
         await super.updateSettingsForWorkspace(workspace, serverSettings);
         (workspace as PylanceWorkspaceServiceInstance).completeFunctionParens = !!(serverSettings as PylanceServerSettings)
             .completeFunctionParens;
+        (workspace as PylanceWorkspaceServiceInstance).enableExtractCodeAction = !!(serverSettings as PylanceServerSettings)
+            .enableExtractCodeAction;
 
         if (workspace.disableLanguageServices) {
             return;
@@ -601,6 +601,23 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
         }
 
         return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+    }
+}
+
+export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, textDocumentUri: string) {
+    const aliasContext = (item.data as CompletionItemData)?.isInImport;
+    if (aliasContext) {
+        return;
+    }
+
+    if (item.kind === CompletionItemKind.Function || item.kind === CompletionItemKind.Method) {
+        item.insertText = (item.insertText ?? item.label) + '($0)';
+        item.insertTextFormat = InsertTextFormat.Snippet;
+        item.command = mergeCommands(item.command, {
+            title: '',
+            command: Commands.triggerParameterHints,
+            arguments: [textDocumentUri],
+        });
     }
 }
 

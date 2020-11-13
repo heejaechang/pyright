@@ -8,7 +8,7 @@
  */
 
 import { assert } from '../common/debug';
-import { ParameterCategory } from '../parser/parseNodes';
+import { ExpressionNode, ParameterCategory } from '../parser/parseNodes';
 import { FunctionDeclaration } from './declaration';
 import { Symbol, SymbolTable } from './symbol';
 
@@ -79,6 +79,8 @@ export type Type =
     | ModuleType
     | UnionType
     | TypeVarType;
+
+export type TypeVarScopeId = string;
 
 export class EnumLiteral {
     constructor(public className: string, public itemName: string) {}
@@ -198,7 +200,8 @@ export namespace ModuleType {
 
 export interface DataClassEntry {
     name: string;
-    hasDefault: boolean;
+    hasDefault?: boolean;
+    defaultValueExpression?: ExpressionNode;
     includeInInit: boolean;
     type: Type;
 }
@@ -295,6 +298,7 @@ interface ClassDetails {
     aliasClass?: ClassType;
     fields: SymbolTable;
     typeParameters: TypeVarType[];
+    typeVarScopeId?: TypeVarScopeId;
     docString?: string;
     dataClassEntries?: DataClassEntry[];
     typedDictEntries?: Map<string, TypedDictEntry>;
@@ -587,6 +591,16 @@ export namespace ClassType {
             return false;
         }
 
+        // Special-case NamedTuple and Tuple classes because we rewrite the base classes
+        // in these cases.
+        if (ClassType.isBuiltIn(classType, 'NamedTuple') && ClassType.isBuiltIn(type2, 'NamedTuple')) {
+            return true;
+        }
+        if (ClassType.isBuiltIn(classType, 'Tuple') && ClassType.isBuiltIn(type2, 'Tuple')) {
+            return true;
+        }
+
+        // Make sure the base classes match.
         for (let i = 0; i < class1Details.baseClasses.length; i++) {
             if (!isTypeSame(class1Details.baseClasses[i], class2Details.baseClasses[i], recursionCount + 1)) {
                 return false;
@@ -727,6 +741,7 @@ export interface FunctionParameter {
     isNameSynthesized?: boolean;
     isTypeInferred?: boolean;
     hasDefault?: boolean;
+    defaultValueExpression?: ExpressionNode;
     defaultType?: Type;
     hasDeclaredType?: boolean;
     type: Type;
@@ -799,6 +814,7 @@ interface FunctionDetails {
     parameters: FunctionParameter[];
     declaredReturnType?: Type;
     declaration?: FunctionDeclaration;
+    typeVarScopeId?: TypeVarScopeId;
     builtInName?: string;
     docString?: string;
 
@@ -817,10 +833,6 @@ export interface FunctionType extends TypeBase {
 
     details: FunctionDetails;
 
-    // This flag is set when the first parameter is stripped
-    // (see "clone" method below).
-    ignoreFirstParamOfDeclaration?: boolean;
-
     // A function type can be specialized (i.e. generic type
     // variables replaced by a concrete type).
     specializedTypes?: SpecializedFunctionTypes;
@@ -830,7 +842,8 @@ export interface FunctionType extends TypeBase {
 }
 
 export interface ParamSpecEntry {
-    name: string;
+    category: ParameterCategory;
+    name?: string;
     type: Type;
 }
 
@@ -893,7 +906,6 @@ export namespace FunctionType {
             newFunction.details.parameters = type.details.parameters.slice(1);
             newFunction.details.flags &= ~(FunctionTypeFlags.ConstructorMethod | FunctionTypeFlags.ClassMethod);
             newFunction.details.flags |= FunctionTypeFlags.StaticMethod;
-            newFunction.ignoreFirstParamOfDeclaration = true;
         }
 
         if (type.typeAliasInfo !== undefined) {
@@ -977,9 +989,9 @@ export namespace FunctionType {
         if (paramTypes) {
             newFunction.details.parameters = paramTypes.map((specEntry, index) => {
                 return {
-                    category: ParameterCategory.Simple,
+                    category: specEntry.category,
                     name: specEntry.name,
-                    isNameSynthesized: true,
+                    isNameSynthesized: false,
                     hasDeclaredType: true,
                     type: specEntry.type,
                 };
@@ -1275,9 +1287,8 @@ export interface TypeVarType extends TypeBase {
     details: TypeVarDetails;
 
     // An ID that uniquely identifies the scope in which this TypeVar is
-    // defined. It corresponds to the parse node ID of the class or
-    // function.
-    scopeId?: number;
+    // defined.
+    scopeId?: TypeVarScopeId;
 
     // String formatted as <name>.<scopeId>.
     scopeName?: string;
@@ -1308,15 +1319,15 @@ export namespace TypeVarType {
         return newInstance;
     }
 
-    export function cloneForScopeId(type: TypeVarType, scopeId: number) {
+    export function cloneForScopeId(type: TypeVarType, scopeId: string) {
         const newInstance: TypeVarType = { ...type };
         newInstance.scopeName = makeScopeName(type.details.name, scopeId);
         newInstance.scopeId = scopeId;
         return newInstance;
     }
 
-    export function makeScopeName(name: string, scopeId: number) {
-        return `${name}.${scopeId.toString()}`;
+    export function makeScopeName(name: string, scopeId: string) {
+        return `${name}.${scopeId}`;
     }
 
     function create(name: string, isParamSpec: boolean, isSynthesized: boolean, typeFlags: TypeFlags) {

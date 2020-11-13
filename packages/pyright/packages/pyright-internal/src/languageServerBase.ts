@@ -173,6 +173,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasHierarchicalDocumentSymbolCapability = false;
     protected _hoverContentFormat: MarkupKind = MarkupKind.PlainText;
     protected _completionDocFormat: MarkupKind = MarkupKind.PlainText;
+    protected _signatureDocFormat: MarkupKind = MarkupKind.PlainText;
     protected _supportsUnnecessaryDiagnosticTag = false;
     protected _defaultClientConfig: any;
 
@@ -382,11 +383,21 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         // For any non-workspace paths, use the node file watcher.
-        const nodeWatchers = nonWorkspacePaths.map((path) => {
-            return fs.watch(path, { recursive: true }, (event, filename) =>
-                listener(event as FileWatcherEventType, filename)
-            );
-        });
+        let nodeWatchers: fs.FSWatcher[];
+
+        try {
+            nodeWatchers = nonWorkspacePaths.map((path) => {
+                return fs.watch(path, { recursive: true }, (event, filename) =>
+                    listener(event as FileWatcherEventType, filename)
+                );
+            });
+        } catch (e) {
+            // Versions of node >= 14 are reportedly throwing exceptions
+            // when calling fs.watch with recursive: true. Just swallow
+            // the exception and proceed.
+            this.console.error(`Exception received when installing recursive file system watcher`);
+            nodeWatchers = [];
+        }
 
         const fileWatcher: InternalFileWatcher = {
             close() {
@@ -579,6 +590,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             const signatureHelpResults = workspace.serviceInstance.getSignatureHelpForPosition(
                 filePath,
                 position,
+                this._signatureDocFormat,
                 token
             );
             if (!signatureHelpResults) {
@@ -596,7 +608,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                     );
                 }
 
-                const sigInfo = SignatureInformation.create(sig.label, sig.documentation, ...paramInfo);
+                const sigInfo = SignatureInformation.create(sig.label, undefined, ...paramInfo);
+                sigInfo.documentation = sig.documentation;
                 sigInfo.activeParameter = sig.activeParameter;
                 return sigInfo;
             });
@@ -923,6 +936,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._hoverContentFormat = this._getCompatibleMarkupKind(capabilities.textDocument?.hover?.contentFormat);
         this._completionDocFormat = this._getCompatibleMarkupKind(
             capabilities.textDocument?.completion?.completionItem?.documentationFormat
+        );
+        this._signatureDocFormat = this._getCompatibleMarkupKind(
+            capabilities.textDocument?.signatureHelp?.signatureInformation?.documentationFormat
         );
         const supportedDiagnosticTags = capabilities.textDocument?.publishDiagnostics?.tagSupport?.valueSet || [];
         this._supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(

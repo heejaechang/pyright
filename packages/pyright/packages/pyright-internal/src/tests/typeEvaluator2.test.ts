@@ -102,6 +102,12 @@ test('NewType3', () => {
     TestUtils.validateResults(analysisResults, 4);
 });
 
+test('isInstance1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance1.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('isInstance2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance2.py']);
 
@@ -784,6 +790,11 @@ test('MemberAccess6', () => {
     TestUtils.validateResults(analysisResults, 2);
 });
 
+test('MemberAccess7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess7.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('DataClass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass1.py']);
 
@@ -927,6 +938,14 @@ test('ParamSpec4', () => {
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec4.py'], configOptions);
     TestUtils.validateResults(results, 5);
+});
+
+test('ParamSpec5', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec5.py'], configOptions);
+    TestUtils.validateResults(results, 0);
 });
 
 test('ClassVar1', () => {

@@ -41,7 +41,7 @@ describe('Settings migration', () => {
 
     test('Do nothing if Pylance is not default language server', async () => {
         await migrateV1Settings(instance(appConfigMock), instance(appShell));
-        verify(appConfigMock.updateSetting(anyString(), anything(), anything())).never();
+        verify(appConfigMock.updateSetting(anything(), anyString(), anything(), anything())).never();
         verify(appShell.showInformationMessage(anyString())).never();
     });
 
@@ -51,7 +51,7 @@ describe('Settings migration', () => {
                 for (const workspaceFolderValue of [undefined, value]) {
                     // Test all combinations of global, workspace and folder settings.
                     test(`Do nothing if ${from} is already migrated with global = ${globalValue}, workspace = ${workspaceValue}, folder = ${workspaceFolderValue}`, async () => {
-                        when(appConfigMock.inspect<any>(anyString())).thenCall((arg: string) => {
+                        when(appConfigMock.inspect<any>('python', anyString())).thenCall((arg: string) => {
                             return arg === to
                                 ? {
                                       key: to,
@@ -62,7 +62,7 @@ describe('Settings migration', () => {
                                 : undefined;
                         });
                         await migrateSetting(from, to, instance(appConfigMock));
-                        verify(appConfigMock.updateSetting(anyString(), anything(), anything())).never();
+                        verify(appConfigMock.updateSetting(anything(), anyString(), anything(), anything())).never();
                     });
                 }
             }
@@ -75,20 +75,22 @@ describe('Settings migration', () => {
                 for (const workspaceFolderValue of [undefined, value]) {
                     // Test all combinations of global, workspace and folder settings.
                     test(`Migrate ${from} to ${to} with global = ${globalValue}, workspace = ${workspaceValue}, folder = ${workspaceFolderValue}`, async () => {
-                        when(appConfigMock.inspect<any>(anyString())).thenCall((arg: string) => {
-                            if (arg === to) {
+                        when(appConfigMock.inspect<any>('python', anyString())).thenCall(
+                            (_section: string, arg: string) => {
+                                if (arg === to) {
+                                    return undefined;
+                                }
+                                if (arg === from) {
+                                    return {
+                                        key: from,
+                                        globalValue,
+                                        workspaceValue,
+                                        workspaceFolderValue,
+                                    };
+                                }
                                 return undefined;
                             }
-                            if (arg === from) {
-                                return {
-                                    key: from,
-                                    globalValue,
-                                    workspaceValue,
-                                    workspaceFolderValue,
-                                };
-                            }
-                            return undefined;
-                        });
+                        );
 
                         await migrateSetting(from, to, instance(appConfigMock));
 
@@ -117,10 +119,10 @@ describe('Settings migration', () => {
         for (const workspaceValue of [undefined, value]) {
             for (const workspaceFolderValue of [undefined, value]) {
                 test(`Verify informational message is logged after migration with global = ${globalValue}, workspace = ${workspaceValue}, folder = ${workspaceFolderValue}`, async () => {
-                    when(appConfigMock.getSetting<string>(LanguageServerSettingName)).thenReturn(PylanceName);
+                    when(appConfigMock.getSetting<string>('python', LanguageServerSettingName)).thenReturn(PylanceName);
                     // Even calls are for 'to' and odd calls are for 'from'
                     let call = 0;
-                    when(appConfigMock.inspect<any>(anyString())).thenCall((arg: string) => {
+                    when(appConfigMock.inspect<any>('python', anyString())).thenCall((arg: string) => {
                         return call++ & 1
                             ? {
                                   key: arg,
@@ -149,8 +151,8 @@ describe('Settings migration', () => {
         const entries = Array.from(settingsMigrationMap.entries());
         const tos = entries.map(([_, to]) => to);
 
-        when(appConfigMock.getSetting<string>(LanguageServerSettingName)).thenReturn(PylanceName);
-        when(appConfigMock.inspect<any>(anyString())).thenCall((arg: string) => {
+        when(appConfigMock.getSetting<string>('python', LanguageServerSettingName)).thenReturn(PylanceName);
+        when(appConfigMock.inspect<any>('python', anyString())).thenCall((_section: string, arg: string) => {
             if (tos.includes(arg)) {
                 return undefined;
             }
@@ -159,7 +161,7 @@ describe('Settings migration', () => {
                 globalValue: value,
             };
         });
-        when(appConfigMock.updateSetting(anyString(), anything(), anything())).thenThrow({
+        when(appConfigMock.updateSetting('python', anyString(), anything(), anything())).thenThrow({
             name: 'error',
             message: 'message',
         });
@@ -173,14 +175,15 @@ describe('Settings migration', () => {
     });
 
     function verifyUpdate(name: string, target: ConfigurationTarget, appConfigMock: AppConfiguration) {
-        const [n, v, tgt] = capture(appConfigMock.updateSetting).first();
+        const [section, n, v, tgt] = capture(appConfigMock.updateSetting).first();
+        expect(section).toEqual('python');
         expect(n).toEqual(name);
         expect(v).toEqual(value);
         expect(tgt).toEqual(target);
     }
 
     function verifyNotUpdated(target: ConfigurationTarget): void {
-        verify(appConfigMock.updateSetting(anyString(), anything(), target)).never();
+        verify(appConfigMock.updateSetting(anything(), anyString(), anything(), target)).never();
     }
 
     function getPackageJson(): any {
