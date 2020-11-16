@@ -1,0 +1,38 @@
+name: 'Tag prerelease for stable'
+
+# Tags a prerelease for each stable tag.
+# For example, tagging 2020.11.1 will tag the same commit as 2020.11.2-pre.1.
+
+on:
+  push:
+    tags:
+      # Stable CalVer tags without 'v' prefix
+      - '20[0-9][0-9].[0-9]+.[0-9]+'
+      - '!20[0-9][0-9].[0-9]+.[0-9]+-*'
+
+jobs:
+  create:
+    # The above tag filter should work, but just in case, don't run when `-` is in the tag.
+    if: github.repository == 'microsoft/pyrx' && ! contains(github.ref, '-')
+    runs-on: ubuntu-18.04
+    name: Create prerelease tag
+
+    steps:
+      - name: Bump version
+        id: version
+        run:
+          export VERSION=$(echo "${{ github.ref }}" | sed -e 's:^refs/tags/::' | perl -pe 's/(\d+.\d+.)(\d+)/$1.($2+1)."-pre.1"/e')
+          echo Tagging version $VERSION
+          echo "::set-output name=version::$VERSION"
+
+      - name: Create tag
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            github.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/tags/${{ steps.version.outputs.version }}",
+              sha: context.sha
+            })

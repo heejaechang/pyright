@@ -36,7 +36,9 @@ export class BlobStorageImpl implements BlobStorage {
                 continue;
             }
 
-            if (stable && version.prerelease.length !== 0) {
+            // If searching for stable, only check stable releases.
+            // If searching for prereleases, only check prereleases.
+            if (stable !== !version.prerelease.length) {
                 continue;
             }
 

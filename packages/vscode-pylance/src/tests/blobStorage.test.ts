@@ -114,6 +114,26 @@ describe('Blob storage client', () => {
         expect(blob!.contentLength).toBe(expectedBlob.properties.contentLength);
     });
 
+    test('getLatest unstable only', async () => {
+        const { blobs, blobMap } = makeBlobMap(
+            ['2020.11.1', true],
+            ['2020.10.1-pre.2', false],
+            ['2020.10.1-pre.1', false]
+        );
+
+        const expectedVersion = '2020.10.1-pre.2';
+        const expectedBlob = blobMap[expectedVersion];
+
+        when(blobStorageProxy.listBlobs()).thenCall(() => arrayToAsyncIterable(blobs));
+
+        const blob = await blobStorage.getLatest(false);
+        expect(blob).toBeDefined();
+
+        expect(blob!.version.format()).toBe(expectedVersion);
+        expect(blob!.name).toBe(expectedBlob.name);
+        expect(blob!.contentLength).toBe(expectedBlob.properties.contentLength);
+    });
+
     test('download', async () => {
         when(blobStorageProxy.listBlobs()).thenCall(() => arrayToAsyncIterable(blobs));
         when(blobStorageProxy.downloadBlob(anything(), anything(), anything())).thenResolve();

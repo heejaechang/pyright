@@ -61,7 +61,7 @@ import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
 import { mergeCommands } from './commands/multiCommand';
-import { PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { IS_PRERELEASE, PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -179,7 +179,7 @@ class PylanceServer extends LanguageServerBase {
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
             autoImportCompletions: true,
-            indexing: false,
+            indexing: IS_PRERELEASE,
             completeFunctionParens: false,
             enableExtractCodeAction: false,
         };
