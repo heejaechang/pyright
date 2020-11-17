@@ -571,8 +571,12 @@ class PylanceServer extends LanguageServerBase {
                     addMeasurementsToEvent(importEvent, resolver.importMetrics);
                     shouldSend = true;
                 }
+
                 const nativeModuleNames = resolver.importMetrics.getAndResetNativeModuleNames();
-                nativeModuleNames.forEach((m) => nativeModules.add(m));
+                if (nativeModuleNames.length > 0) {
+                    nativeModuleNames.forEach((m) => nativeModules.add(m));
+                    shouldSend = true;
+                }
             }
         });
 
