@@ -95,7 +95,6 @@ import {
     Type,
     TypeBase,
     TypeCategory,
-    TypeVarType,
     UnknownType,
 } from './types';
 import {
@@ -290,13 +289,11 @@ export class Checker extends ParseTreeWalker {
                 const annotationNode = param.typeAnnotation || param.typeAnnotationComment;
                 if (annotationNode) {
                     const paramType = functionTypeResult.functionType.details.parameters[index].type;
-                    const diag = new DiagnosticAddendum();
-                    const scopeId = this._evaluator.getScopeIdForNode(node);
-                    if (this._containsCovariantTypeVar(paramType, scopeId, diag)) {
+                    if (isTypeVar(paramType) && paramType.details.isCovariant && !paramType.details.isSynthesized) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.paramTypeCovariant() + diag.getString(),
+                            Localizer.Diagnostic.paramTypeCovariant(),
                             annotationNode
                         );
                     }
@@ -869,7 +866,7 @@ export class Checker extends ParseTreeWalker {
             prevOverload,
             new DiagnosticAddendum(),
             /* typeVarMap */ undefined,
-            CanAssignFlags.MatchTypeVarsExactly |
+            CanAssignFlags.SkipSolveTypeVars |
                 CanAssignFlags.SkipFunctionReturnTypeCheck |
                 CanAssignFlags.DisallowAssignFromAny
         );
@@ -1995,24 +1992,6 @@ export class Checker extends ParseTreeWalker {
         return !isValid;
     }
 
-    private _containsCovariantTypeVar(type: Type, scopeId: string, diag: DiagnosticAddendum): boolean {
-        let isValid = true;
-
-        doForSubtypes(type, (subtype) => {
-            if (isTypeVar(subtype) && subtype.details.isCovariant) {
-                if (subtype.scopeId !== scopeId) {
-                    diag.addMessage(
-                        Localizer.DiagnosticAddendum.typeVarIsCovariant().format({ name: subtype.details.name })
-                    );
-                    isValid = false;
-                }
-            }
-            return undefined;
-        });
-
-        return !isValid;
-    }
-
     // Validates that any overridden member variables are not marked
     // as Final in parent classes.
     private _validateFinalMemberOverrides(classType: ClassType) {
@@ -2143,7 +2122,8 @@ export class Checker extends ParseTreeWalker {
                             Localizer.Diagnostic.methodOverridden().format({
                                 name,
                                 className: baseClassAndSymbol.classType.details.name,
-                            }) + diagAddendum.getString(),
+                                type: this._evaluator.printType(typeOfSymbol, /* expandTypeAlias */ false),
+                            }),
                             lastDecl.node
                         );
 

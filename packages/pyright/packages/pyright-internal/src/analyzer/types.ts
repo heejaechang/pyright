@@ -90,6 +90,7 @@ export type LiteralValue = number | boolean | string | EnumLiteral;
 
 export type TypeSourceId = string | undefined;
 export const maxTypeRecursionCount = 16;
+export const maxApplyTypesPasses = 4;
 
 export type InheritanceChain = (ClassType | UnknownType)[];
 
@@ -97,6 +98,7 @@ interface TypeAliasInfo {
     aliasName: string;
     typeParameters?: TypeVarType[];
     typeArguments?: Type[];
+    typeVarScopeId: TypeVarScopeId;
 }
 
 interface TypeBase {
@@ -114,13 +116,20 @@ export namespace TypeBase {
         return (type.flags & TypeFlags.Instance) !== 0;
     }
 
-    export function cloneForTypeAlias(type: Type, name: string, typeParams?: TypeVarType[], typeArgs?: Type[]): Type {
+    export function cloneForTypeAlias(
+        type: Type,
+        name: string,
+        typeVarScopeId: TypeVarScopeId,
+        typeParams?: TypeVarType[],
+        typeArgs?: Type[]
+    ): Type {
         const typeClone = { ...type };
 
         typeClone.typeAliasInfo = {
             aliasName: name,
             typeParameters: typeParams,
             typeArguments: typeArgs,
+            typeVarScopeId,
         };
 
         return typeClone;
@@ -283,6 +292,12 @@ export const enum ClassTypeFlags {
     // the class refers to itself (e.g. uses itself as a type
     // argument to one of its generic base classes).
     PartiallyConstructed = 1 << 15,
+
+    // The class or one of its ancestors defines a __class_getitem__
+    // method that is used for subscripting. This is not set if the
+    // class is generic, and therefore supports standard subscripting
+    // semantics.
+    HasCustomClassGetItem = 1 << 16,
 }
 
 interface ClassDetails {
@@ -538,6 +553,10 @@ export namespace ClassType {
 
     export function isPartiallyConstructed(classType: ClassType) {
         return !!(classType.details.flags & ClassTypeFlags.PartiallyConstructed);
+    }
+
+    export function hasCustomClassGetItem(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.HasCustomClassGetItem);
     }
 
     export function getAliasClass(classType: ClassType): ClassType {
@@ -1277,6 +1296,7 @@ export interface TypeVarDetails {
 
     // Used for recursive type aliases.
     recursiveTypeAliasName?: string;
+    recursiveTypeAliasScopeId?: TypeVarScopeId;
 
     // Type parameters for a recursive type alias.
     recursiveTypeParameters?: TypeVarType[];
@@ -1734,13 +1754,6 @@ export function combineTypes(types: Type[], maxSubtypeCount?: number): Type {
         }
         return 0;
     });
-
-    // If the union contains a NoReturn, remove it. NoReturn should
-    // be used only when it's by itself.
-    const isNoReturn = (t: Type) => isObject(t) && ClassType.isBuiltIn(t.classType, 'NoReturn');
-    if (expandedTypes.find((t) => isNoReturn(t))) {
-        expandedTypes = expandedTypes.filter((t) => !isNoReturn(t));
-    }
 
     // If removing all NoReturn types results in no remaining types,
     // convert it to an unknown.

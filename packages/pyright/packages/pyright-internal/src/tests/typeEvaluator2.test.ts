@@ -225,7 +225,7 @@ test('GenericTypes4', () => {
 test('GenericTypes5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes5.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('GenericTypes6', () => {
@@ -861,6 +861,12 @@ test('Callable1', () => {
     TestUtils.validateResults(analysisResults, 3);
 });
 
+test('Callable2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable2.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('ThreePartVersion1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['threePartVersion1.py']);
 
@@ -873,7 +879,7 @@ test('Unions1', () => {
     // Analyze with Python 3.9 settings. This will generate errors.
     configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults3_9 = TestUtils.typeAnalyzeSampleFiles(['unions1.py'], configOptions);
-    TestUtils.validateResults(analysisResults3_9, 7);
+    TestUtils.validateResults(analysisResults3_9, 9);
 
     // Analyze with Python 3.10 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
@@ -975,13 +981,13 @@ test('TypeVar2', () => {
 test('TypeVar3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar3.py']);
 
-    TestUtils.validateResults(analysisResults, 6);
+    TestUtils.validateResults(analysisResults, 8);
 });
 
 test('TypeVar4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar4.py']);
 
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Annotated1', () => {
@@ -1106,4 +1112,10 @@ test('Constructor3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor3.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('ClassGetItem1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classGetItem1.py']);
+
+    TestUtils.validateResults(analysisResults, 0, 1);
 });
