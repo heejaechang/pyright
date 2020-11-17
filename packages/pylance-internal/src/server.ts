@@ -184,6 +184,8 @@ class PylanceServer extends LanguageServerBase {
             enableExtractCodeAction: false,
         };
 
+        let forceProgressBar = false;
+
         try {
             const pythonSection = await this.getConfiguration(workspace.rootUri, pythonSectionName);
             if (pythonSection) {
@@ -247,6 +249,8 @@ class PylanceServer extends LanguageServerBase {
                 serverSettings.indexing = pythonAnalysisSection.indexing ?? serverSettings.indexing;
                 serverSettings.enableExtractCodeAction =
                     pythonAnalysisSection.enableExtractCodeAction ?? serverSettings.enableExtractCodeAction;
+
+                forceProgressBar = !!pythonAnalysisSection._forceProgressBar;
             }
         } catch (error) {
             this.console.error(`Error reading settings: ${error}`);
@@ -254,6 +258,7 @@ class PylanceServer extends LanguageServerBase {
 
         // If typeCheckingMode is not 'off' or if there is any custom rule enabled, then progress bar is enabled.
         this._progressBarEnabled =
+            forceProgressBar ||
             serverSettings.typeCheckingMode !== 'off' ||
             Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
 
