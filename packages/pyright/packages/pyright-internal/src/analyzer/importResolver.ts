@@ -1273,7 +1273,7 @@ export class ImportResolver {
         }
 
         // Don't add directories with dunder names like "__pycache__".
-        if (isDunderName(suggestionToAdd)) {
+        if (isDunderName(suggestionToAdd) && suggestionToAdd !== '__future__') {
             return;
         }
 

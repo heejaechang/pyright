@@ -774,6 +774,12 @@ test('Tuples10', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Tuples11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples11.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
@@ -1007,7 +1013,7 @@ test('TypeAlias4', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults3_9 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
-    TestUtils.validateResults(analysisResults3_9, 1);
+    TestUtils.validateResults(analysisResults3_9, 6);
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults3_10 = TestUtils.typeAnalyzeSampleFiles(['typeAlias4.py'], configOptions);
@@ -1033,7 +1039,10 @@ test('TypeAlias7', () => {
 });
 
 test('TypeAlias8', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias8.py']);
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias8.py'], configOptions);
 
     TestUtils.validateResults(analysisResults, 4);
 });
