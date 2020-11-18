@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "scrape_module.py",
+            "console": "integratedTerminal",
+            "args": ["numpy.core._multiarray_umath"]
+        }
+    ]
+}

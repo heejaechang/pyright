@@ -371,29 +371,29 @@ class DocstringSigParser(object):
         """Scans the string for the first closing parenthesis,
         handling nesting, which is the best heuristic we have for
         an example call at the start of the docstring."""
+        # Note: line may or may not contain complete (...) and closing ')' may be on another line.
+        # We also prevent going too far into the expression so it does not pick random x() in comments.
+        expr = expr.split("\n\n")[0]
         if not expr or ")" not in expr:
             return None
+
         found = []
         n = 0
-        for line in expr.splitlines():
-            found_one = False
-            line = line.strip("\r\n\t ")
-            if not line:
-                break
-            for i, c in enumerate(line):
-                if c == ")":
-                    n -= 1
-                    if n == 0:
-                        found.append(line[: i + 1])
-                        found_one = True
-                elif c == "(":
-                    n += 1
+        expr = (
+            expr.replace("\r", " ")
+            .replace("\n", " ")
+            .replace("\t", " ")
+            .replace(" ", "")
+        )
 
-            if not found_one:
-                break
-        if found:
-            found.sort(key=len)
-            return found[-1]
+        for i, c in enumerate(expr):
+            if c == ")":
+                n -= 1
+                if n == 0:
+                    return expr[: i + 1]
+            elif c == "(":
+                n += 1
+
         return None
 
 
@@ -610,7 +610,7 @@ class Signature(object):
 
         # TODO: Combine this with the check for "See help(type(self))" in MemberInfo.
         if self.name in ("__init__", "__new__") and fallback_doc:
-            self.fullsig = ds_parser.argspec(fallback_doc, override_name=self.name)
+            self.fullsig = ds_parser.argspec(doc=fallback_doc, override_name=self.name)
         elif not hasattr(self.callable, "__call__") and hasattr(
             self.callable, "__get__"
         ):

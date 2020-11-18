@@ -46,7 +46,7 @@ class _MemDebug(_mod_builtins.object):
 
 class AncestorsIterator(_ElementMatchIterator):
     'AncestorsIterator(self, node, tag=None)\n    Iterates over the ancestors of an element (from parent to parent).\n    '
-    def __init__(self, fromparenttoparent) -> None:
+    def __init__(self, node, tag=...) -> None:
         'AncestorsIterator(self, node, tag=None)\n    Iterates over the ancestors of an element (from parent to parent).\n    '
         ...
     
@@ -2310,7 +2310,7 @@ def SubElement(_parent, _tag, attrib, nsmap, **_extra) -> typing.Any:
 
 class TreeBuilder(_SaxParserTarget):
     'TreeBuilder(self, element_factory=None, parser=None,\n                    comment_factory=None, pi_factory=None,\n                    insert_comments=True, insert_pis=True)\n\n    Parser target that builds a tree from parse event callbacks.\n\n    The factory arguments can be used to influence the creation of\n    elements, comments and processing instructions.\n\n    By default, comments and processing instructions are inserted into\n    the tree, but they can be ignored by passing the respective flags.\n\n    The final tree is returned by the ``close()`` method.\n    '
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, element_factory=..., parser=..., comment_factory=..., pi_factory=..., insert_comments=..., insert_pis=...) -> None:
         'TreeBuilder(self, element_factory=None, parser=None,\n                    comment_factory=None, pi_factory=None,\n                    insert_comments=True, insert_pis=True)\n\n    Parser target that builds a tree from parse event callbacks.\n\n    The factory arguments can be used to influence the creation of\n    elements, comments and processing instructions.\n\n    By default, comments and processing instructions are inserted into\n    the tree, but they can be ignored by passing the respective flags.\n\n    The final tree is returned by the ``close()`` method.\n    '
         ...
     
