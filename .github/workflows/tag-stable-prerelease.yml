@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Bump version
         id: version
-        run:
+        run: |
           export VERSION=$(echo "${{ github.ref }}" | sed -e 's:^refs/tags/::' | perl -pe 's/(\d+.\d+.)(\d+)/$1.($2+1)."-pre.1"/e')
           echo Tagging version $VERSION
           echo "::set-output name=version::$VERSION"
