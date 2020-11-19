@@ -158,6 +158,7 @@ interface ImportAliasData {
 
 export class AutoImporter {
     private _importStatements: ImportStatements;
+    private _patternMatcher: (pattern: string, name: string) => boolean;
 
     constructor(
         private _execEnvironment: ExecutionEnvironment,
@@ -166,8 +167,10 @@ export class AutoImporter {
         private _invocationPosition: Position,
         private _excludes: string[],
         private _moduleSymbolMap: ModuleSymbolMap,
-        private _libraryMap?: Map<string, IndexResults>
+        private _libraryMap?: Map<string, IndexResults>,
+        patternMatcher?: (pattern: string, name: string) => boolean
     ) {
+        this._patternMatcher = patternMatcher ?? StringUtils.isPatternInSymbol;
         this._importStatements = getTopLevelImports(this._parseResults.parseTree);
     }
 
@@ -512,9 +515,7 @@ export class AutoImporter {
             return word === name;
         }
 
-        return word.length > 2
-            ? StringUtils.computeCompletionSimilarity(word, name) > similarityLimit
-            : word.length > 0 && name.startsWith(word);
+        return word.length > 0 && this._patternMatcher(word, name);
     }
 
     private _containsName(name: string, source: string | undefined, results: AutoImportResult[]) {
