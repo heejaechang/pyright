@@ -135,6 +135,7 @@ export interface AutoImportResult {
     name: string;
     symbol?: Symbol;
     source?: string;
+    insertionText: string;
     edits: TextEditAction[];
     alias?: string;
     kind?: CompletionItemKind;
@@ -337,6 +338,7 @@ export class AutoImporter {
                 name,
                 symbol: autoImportSymbol.symbol,
                 source: importSource,
+                insertionText: aliasName ?? name,
                 edits: autoImportTextEdits,
                 alias: aliasName,
                 kind: autoImportSymbol.kind,
@@ -398,6 +400,7 @@ export class AutoImporter {
                     symbol: importAliasData.symbol,
                     kind: importAliasData.kind,
                     source: importAliasData.importParts.importFrom,
+                    insertionText: aliasName ?? importAliasData.importParts.importName,
                     edits: autoImportTextEdits,
                 });
             });

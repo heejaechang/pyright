@@ -2,39 +2,51 @@
 // @indexer: true
 
 // @filename: test1.py
-//// os[|/*marker1*/|]
+//// [|/*import1*/|][|os/*marker1*/|]
 
 // @filename: test2.py
-//// sys[|/*marker2*/|]
+//// [|/*import2*/|][|sys/*marker2*/|]
 
 helper.openFile('/test1.py');
 
-// @ts-ignore
-await helper.verifyCompletion('included', 'markdown', {
-    marker1: {
-        completions: [
-            {
-                label: 'os',
-                kind: Consts.CompletionItemKind.Module,
-                documentation: '```\nimport os\n```',
-                detail: 'Auto-import',
-            },
-        ],
-    },
-});
+{
+    const import1Range = helper.getPositionRange('import1');
+    const marker1Range = helper.getPositionRange('marker1');
 
-helper.openFile('/test2.py');
+    // @ts-ignore
+    await helper.verifyCompletion('included', 'markdown', {
+        marker1: {
+            completions: [
+                {
+                    label: 'os',
+                    kind: Consts.CompletionItemKind.Module,
+                    documentation: '```\nimport os\n```',
+                    detail: 'Auto-import',
+                    textEdit: { range: marker1Range, newText: 'os' },
+                    additionalTextEdits: [{ range: import1Range, newText: 'import os\n\n\n' }],
+                },
+            ],
+        },
+    });
 
-// @ts-ignore
-await helper.verifyCompletion('included', 'markdown', {
-    marker2: {
-        completions: [
-            {
-                label: 'sys',
-                kind: Consts.CompletionItemKind.Module,
-                documentation: '```\nimport sys\n```',
-                detail: 'Auto-import',
-            },
-        ],
-    },
-});
+    helper.openFile('/test2.py');
+
+    const import2Range = helper.getPositionRange('import2');
+    const marker2Range = helper.getPositionRange('marker2');
+
+    // @ts-ignore
+    await helper.verifyCompletion('included', 'markdown', {
+        marker2: {
+            completions: [
+                {
+                    label: 'sys',
+                    kind: Consts.CompletionItemKind.Module,
+                    documentation: '```\nimport sys\n```',
+                    detail: 'Auto-import',
+                    textEdit: { range: marker2Range, newText: 'sys' },
+                    additionalTextEdits: [{ range: import2Range, newText: 'import sys\n\n\n' }],
+                },
+            ],
+        },
+    });
+}

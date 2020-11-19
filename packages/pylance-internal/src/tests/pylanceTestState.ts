@@ -276,6 +276,5 @@ export class PylanceTestState extends TestState {
         }
 
         super.verifyCompletionItem(expected, actual);
-        assert.strictEqual(actual.insertText, expected.insertionText);
     }
 }

@@ -626,13 +626,18 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
 }
 
 export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, textDocumentUri: string) {
-    const aliasContext = (item.data as CompletionItemData)?.isInImport;
-    if (aliasContext) {
+    const autoParenDisabledContext = (item.data as CompletionItemData)?.funcParensDisabled;
+    if (autoParenDisabledContext) {
         return;
     }
 
     if (item.kind === CompletionItemKind.Function || item.kind === CompletionItemKind.Method) {
-        item.insertText = (item.insertText ?? item.label) + '($0)';
+        if (item.textEdit) {
+            item.textEdit.newText = item.textEdit.newText + '($0)';
+        } else {
+            item.insertText = (item.insertText ?? item.label) + '($0)';
+        }
+
         item.insertTextFormat = InsertTextFormat.Snippet;
         item.command = mergeCommands(item.command, {
             title: '',

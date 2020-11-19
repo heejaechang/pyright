@@ -718,11 +718,7 @@ export class TestState {
                     const workspaceEdits = results as WorkspaceEdit;
                     for (const edits of Object.values(workspaceEdits.changes!)) {
                         for (const edit of edits) {
-                            if (
-                                map[name].edits!.filter(
-                                    (e) => rangesAreEqual(e.range, edit.range) && e.newText === edit.newText
-                                ).length !== 1
-                            ) {
+                            if (map[name].edits!.filter((e) => this._editsAreEqual(e, edit)).length !== 1) {
                                 this.raiseError(
                                     `doesn't contain expected result: ${stringify(map[name])}, actual: ${stringify(
                                         edits
@@ -1575,9 +1571,51 @@ export class TestState {
         }
     }
 
+    private _editsAreEqual(actual: TextEdit | undefined, expected: TextEdit | undefined) {
+        if (actual === expected) {
+            return true;
+        }
+
+        if (actual === undefined || expected === undefined) {
+            return false;
+        }
+
+        return rangesAreEqual(actual.range, expected.range) && actual.newText === expected.newText;
+    }
+
+    private _verifyEdit(actual: TextEdit | undefined, expected: TextEdit | undefined) {
+        if (!this._editsAreEqual(actual, expected)) {
+            this.raiseError(`doesn't contain expected result: ${stringify(expected)}, actual: ${stringify(actual)}`);
+        }
+    }
+
+    private _verifyEdits(actual: TextEdit[] | undefined, expected: TextEdit[] | undefined) {
+        actual = actual ?? [];
+        expected = expected ?? [];
+
+        let extra = expected.slice(0);
+        let left = actual.slice(0);
+
+        for (const item of actual) {
+            extra = extra.filter((e) => !this._editsAreEqual(e, item));
+        }
+
+        for (const item of expected) {
+            left = left.filter((e) => !this._editsAreEqual(e, item));
+        }
+
+        if (extra.length > 0 || left.length > 0) {
+            this.raiseError(`doesn't contain expected result: ${stringify(extra)}, actual: ${stringify(left)}`);
+        }
+    }
+
     protected verifyCompletionItem(expected: _.FourSlashCompletionItem, actual: CompletionItem) {
         assert.strictEqual(actual.label, expected.label);
         assert.strictEqual(actual.detail, expected.detail);
         assert.strictEqual(actual.kind, expected.kind);
+
+        assert.strictEqual(actual.insertText, expected.insertionText);
+        this._verifyEdit(actual.textEdit as TextEdit, expected.textEdit);
+        this._verifyEdits(actual.additionalTextEdits, expected.additionalTextEdits);
     }
 }

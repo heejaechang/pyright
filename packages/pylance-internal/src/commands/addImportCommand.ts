@@ -51,7 +51,7 @@ export class AddImportCommand implements ServerCommand {
             ...result.edits.map((e) => {
                 return { filePath, range: e.range, replacementText: e.replacementText };
             }),
-            { filePath, range, replacementText: result.alias ?? result.name },
+            { filePath, range, replacementText: result.insertionText },
         ]);
     }
 }

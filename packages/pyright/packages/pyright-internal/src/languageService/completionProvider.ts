@@ -189,7 +189,7 @@ export interface CompletionItemData {
     position: Position;
     autoImportText?: string;
     symbolLabel?: string;
-    isInImport?: boolean;
+    funcParensDisabled?: boolean;
 }
 
 // MemberAccessInfo attempts to gather info for unknown types
@@ -223,7 +223,7 @@ interface Edits {
 }
 
 interface SymbolDetail {
-    isInImport?: boolean;
+    funcParensDisabled?: boolean;
     autoImportSource?: string;
     autoImportAlias?: string;
     objectThrough?: ObjectType;
@@ -231,7 +231,7 @@ interface SymbolDetail {
 }
 
 interface CompletionDetail {
-    isInImport?: boolean;
+    funcParensDisabled?: boolean;
     typeDetail?: string;
     documentation?: string;
     autoImportText?: string;
@@ -530,7 +530,7 @@ export class CompletionProvider {
 
         if (curNode.parent.nodeType === ParseNodeType.Function && curNode === curNode.parent.name) {
             if (curNode.parent.decorators?.some((d) => this._isOverload(d))) {
-                return this._getMethodOverloadsCompletions(curNode);
+                return this._getMethodOverloadsCompletions(priorWord, curNode);
             }
 
             return undefined;
@@ -639,12 +639,12 @@ export class CompletionProvider {
             case ErrorExpressionCategory.MissingFunctionParameterList: {
                 if (node.child && node.child.nodeType === ParseNodeType.Name) {
                     if (node.decorators?.some((d) => this._isOverload(d))) {
-                        return this._getMethodOverloadsCompletions(node.child);
+                        return this._getMethodOverloadsCompletions(priorWord, node.child);
                     }
 
                     // Determine if the partial name is a method that's overriding
                     // a method in a base class.
-                    return this._getMethodOverrideCompletions(node.child);
+                    return this._getMethodOverrideCompletions(priorWord, node.child);
                 }
                 break;
             }
@@ -665,12 +665,13 @@ export class CompletionProvider {
         return { completionList };
     }
 
-    private _getMethodOverloadsCompletions(partialName: NameNode): CompletionResults | undefined {
+    private _getMethodOverloadsCompletions(priorWord: string, partialName: NameNode): CompletionResults | undefined {
         const symbolTable = getSymbolTable(this._evaluator, partialName);
         if (!symbolTable) {
             return undefined;
         }
 
+        const funcParensDisabled = partialName.parent?.nodeType === ParseNodeType.Function ? true : undefined;
         const completionList = CompletionList.create();
 
         const enclosingFunc = ParseTreeUtils.getEnclosingFunction(partialName);
@@ -692,13 +693,11 @@ export class CompletionProvider {
             }
 
             if (StringUtils.isPatternInSymbol(partialName.value, name)) {
-                const range: Range = {
-                    start: { line: this._position.line, character: this._position.character - partialName.length },
-                    end: { line: this._position.line, character: this._position.character },
-                };
-
-                const textEdit = TextEdit.replace(range, decl.node.name.value);
-                this._addSymbol(name, symbol, partialName.value, completionList, { edits: { textEdit } });
+                const textEdit = this._createReplaceEdits(priorWord, partialName, decl.node.name.value);
+                this._addSymbol(name, symbol, partialName.value, completionList, {
+                    funcParensDisabled,
+                    edits: { textEdit },
+                });
             }
         });
 
@@ -733,7 +732,7 @@ export class CompletionProvider {
         }
     }
 
-    private _getMethodOverrideCompletions(partialName: NameNode): CompletionResults | undefined {
+    private _getMethodOverrideCompletions(priorWord: string, partialName: NameNode): CompletionResults | undefined {
         const enclosingClass = ParseTreeUtils.getEnclosingClass(partialName, true);
         if (!enclosingClass) {
             return undefined;
@@ -759,19 +758,32 @@ export class CompletionProvider {
             const decl = getLastTypedDeclaredForSymbol(symbol);
             if (decl && decl.type === DeclarationType.Function) {
                 if (StringUtils.isPatternInSymbol(partialName.value, name)) {
-                    const range: Range = {
-                        start: { line: this._position.line, character: this._position.character - partialName.length },
-                        end: { line: this._position.line, character: this._position.character },
-                    };
-
                     const methodSignature = this._printMethodSignature(decl.node) + ':';
-                    const textEdit = TextEdit.replace(range, methodSignature);
-                    this._addSymbol(name, symbol, partialName.value, completionList, { edits: { textEdit } });
+                    const textEdit = this._createReplaceEdits(priorWord, partialName, methodSignature);
+                    this._addSymbol(name, symbol, partialName.value, completionList, {
+                        // method signature already contains ()
+                        funcParensDisabled: true,
+                        edits: { textEdit },
+                    });
                 }
             }
         });
 
         return { completionList };
+    }
+
+    private _createReplaceEdits(priorWord: string, node: ParseNode | undefined, text: string) {
+        const replaceOrInsertEndChar =
+            node?.nodeType === ParseNodeType.Name
+                ? this._position.character - priorWord.length + node.value.length
+                : this._position.character;
+
+        const range: Range = {
+            start: { line: this._position.line, character: this._position.character - priorWord.length },
+            end: { line: this._position.line, character: replaceOrInsertEndChar },
+        };
+
+        return TextEdit.replace(range, text);
     }
 
     private _printMethodSignature(node: FunctionNode): string {
@@ -969,7 +981,7 @@ export class CompletionProvider {
         // Add auto-import suggestions from other modules.
         // Ignore this check for privates, since they are not imported.
         if (this._configOptions.autoImportCompletions && !priorWord.startsWith('_') && !this._itemToResolve) {
-            this._getAutoImportCompletions(priorWord, completionList);
+            this._getAutoImportCompletions(priorWord, parseNode, completionList);
         }
 
         // Add literal values if appropriate.
@@ -1231,7 +1243,7 @@ export class CompletionProvider {
         }
     }
 
-    private _getAutoImportCompletions(priorWord: string, completionList: CompletionList) {
+    private _getAutoImportCompletions(priorWord: string, node: ParseNode, completionList: CompletionList) {
         if (!this._autoImportMaps) {
             return;
         }
@@ -1263,7 +1275,10 @@ export class CompletionProvider {
                 this._addSymbol(result.name, result.symbol, priorWord, completionList, {
                     autoImportSource: result.source,
                     autoImportAlias: result.alias,
-                    edits: { additionalTextEdits: result.edits },
+                    edits: {
+                        textEdit: this._createReplaceEdits(priorWord, undefined, result.insertionText),
+                        additionalTextEdits: result.edits,
+                    },
                 });
             } else {
                 this._addNameToCompletionList(
@@ -1273,7 +1288,10 @@ export class CompletionProvider {
                     completionList,
                     {
                         autoImportText: this._getAutoImportText(result.name, result.source, result.alias),
-                        edits: { additionalTextEdits: result.edits },
+                        edits: {
+                            textEdit: this._createReplaceEdits(priorWord, undefined, result.insertionText),
+                            additionalTextEdits: result.edits,
+                        },
                     }
                 );
             }
@@ -1453,7 +1471,7 @@ export class CompletionProvider {
                 if (!completionList.items.some((item) => item.label === name)) {
                     this._addSymbol(name, symbol, priorWord, completionList, {
                         objectThrough,
-                        isInImport,
+                        funcParensDisabled: isInImport,
                     });
                 }
             }
@@ -1622,7 +1640,7 @@ export class CompletionProvider {
 
             this._addNameToCompletionList(detail.autoImportAlias ?? name, itemKind, priorWord, completionList, {
                 autoImportText,
-                isInImport: detail.isInImport,
+                funcParensDisabled: detail.funcParensDisabled,
                 edits: detail.edits,
             });
         } else {
@@ -1631,7 +1649,7 @@ export class CompletionProvider {
             if (synthesizedType) {
                 const itemKind: CompletionItemKind = CompletionItemKind.Variable;
                 this._addNameToCompletionList(name, itemKind, priorWord, completionList, {
-                    isInImport: detail.isInImport,
+                    funcParensDisabled: detail.funcParensDisabled,
                     edits: detail.edits,
                 });
             }
@@ -1681,8 +1699,8 @@ export class CompletionProvider {
             position: this._position,
         };
 
-        if (detail?.isInImport) {
-            completionItemData.isInImport = true;
+        if (detail?.funcParensDisabled) {
+            completionItemData.funcParensDisabled = true;
         }
 
         completionItem.data = completionItemData;
