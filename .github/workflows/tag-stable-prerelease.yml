@@ -18,6 +18,10 @@ jobs:
     name: Create prerelease tag
 
     steps:
+      - uses: actions/checkout@v2
+        with:
+          ssh-key: ${{ secrets.PREREL_PUSH_SSH_KEY }}
+
       - name: Bump version
         id: version
         run: |
@@ -25,14 +29,7 @@ jobs:
           echo Tagging version $VERSION
           echo "::set-output name=version::$VERSION"
 
-      - name: Create tag
-        uses: actions/github-script@v3
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            github.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: "refs/tags/${{ steps.version.outputs.version }}",
-              sha: context.sha
-            })
+      - name: Tag and push
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
