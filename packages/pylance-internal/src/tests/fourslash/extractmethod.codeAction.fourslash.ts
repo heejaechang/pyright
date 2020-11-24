@@ -133,27 +133,6 @@ await expect(
     })
 ).rejects.toThrowError(CannotExtractReason.ContainsContinueWithoutLoop);
 
-// @filename: TestEnclosedWithContinue.py
-////def f():
-////    n = 10
-////    i = 0
-////    [|/*marker20*/while i < n:
-////        if ( i == 0):
-////            continue i
-////        i = i +1|]
-// @ts-ignore
-await helper.verifyExtractMethod('marker20', {
-    ['file:///TestEnclosedWithContinue.py']: [
-        `new_func(n, i)`,
-        `\n
-def new_func( n, i ):
-    while i < n:
-        if ( i == 0):
-            continue i
-        i = i +1`,
-    ],
-});
-
 // @filename: PartialIfStatementShouldThrow.py
 ////def f():
 ////    n = 10
@@ -324,6 +303,27 @@ await helper.verifyExtractMethod('marker19', {
         `\n
 def new_func():
     x = 42`,
+    ],
+});
+
+// @filename: TestEnclosedWithContinue.py
+////def f():
+////    n = 10
+////    i = 0
+////    [|/*marker20*/while i < n:
+////        if ( i == 0):
+////            continue
+////        i = i +1|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker20', {
+    ['file:///TestEnclosedWithContinue.py']: [
+        `new_func(n, i)`,
+        `\n
+def new_func( n, i ):
+    while i < n:
+        if ( i == 0):
+            continue
+        i = i +1`,
     ],
 });
 
@@ -563,5 +563,103 @@ await helper.verifyExtractMethod('marker38', {
         `\n
 def new_func( anchor ):
     return anchor`,
+    ],
+});
+
+// @filename: TestExtractDoubleIndentedCode.py
+//// def function(url_adapter, old_scheme):
+////     try:
+////         [|/*marker39*/try:
+////             rv = url_adapter.build()
+////         finally:
+////             if old_scheme is not None:
+////                 url_adapter.url_scheme = old_scheme|]
+////     except ValueError as error:
+////         pass
+// @ts-ignore
+await helper.verifyExtractMethod('marker39', {
+    ['file:///TestExtractDoubleIndentedCode.py']: [
+        `new_func(url_adapter, old_scheme)`,
+        `\n
+def new_func( url_adapter, old_scheme ):
+    try:
+        rv = url_adapter.build()
+    finally:
+        if old_scheme is not None:
+            url_adapter.url_scheme = old_scheme`,
+    ],
+});
+
+// @filename: TestExtractDoubleIndentedCodeWithMultilineComment.py
+////def function(url_adapter, old_scheme):
+////    try:
+////        [|/*marker40*/try:
+////            rv = url_adapter.build()
+////            str = """Multiline
+//// string"""
+////        finally:
+////            if old_scheme is not None:
+////                url_adapter.url_scheme = old_scheme|]
+////    except ValueError as error:
+////        pass
+// @ts-ignore
+await helper.verifyExtractMethod('marker40', {
+    ['file:///TestExtractDoubleIndentedCodeWithMultilineComment.py']: [
+        `new_func(url_adapter, old_scheme)`,
+        `\n
+def new_func( url_adapter, old_scheme ):
+    try:
+        rv = url_adapter.build()
+        str = """Multiline
+ string"""
+    finally:
+        if old_scheme is not None:
+            url_adapter.url_scheme = old_scheme`,
+    ],
+});
+
+// @filename: TestInvalidExpressionWithStatementShouldThrow.py
+////def function():
+////    x =[|/*marker41*/ 1
+////    y = 2|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker41', {
+        ['file:///TestInvalidExpressionWithStatementShouldThrow.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+
+// @filename: TestMultilineStatement.py
+////total = [|/*marker42*/1 + \
+////    2 + \
+////    3|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker42', {
+    ['file:///TestMultilineStatement.py']: [
+        `\n
+def new_func():
+    return 1 + \\
+    2 + \\
+    3\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestMultilineComment.py
+////[|/*marker43*/""" This is a comment
+////written in
+////more than just one line """
+////
+////print("Hello, World!")|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker43', {
+    ['file:///TestMultilineComment.py']: [
+        `\n
+def new_func():
+    """ This is a comment
+written in
+more than just one line """
+    print("Hello, World!")\n\n`,
+        `new_func()`,
     ],
 });

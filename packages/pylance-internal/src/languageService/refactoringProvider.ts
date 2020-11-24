@@ -41,6 +41,8 @@ import {
 import { ParseResults } from 'pyright-internal/parser/parser';
 import { KeywordType } from 'pyright-internal/parser/tokenizerTypes';
 
+import { formatCode } from '../common/formatter';
+
 enum StepDirection {
     Backward = 0,
     Forward,
@@ -418,7 +420,18 @@ export class ExtractMethodProvider {
         //     x = [|1 + 3  error
         //     y = 2|]
         if (!isExpression) {
-            const hasExpression = extractedNodes.some((node) => this._isExpression(node));
+            const hasExpression = extractedNodes.some((node) => {
+                if (node) {
+                    // ignore sub expressions if the parent node is already in our list
+                    // example "if statements currently add test expressions and statements"
+                    const isChildNode = extractedNodes.find((n) => n && n.id === node.parent?.id);
+                    if (!isChildNode) {
+                        return this._isExpression(node);
+                    }
+                    return false;
+                }
+            });
+
             if (hasExpression) {
                 return CannotExtractReason.InvalidExpressionAndStatementSelected;
             }
@@ -436,13 +449,13 @@ export class ExtractMethodProvider {
             return CannotExtractReason.ContainsYieldExpression;
         }
 
-        const orphandIfElse = extractedNodes.some(
+        const orphanedIfElse = extractedNodes.some(
             (node) =>
                 node?.nodeType === ParseNodeType.If &&
                 node.parent?.nodeType === ParseNodeType.If &&
-                !selectionContainsNode(selectionRange, parentNode)
+                !selectionContainsNode(selectionRange, node.parent)
         );
-        if (orphandIfElse) {
+        if (orphanedIfElse) {
             return CannotExtractReason.ContainsPartialIfElseStatement;
         }
         return CannotExtractReason.None;
@@ -513,7 +526,12 @@ export class ExtractMethodProvider {
         const baseNewName = funcInfo && funcInfo.className ? 'new_method' : 'new_func';
         const newFuncName = generateUniqueNameInClassOrModule(baseNewName, selectionInfo.parentNode);
 
-        const methodBodyStr = ExtractMethodProvider._buildMethodBody(selectionInfo, parseResults, outputSymbols);
+        const methodBodyStr = ExtractMethodProvider._buildMethodBody(
+            selectionInfo,
+            parseResults,
+            outputSymbols,
+            indentionOffset
+        );
 
         const functionDef = this._buildFunctionDefinition(
             newFuncName,
@@ -603,18 +621,29 @@ export class ExtractMethodProvider {
         return funcInfo;
     }
 
-    private static _buildMethodBody(selectionInfo: SelectionInfo, parseResults: ParseResults, outputSymbols: string[]) {
+    private static _buildMethodBody(
+        selectionInfo: SelectionInfo,
+        parseResults: ParseResults,
+        outputSymbols: string[],
+        indentionOffset: number
+    ) {
         if (selectionInfo.bodyNodes === undefined || selectionInfo.range === undefined) {
             return [];
         }
 
-        const methodBodyStr = this._convertNodesToString(selectionInfo.bodyNodes, parseResults, selectionInfo.range);
+        const methodBodyStr = this._convertNodesToString(
+            selectionInfo.bodyNodes,
+            parseResults,
+            selectionInfo.range,
+            indentionOffset
+        );
 
+        const indention = ' '.repeat(indentionOffset + 4);
         // add return statement to new function definition
         if (selectionInfo.isExpression) {
-            methodBodyStr[methodBodyStr.length - 1] = 'return ' + methodBodyStr[methodBodyStr.length - 1];
+            methodBodyStr[0] = indention + 'return ' + methodBodyStr[0];
         } else if (outputSymbols.length > 0) {
-            const returnStr = 'return ' + outputSymbols.join(',');
+            const returnStr = indention + 'return ' + outputSymbols.join(',');
             methodBodyStr.push(returnStr);
         }
 
@@ -720,9 +749,8 @@ export class ExtractMethodProvider {
             funcStr += `():\n`;
         }
 
-        bodyStr.forEach((line) => {
-            funcStr += `${functionIndention}${Indention}${line.trim()}\n`;
-        });
+        funcStr += bodyStr.join('\n');
+
         return funcStr.trimEnd();
     }
 
@@ -732,17 +760,21 @@ export class ExtractMethodProvider {
         }
 
         const bodyNodes: ParseNodeArray = [];
-        // node in range
-        if (node.start >= range.start && TextRange.getEnd(node) <= TextRange.getEnd(range)) {
-            bodyNodes.push(node);
-            return bodyNodes;
-        }
-
-        const parseTreeWalker = new ParseTreeWalker();
 
         // The range is found within this node. See if we can localize it
         // further by checking its children.
+        const parseTreeWalker = new ParseTreeWalker();
         const children = parseTreeWalker.visitNode(node);
+
+        // node in range
+        const isInRange = node.start >= range.start && TextRange.getEnd(node) <= TextRange.getEnd(range);
+        if (isInRange) {
+            bodyNodes.push(node);
+            if (children.length === 0 || isExpressionNode(node) || node.nodeType === ParseNodeType.StatementList) {
+                return bodyNodes;
+            }
+        }
+
         for (const child of children) {
             if (child) {
                 const containingChildren = this._findNodesInRange(child, range);
@@ -758,30 +790,89 @@ export class ExtractMethodProvider {
     private static _convertNodesToString(
         nodes: ParseNodeArray,
         parseResults: ParseResults,
-        range: TextRange
+        range: TextRange,
+        indentionOffset: number
     ): string[] {
-        const bodyStr: string[] = [''];
+        const bodyLines: string[] = [];
         let curOffset = TextRange.getEnd(range);
         let preOffset = curOffset;
         let curPos = convertOffsetToPosition(curOffset, parseResults.tokenizerOutput.lines);
-        let prePro = curPos;
-        nodes.reverse().forEach((node) => {
-            curOffset = TextRange.contains(range, node!.start) ? node!.start : range.start;
-            const length = preOffset - curOffset;
-            const nodeStr = parseResults.text.substr(curOffset, length).trim();
+        let prePos = curPos;
 
+        const firstLineIndent = convertOffsetToPosition(range.start, parseResults.tokenizerOutput.lines).character;
+
+        // Walk backwards thur the nodes because we can't trust a node end as being a full line because it wont include comments,
+        // so instead we copy all the way back to the previous offset which was a node's start.
+        const reverseNodes = nodes.reverse().forEach((node) => {
+            if (!node) {
+                return;
+            }
+
+            curOffset = node.start;
+            if (!TextRange.contains(range, node.start)) {
+                curOffset = range.start;
+            }
+
+            // Make sure nodes like Suites, which include multiple statements don't duplicate previous
+            // written strings
             curPos = convertOffsetToPosition(curOffset, parseResults.tokenizerOutput.lines);
-            if (curPos.line !== prePro.line) {
-                bodyStr.push(nodeStr);
+            const curLength = curOffset + node.length > preOffset ? preOffset - curOffset : node.length;
+            const nodeStr = parseResults.text.substr(curOffset, curLength);
+            const nodeAsCodeLines = formatCode(nodeStr, node);
+
+            // Capture any strings after the current node back to the previous node
+            // in order to grab comments
+            const postNodeStartOffset = TextRange.getEnd(node);
+            const postNodeLength = preOffset - postNodeStartOffset;
+            if (postNodeLength > 0) {
+                const postNodeStr = parseResults.text.substr(postNodeStartOffset, postNodeLength);
+                const postNodeStrings = formatCode(postNodeStr, undefined);
+                if (bodyLines.length === 0) {
+                    bodyLines.push(...postNodeStrings);
+                } else {
+                    bodyLines[bodyLines.length - 1] = postNodeStrings.join() + bodyLines[bodyLines.length - 1];
+                }
+            }
+
+            if (curPos.line !== prePos.line) {
+                // Format previous line
+                const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prePos.line);
+                const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
+                const indent = rawLine.indexOf(rawLine.trimStart());
+
+                if (indent >= firstLineIndent) {
+                    const newIndent = indent - firstLineIndent + 4 + indentionOffset;
+                    let line = bodyLines[bodyLines.length - 1];
+                    line = !line ? line : line.trimStart();
+                    bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
+                }
+
+                bodyLines.push(...nodeAsCodeLines.reverse());
             } else {
-                bodyStr[bodyStr.length - 1] = nodeStr + ' ' + bodyStr[bodyStr.length - 1];
+                if (bodyLines.length === 0) {
+                    bodyLines.push(...nodeAsCodeLines.reverse());
+                } else {
+                    bodyLines[bodyLines.length - 1] = nodeAsCodeLines.join() + bodyLines[bodyLines.length - 1];
+                }
             }
 
             preOffset = curOffset;
-            prePro = curPos;
+            prePos = curPos;
         });
 
-        return bodyStr.reverse();
+        // Format last line
+        const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(curPos.line);
+        const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
+        const indent = rawLine.indexOf(rawLine.trimStart());
+
+        if (indent >= firstLineIndent) {
+            const newIndent = indent - firstLineIndent + 4 + indentionOffset;
+            let line = bodyLines[bodyLines.length - 1];
+            line = !line ? line : line.trimStart();
+            bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
+        }
+
+        return bodyLines.reverse();
     }
 
     private static _findSignatureSymbols(
@@ -949,12 +1040,10 @@ export class ExtractMethodProvider {
             return;
         }
 
-        const stopAtFunction = true;
-        const stopAtLambda = false;
         const startNodeSuiteOrModule =
             startNode.nodeType === ParseNodeType.Suite || startNode.nodeType === ParseNodeType.Module
                 ? startNode
-                : getEnclosingSuiteOrModule(startNode, stopAtFunction, stopAtLambda);
+                : getEnclosingSuiteOrModule(startNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
 
         // See if we need to expand or shrink the endNode. ie. mistaken extra binary operator like '+'
         if (!this._isValidExtractionNode(endNode)) {
@@ -1041,10 +1130,8 @@ export class ExtractMethodProvider {
             return;
         }
 
-        const stopAtFunction = true;
-        const stopAtLambda = false;
-        const startNodeParent = getEnclosingSuiteOrModule(startNode, stopAtFunction, stopAtLambda);
-        const endNodeParent = getEnclosingSuiteOrModule(startNode, stopAtFunction, stopAtLambda);
+        const startNodeParent = getEnclosingSuiteOrModule(startNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
+        const endNodeParent = getEnclosingSuiteOrModule(startNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
 
         if (startNodeParent?.id !== endNodeParent?.id) {
             return;
@@ -1068,7 +1155,7 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         adjRange: TextRange
     ) {
-        return this._convertNodesToString(bodyNodes, parseResults, adjRange).join(' ').trimEnd();
+        return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('');
     }
 }
 
