@@ -36,6 +36,11 @@
         "ms-python.python"
     ],
     "contributes": {
+        "configurationDefaults": {
+            "[python]": {
+                "editor.wordBasedSuggestions": false
+            }
+        },
         "configuration": {
             "type": "object",
             "title": "Pylance",
