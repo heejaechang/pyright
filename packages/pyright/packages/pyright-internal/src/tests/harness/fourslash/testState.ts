@@ -849,7 +849,7 @@ export class TestState {
                 if (verifyMode === 'exact') {
                     if (result.completionList.items.length !== expectedCompletions.length) {
                         assert.fail(
-                            `Expected ${expectedCompletions.length} items but received ${
+                            `${markerName} - Expected ${expectedCompletions.length} items but received ${
                                 result.completionList.items.length
                             }. Actual completions:\n${stringify(result.completionList.items.map((r) => r.label))}`
                         );
@@ -863,7 +863,7 @@ export class TestState {
                         if (verifyMode === 'excluded') {
                             // we're not supposed to find the completions passed to the test
                             assert.fail(
-                                `Completion item with label "${
+                                `${markerName} - Completion item with label "${
                                     expected.label
                                 }" unexpected. Actual completions:\n${stringify(
                                     result.completionList.items.map((r) => r.label)
@@ -884,7 +884,7 @@ export class TestState {
                                 assert.strictEqual(actual.documentation.kind, docFormat);
                             } else {
                                 assert.fail(
-                                    `Unexpected type of contents object "${actual.documentation}", should be MarkupContent.`
+                                    `${markerName} - Unexpected type of contents object "${actual.documentation}", should be MarkupContent.`
                                 );
                             }
                         }
@@ -894,7 +894,7 @@ export class TestState {
                         if (verifyMode === 'included' || verifyMode === 'exact') {
                             // we're supposed to find all items passed to the test
                             assert.fail(
-                                `Completion item with label "${
+                                `${markerName} - Completion item with label "${
                                     expected.label
                                 }" expected. Actual completions:\n${stringify(
                                     result.completionList.items.map((r) => r.label)
@@ -908,13 +908,15 @@ export class TestState {
                     if (result.completionList.items.length !== 0) {
                         // we removed every item we found, there should not be any remaining
                         assert.fail(
-                            `Completion items unexpected: ${stringify(result.completionList.items.map((r) => r.label))}`
+                            `${markerName} - Completion items unexpected: ${stringify(
+                                result.completionList.items.map((r) => r.label)
+                            )}`
                         );
                     }
                 }
             } else {
                 if (verifyMode !== 'exact' || expectedCompletions.length > 0) {
-                    assert.fail('Failed to get completions');
+                    assert.fail(`${markerName} - Failed to get completions`);
                 }
             }
 
@@ -928,7 +930,7 @@ export class TestState {
                     result?.memberAccessInfo?.unknownMemberName !== expectedName
                 ) {
                     assert.fail(
-                        `Expected completion results memberAccessInfo with \n    lastKnownModule: "${expectedModule}"\n    lastKnownMemberName: "${expectedType}"\n    unknownMemberName: "${expectedName}"\n  Actual memberAccessInfo:\n    lastKnownModule: "${
+                        `${markerName} - Expected completion results memberAccessInfo with \n    lastKnownModule: "${expectedModule}"\n    lastKnownMemberName: "${expectedType}"\n    unknownMemberName: "${expectedName}"\n  Actual memberAccessInfo:\n    lastKnownModule: "${
                             result.memberAccessInfo?.lastKnownModule ?? ''
                         }"\n    lastKnownMemberName: "${
                             result.memberAccessInfo?.lastKnownMemberName ?? ''
