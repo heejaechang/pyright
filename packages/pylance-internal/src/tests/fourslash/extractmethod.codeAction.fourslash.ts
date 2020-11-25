@@ -27,7 +27,7 @@ await helper.verifyExtractMethod('marker', {
     ['file:///TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py']: [
         `ABC = new_func(c, a)`,
         `\n
-def new_func( c, a ):
+def new_func(c, a):
     b = 2
     a[0]= 3
     ABC = a[0] + b + c + a + 1 + 42
@@ -44,7 +44,7 @@ await helper.verifyExtractMethod('marker5', {
     ['file:///TestSimpleVarUsedBeforeSelection.py']: [
         `return new_func(a)`,
         `\n
-def new_func( a ):
+def new_func(a):
     return a + 3`,
     ],
 });
@@ -62,7 +62,7 @@ await helper.verifyExtractMethod('marker2', {
         `cls.new_method()`,
         `\n
     @classmethod
-    def new_method( cls ):
+    def new_method(cls):
         return 1 + 2`,
     ],
 });
@@ -77,7 +77,7 @@ await helper.verifyExtractMethod('marker3', {
     ['file:///TestClassWithNormalFunc.py']: [
         `self.new_method()`,
         `\n
-    def new_method( self ):
+    def new_method(self):
         return 1 + 2`,
     ],
 });
@@ -112,7 +112,7 @@ await helper.verifyExtractMethod('marker6', {
     ['file:///TestExtractStatementAndReturn.py']: [
         `return new_func(ABC)`,
         `\n
-def new_func( ABC ):
+def new_func(ABC):
     XYX = 100
     return ABC`,
     ],
@@ -192,7 +192,7 @@ await helper.verifyExtractMethod('marker11', {
     ['file:///WhileStatementShouldPass.py']: [
         `new_func(n, i)`,
         `\n
-def new_func( n, i ):
+def new_func(n, i):
     while i < n:
         if ( i == 0):
             i = i +1
@@ -214,7 +214,7 @@ await helper.verifyExtractMethod('marker12', {
     ['file:///TestDefinitions.py']: [
         `new_func(g, h)`,
         `\n
-def new_func( g, h ):
+def new_func(g, h):
     x = g()
     z = h()`,
     ],
@@ -245,7 +245,7 @@ await helper.verifyExtractMethod('marker14', {
     ['file:///AssignInIfStatementReadAfter.py']: [
         `self.new_method()`,
         `\n
-    def new_method( self ):
+    def new_method(self):
         oar = player = Player()`,
     ],
 });
@@ -319,7 +319,7 @@ await helper.verifyExtractMethod('marker20', {
     ['file:///TestEnclosedWithContinue.py']: [
         `new_func(n, i)`,
         `\n
-def new_func( n, i ):
+def new_func(n, i):
     while i < n:
         if ( i == 0):
             continue
@@ -527,7 +527,7 @@ await helper.verifyExtractMethod('marker36', {
     ['file:///TestCompleteIfElse.py']: [
         `new_func(name)`,
         `\n
-def new_func( name ):
+def new_func(name):
     if name == 'john':
         print('hello john')
     elif name == 'mark':
@@ -561,7 +561,7 @@ await helper.verifyExtractMethod('marker38', {
     ['file:///TestExtractArgumentShouldHaveReturn.py']: [
         `new_func(anchor)`,
         `\n
-def new_func( anchor ):
+def new_func(anchor):
     return anchor`,
     ],
 });
@@ -581,7 +581,7 @@ await helper.verifyExtractMethod('marker39', {
     ['file:///TestExtractDoubleIndentedCode.py']: [
         `new_func(url_adapter, old_scheme)`,
         `\n
-def new_func( url_adapter, old_scheme ):
+def new_func(url_adapter, old_scheme):
     try:
         rv = url_adapter.build()
     finally:
@@ -607,7 +607,7 @@ await helper.verifyExtractMethod('marker40', {
     ['file:///TestExtractDoubleIndentedCodeWithMultilineComment.py']: [
         `new_func(url_adapter, old_scheme)`,
         `\n
-def new_func( url_adapter, old_scheme ):
+def new_func(url_adapter, old_scheme):
     try:
         rv = url_adapter.build()
         str = """Multiline

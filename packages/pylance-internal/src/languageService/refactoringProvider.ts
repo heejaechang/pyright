@@ -744,7 +744,7 @@ export class ExtractMethodProvider {
         funcStr += `${functionIndention}def ${funcName}`;
 
         if (paramStr.length > 0) {
-            funcStr += `( ${paramStr} ):\n`;
+            funcStr += `(${paramStr}):\n`;
         } else {
             funcStr += `():\n`;
         }
