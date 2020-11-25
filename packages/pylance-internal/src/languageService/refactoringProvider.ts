@@ -24,7 +24,7 @@ import {
     convertOffsetToPosition,
     convertRangeToTextRange,
 } from 'pyright-internal/common/positionUtils';
-import { Position, Range, TextRange } from 'pyright-internal/common/textRange';
+import { comparePositions, Position, Range, TextRange } from 'pyright-internal/common/textRange';
 import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
 import { FindReferencesTreeWalker, ReferencesResult } from 'pyright-internal/languageService/referencesProvider';
 import {
@@ -923,55 +923,68 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         token: CancellationToken
     ): string[] {
-        const symbolsWrittenInSelection = new Map<string, string>();
+        const symbolsWrittenInSelection = findSymbolsInSelection(symbolReferences, token, selRange);
 
-        symbolReferences.forEach((refResults, symbolName) => {
-            refResults.declarations.forEach((decl, _) => {
-                if (symbolsWrittenInSelection.has(symbolName)) {
-                    return;
-                }
+        const selectionEndPosition = convertOffsetToPosition(
+            TextRange.getEnd(selRange),
+            parseResults.tokenizerOutput.lines
+        );
 
-                if (token.isCancellationRequested) {
-                    return;
-                }
-
-                const isInSelection = TextRange.contains(selRange, decl.node.start);
-                if (isInSelection) {
-                    symbolsWrittenInSelection.set(symbolName, symbolName);
-                }
-            });
-        });
-
+        // Search the symbols written inside the selection for reads after the selection,
+        // but also check for writes after the selection.
         const outputSymbol = new Map<string, string>();
         symbolReferences.forEach((refResults, symbolName) => {
             if (!symbolsWrittenInSelection.has(symbolName)) {
                 return;
             }
 
-            if (token.isCancellationRequested) {
-                return;
-            }
+            const readsAfterSelection = refResults.locations.filter(
+                (docRange) => comparePositions(docRange.range.start, selectionEndPosition) > 0
+            );
 
-            refResults.locations.forEach((docRange) => {
+            const declarationsAfterSelection = refResults.declarations.filter(
+                (decl) => decl.node.start > TextRange.getEnd(selRange)
+            );
+
+            readsAfterSelection.forEach((docRange) => {
+                if (token.isCancellationRequested) {
+                    return;
+                }
+
                 if (outputSymbol.has(symbolName)) {
                     return;
                 }
+
                 const readLocation = convertRangeToTextRange(docRange.range, parseResults.tokenizerOutput.lines);
                 if (readLocation === undefined) {
                     return;
                 }
 
-                const isReadAfterSelection = readLocation.start > TextRange.getEnd(selRange);
-                if (isReadAfterSelection) {
-                    // Note all declaration locations are also refResult locations so allow
-                    // declaration locations to equal reference locations
-                    const isReassignedAfterSelectionAndBeforeRead = refResults.declarations.some((decl) => {
-                        return decl.node.start > TextRange.getEnd(selRange) && decl.node.start <= readLocation.start;
-                    });
+                // Note all declaration locations are also refResult locations, so skip checking those reads
+                const isDeclaration = declarationsAfterSelection.find((decl) => readLocation.start === decl.node.start);
+                if (isDeclaration) {
+                    return;
+                }
 
-                    if (!isReassignedAfterSelectionAndBeforeRead) {
-                        outputSymbol.set(symbolName, symbolName);
+                const isWrittenBeforeReadAfterSelection = declarationsAfterSelection.some((decl) => {
+                    const writePosition = convertOffsetToPosition(decl.node.start, parseResults.tokenizerOutput.lines);
+                    const readPosition = convertOffsetToPosition(
+                        readLocation.start,
+                        parseResults.tokenizerOutput.lines
+                    );
+
+                    // We need to compare line numbers instead of offsets because in the case
+                    // (x = x) the read is before the write but the offset of the read is greater than the offset of the write
+                    let isWriteBeforeRead = writePosition.line < readPosition.line;
+                    if (writePosition.line === readPosition.line) {
+                        isWriteBeforeRead = writePosition.character > readPosition.character;
                     }
+
+                    return isWriteBeforeRead;
+                });
+
+                if (!isWrittenBeforeReadAfterSelection) {
+                    outputSymbol.set(symbolName, symbolName);
                 }
             });
         });
@@ -1157,6 +1170,32 @@ export class ExtractMethodProvider {
     ) {
         return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('');
     }
+}
+
+function findSymbolsInSelection(
+    symbolReferences: Map<string, ReferencesResult>,
+    token: CancellationToken,
+    selRange: TextRange
+) {
+    const symbolsWrittenInSelection = new Map<string, string>();
+
+    symbolReferences.forEach((refResults, symbolName) => {
+        refResults.declarations.forEach((decl, _) => {
+            if (symbolsWrittenInSelection.has(symbolName)) {
+                return;
+            }
+
+            if (token.isCancellationRequested) {
+                return;
+            }
+
+            const isInSelection = TextRange.contains(selRange, decl.node.start);
+            if (isInSelection) {
+                symbolsWrittenInSelection.set(symbolName, symbolName);
+            }
+        });
+    });
+    return symbolsWrittenInSelection;
 }
 
 function adjustRangeForWhitespace(selRange: TextRange, fileContents: string): TextRange {

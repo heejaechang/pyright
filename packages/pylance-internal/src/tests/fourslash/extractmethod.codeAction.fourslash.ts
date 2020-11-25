@@ -663,3 +663,17 @@ more than just one line """
         `new_func()`,
     ],
 });
+
+// @filename: TestReadBeforeWriteAfterSelection.py
+////[|/*marker44*/x = 1|]
+////x = x
+// @ts-ignore
+await helper.verifyExtractMethod('marker44', {
+    ['file:///TestReadBeforeWriteAfterSelection.py']: [
+        `\n
+def new_func():
+    x = 1
+    return x\n\n`,
+        `x = new_func()`,
+    ],
+});
