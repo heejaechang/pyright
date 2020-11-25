@@ -65,7 +65,7 @@ export class PylanceTestState extends TestState {
         const emptyFiles = { ['']: `` };
 
         // if (command?.arguments && command?.arguments[0]) {
-        //     host.HOST.log(command!.arguments[0]);
+        //     HOST.log(command!.arguments[0]);
         // }
 
         const commandResult = await super.verifyCommand(command, emptyFiles);

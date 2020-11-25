@@ -432,7 +432,8 @@ export class ExtractMethodProvider {
                 }
             });
 
-            if (hasExpression) {
+            const hasArgument = extractedNodes.some((node) => node && node.nodeType === ParseNodeType.Argument);
+            if (hasExpression || hasArgument) {
                 return CannotExtractReason.InvalidExpressionAndStatementSelected;
             }
         }
@@ -655,10 +656,7 @@ export class ExtractMethodProvider {
     // Is any node not a full statement but just a right hand expression ie. 1 + 2
     // todo: I think this needs to be refined to cover more edge cases
     private static _isExpression(node: ParseNode | undefined): boolean {
-        // If we have statements, we are not an expression
-        if (node && node.nodeType === ParseNodeType.StatementList) {
-            return false;
-        } else if (
+        if (
             // If we are an left nameNode in an assignment or call,or we are not an expression
             // ie. |print|("hello") or  |a| = 1 + 2
             (node?.parent?.nodeType === ParseNodeType.Assignment ||
@@ -667,8 +665,6 @@ export class ExtractMethodProvider {
             node.parent.leftExpression.id === node.id
         ) {
             return false;
-        } else if (node && node.nodeType === ParseNodeType.Argument) {
-            return true;
         }
 
         const isExpression = node && isExpressionNode(node);
@@ -772,7 +768,12 @@ export class ExtractMethodProvider {
         const isInRange = node.start >= range.start && TextRange.getEnd(node) <= TextRange.getEnd(range);
         if (isInRange) {
             bodyNodes.push(node);
-            if (children.length === 0 || isExpressionNode(node) || node.nodeType === ParseNodeType.StatementList) {
+            if (
+                children.length === 0 ||
+                isExpressionNode(node) ||
+                node.nodeType === ParseNodeType.StatementList ||
+                node.nodeType === ParseNodeType.Argument // don't allow child nodes of arguments to be added individually
+            ) {
                 return bodyNodes;
             }
         }

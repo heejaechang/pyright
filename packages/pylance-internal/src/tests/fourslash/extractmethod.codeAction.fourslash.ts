@@ -557,14 +557,11 @@ await expect(
 ////         hello += url_quote([|/*marker38*/anchor|])
 ////     return hello
 // @ts-ignore
-await helper.verifyExtractMethod('marker38', {
-    ['file:///TestExtractArgumentShouldHaveReturn.py']: [
-        `new_func(anchor)`,
-        `\n
-def new_func(anchor):
-    return anchor`,
-    ],
-});
+await expect(
+    helper.verifyExtractMethod('marker38', {
+        ['file:///TestExtractArgumentShouldHaveReturn.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
 
 // @filename: TestExtractDoubleIndentedCode.py
 //// def function(url_adapter, old_scheme):
@@ -700,3 +697,37 @@ await helper.verifyExtractMethod('marker45', {
         return var1,var2`,
     ],
 });
+
+// @filename: TestExtractMultiArgumentShouldFail.py
+////class MyBase:
+////    def __init__(self, firstname: str, lastname: str):
+////        pass
+////
+////class MyDerived(MyBase):
+////    def __init__(self):
+////        super().__init__(
+////            [|/*marker46*/firstname='hugues',
+////            lastname='valois'|]
+////        )
+////        print('end of init')
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker46', {
+        ['file:///TestExtractMultiArgumentShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+
+// @filename: TestExtractSingleArgumentShouldFail.py
+//// from werkzeug import url_quote
+////
+//// def function(anchor):
+////     hello = ''
+////     if anchor is not None:
+////         hello += url_quote([|/*marker47*/anchor|])
+////     return hello
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker47', {
+        ['file:///TestExtractSingleArgumentShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
