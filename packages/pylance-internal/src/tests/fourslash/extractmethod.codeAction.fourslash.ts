@@ -677,3 +677,26 @@ def new_func():
         `x = new_func()`,
     ],
 });
+
+// @filename: TestDuplicateSelfParams.py
+////import os.path
+////
+////class MyClass:
+////    import_name: str
+////
+////    def method1(self):
+////        [|/*marker45*/var1 = os.path.dirname(self.import_name)
+////        var2 = os.path.basename(self.import_name)|]
+////        print(var1)
+////        print(var2)
+// @ts-ignore
+await helper.verifyExtractMethod('marker45', {
+    ['file:///TestDuplicateSelfParams.py']: [
+        `var1, var2 = self.new_method()`,
+        `\n
+    def new_method(self):
+        var1 = os.path.dirname(self.import_name)
+        var2 = os.path.basename(self.import_name)
+        return var1,var2`,
+    ],
+});

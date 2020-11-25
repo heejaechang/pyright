@@ -494,7 +494,9 @@ export class ExtractMethodProvider {
                 parameters[0].name !== undefined
             ) {
                 // add self or cls to the front of our parameters array
-                parameterSymbols.unshift(parameters[0].name);
+                if (!parameterSymbols.find((param) => param === parameters[0].name)) {
+                    parameterSymbols.unshift(parameters[0].name);
+                }
             }
 
             indentionOffset = funcInfo.indentionOffset;
