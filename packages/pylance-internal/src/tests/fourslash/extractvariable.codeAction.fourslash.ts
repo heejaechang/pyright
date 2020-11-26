@@ -15,7 +15,7 @@ enum ExtractVariableCannotExtractReason {
 }
 
 // @filename: testBasicExpression.py
-//// def f():
+////def f():
 ////    b = [|/*marker*/2 + 3|]
 ////    return b
 // @ts-ignore
@@ -24,7 +24,7 @@ await helper.verifyExtractVariable('marker', {
 });
 
 // @filename: testMiddleExpression.py
-//// def f():
+////def f():
 ////    b = [|/*marker2*/2 + 3|] + 1
 ////    return b
 // @ts-ignore
@@ -33,7 +33,7 @@ await helper.verifyExtractVariable('marker2', {
 });
 
 // @filename: testExpressionWithComment.py
-//// def f():
+////def f():
 ////    b = [|/*marker3*/2 + 3 + 1 #comment|]
 ////    return b
 // @ts-ignore
@@ -42,7 +42,7 @@ await helper.verifyExtractVariable('marker3', {
 });
 
 // @filename: testExpressionWithPartialComment.py
-//// def f():
+////def f():
 ////    b = [|/*marker4*/2 + 3 + 1 #com|]ment
 ////    return b
 
@@ -52,7 +52,7 @@ await helper.verifyExtractVariable('marker4', {
 });
 
 // @filename: testExpressionAndStatementShouldThrow.py
-//// def f():
+////def f():
 ////    b = [|/*marker5*/2 + 3 + 1 #comment
 ////    a = 1 |]
 ////    return b
@@ -62,7 +62,7 @@ await expect(
 ).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
 
 // @filename: testAssignmentShouldThrow.py
-//// def f():
+////def f():
 ////    [|/*marker6*/b = 2|] + 3 + 1 #comment
 ////    a = 1
 ////    return b
@@ -74,7 +74,7 @@ await expect(
 ).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
 
 // @filename: TestUniqueVariableNameInFunction.py
-//// def f():
+////def f():
 ////    new_var = 1
 ////    b = [|/*marker7*/2 + 3|]
 ////    return b
@@ -84,20 +84,28 @@ await helper.verifyExtractVariable('marker7', {
 });
 
 // @filename: TestUniqueVariableNameInModule.py
-////    new_var = 1
-////    b = [|/*marker8*/2 + 3|]
-////    return b
-
+////new_var = 1
+////b = [|/*marker8*/2 + 3|]
 // @ts-ignore
 await helper.verifyExtractVariable('marker8', {
-    ['file:///TestUniqueVariableNameInModule.py']: [`new_var1`, `new_var1 = 2 + 3\n    `],
+    ['file:///TestUniqueVariableNameInModule.py']: [`new_var1`, `new_var1 = 2 + 3\n`],
 });
 
 // @filename: testAugmentedAssignmentShouldThrow.py
-//// def f():
+////def f():
 ////    [|/*marker9*/b|] += 1
 ////    return b
 // @ts-ignore
 await expect(
     helper.verifyExtractVariable('marker9', { ['file:///testAugmentedAssignmentShouldThrow.py']: [] })
 ).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+
+// @filename: testMultiIndention.py
+////class MyClass:
+////    def function(self, name):
+////        if name is not [|/*marker10*/None|]:
+////            pass
+// @ts-ignore
+await helper.verifyExtractVariable('marker10', {
+    ['file:///testMultiIndention.py']: [`new_var`, `new_var = None\n        `],
+});

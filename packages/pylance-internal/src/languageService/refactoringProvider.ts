@@ -62,8 +62,6 @@ export enum CannotExtractReason {
     ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
-const Indention = '    ';
-
 interface SelectionInfo {
     failedReason: CannotExtractReason;
     range?: TextRange;
@@ -151,20 +149,23 @@ export class ExtractMethodProvider {
             ),
         });
 
-        const statements = selectionInfo.parentNode.statements;
-        if (statements) {
+        // Find the statement containing the extract variable selection so that we can insert ahead of it.
+        const statementContainingSelection = selectionInfo.parentNode.statements?.find((statement) => {
+            const statementRange = TextRange.create(statement.start, statement.length);
+            return TextRange.contains(statementRange, selectionInfo.range!.start);
+        });
+
+        if (statementContainingSelection) {
             // find the statement that contains the selection
-            let insertOffset = statements[0].start;
-            statements.forEach((statement) => {
-                const statementRange = TextRange.create(statement.start, statement.length);
-                if (TextRange.contains(statementRange, selectionInfo.range!.start)) {
-                    insertOffset = statement.start;
-                }
-            });
+            const insertOffset = statementContainingSelection.start;
+            const indentOffset = convertOffsetToPosition(
+                statementContainingSelection.start,
+                parseResults.tokenizerOutput.lines
+            ).character;
 
             //insert at beginning of the selection line
             editActions.push({
-                replacementText: generatedAssignment + '\n' + Indention,
+                replacementText: generatedAssignment + '\n' + ' '.repeat(indentOffset),
                 filePath: filePath,
                 range: convertOffsetsToRange(insertOffset, insertOffset, parseResults.tokenizerOutput.lines),
             });
