@@ -632,16 +632,20 @@ export class AutoImporter {
                     };
                 }
 
-                // If not, add what we want at the existing import from statement.
-                return {
-                    insertionText: abbrFromUsers ?? insertionText,
-                    edits: getTextEditsForAutoImportSymbolAddition(
-                        importName,
-                        importStatement,
-                        this._parseResults,
-                        abbrFromUsers
-                    ),
-                };
+                // If not, add what we want at the existing 'import from' statement as long as
+                // what is imported is not module itself.
+                // ex) don't add "path" to existing "from os.path import dirname" statement.
+                if (moduleName === importStatement.moduleName) {
+                    return {
+                        insertionText: abbrFromUsers ?? insertionText,
+                        edits: getTextEditsForAutoImportSymbolAddition(
+                            importName,
+                            importStatement,
+                            this._parseResults,
+                            abbrFromUsers
+                        ),
+                    };
+                }
             }
         } else if (importName) {
             // If it is the module itself that got imported, make sure we don't import it again.
