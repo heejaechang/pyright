@@ -545,10 +545,11 @@ export class ExtractMethodProvider {
             indentionOffset
         );
 
+        let appendNewline = insertFuncAheadOfSelection ? '' : '\n\n';
         const newFuncAppendEdit = {
             filePath: filepath,
             range: { start: newFuncInsertionPosition, end: newFuncInsertionPosition },
-            replacementText: '\n\n' + functionDef,
+            replacementText: appendNewline + functionDef,
         };
 
         const callFunctionString = this._buildCallDefinition(
@@ -561,10 +562,11 @@ export class ExtractMethodProvider {
 
         // replace selected text with new function call
         // This edit is a replacement of the original selection
+        appendNewline = parseResults.text.substr(TextRange.getEnd(selectionInfo.range) - 1, 1) === '\n' ? '\n' : '';
         const callReplacementEdit = {
             filePath: filepath,
             range: convertOffsetsToRange(selectionInfo.range.start, TextRange.getEnd(selectionInfo.range), outputLines),
-            replacementText: callFunctionString,
+            replacementText: callFunctionString + appendNewline,
         };
 
         // Edits are applied in reverse order, so we append first so that the

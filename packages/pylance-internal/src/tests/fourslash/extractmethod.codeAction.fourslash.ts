@@ -14,6 +14,16 @@ enum CannotExtractReason {
     ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
+// @filename: TestBlankLineAheadOfSelectionGlobalScope.py
+////
+////x = 1
+////
+////[|/*marker49*/y = 2|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker49', {
+    ['file:///TestBlankLineAheadOfSelectionGlobalScope.py']: [`def new_func():\n    y = 2\n\n`, `new_func()`],
+});
+
 // @filename: TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py
 ////def f(c:int):
 ////    a = [1,2]
@@ -226,8 +236,7 @@ def new_func(g, h):
 // @ts-ignore
 await helper.verifyExtractMethod('marker13', {
     ['file:///TestLeadingCommentGlobal.py']: [
-        `\n
-def new_func():
+        `def new_func():
     x = 41\n\n`,
         `new_func()`,
     ],
@@ -393,8 +402,7 @@ await expect(
 // @ts-ignore
 await helper.verifyExtractMethod('marker25', {
     ['file:///TestGlobalFuncInsertsAheadOfSelection.py']: [
-        `\n
-def new_func():
+        `def new_func():
     x = 41\n\n`,
         `new_func()`,
     ],
@@ -633,8 +641,7 @@ await expect(
 // @ts-ignore
 await helper.verifyExtractMethod('marker42', {
     ['file:///TestMultilineStatement.py']: [
-        `\n
-def new_func():
+        `def new_func():
     return 1 + \\
     2 + \\
     3\n\n`,
@@ -651,8 +658,7 @@ def new_func():
 // @ts-ignore
 await helper.verifyExtractMethod('marker43', {
     ['file:///TestMultilineComment.py']: [
-        `\n
-def new_func():
+        `def new_func():
     """ This is a comment
 written in
 more than just one line """
@@ -667,8 +673,7 @@ more than just one line """
 // @ts-ignore
 await helper.verifyExtractMethod('marker44', {
     ['file:///TestReadBeforeWriteAfterSelection.py']: [
-        `\n
-def new_func():
+        `def new_func():
     x = 1
     return x\n\n`,
         `x = new_func()`,
@@ -731,3 +736,18 @@ await expect(
         ['file:///TestExtractSingleArgumentShouldFail.py']: [],
     })
 ).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+
+// @filename: TestBlankLineEndOfSelectionFunctionScope.py
+////def function(name: str):
+////    [|/*marker48*/x = 1
+////|]
+////    y = 2
+// @ts-ignore
+await helper.verifyExtractMethod('marker48', {
+    ['file:///TestBlankLineEndOfSelectionFunctionScope.py']: [
+        `new_func()\n`,
+        `\n
+def new_func():
+    x = 1`,
+    ],
+});
