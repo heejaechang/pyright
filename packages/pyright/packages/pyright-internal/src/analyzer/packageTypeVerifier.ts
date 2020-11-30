@@ -32,7 +32,7 @@ import {
     Type,
     TypeCategory,
 } from './types';
-import { convertToInstance, isEllipsisType, transformTypeObjectToClass } from './typeUtils';
+import { convertToInstance, doForEachSubtype, isEllipsisType, transformTypeObjectToClass } from './typeUtils';
 
 export enum PackageSymbolType {
     Indeterminate,
@@ -609,7 +609,7 @@ export class PackageTypeVerifier {
 
             case TypeCategory.Union: {
                 let isKnown = true;
-                for (const subtype of type.subtypes) {
+                doForEachSubtype(type, (subtype) => {
                     if (
                         !this._validateTypeIsCompletelyKnown(
                             subtype,
@@ -621,7 +621,7 @@ export class PackageTypeVerifier {
                     ) {
                         isKnown = false;
                     }
-                }
+                });
 
                 return isKnown;
             }
@@ -754,7 +754,7 @@ export class PackageTypeVerifier {
         // Is this class is in the public symbol list and is not the class
         // that we're explicitly excluding from the public symbol list? If
         // so, indicate that it is fully known. Any parts of the type that
-        // are unknown will be repoted when that public symbol is analyzed.
+        // are unknown will be reported when that public symbol is analyzed.
         if (currentSymbol !== type.details.fullName && publicSymbolMap.has(type.details.fullName)) {
             typeInfo = {
                 isFullyKnown: true,

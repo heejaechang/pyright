@@ -480,6 +480,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.privateUsedOutsideOfClass'));
         export const privateUsedOutsideOfModule = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.privateUsedOutsideOfModule'));
+        export const propertyOverridden = () =>
+            new ParameterizedString<{ name: string; className: string }>(getRawString('Diagnostic.propertyOverridden'));
         export const propertyStaticOrClassMethod = () => getRawString('Diagnostic.propertyStaticOrClassMethod');
         export const protectedUsedOutsideOfClass = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protectedUsedOutsideOfClass'));
@@ -487,6 +489,8 @@ export namespace Localizer {
         export const protocolUsedInCall = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protocolUsedInCall'));
         export const raiseParams = () => getRawString('Diagnostic.raiseParams');
+        export const recursiveDefinition = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.recursiveDefinition'));
         export const relativeImportNotAllowed = () => getRawString('Diagnostic.relativeImportNotAllowed');
         export const returnMissing = () =>
             new ParameterizedString<{ returnType: string }>(getRawString('Diagnostic.returnMissing'));
@@ -655,6 +659,10 @@ export namespace Localizer {
         export const unpackInSet = () => getRawString('Diagnostic.unpackInSet');
         export const unpackTuplesIllegal = () => getRawString('Diagnostic.unpackTuplesIllegal');
         export const unreachableCode = () => getRawString('Diagnostic.unreachableCode');
+        export const unsupportedDunderAllAssignment = () => getRawString('Diagnostic.unsupportedDunderAllAssignment');
+        export const unsupportedDunderAllOperation = () => getRawString('Diagnostic.unsupportedDunderAllOperation');
+        export const unusedCallResult = () =>
+            new ParameterizedString<{ type: string }>(getRawString('Diagnostic.unusedCallResult'));
         export const varAnnotationIllegal = () => getRawString('Diagnostic.varAnnotationIllegal');
         export const walrusIllegal = () => getRawString('Diagnostic.walrusIllegal');
         export const walrusNotAllowed = () => getRawString('Diagnostic.walrusNotAllowed');
@@ -759,6 +767,10 @@ export namespace Localizer {
             );
         export const paramType = () =>
             new ParameterizedString<{ paramType: string }>(getRawString('DiagnosticAddendum.paramType'));
+        export const propertyMethodIncompatible = () =>
+            new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.propertyMethodIncompatible'));
+        export const propertyMethodMissing = () =>
+            new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.propertyMethodMissing'));
         export const propertyMissingDeleter = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.propertyMissingDeleter'));
         export const propertyMissingSetter = () =>

@@ -96,6 +96,9 @@ export interface DiagnosticRuleSet {
     // Report mismatch in types between property getter and setter?
     reportPropertyTypeMismatch: DiagnosticLevel;
 
+    // Report the use of unknown member accesses on function objects?
+    reportFunctionMemberAccess: DiagnosticLevel;
+
     // Report missing imports?
     reportMissingImports: DiagnosticLevel;
 
@@ -222,6 +225,14 @@ export interface DiagnosticRuleSet {
     // Report statements that are syntactically correct but
     // have no semantic meaning within a type stub file.
     reportInvalidStubStatement: DiagnosticLevel;
+
+    // Report operations on __all__ symbol that are not supported
+    // by a static type checker.
+    reportUnsupportedDunderAll: DiagnosticLevel;
+
+    // Report cases where a call expression's return result is not
+    // None and is not used in any way.
+    reportUnusedCallResult: DiagnosticLevel;
 }
 
 export function cloneDiagnosticRuleSet(diagSettings: DiagnosticRuleSet): DiagnosticRuleSet {
@@ -246,6 +257,7 @@ export function getDiagLevelDiagnosticRules() {
     return [
         DiagnosticRule.reportGeneralTypeIssues,
         DiagnosticRule.reportPropertyTypeMismatch,
+        DiagnosticRule.reportFunctionMemberAccess,
         DiagnosticRule.reportMissingImports,
         DiagnosticRule.reportMissingModuleSource,
         DiagnosticRule.reportMissingTypeStubs,
@@ -286,6 +298,8 @@ export function getDiagLevelDiagnosticRules() {
         DiagnosticRule.reportUndefinedVariable,
         DiagnosticRule.reportUnboundVariable,
         DiagnosticRule.reportInvalidStubStatement,
+        DiagnosticRule.reportUnsupportedDunderAll,
+        DiagnosticRule.reportUnusedCallResult,
     ];
 }
 
@@ -307,6 +321,7 @@ export function getOffDiagnosticRuleSet(): DiagnosticRuleSet {
         enableTypeIgnoreComments: true,
         reportGeneralTypeIssues: 'none',
         reportPropertyTypeMismatch: 'none',
+        reportFunctionMemberAccess: 'none',
         reportMissingImports: 'warning',
         reportMissingModuleSource: 'warning',
         reportMissingTypeStubs: 'none',
@@ -347,6 +362,8 @@ export function getOffDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnboundVariable: 'warning',
         reportUndefinedVariable: 'warning',
         reportInvalidStubStatement: 'none',
+        reportUnsupportedDunderAll: 'none',
+        reportUnusedCallResult: 'none',
     };
 
     return diagSettings;
@@ -364,6 +381,7 @@ export function getBasicDiagnosticRuleSet(): DiagnosticRuleSet {
         enableTypeIgnoreComments: true,
         reportGeneralTypeIssues: 'error',
         reportPropertyTypeMismatch: 'error',
+        reportFunctionMemberAccess: 'none',
         reportMissingImports: 'error',
         reportMissingModuleSource: 'warning',
         reportMissingTypeStubs: 'none',
@@ -404,6 +422,8 @@ export function getBasicDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnboundVariable: 'error',
         reportUndefinedVariable: 'error',
         reportInvalidStubStatement: 'none',
+        reportUnsupportedDunderAll: 'warning',
+        reportUnusedCallResult: 'none',
     };
 
     return diagSettings;
@@ -421,6 +441,7 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
         enableTypeIgnoreComments: true, // Not overridden by strict mode
         reportGeneralTypeIssues: 'error',
         reportPropertyTypeMismatch: 'error',
+        reportFunctionMemberAccess: 'error',
         reportMissingImports: 'error',
         reportMissingModuleSource: 'warning',
         reportMissingTypeStubs: 'error',
@@ -461,6 +482,8 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUnboundVariable: 'error',
         reportUndefinedVariable: 'error',
         reportInvalidStubStatement: 'error',
+        reportUnsupportedDunderAll: 'error',
+        reportUnusedCallResult: 'none',
     };
 
     return diagSettings;
@@ -803,6 +826,13 @@ export class ConfigOptions {
                 defaultSettings.reportPropertyTypeMismatch
             ),
 
+            // Read the "reportFunctionMemberAccess" entry.
+            reportFunctionMemberAccess: this._convertDiagnosticLevel(
+                configObj.reportFunctionMemberAccess,
+                DiagnosticRule.reportFunctionMemberAccess,
+                defaultSettings.reportFunctionMemberAccess
+            ),
+
             // Read the "reportMissingImports" entry.
             reportMissingImports: this._convertDiagnosticLevel(
                 configObj.reportMissingImports,
@@ -1081,6 +1111,20 @@ export class ConfigOptions {
                 configObj.reportInvalidStubStatement,
                 DiagnosticRule.reportInvalidStubStatement,
                 defaultSettings.reportInvalidStubStatement
+            ),
+
+            // Read the "reportUnsupportedDunderAll" entry.
+            reportUnsupportedDunderAll: this._convertDiagnosticLevel(
+                configObj.reportUnsupportedDunderAll,
+                DiagnosticRule.reportUnsupportedDunderAll,
+                defaultSettings.reportUnsupportedDunderAll
+            ),
+
+            // Read the "reportUnusedCallResult" entry.
+            reportUnusedCallResult: this._convertDiagnosticLevel(
+                configObj.reportUnusedCallResult,
+                DiagnosticRule.reportUnusedCallResult,
+                defaultSettings.reportUnusedCallResult
             ),
         };
 

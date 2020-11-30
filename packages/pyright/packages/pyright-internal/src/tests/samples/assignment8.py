@@ -2,7 +2,7 @@
 # assigned any other type.
 
 import os
-from typing import Any, TypeVar, overload
+from typing import Any, Optional, TypeVar, overload
 
 
 class Foo:
@@ -13,6 +13,9 @@ class Foo:
     @overload
     def bar(self, obj: object) -> Any:
         ...
+
+    def bar(self, obj: Optional[object]) -> Any:
+        pass
 
     @staticmethod
     def baz():

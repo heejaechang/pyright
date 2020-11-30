@@ -19,6 +19,7 @@ import {
     TypeVarScopeId,
     TypeVarType,
 } from './types';
+import { doForEachSubtype } from './typeUtils';
 
 export interface TypeVarMapEntry {
     typeVar: TypeVarType;
@@ -30,9 +31,15 @@ export interface ParamSpecMapEntry {
     type: ParamSpecEntry[];
 }
 
+export interface VariadicTypeVarMapEntry {
+    typeVar: TypeVarType;
+    types: Type[];
+}
+
 export class TypeVarMap {
-    private _solveForScopes: string[] | undefined;
+    private _solveForScopes: TypeVarScopeId[] | undefined;
     private _typeVarMap: Map<string, TypeVarMapEntry>;
+    private _variadicTypeVarMap: Map<string, VariadicTypeVarMapEntry> | undefined;
     private _paramSpecMap: Map<string, ParamSpecMapEntry>;
     private _isNarrowableMap: Map<string, boolean>;
     private _isLocked = false;
@@ -52,7 +59,10 @@ export class TypeVarMap {
     }
 
     clone() {
-        const newTypeVarMap = new TypeVarMap(this._solveForScopes);
+        const newTypeVarMap = new TypeVarMap();
+        if (this._solveForScopes) {
+            newTypeVarMap._solveForScopes = [...this._solveForScopes];
+        }
 
         this._typeVarMap.forEach((value) => {
             newTypeVarMap.setTypeVar(value.typeVar, value.type, this.isNarrowable(value.typeVar));
@@ -80,8 +90,12 @@ export class TypeVarMap {
         return this._solveForScopes;
     }
 
-    hasSolveForScope(scopeId: TypeVarScopeId) {
-        return this._solveForScopes !== undefined && this._solveForScopes.some((s) => s === scopeId);
+    hasSolveForScope(scopeId: TypeVarScopeId | undefined) {
+        return (
+            scopeId !== undefined &&
+            this._solveForScopes !== undefined &&
+            this._solveForScopes.some((s) => s === scopeId)
+        );
     }
 
     setSolveForScopes(scopeIds: TypeVarScopeId[]) {
@@ -89,7 +103,7 @@ export class TypeVarMap {
     }
 
     addSolveForScope(scopeId?: TypeVarScopeId) {
-        if (scopeId !== undefined) {
+        if (scopeId !== undefined && !this.hasSolveForScope(scopeId)) {
             if (!this._solveForScopes) {
                 this._solveForScopes = [];
             }
@@ -135,6 +149,21 @@ export class TypeVarMap {
         const key = this._getKey(reference);
         this._typeVarMap.set(key, { typeVar: reference, type });
         this._isNarrowableMap.set(key, isNarrowable);
+    }
+
+    getVariadicTypeVar(reference: TypeVarType): Type[] | undefined {
+        return this._variadicTypeVarMap?.get(this._getKey(reference))?.types;
+    }
+
+    setVariadicTypeVar(reference: TypeVarType, types: Type[]) {
+        assert(!this._isLocked);
+        const key = this._getKey(reference);
+
+        // Allocate variadic map on demand since most classes don't use it.
+        if (!this._variadicTypeVarMap) {
+            this._variadicTypeVarMap = new Map<string, VariadicTypeVarMapEntry>();
+        }
+        this._variadicTypeVarMap.set(key, { typeVar: reference, types });
     }
 
     getTypeVars(): TypeVarMapEntry[] {
@@ -210,7 +239,7 @@ export class TypeVarMap {
 
             case TypeCategory.Union: {
                 let minScore = 1;
-                type.subtypes.forEach((subtype) => {
+                doForEachSubtype(type, (subtype) => {
                     const subtypeScore = this._getComplexityScoreForType(subtype, recursionCount + 1);
                     if (subtypeScore < minScore) {
                         minScore = subtypeScore;

@@ -50,6 +50,8 @@ The following settings control pyright’s diagnostic output (warnings or errors
 
 **reportPropertyTypeMismatch** [boolean or string, optional]: Generate or suppress diagnostics for properties where the type of the value passed to the setter is not assignable to the value returned by the getter. Such mismatches violate the intended use of properties, which are meant to act like variables. The default value for this setting is 'error'.
 
+**reportFunctionMemberAccess** [boolean or string, optional]: Generate or suppress diagnostics for non-standard member accesses for functions. The default value for this setting is 'none'.
+
 **reportMissingImports** [boolean or string, optional]: Generate or suppress diagnostics for imports that have no corresponding imported python file or type stub file. The default value for this setting is 'none', although pyright can do a much better job of static type checking if type stub files are provided for all imports.
 
 **reportMissingModuleSource** [boolean or string, optional]: Generate or suppress diagnostics for imports that have no corresponding source file. This happens when a type stub is found, but the module source file was not found, indicating that the code may fail at runtime when using this execution environment. Type checking will be done using the type stub. The default value for this setting is 'warning'.
@@ -129,6 +131,10 @@ The following settings control pyright’s diagnostic output (warnings or errors
 **reportUnboundVariable** [boolean or string, optional]: Generate or suppress diagnostics for unbound and possibly unbound variables. The default value for this setting is 'error'.
 
 **reportInvalidStubStatement** [boolean or string, optional]: Generate or suppress diagnostics for statements that are syntactically correct but have no purpose within a type stub file. The default value for this setting is 'none'.
+
+**reportUnsupportedDunderAll** [boolean or string, optional]: Generate or suppress diagnostics for statements that define or manipulate `__all__` in a way that is not allowed by a static type checker, thus rendering the contents of `__all__` to be unknown or incorrect. The default value for this setting is 'warning'.
+
+**reportUnusedCallResult** [boolean or string, optional]: Generate or suppress diagnostics for call statements whose return value is not used in any way and is not None. The default value for this setting is 'none'.
 
 
 ## Execution Environment Options

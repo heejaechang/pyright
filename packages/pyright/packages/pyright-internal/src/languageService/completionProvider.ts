@@ -41,6 +41,7 @@ import {
     FunctionType,
     getTypeAliasInfo,
     isClass,
+    isFunction,
     isModule,
     isNone,
     isObject,
@@ -54,13 +55,11 @@ import {
     UnknownType,
 } from '../analyzer/types';
 import {
-    doForSubtypes,
-    getConcreteTypeFromTypeVar,
+    doForEachSubtype,
     getDeclaringModulesForType,
     getMembersForClass,
     getMembersForModule,
     isProperty,
-    makeTopLevelTypeVarsConcrete,
 } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
@@ -834,11 +833,14 @@ export class CompletionProvider {
             if (isTypeVar(leftType)) {
                 // If the left is a constrained TypeVar, treat it as a union for the
                 // purposes of providing completion suggestions.
-                leftType = getConcreteTypeFromTypeVar(leftType, /* convertConstraintsToUnion */ true);
+                leftType = this._evaluator.makeTopLevelTypeVarsConcrete(leftType, /* convertConstraintsToUnion */ true);
             }
 
-            doForSubtypes(leftType, (subtype) => {
-                const specializedSubtype = makeTopLevelTypeVarsConcrete(subtype);
+            doForEachSubtype(leftType, (subtype) => {
+                const specializedSubtype = this._evaluator.makeTopLevelTypeVarsConcrete(
+                    subtype,
+                    /* convertConstraintsToUnion */ false
+                );
 
                 if (isObject(specializedSubtype)) {
                     getMembersForClass(specializedSubtype.classType, symbolTable, /* includeInstanceVars */ true);
@@ -860,11 +862,12 @@ export class CompletionProvider {
                         getMembersForClass(objectClass, symbolTable, TypeBase.isInstance(subtype));
                     }
                 }
-
-                return undefined;
             });
 
-            const specializedLeftType = makeTopLevelTypeVarsConcrete(leftType);
+            const specializedLeftType = this._evaluator.makeTopLevelTypeVarsConcrete(
+                leftType,
+                /* convertConstraintsToUnion */ false
+            );
             const objectThrough: ObjectType | undefined = isObject(specializedLeftType)
                 ? specializedLeftType
                 : undefined;
@@ -1066,22 +1069,20 @@ export class CompletionProvider {
         completionList: CompletionList
     ) {
         const quoteValue = this._getQuoteValueFromPriorText(priorText);
-        doForSubtypes(type, (subtype) => {
-            if (isObject(subtype)) {
-                if (ClassType.isBuiltIn(subtype.classType, 'str')) {
-                    if (subtype.classType.literalValue !== undefined) {
-                        this._addStringLiteralToCompletionList(
-                            subtype.classType.literalValue as string,
-                            quoteValue.stringValue,
-                            postText,
-                            quoteValue.quoteCharacter,
-                            completionList
-                        );
-                    }
-                }
+        doForEachSubtype(type, (subtype) => {
+            if (
+                isObject(subtype) &&
+                ClassType.isBuiltIn(subtype.classType, 'str') &&
+                subtype.classType.literalValue !== undefined
+            ) {
+                this._addStringLiteralToCompletionList(
+                    subtype.classType.literalValue as string,
+                    quoteValue.stringValue,
+                    postText,
+                    quoteValue.quoteCharacter,
+                    completionList
+                );
             }
-
-            return undefined;
         });
     }
 
@@ -1530,9 +1531,10 @@ export class CompletionProvider {
                                     break;
                                 }
                                 case DeclarationType.Function: {
-                                    const functionType = detail.objectThrough
-                                        ? this._evaluator.bindFunctionToClassOrObject(detail.objectThrough, type, false)
-                                        : type;
+                                    const functionType =
+                                        detail.objectThrough && isFunction(type)
+                                            ? this._evaluator.bindFunctionToClassOrObject(detail.objectThrough, type)
+                                            : type;
                                     if (functionType) {
                                         if (isProperty(functionType) && detail.objectThrough) {
                                             const propertyType =
