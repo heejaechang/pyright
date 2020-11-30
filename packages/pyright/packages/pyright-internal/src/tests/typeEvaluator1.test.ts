@@ -518,6 +518,24 @@ test('Function12', () => {
     TestUtils.validateResults(analysisResults, 0, 0, 0, 2);
 });
 
+test('Function13', () => {
+    // Analyze with reportFunctionMemberAccess disabled.
+    const analysisResult1 = TestUtils.typeAnalyzeSampleFiles(['function13.py']);
+    TestUtils.validateResults(analysisResult1, 0);
+
+    // Analyze with reportFunctionMemberAccess enabled.
+    const configOptions = new ConfigOptions('.');
+    configOptions.diagnosticRuleSet.reportFunctionMemberAccess = 'error';
+    const analysisResult2 = TestUtils.typeAnalyzeSampleFiles(['function13.py'], configOptions);
+    TestUtils.validateResults(analysisResult2, 3);
+});
+
+test('Function14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function14.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
@@ -909,7 +927,13 @@ test('Loops4', () => {
 test('Loops5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops5.py']);
 
-    TestUtils.validateResults(analysisResults, 0, 0, 2);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Loops6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('ForLoops1', () => {
@@ -1059,6 +1083,12 @@ test('TypeAlias10', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeAlias11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias11.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Dictionary1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dictionary1.py']);
 
@@ -1087,7 +1117,7 @@ test('Classes2', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleMethodOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes2.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 13);
+    TestUtils.validateResults(analysisResults, 17);
 });
 
 test('Classes3', () => {
@@ -1112,7 +1142,7 @@ test('Classes5', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleVariableOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes5.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Classes6', () => {

@@ -151,6 +151,17 @@
                                 "error"
                             ]
                         },
+                        "reportFunctionMemberAccess": {
+                            "type": "string",
+                            "description": "Diagnostics for member accesses on functions.",
+                            "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
                         "reportMissingImports": {
                             "type": "string",
                             "description": "Diagnostics for imports that have no corresponding imported python file or type stub file.",
@@ -584,6 +595,28 @@
                             "type": "string",
                             "description": "Diagnostics for unbound and possibly unbound variables.",
                             "default": "information",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportUnusedCallResult": {
+                            "type": "string",
+                            "description": "Diagnostics for call expressions whose results are not consumed and are not None.",
+                            "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportUnsupportedDunderAll": {
+                            "type": "string",
+                            "description": "Diagnostics for unsupported operations performed on __all__.",
+                            "default": "warning",
                             "enum": [
                                 "none",
                                 "information",

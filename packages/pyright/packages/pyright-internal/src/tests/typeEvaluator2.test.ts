@@ -132,6 +132,12 @@ test('isInstance5', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('isInstance6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Unbound1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound1.py']);
 
@@ -231,7 +237,7 @@ test('GenericTypes5', () => {
 test('GenericTypes6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes6.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('GenericTypes7', () => {
@@ -363,7 +369,7 @@ test('GenericTypes27', () => {
 test('GenericTypes28', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes28.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('GenericTypes29', () => {
@@ -409,14 +415,65 @@ test('GenericTypes34', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
-test('GenericTypes35', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes35.py']);
+// This test is intentionally commented out for now. The functionality
+// that it tests relied on the looser handling of TypeVars.
+
+// test('GenericTypes35', () => {
+//     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes35.py']);
+
+//     TestUtils.validateResults(analysisResults, 1);
+// });
+
+test('GenericTypes36', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes36.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes37', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes37.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('GenericTypes38', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes38.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes39', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes39.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('GenericTypes40', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes40.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes41', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes41.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes42', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes42.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('GenericTypes43', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes43.py']);
 
     TestUtils.validateResults(analysisResults, 1);
 });
 
-test('GenericTypes36', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes36.py']);
+test('GenericTypes44', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes44.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -477,6 +534,12 @@ test('Protocol9', () => {
 
 test('Protocol10', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol10.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Protocol11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol11.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -671,6 +734,24 @@ test('Import12', () => {
     TestUtils.validateResults(analysisResults, 0, 0);
 });
 
+test('DunderAll1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // By default, reportUnsupportedDunderAll is a warning.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll1.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0, 9);
+
+    // Turn on error.
+    configOptions.diagnosticRuleSet.reportUnsupportedDunderAll = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll1.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 9, 0);
+
+    // Turn off diagnostic.
+    configOptions.diagnosticRuleSet.reportUnsupportedDunderAll = 'none';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll1.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0, 0);
+});
+
 test('Overload1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload1.py']);
     TestUtils.validateResults(analysisResults, 2);
@@ -795,6 +876,11 @@ test('MemberAccess7', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('MemberAccess8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess8.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('DataClass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass1.py']);
 
@@ -915,7 +1001,7 @@ test('ParamSpec1', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec1.py'], configOptions);
-    TestUtils.validateResults(results, 7);
+    TestUtils.validateResults(results, 6);
 });
 
 test('ParamSpec2', () => {
@@ -981,13 +1067,25 @@ test('TypeVar2', () => {
 test('TypeVar3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar3.py']);
 
-    TestUtils.validateResults(analysisResults, 8);
+    TestUtils.validateResults(analysisResults, 6);
 });
 
 test('TypeVar4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar4.py']);
 
     TestUtils.validateResults(analysisResults, 3);
+});
+
+test('TypeVar5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar5.py']);
+
+    TestUtils.validateResults(analysisResults, 20);
+});
+
+test('TypeVar6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar6.py']);
+
+    TestUtils.validateResults(analysisResults, 22);
 });
 
 test('Annotated1', () => {
@@ -1005,7 +1103,7 @@ test('Annotated1', () => {
 test('Circular1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circular1.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('TryExcept2', () => {
@@ -1114,8 +1212,39 @@ test('Constructor3', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Constructor4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor4.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Constructor5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor5.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Constructor6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ClassGetItem1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classGetItem1.py']);
 
     TestUtils.validateResults(analysisResults, 0, 1);
+});
+
+test('UnusedCallResult1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // By default, this is disabled.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['unusedCallResult1.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0);
+
+    // Enable it as an error.
+    configOptions.diagnosticRuleSet.reportUnusedCallResult = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['unusedCallResult1.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 3);
 });

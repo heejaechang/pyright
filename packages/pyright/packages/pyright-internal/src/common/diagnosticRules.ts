@@ -18,6 +18,7 @@ export enum DiagnosticRule {
 
     reportGeneralTypeIssues = 'reportGeneralTypeIssues',
     reportPropertyTypeMismatch = 'reportPropertyTypeMismatch',
+    reportFunctionMemberAccess = 'reportFunctionMemberAccess',
     reportMissingImports = 'reportMissingImports',
     reportMissingModuleSource = 'reportMissingModuleSource',
     reportMissingTypeStubs = 'reportMissingTypeStubs',
@@ -58,4 +59,6 @@ export enum DiagnosticRule {
     reportUndefinedVariable = 'reportUndefinedVariable',
     reportUnboundVariable = 'reportUnboundVariable',
     reportInvalidStubStatement = 'reportInvalidStubStatement',
+    reportUnsupportedDunderAll = 'reportUnsupportedDunderAll',
+    reportUnusedCallResult = 'reportUnusedCallResult',
 }

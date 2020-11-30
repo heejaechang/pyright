@@ -1,7 +1,18 @@
 # This sample tests the reportIncompatibleMethodOverride
 # configuration option.
 
-from typing import Any, Callable, Iterable, List, Sequence, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 
 class ParentClass:
@@ -165,4 +176,110 @@ class Base1:
 
 class Base2(Base1):
     def submit(self, fn: Callable[..., _T2], *args: Any, **kwargs: Any) -> List[_T2]:
+        return []
+
+
+class Foo:
+    pass
+
+
+_T2A = TypeVar("_T2A", bound=Foo)
+_T2B = TypeVar("_T2B", bound=Foo)
+
+
+class ClassA(Generic[_T2A]):
+    def func1(self) -> Optional[_T2A]:
+        return None
+
+    @property
+    def prop1(self) -> Optional[_T2A]:
+        return None
+
+    @property
+    def prop2(self) -> Optional[_T2A]:
+        return None
+
+    @prop2.setter
+    def prop2(self, val: _T2A):
+        pass
+
+    @prop2.deleter
+    def prop2(self):
+        pass
+
+    @property
+    def prop3(self) -> Optional[_T2A]:
+        return None
+
+    @prop3.setter
+    def prop3(self, val: _T2A):
+        pass
+
+    @property
+    def prop4(self) -> Optional[_T2A]:
+        return None
+
+    @prop4.deleter
+    def prop4(self):
+        pass
+
+    @property
+    def prop5(self) -> int:
+        return 3
+
+
+class ClassB(ClassA[_T2B]):
+    # This should generate an error because a variable
+    # cannot override a property.
+    prop1: _T2B
+
+    def func1(self) -> Optional[_T2B]:
+        return None
+
+    @property
+    def prop2(self) -> _T2B:
+        return self.prop1
+
+    @prop2.setter
+    def prop2(self, val: _T2B):
+        pass
+
+    @prop2.deleter
+    def prop2(self):
+        pass
+
+    # This should generate an error because it is missing
+    # a setter (fset method).
+    @property
+    def prop3(self) -> Optional[_T2B]:
+        return None
+
+    # This should generate an error because it is missing
+    # a deleter (fdel method).
+    @property
+    def prop4(self) -> Optional[_T2B]:
+        return None
+
+    # This should generate an error because prop4's getter
+    # method isn't compatible with base class.
+    @property
+    def prop5(self) -> str:
+        return "hi"
+
+
+class Base3:
+    def case(self, value: Any) -> Iterable[Any]:
+        return []
+
+
+class Derived3(Base3):
+    @overload
+    def case(self, value: int) -> Iterable[int]:
+        ...
+
+    @overload
+    def case(self, value: float) -> Iterable[float]:
+        ...
+
+    def case(self, value: Any) -> Iterable[Any]:
         return []
