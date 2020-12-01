@@ -1079,18 +1079,19 @@ export class ExtractMethodProvider {
                 adjRange = TextRange.fromBounds(startNode.start, endNode.start + endNode.length);
             }
         } else {
-            // To capture the comments at an end of line we need to find the first statement
-            // after our selection, so update our selection to just before the first statement outside our selection.
+            // To capture the comments at an end of line we find the line range and extend the selection to that.
+            // When the user is including comments at the end of a line the endNode from findNodeByOffset() won't be found on that line but
+            // as a parent node of type Suite or Module
             if (
                 startNodeSuiteOrModule &&
                 (endNode.nodeType === ParseNodeType.Suite || endNode.nodeType === ParseNodeType.Module)
             ) {
-                const firstStatementAfterRange = startNodeSuiteOrModule.statements.find((s) => {
-                    return s.start > TextRange.getEnd(adjRange);
-                });
-                if (firstStatementAfterRange !== undefined) {
-                    endOffset = firstStatementAfterRange.start - 1;
-                }
+                const position = convertOffsetToPosition(
+                    TextRange.getEnd(adjRange),
+                    parseResults.tokenizerOutput.lines
+                );
+                const line = parseResults.tokenizerOutput.lines.getItemAt(position.line);
+                endOffset = line.start + line.length - 1; //minus one to not include newline
             }
 
             adjRange = TextRange.create(adjRange.start, endOffset - adjRange.start);

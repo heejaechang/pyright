@@ -14,16 +14,6 @@ enum CannotExtractReason {
     ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
 }
 
-// @filename: TestBlankLineAheadOfSelectionGlobalScope.py
-////
-////x = 1
-////
-////[|/*marker49*/y = 2|]
-// @ts-ignore
-await helper.verifyExtractMethod('marker49', {
-    ['file:///TestBlankLineAheadOfSelectionGlobalScope.py']: [`def new_func():\n    y = 2\n\n`, `new_func()`],
-});
-
 // @filename: TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py
 ////def f(c:int):
 ////    a = [1,2]
@@ -749,5 +739,31 @@ await helper.verifyExtractMethod('marker48', {
         `\n
 def new_func():
     x = 1`,
+    ],
+});
+
+// @filename: TestBlankLineAheadOfSelectionGlobalScope.py
+////
+////x = 1
+////
+////[|/*marker49*/y = 2|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker49', {
+    ['file:///TestBlankLineAheadOfSelectionGlobalScope.py']: [`def new_func():\n    y = 2\n\n`, `new_func()`],
+});
+
+// @filename: TestExtractComment.py
+////def f(c:int):
+////    [|/*marker50*/ABC = 1 + 42 #comment|]
+////    XYX = 100
+////    return ABC
+//@ts-ignore
+await helper.verifyExtractMethod('marker50', {
+    ['file:///TestExtractComment.py']: [
+        `ABC = new_func()`,
+        `\n
+def new_func():
+    ABC = 1 + 42 #comment
+    return ABC`,
     ],
 });
