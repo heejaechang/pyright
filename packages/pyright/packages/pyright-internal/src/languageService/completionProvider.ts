@@ -82,6 +82,7 @@ import {
     ModuleNameNode,
     NameNode,
     ParameterCategory,
+    ParameterNode,
     ParseNode,
     ParseNodeType,
     StringNode,
@@ -643,7 +644,7 @@ export class CompletionProvider {
 
                     // Determine if the partial name is a method that's overriding
                     // a method in a base class.
-                    return this._getMethodOverrideCompletions(priorWord, node.child);
+                    return this._getMethodOverrideCompletions(priorWord, node.child, node.decorators);
                 }
                 break;
             }
@@ -652,8 +653,12 @@ export class CompletionProvider {
         return undefined;
     }
 
-    private _isOverload(d: DecoratorNode): unknown {
-        return d.expression.nodeType === ParseNodeType.Name && d.expression.value === 'overload';
+    private _isOverload(node: DecoratorNode): boolean {
+        return this._checkDecorator(node, 'overload');
+    }
+
+    private _checkDecorator(node: DecoratorNode, value: string): boolean {
+        return node.expression.nodeType === ParseNodeType.Name && node.expression.value === value;
     }
 
     private _createSingleKeywordCompletionList(keyword: string): CompletionResults {
@@ -731,7 +736,11 @@ export class CompletionProvider {
         }
     }
 
-    private _getMethodOverrideCompletions(priorWord: string, partialName: NameNode): CompletionResults | undefined {
+    private _getMethodOverrideCompletions(
+        priorWord: string,
+        partialName: NameNode,
+        decorators?: DecoratorNode[]
+    ): CompletionResults | undefined {
         const enclosingClass = ParseTreeUtils.getEnclosingClass(partialName, true);
         if (!enclosingClass) {
             return undefined;
@@ -742,14 +751,16 @@ export class CompletionProvider {
             return undefined;
         }
 
-        // Get symbols in reverse-MRO, but leave omit the class itself.
         const symbolTable = new Map<string, Symbol>();
-        for (let i = classResults.classType.details.mro.length - 1; i > 0; i--) {
+        for (let i = 1; i < classResults.classType.details.mro.length; i++) {
             const mroClass = classResults.classType.details.mro[i];
             if (isClass(mroClass)) {
                 getMembersForClass(mroClass, symbolTable, false);
             }
         }
+
+        const staticmethod = decorators?.some((d) => this._checkDecorator(d, 'staticmethod')) ?? false;
+        const classmethod = decorators?.some((d) => this._checkDecorator(d, 'classmethod')) ?? false;
 
         const completionList = CompletionList.create();
 
@@ -757,8 +768,26 @@ export class CompletionProvider {
             const decl = getLastTypedDeclaredForSymbol(symbol);
             if (decl && decl.type === DeclarationType.Function) {
                 if (StringUtils.isPatternInSymbol(partialName.value, name)) {
+                    const declaredType = this._evaluator.getTypeForDeclaration(decl);
+                    if (!declaredType || declaredType.category !== TypeCategory.Function) {
+                        return;
+                    }
+
+                    if (
+                        staticmethod !== FunctionType.isStaticMethod(declaredType) ||
+                        classmethod !== FunctionType.isClassMethod(declaredType)
+                    ) {
+                        return;
+                    }
+
                     const methodSignature = this._printMethodSignature(decl.node) + ':';
-                    const textEdit = this._createReplaceEdits(priorWord, partialName, methodSignature);
+                    const methodBody = this._printOverridenMethodBody(declaredType, decl);
+                    const textEdit = this._createReplaceEdits(
+                        priorWord,
+                        partialName,
+                        `${methodSignature}\n${methodBody}`
+                    );
+
                     this._addSymbol(name, symbol, partialName.value, completionList, {
                         // method signature already contains ()
                         funcParensDisabled: true,
@@ -799,9 +828,15 @@ export class CompletionProvider {
                     paramString += param.name.value;
                 }
 
+                // Currently, we don't automatically add import if the type used in the annotation is not imported
+                // in current file.
                 const paramTypeAnnotation = this._evaluator.getTypeAnnotationForParameter(node, index);
                 if (paramTypeAnnotation) {
                     paramString += ': ' + ParseTreeUtils.printExpression(paramTypeAnnotation);
+                }
+
+                if (!paramString && !param.name && param.category === ParameterCategory.Simple) {
+                    return '/';
                 }
 
                 return paramString;
@@ -818,6 +853,43 @@ export class CompletionProvider {
         }
 
         return methodSignature;
+    }
+
+    private _printOverridenMethodBody(declaredType: FunctionType, decl: FunctionDeclaration) {
+        let sb = '    ';
+
+        if (decl.node.parameters.length === 0) {
+            sb += 'pass';
+            return sb;
+        }
+
+        const parameters = getParameters(declaredType, decl);
+        if (decl.node.name.value !== '__init__') {
+            sb += 'return ';
+        }
+
+        return sb + `super().${decl.node.name.value}(${parameters.map(convertToString).join(', ')})`;
+
+        function getParameters(declaredType: FunctionType, decl: FunctionDeclaration) {
+            if (FunctionType.isStaticMethod(declaredType)) {
+                return decl.node.parameters.filter((p) => p.name);
+            }
+
+            return decl.node.parameters.slice(1).filter((p) => p.name);
+        }
+
+        function convertToString(parameter: ParameterNode) {
+            const name = parameter.name?.value;
+            if (parameter.category === ParameterCategory.VarArgList) {
+                return `*${name}`;
+            }
+
+            if (parameter.category === ParameterCategory.VarArgDictionary) {
+                return `**${name}`;
+            }
+
+            return parameter.defaultValue ? `${name}=${name}` : name;
+        }
     }
 
     private _getMemberAccessCompletions(

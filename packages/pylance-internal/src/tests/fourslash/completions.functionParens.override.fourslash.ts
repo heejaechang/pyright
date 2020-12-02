@@ -44,12 +44,12 @@
                 {
                     label: 'method',
                     kind: Consts.CompletionItemKind.Method,
-                    textEdit: { range: marker1Range, newText: 'method(self):' },
+                    textEdit: { range: marker1Range, newText: 'method(self):\n    return super().method()' },
                 },
                 {
                     label: 'method2',
                     kind: Consts.CompletionItemKind.Method,
-                    textEdit: { range: marker1Range, newText: 'method2(self):' },
+                    textEdit: { range: marker1Range, newText: 'method2(self):\n    return super().method2()' },
                 },
             ],
         },
@@ -58,12 +58,12 @@
                 {
                     label: 'method',
                     kind: Consts.CompletionItemKind.Method,
-                    textEdit: { range: marker2Range, newText: 'method(self):' },
+                    textEdit: { range: marker2Range, newText: 'method(self):\n    return super().method()' },
                 },
                 {
                     label: 'method2',
                     kind: Consts.CompletionItemKind.Method,
-                    textEdit: { range: marker2Range, newText: 'method2(self):' },
+                    textEdit: { range: marker2Range, newText: 'method2(self):\n    return super().method2()' },
                 },
             ],
         },
