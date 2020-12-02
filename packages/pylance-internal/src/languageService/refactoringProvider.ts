@@ -350,7 +350,7 @@ export class ExtractMethodProvider {
                 return { failedReason: returnFailure };
             }
 
-            const bodyNodes = this._findNodesInRange(parentNode, selectionRange);
+            const bodyNodes = this._findNodesInRange(parentNode, adjRange);
             if (bodyNodes === undefined || bodyNodes.length === 0) {
                 return { failedReason: CannotExtractReason.InvalidTargetSelected };
             }
@@ -1033,7 +1033,6 @@ export class ExtractMethodProvider {
         }
 
         let endOffset = TextRange.getEnd(adjRange);
-
         let endNode = findNodeByOffset(moduleNode, endOffset);
         if (!endNode) {
             return;
@@ -1045,6 +1044,20 @@ export class ExtractMethodProvider {
         const endNodeContained = selectionContainsNode(selectionRange, endNode);
         if (TextRange.contains(selectionRange, endNode.start) && !endNodeContained) {
             return;
+        }
+
+        let parentNode = startNode;
+        while (TextRange.getEnd(parentNode) < TextRange.getEnd(endNode)) {
+            if (parentNode.parent === undefined) {
+                break;
+            }
+            parentNode = parentNode.parent;
+        }
+
+        // Expand selection endpoint to capture common parentNode and to prevent partial selection of if statements
+        if (!selectionContainsNode(selectionRange, parentNode)) {
+            endNode = parentNode;
+            endOffset = TextRange.getEnd(endNode);
         }
 
         // Check for crossing function or Class boundaries
@@ -1086,16 +1099,28 @@ export class ExtractMethodProvider {
                 startNodeSuiteOrModule &&
                 (endNode.nodeType === ParseNodeType.Suite || endNode.nodeType === ParseNodeType.Module)
             ) {
-                const position = convertOffsetToPosition(
-                    TextRange.getEnd(adjRange),
-                    parseResults.tokenizerOutput.lines
+                const firstStatementAfterRange = startNodeSuiteOrModule.statements.find(
+                    (s) => s.start > TextRange.getEnd(adjRange)
                 );
-                const line = parseResults.tokenizerOutput.lines.getItemAt(position.line);
-                endOffset = line.start + line.length - 1; //minus one to not include newline
+
+                if (firstStatementAfterRange !== undefined) {
+                    const position = convertOffsetToPosition(
+                        TextRange.getEnd(adjRange),
+                        parseResults.tokenizerOutput.lines
+                    );
+                    const line = parseResults.tokenizerOutput.lines.getItemAt(position.line);
+                    endOffset = line.start + line.length - 1; //minus one to not include newline
+                }
+                endNode = undefined;
             }
 
             adjRange = TextRange.create(adjRange.start, endOffset - adjRange.start);
             adjRange = adjustRangeForWhitespace(adjRange, parseResults.text);
+        }
+
+        // Prevent invalid partial if selections
+        if (endNode && startNode.start > endNode?.start) {
+            return;
         }
 
         return adjRange;

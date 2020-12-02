@@ -30,7 +30,7 @@ await helper.verifyExtractMethod('marker', {
 def new_func(c, a):
     b = 2
     a[0]= 3
-    ABC = a[0] + b + c + a + 1 + 42
+    ABC = a[0] + b + c + a + 1 + 42 #comment
     return ABC`,
     ],
 });
@@ -455,7 +455,7 @@ await helper.verifyExtractMethod('marker31', {
         `new_func()`,
         `\n
 def new_func():
-    return 1 + 42`,
+    return 1 + 42 + 3`,
     ],
 });
 
@@ -710,7 +710,7 @@ await expect(
     helper.verifyExtractMethod('marker46', {
         ['file:///TestExtractMultiArgumentShouldFail.py']: [],
     })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
 
 // @filename: TestExtractSingleArgumentShouldFail.py
 //// from werkzeug import url_quote
@@ -765,5 +765,69 @@ await helper.verifyExtractMethod('marker50', {
 def new_func():
     ABC = 1 + 42 #comment
     return ABC`,
+    ],
+});
+
+// @filename: TestExtendingEndPointToSpanOperator.py
+////def function(add_etags, filename):
+////    if [|/*marker51*/add_etags and filename|] is not None:
+////        pass
+// @ts-ignore
+await helper.verifyExtractMethod('marker51', {
+    ['file:///TestExtendingEndPointToSpanOperator.py']: [
+        `new_func(add_etags, filename)`,
+        `\n
+def new_func(add_etags, filename):
+    return add_etags and filename is not None`,
+    ],
+});
+
+// @filename: TestTernarySelection.py
+////def function(session):
+////    flashes = [|/*marker52*/session.pop("_flashes") if "_flashes" in session else []|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker52', {
+    ['file:///TestTernarySelection.py']: [
+        `new_func(session)`,
+        `\n
+def new_func(session):
+    return session.pop("_flashes") if "_flashes" in session else []`,
+    ],
+});
+
+// @filename: TestExpandTernarySelectionEndpoint.py
+////def function(session):
+////    flashes = [|/*marker53*/session.pop("_flashes") if "_flashes"|] in session else []
+// @ts-ignore
+await helper.verifyExtractMethod('marker53', {
+    ['file:///TestExpandTernarySelectionEndpoint.py']: [
+        `new_func(session)`,
+        `\n
+def new_func(session):
+    return session.pop("_flashes") if "_flashes" in session else []`,
+    ],
+});
+
+// @filename: TestTernaryWithInvalidStartSelectionShouldFail.py
+////def function(session):
+////    flashes = session.pop("_flashes") if [|/*marker54*/"_flashes" in session else []|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker54', {
+        ['file:///TestTernaryWithInvalidStartSelectionShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractCommentOnLastStatement.py
+////def f(c:int):
+////    ABC = 1
+////    [|/*marker55*/return ABC #comment|]
+//@ts-ignore
+await helper.verifyExtractMethod('marker55', {
+    ['file:///TestExtractCommentOnLastStatement.py']: [
+        `return new_func(ABC)`,
+        `\n
+def new_func(ABC):
+    return ABC #comment`,
     ],
 });
