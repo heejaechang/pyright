@@ -38,6 +38,12 @@ Settings and Customization
 ===============
 Pylance provides users with the ability to customize their Python language support via a host of settings which can either be placed in the settings.json file in your workspace, or edited through the Settings Editor UI. 
 
+- `pylance.insidersChannel`
+    - Used to control the insiders download channel.
+    - Available values:
+        - `off` (default)
+        - `daily`
+
 - `python.analysis.typeCheckingMode`
     - Used to specify the level of type checking analysis performed;
     - Default: `off`
