@@ -181,7 +181,7 @@ class PylanceServer extends LanguageServerBase {
             autoImportCompletions: true,
             indexing: IS_PRERELEASE,
             completeFunctionParens: false,
-            enableExtractCodeAction: false,
+            enableExtractCodeAction: IS_PRERELEASE,
         };
 
         let forceProgressBar = false;
