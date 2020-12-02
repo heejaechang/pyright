@@ -138,6 +138,12 @@ test('isInstance6', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('isInstance7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance7.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Unbound1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound1.py']);
 
@@ -833,7 +839,7 @@ test('FString5', () => {
     // Analyze with Python 3.7 settings. This will generate errors.
     configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['fstring5.py'], configOptions);
-    TestUtils.validateResults(analysisResults37, 2);
+    TestUtils.validateResults(analysisResults37, 3);
 
     // Analyze with Python 3.8 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_8;
@@ -1079,11 +1085,17 @@ test('TypeVar4', () => {
 test('TypeVar5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar5.py']);
 
-    TestUtils.validateResults(analysisResults, 20);
+    TestUtils.validateResults(analysisResults, 18);
 });
 
 test('TypeVar6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar6.py']);
+
+    TestUtils.validateResults(analysisResults, 19);
+});
+
+test('TypeVar7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar7.py']);
 
     TestUtils.validateResults(analysisResults, 22);
 });

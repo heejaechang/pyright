@@ -7,6 +7,8 @@
  * Collection of functions that operate on Type objects.
  */
 
+import { assert } from 'console';
+
 import { ParameterCategory } from '../parser/parseNodes';
 import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
@@ -14,7 +16,8 @@ import { isTypedDictMemberAccessedThroughIndex } from './symbolUtils';
 import {
     AnyType,
     ClassType,
-    combineTypes,
+    combineConstrainedTypes,
+    ConstrainedSubtype,
     EnumLiteral,
     findSubtype,
     FunctionType,
@@ -34,6 +37,8 @@ import {
     ParamSpecEntry,
     removeFromUnion,
     SpecializedFunctionTypes,
+    SubtypeConstraint,
+    SubtypeConstraints,
     Type,
     TypeBase,
     TypeCategory,
@@ -129,15 +134,26 @@ export function isOptionalType(type: Type): boolean {
 
 // Calls a callback for each subtype and combines the results
 // into a final type.
-export function mapSubtypes(type: Type, callback: (type: Type) => Type | undefined): Type {
+export function mapSubtypes(
+    type: Type,
+    callback: (type: Type, constraints: SubtypeConstraints) => Type | undefined,
+    constraintFilter?: SubtypeConstraints
+): Type {
     if (type.category === TypeCategory.Union) {
-        const newTypes: Type[] = [];
+        const newSubtypes: ConstrainedSubtype[] = [];
         let typeChanged = false;
 
-        type.subtypes.forEach((subtype) => {
-            const transformedType = callback(subtype);
+        type.subtypes.forEach((subtype, index) => {
+            const subtypeConstraints = type.constraints ? type.constraints[index] : undefined;
+            if (constraintFilter) {
+                if (!SubtypeConstraint.isCompatible(subtypeConstraints, constraintFilter)) {
+                    return undefined;
+                }
+            }
+
+            const transformedType = callback(subtype, subtypeConstraints);
             if (transformedType) {
-                newTypes.push(transformedType);
+                newSubtypes.push({ type: transformedType, constraints: subtypeConstraints });
                 if (transformedType !== subtype) {
                     typeChanged = true;
                 }
@@ -147,19 +163,29 @@ export function mapSubtypes(type: Type, callback: (type: Type) => Type | undefin
             return undefined;
         });
 
-        return typeChanged ? combineTypes(newTypes) : type;
+        return typeChanged ? combineConstrainedTypes(newSubtypes) : type;
     }
 
-    return callback(type) || NeverType.create();
+    const transformedSubtype = callback(type, undefined);
+    if (!transformedSubtype) {
+        return NeverType.create();
+    }
+    return transformedSubtype;
 }
 
-export function doForEachSubtype(type: Type, callback: (type: Type) => void): void {
+export function doForEachSubtype(type: Type, callback: (type: Type, constraints: SubtypeConstraints) => void): void {
     if (type.category === TypeCategory.Union) {
-        type.subtypes.forEach((subtype) => {
-            callback(subtype);
-        });
+        if (type.constraints) {
+            type.subtypes.forEach((subtype, index) => {
+                callback(subtype, type.constraints![index]);
+            });
+        } else {
+            type.subtypes.forEach((subtype, index) => {
+                callback(subtype, undefined);
+            });
+        }
     } else {
-        callback(type);
+        callback(type, undefined);
     }
 }
 
@@ -906,7 +932,7 @@ export function specializeClassType(type: ClassType): ClassType {
 // Removes the first parameter of the function and returns a new function.
 export function stripFirstParameter(type: FunctionType): FunctionType {
     if (type.details.parameters.length > 0 && type.details.parameters[0].category === ParameterCategory.Simple) {
-        return FunctionType.clone(type, true);
+        return FunctionType.clone(type, /* stripFirstParam */ true);
     }
     return type;
 }
@@ -1045,6 +1071,22 @@ export function buildTypeVarMap(
     });
 
     return typeVarMap;
+}
+
+// Determines the specialized base class type that srcType derives from.
+export function specializeForBaseClass(srcType: ClassType, baseClass: ClassType): ClassType {
+    const typeParams = ClassType.getTypeParameters(baseClass);
+
+    // If there are no type parameters for the specified base class,
+    // no specialization is required.
+    if (typeParams.length === 0) {
+        return baseClass;
+    }
+
+    const typeVarMap = buildTypeVarMapFromSpecializedClass(srcType);
+    const specializedType = applySolvedTypeVars(baseClass, typeVarMap);
+    assert(isClass(specializedType));
+    return specializedType as ClassType;
 }
 
 // If ignoreUnknown is true, an unknown base class is ignored when
@@ -1462,7 +1504,7 @@ export function _transformTypeVars(
 
         // Recursively transform the results, but ensure that we don't replace the
         // same type variable recursively by setting it in the recursionMap.
-        const typeVarName = type.scopeName || type.details.name;
+        const typeVarName = TypeVarType.getScopeName(type);
         if (!recursionMap.has(typeVarName)) {
             replacementType = callbacks.transformTypeVar(type);
 
@@ -1483,7 +1525,9 @@ export function _transformTypeVars(
     }
 
     if (type.category === TypeCategory.Union) {
-        return mapSubtypes(type, (subtype) => _transformTypeVars(subtype, callbacks, recursionMap, recursionLevel + 1));
+        return mapSubtypes(type, (subtype) => {
+            return _transformTypeVars(subtype, callbacks, recursionMap, recursionLevel + 1);
+        });
     }
 
     if (isObject(type)) {
@@ -1569,7 +1613,7 @@ function _transformTypeVarsInClassType(
         typeParams.forEach((typeParam) => {
             let replacementType: Type = typeParam;
 
-            const typeParamName = typeParam.scopeName || typeParam.details.name;
+            const typeParamName = TypeVarType.getScopeName(typeParam);
             if (!recursionMap.has(typeParamName)) {
                 replacementType = callbacks.transformTypeVar(typeParam);
                 if (replacementType !== typeParam) {

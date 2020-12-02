@@ -334,6 +334,12 @@ test('TypeNarrowing19', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowing20', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing20.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ReturnTypes1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['returnTypes1.py']);
 
@@ -670,6 +676,12 @@ test('Properties8', () => {
 
 test('Properties9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['properties9.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Properties10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['properties10.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -1185,4 +1197,10 @@ test('TypeGuard1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeGuard1.py']);
 
     TestUtils.validateResults(analysisResults, 5);
+});
+
+test('Never1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['never1.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
