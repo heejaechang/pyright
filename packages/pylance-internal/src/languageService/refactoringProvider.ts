@@ -846,7 +846,7 @@ export class ExtractMethodProvider {
                 const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
                 const indent = rawLine.indexOf(rawLine.trimStart());
 
-                if (indent >= firstLineIndent) {
+                if (indent >= firstLineIndent && bodyLines.length > 0) {
                     const newIndent = indent - firstLineIndent + 4 + indentionOffset;
                     let line = bodyLines[bodyLines.length - 1];
                     line = !line ? line : line.trimStart();
@@ -871,7 +871,7 @@ export class ExtractMethodProvider {
         const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
         const indent = rawLine.indexOf(rawLine.trimStart());
 
-        if (indent >= firstLineIndent) {
+        if (indent >= firstLineIndent && bodyLines.length > 0) {
             const newIndent = indent - firstLineIndent + 4 + indentionOffset;
             let line = bodyLines[bodyLines.length - 1];
             line = !line ? line : line.trimStart();
@@ -1200,7 +1200,7 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         adjRange: TextRange
     ) {
-        return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('');
+        return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('\n');
     }
 }
 

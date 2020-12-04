@@ -109,3 +109,12 @@ await expect(
 await helper.verifyExtractVariable('marker10', {
     ['file:///testMultiIndention.py']: [`new_var`, `new_var = None\n        `],
 });
+
+// @filename: testMultilineString.py
+////def f():
+////    str = [|/*marker11*/"""Multiline
+//// string"""|]
+// @ts-ignore
+await helper.verifyExtractVariable('marker11', {
+    ['file:///testMultilineString.py']: [`new_var`, `new_var = """Multiline\n string"""\n    `],
+});
