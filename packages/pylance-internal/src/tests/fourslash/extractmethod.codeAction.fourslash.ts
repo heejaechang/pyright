@@ -559,7 +559,7 @@ await expect(
     helper.verifyExtractMethod('marker38', {
         ['file:///TestExtractArgumentShouldHaveReturn.py']: [],
     })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
 
 // @filename: TestExtractDoubleIndentedCode.py
 //// def function(url_adapter, old_scheme):
@@ -725,7 +725,7 @@ await expect(
     helper.verifyExtractMethod('marker47', {
         ['file:///TestExtractSingleArgumentShouldFail.py']: [],
     })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
 
 // @filename: TestBlankLineEndOfSelectionFunctionScope.py
 ////def function(name: str):
@@ -829,5 +829,18 @@ await helper.verifyExtractMethod('marker55', {
         `\n
 def new_func(ABC):
     return ABC #comment`,
+    ],
+});
+
+// @filename: TestExtractInlinedForStatement.py
+////def f(weights):
+////    names = [[|/*marker56*/w.name|] for w in weights]
+//@ts-ignore
+await helper.verifyExtractMethod('marker56', {
+    ['file:///TestExtractInlinedForStatement.py']: [
+        `new_func(w)`,
+        `\n
+def new_func(w):
+    return w.name`,
     ],
 });

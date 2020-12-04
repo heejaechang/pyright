@@ -9,6 +9,7 @@ import { CancellationToken } from 'vscode-languageserver';
 
 import * as AnalyzerNodeInfo from 'pyright-internal/analyzer/analyzerNodeInfo';
 import { ReturnFinder, YieldFinder } from 'pyright-internal/analyzer/binder';
+import { Declaration } from 'pyright-internal/analyzer/declaration';
 import {
     findNodeByOffset,
     getEnclosingClassOrModule,
@@ -65,7 +66,7 @@ export enum CannotExtractReason {
 interface SelectionInfo {
     failedReason: CannotExtractReason;
     range?: TextRange;
-    parentNode?: SuiteNode | ModuleNode;
+    parentNode?: ParseNode;
     bodyNodes?: ParseNodeArray;
     isExpression?: boolean;
 }
@@ -150,7 +151,12 @@ export class ExtractMethodProvider {
         });
 
         // Find the statement containing the extract variable selection so that we can insert ahead of it.
-        const statementContainingSelection = selectionInfo.parentNode.statements?.find((statement) => {
+        const suiteOrModule =
+            selectionInfo.parentNode.nodeType === ParseNodeType.Suite ||
+            selectionInfo.parentNode.nodeType === ParseNodeType.Module
+                ? selectionInfo.parentNode
+                : getEnclosingSuiteOrModule(selectionInfo.parentNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
+        const statementContainingSelection = suiteOrModule?.statements?.find((statement) => {
             const statementRange = TextRange.create(statement.start, statement.length);
             return TextRange.contains(statementRange, selectionInfo.range!.start);
         });
@@ -271,7 +277,7 @@ export class ExtractMethodProvider {
     }
 
     static canExtractVariable(parseResults: ParseResults, selRange: TextRange): SelectionInfo {
-        let parentNode: SuiteNode | ModuleNode | undefined = undefined;
+        let parentNode: ParseNode | undefined = undefined;
         let bodyNodes: ParseNodeArray | undefined = undefined;
         let range: TextRange | undefined = undefined;
 
@@ -285,7 +291,7 @@ export class ExtractMethodProvider {
                 return { failedReason: CannotExtractReason.InvalidExpressionSelected };
             }
 
-            parentNode = this._findParentForRange(parseResults.parseTree, range);
+            parentNode = _findParentForRange(parseResults.parseTree, range);
             if (!parentNode) {
                 return { failedReason: CannotExtractReason.InvalidExpressionSelected };
             }
@@ -340,7 +346,7 @@ export class ExtractMethodProvider {
                 return { failedReason: CannotExtractReason.InvalidTargetSelected };
             }
 
-            const parentNode = this._findParentForRange(parseResults.parseTree, adjRange);
+            const parentNode = _findParentForRange(parseResults.parseTree, adjRange);
             if (!parentNode) {
                 return { failedReason: CannotExtractReason.InvalidTargetSelected };
             }
@@ -887,8 +893,11 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         token: CancellationToken
     ): string[] {
-        const parameters = new Map<string, string>();
+        if (selRange === undefined) {
+            return [];
+        }
 
+        const parameters = new Map<string, string>();
         symbolReferences.forEach((refResults, symbolName) => {
             refResults.locations.forEach((docRange) => {
                 if (parameters.has(symbolName)) {
@@ -904,12 +913,15 @@ export class ExtractMethodProvider {
                 if (isInSelection) {
                     const isDeclaredInsideSelectionBeforeRead = refResults.declarations.some(
                         (decl, _) =>
-                            TextRange.contains(selRange, decl.node.start) && decl.node.start < readLocation!.start
+                            TextRange.contains(selRange, decl.node.start) &&
+                            isDeclExecutedBeforeOffset(decl, readLocation!.start, parseResults)
                     );
 
                     if (!isDeclaredInsideSelectionBeforeRead) {
                         const isDeclaredBeforeSelection = refResults.declarations.some(
-                            (decl, _) => decl.node.start < selRange!.start
+                            (decl, _) =>
+                                isDeclExecutedBeforeOffset(decl, selRange.start, parseResults) &&
+                                isDeclExecutedBeforeOffset(decl, TextRange.getEnd(selRange), parseResults)
                         );
 
                         if (isDeclaredBeforeSelection) {
@@ -972,22 +984,9 @@ export class ExtractMethodProvider {
                     return;
                 }
 
-                const isWrittenBeforeReadAfterSelection = declarationsAfterSelection.some((decl) => {
-                    const writePosition = convertOffsetToPosition(decl.node.start, parseResults.tokenizerOutput.lines);
-                    const readPosition = convertOffsetToPosition(
-                        readLocation.start,
-                        parseResults.tokenizerOutput.lines
-                    );
-
-                    // We need to compare line numbers instead of offsets because in the case
-                    // (x = x) the read is before the write but the offset of the read is greater than the offset of the write
-                    let isWriteBeforeRead = writePosition.line < readPosition.line;
-                    if (writePosition.line === readPosition.line) {
-                        isWriteBeforeRead = writePosition.character > readPosition.character;
-                    }
-
-                    return isWriteBeforeRead;
-                });
+                const isWrittenBeforeReadAfterSelection = declarationsAfterSelection.some((decl) =>
+                    isDeclExecutedBeforeOffset(decl, readLocation.start, parseResults)
+                );
 
                 if (!isWrittenBeforeReadAfterSelection) {
                     outputSymbol.set(symbolName, symbolName);
@@ -1026,12 +1025,6 @@ export class ExtractMethodProvider {
             return;
         }
 
-        // Fix for only selecting the test expression of a startNode while or if statement
-        const startNodeContained = selectionContainsNode(selectionRange, startNode);
-        if (!startNodeContained) {
-            return;
-        }
-
         let endOffset = TextRange.getEnd(adjRange);
         let endNode = findNodeByOffset(moduleNode, endOffset);
         if (!endNode) {
@@ -1041,21 +1034,14 @@ export class ExtractMethodProvider {
         // Fix for only selecting the test expression of a endNode while or if statement
         // When including comments in our selection our end node will be a parent node that starts
         // before the selection so don't error in this case.
-        const endNodeContained = selectionContainsNode(selectionRange, endNode);
-        if (TextRange.contains(selectionRange, endNode.start) && !endNodeContained) {
+        const endNodeContained = selectionContainsNode(adjRange, endNode);
+        if (TextRange.contains(adjRange, endNode.start) && !endNodeContained) {
             return;
         }
 
-        let parentNode = startNode;
-        while (TextRange.getEnd(parentNode) < TextRange.getEnd(endNode)) {
-            if (parentNode.parent === undefined) {
-                break;
-            }
-            parentNode = parentNode.parent;
-        }
-
         // Expand selection endpoint to capture common parentNode and to prevent partial selection of if statements
-        if (!selectionContainsNode(selectionRange, parentNode)) {
+        const parentNode = _findCommonParent(startNode, endNode);
+        if (!selectionContainsNode(adjRange, parentNode)) {
             endNode = parentNode;
             endOffset = TextRange.getEnd(endNode);
         }
@@ -1159,32 +1145,6 @@ export class ExtractMethodProvider {
         return node;
     }
 
-    private static _findParentForRange(rootNode: ParseNode, range: TextRange): SuiteNode | ModuleNode | undefined {
-        const startNode = findNodeByOffset(rootNode, range.start);
-        if (startNode === undefined) {
-            return;
-        }
-
-        if (!this._isValidExtractionNode(startNode)) {
-            return;
-        }
-
-        const endOffset = TextRange.getEnd(range);
-        const endNode = findNodeByOffset(rootNode, endOffset);
-        if (endNode === undefined) {
-            return;
-        }
-
-        const startNodeParent = getEnclosingSuiteOrModule(startNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
-        const endNodeParent = getEnclosingSuiteOrModule(startNode, /*stopAtFunction*/ true, /*stopAtLambda*/ false);
-
-        if (startNodeParent?.id !== endNodeParent?.id) {
-            return;
-        }
-
-        return startNodeParent;
-    }
-
     private static _isValidExtractionNode(node: ParseNode): boolean {
         return !(
             node.nodeType === ParseNodeType.BinaryOperation ||
@@ -1202,6 +1162,52 @@ export class ExtractMethodProvider {
     ) {
         return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('\n');
     }
+}
+
+function _findParentForRange(rootNode: ParseNode, range: TextRange): ParseNode | undefined {
+    const startNode = findNodeByOffset(rootNode, range.start);
+    if (startNode === undefined) {
+        return;
+    }
+
+    const endOffset = TextRange.getEnd(range);
+    const endNode = findNodeByOffset(rootNode, endOffset);
+    if (endNode === undefined) {
+        return;
+    }
+
+    const parentNode = _findCommonParent(startNode, endNode, /*stopAtFunction*/ true);
+    return parentNode;
+}
+
+function _findCommonParent(startNode: ParseNode, endNode: ParseNode, stopAtFunction = false): ParseNode {
+    let parentNode = startNode;
+    while (TextRange.getEnd(parentNode) < TextRange.getEnd(endNode)) {
+        if (parentNode.parent === undefined) {
+            break;
+        }
+
+        if (stopAtFunction && parentNode.parent.nodeType === ParseNodeType.Function) {
+            break;
+        }
+
+        parentNode = parentNode.parent;
+    }
+
+    return parentNode;
+}
+
+function isDeclExecutedBeforeOffset(decl: Declaration, readOffset: number, parseResults: ParseResults): boolean {
+    const writePosition = convertOffsetToPosition(decl.node.start, parseResults.tokenizerOutput.lines);
+    const readPosition = convertOffsetToPosition(readOffset, parseResults.tokenizerOutput.lines);
+
+    // We need to compare line numbers instead of offsets because in the case
+    // (x = x) the read is before the write but the offset of the read is greater than the offset of the write
+    let isWriteBeforeRead = writePosition.line < readPosition.line;
+    if (writePosition.line === readPosition.line) {
+        isWriteBeforeRead = writePosition.character > readPosition.character;
+    }
+    return isWriteBeforeRead;
 }
 
 function findSymbolsInSelection(
