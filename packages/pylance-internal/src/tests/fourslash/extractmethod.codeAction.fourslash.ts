@@ -844,3 +844,14 @@ def new_func(w):
     return w.name`,
     ],
 });
+
+// @filename: TestExtractBinaryOperationInsideParens.py
+////x = ([|/*marker57*/1 + 2|])
+//@ts-ignore
+await helper.verifyExtractMethod('marker57', {
+    ['file:///TestExtractBinaryOperationInsideParens.py']: [
+        `def new_func():
+    return 1 + 2\n\n`,
+        `new_func()`,
+    ],
+});

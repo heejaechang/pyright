@@ -1039,11 +1039,13 @@ export class ExtractMethodProvider {
             return;
         }
 
-        // Expand selection endpoint to capture common parentNode and to prevent partial selection of if statements
-        const parentNode = _findCommonParent(startNode, endNode);
-        if (!selectionContainsNode(adjRange, parentNode)) {
-            endNode = parentNode;
-            endOffset = TextRange.getEnd(endNode);
+        if (startNode.parent?.id !== endNode.parent?.id) {
+            //Expand selection endpoint to capture common parentNode and to prevent partial selection of if statements
+            const parentNode = _findCommonParent(startNode, endNode);
+            if (!selectionContainsNode(adjRange, parentNode)) {
+                endNode = parentNode;
+                endOffset = TextRange.getEnd(endNode);
+            }
         }
 
         // Check for crossing function or Class boundaries
@@ -1122,7 +1124,7 @@ export class ExtractMethodProvider {
         fileContents: string
     ): ParseNode | undefined {
         const initialNode = node;
-        const stopChar = StepDirection.Backward ? '(' : ')';
+        const stopChar = dir === StepDirection.Backward ? '(' : ')';
 
         let curOffset = offset;
         while (curOffset >= 0 && curOffset < fileContents.length - 1) {
