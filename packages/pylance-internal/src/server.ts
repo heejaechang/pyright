@@ -75,6 +75,7 @@ import {
     TelemetryService,
     trackPerf,
 } from './common/telemetry';
+import { CustomLSP } from './customLSP';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelSubFolder } from './intelliCode/models';
 import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
@@ -107,6 +108,10 @@ class PylanceServer extends LanguageServerBase {
     // set per workspace or folder. Figure out how can we maintain cache per resource.
     private _progressBarEnabled?: boolean;
     private _hasSemanticTokensRefreshCapability?: boolean;
+
+    private _hasExperimentationSupport?: boolean;
+    private _inExperimentCache: Map<string, boolean>;
+    private _getExperimentValueCache: Map<string, any>;
 
     constructor() {
         const rootDirectory = __dirname;
@@ -145,6 +150,9 @@ class PylanceServer extends LanguageServerBase {
         const icModelSubfolder = path.join(this.fs.getModulePath(), ModelSubFolder);
         this._intelliCode.initialize(this._logger, this._telemetry, this.fs, this._platform, icModelSubfolder);
 
+        this._inExperimentCache = new Map();
+        this._getExperimentValueCache = new Map();
+
         const server = this;
         function reporterFactory(connection: ProgressReporterConnection): ProgressReporter {
             return {
@@ -153,15 +161,15 @@ class PylanceServer extends LanguageServerBase {
                 },
 
                 begin(): void {
-                    connection.sendNotification('python/beginProgress');
+                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.BeginProgress, undefined);
                 },
 
                 report(message: string): void {
-                    connection.sendNotification('python/reportProgress', message);
+                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.ReportProgress, message);
                 },
 
                 end(): void {
-                    connection.sendNotification('python/endProgress');
+                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.EndProgress, undefined);
                 },
             };
         }
@@ -179,10 +187,18 @@ class PylanceServer extends LanguageServerBase {
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
             autoImportCompletions: true,
-            indexing: IS_PRERELEASE,
+            indexing: false,
             completeFunctionParens: false,
-            enableExtractCodeAction: IS_PRERELEASE,
+            enableExtractCodeAction: false,
         };
+
+        const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
+        if (IS_PRERELEASE) {
+            serverSettings.indexing = true;
+            serverSettings.enableExtractCodeAction = true;
+        } else {
+            serverSettings.indexing = indexingExperiment ?? false;
+        }
 
         let forceProgressBar = false;
 
@@ -303,6 +319,8 @@ class PylanceServer extends LanguageServerBase {
 
             this._hasSemanticTokensRefreshCapability = !!params.capabilities.workspace?.semanticTokens?.refreshSupport;
         }
+
+        this._hasExperimentationSupport = params.initializationOptions?.experimentationSupport;
 
         return result;
     }
@@ -591,6 +609,42 @@ class PylanceServer extends LanguageServerBase {
             }
             this._telemetry.sendTelemetry(importEvent);
         }
+    }
+
+    private async _inExperiment(experimentName: string): Promise<boolean | undefined> {
+        if (!this._hasExperimentationSupport) {
+            return undefined;
+        }
+
+        const cached = this._inExperimentCache.get(experimentName);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const { inExperiment } = await CustomLSP.sendRequest(this._connection, CustomLSP.Requests.InExperiment, {
+            experimentName,
+        });
+        this._inExperimentCache.set(experimentName, inExperiment);
+        return inExperiment;
+    }
+
+    private async _getExperimentValue<T extends boolean | number | string>(
+        experimentName: string
+    ): Promise<T | undefined> {
+        if (!this._hasExperimentationSupport) {
+            return undefined;
+        }
+
+        const cached = this._getExperimentValueCache.get(experimentName);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const { value } = await CustomLSP.sendRequest(this._connection, CustomLSP.Requests.GetExperimentValue, {
+            experimentName,
+        });
+        this._getExperimentValueCache.set(experimentName, value);
+        return value;
     }
 }
 
