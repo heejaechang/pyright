@@ -855,3 +855,17 @@ await helper.verifyExtractMethod('marker57', {
         `new_func()`,
     ],
 });
+
+// @filename: TestExtractCompleteForLoop.py
+////fruits = ["apple", "banana", "cherry"]
+////[|/*marker58*/for x in fruits:
+////    print(x)|]
+//@ts-ignore
+await helper.verifyExtractMethod('marker58', {
+    ['file:///TestExtractCompleteForLoop.py']: [
+        `def new_func(fruits):
+    for x in fruits:
+        print(x)\n\n`,
+        `new_func(fruits)`,
+    ],
+});

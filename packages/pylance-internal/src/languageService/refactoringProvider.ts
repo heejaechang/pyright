@@ -909,6 +909,13 @@ export class ExtractMethodProvider {
                 }
 
                 const readLocation = convertRangeToTextRange(docRange.range, parseResults.tokenizerOutput.lines);
+
+                // Note all declaration locations are also refResult locations, so skip checking those reads
+                const isDeclaration = refResults.declarations.find((decl) => readLocation!.start === decl.node.start);
+                if (isDeclaration) {
+                    return;
+                }
+
                 const isInSelection = TextRange.contains(selRange, readLocation!.start);
                 if (isInSelection) {
                     const isDeclaredInsideSelectionBeforeRead = refResults.declarations.some(
