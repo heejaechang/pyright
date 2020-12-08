@@ -118,3 +118,13 @@ await helper.verifyExtractVariable('marker10', {
 await helper.verifyExtractVariable('marker11', {
     ['file:///testMultilineString.py']: [`new_var`, `new_var = """Multiline\n string"""\n    `],
 });
+
+// @filename: TestExtractParamShouldFail.py
+////def function([|/*marker12*/session|]):
+////    pass
+// @ts-ignore
+await expect(
+    helper.verifyExtractVariable('marker12', {
+        ['file:///TestExtractParamShouldFail.py']: [],
+    })
+).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidTargetSelected);

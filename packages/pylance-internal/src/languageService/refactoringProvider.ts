@@ -315,11 +315,18 @@ export class ExtractMethodProvider {
                 return { failedReason: CannotExtractReason.InvalidExpressionSelected };
             }
 
+            const failedReason = this._checkUnsupportedExpressions(
+                parentNode,
+                bodyNodes,
+                range,
+                containsOnlyExpression
+            );
+
             return {
                 range,
                 parentNode,
                 bodyNodes,
-                failedReason: CannotExtractReason.None,
+                failedReason: failedReason,
                 isExpression: containsOnlyExpression,
             };
         } catch (error) {
