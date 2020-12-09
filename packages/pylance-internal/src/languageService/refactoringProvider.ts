@@ -1019,6 +1019,11 @@ export class ExtractMethodProvider {
             return;
         }
 
+        // disable import extraction
+        if (isImport(startNode)) {
+            return;
+        }
+
         // See if we need to shrink the startNode. ie. mistaken extra binary operator like '+'
         if (!this._isValidExtractionNode(startNode)) {
             startNode = this._findNextClosestNode(
@@ -1180,6 +1185,21 @@ export class ExtractMethodProvider {
     }
 }
 
+function isImport(startNode: ParseNode) {
+    const importTypes = [
+        ParseNodeType.ModuleName,
+        ParseNodeType.Import,
+        ParseNodeType.ImportAs,
+        ParseNodeType.ImportFrom,
+        ParseNodeType.ImportFromAs,
+    ];
+
+    return (
+        importTypes.find((type) => type === startNode.nodeType) !== undefined ||
+        getParentOfType(startNode, importTypes) !== undefined
+    );
+}
+
 function _findParentForRange(rootNode: ParseNode, range: TextRange): ParseNode | undefined {
     const startNode = findNodeByOffset(rootNode, range.start);
     if (startNode === undefined) {
@@ -1314,7 +1334,6 @@ function generateUniqueNameInFunction(basename: string, enclosedFunctionNode: Pa
 class BreakAndContinueEnclosedInLoop extends ParseTreeWalker {
     public hasNonEnclosedContinue = false;
     public hasNonEnclosedBreak = false;
-    private _loopCount = 0;
     private _loopTypes = [ParseNodeType.While, ParseNodeType.For];
 
     constructor(private _selectionRange: TextRange) {
@@ -1344,6 +1363,19 @@ function getParentOfTypeInSelection(node: ParseNode, typesToMatch: ParseNodeType
     let curNode: ParseNode | undefined = node;
 
     while (curNode !== undefined && selection && selectionContainsNode(selection, curNode)) {
+        if (typesToMatch.some((type) => type === curNode!.nodeType)) {
+            return curNode;
+        }
+        curNode = curNode.parent;
+    }
+
+    return undefined;
+}
+
+function getParentOfType(node: ParseNode, typesToMatch: ParseNodeType[]) {
+    let curNode: ParseNode | undefined = node;
+
+    while (curNode !== undefined) {
         if (typesToMatch.some((type) => type === curNode!.nodeType)) {
             return curNode;
         }

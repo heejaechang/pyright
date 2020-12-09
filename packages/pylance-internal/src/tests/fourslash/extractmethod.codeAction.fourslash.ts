@@ -869,3 +869,39 @@ await helper.verifyExtractMethod('marker58', {
         `new_func(fruits)`,
     ],
 });
+
+// @filename: TestExtractImportShouldFail.py
+////from __future__ import [|/*marker59*/print_function|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker59', {
+        ['file:///TestExtractImportShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractImportFromShouldFail.py
+////from [|/*marker60*/__future__|] import print_function
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker60', {
+        ['file:///TestExtractImportFromShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractImportAsShouldFail.py
+////import os as [|/*marker61*/osAlias|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker61', {
+        ['file:///TestExtractImportAsShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractImportOsShouldFail.py
+////import [|/*marker62*/os|]
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker62', {
+        ['file:///TestExtractImportOsShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
