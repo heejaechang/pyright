@@ -9,7 +9,6 @@
 
 import { assert } from 'console';
 
-import { ParameterCategory } from '../parser/parseNodes';
 import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
 import { isTypedDictMemberAccessedThroughIndex } from './symbolUtils';
@@ -37,7 +36,6 @@ import {
     ParamSpecEntry,
     removeFromUnion,
     SpecializedFunctionTypes,
-    SubtypeConstraint,
     SubtypeConstraints,
     Type,
     TypeBase,
@@ -100,17 +98,21 @@ export const enum CanAssignFlags {
     // on dest type vars rather than source type var.
     ReverseTypeVarMatching = 1 << 1,
 
+    // Normally TypeVars cannot be narrowed, only widened, unless
+    // ReverseTypeVarMatching is in effect. This overrides the behavior.
+    AllowTypeVarNarrowing = 1 << 2,
+
     // Normally type vars are treated as variables that need to
     // be "solved". If this flag is set, they are treated as types
     // that must match. It is used for overload consistency checking.
-    SkipSolveTypeVars = 1 << 2,
+    SkipSolveTypeVars = 1 << 3,
 
     // If the dest is not Any but the src is Any, treat it
     // as incompatible.
-    DisallowAssignFromAny = 1 << 3,
+    DisallowAssignFromAny = 1 << 4,
 
     // For function types, skip the return type check.
-    SkipFunctionReturnTypeCheck = 1 << 4,
+    SkipFunctionReturnTypeCheck = 1 << 5,
 }
 
 interface TypeVarTransformer {
@@ -118,9 +120,6 @@ interface TypeVarTransformer {
     transformVariadicTypeVar: (paramSpec: TypeVarType) => Type[] | undefined;
     transformParamSpec: (paramSpec: TypeVarType) => ParamSpecEntry[] | undefined;
 }
-
-const singleTickRegEx = /'/g;
-const tripleTickRegEx = /'''/g;
 
 let synthesizedTypeVarIndexForExpectedType = 1;
 
@@ -134,24 +133,15 @@ export function isOptionalType(type: Type): boolean {
 
 // Calls a callback for each subtype and combines the results
 // into a final type.
-export function mapSubtypes(
-    type: Type,
-    callback: (type: Type, constraints: SubtypeConstraints) => Type | undefined,
-    constraintFilter?: SubtypeConstraints
-): Type {
+export function mapSubtypes(type: Type, callback: (type: Type) => Type | undefined): Type {
     if (type.category === TypeCategory.Union) {
         const newSubtypes: ConstrainedSubtype[] = [];
         let typeChanged = false;
 
         type.subtypes.forEach((subtype, index) => {
             const subtypeConstraints = type.constraints ? type.constraints[index] : undefined;
-            if (constraintFilter) {
-                if (!SubtypeConstraint.isCompatible(subtypeConstraints, constraintFilter)) {
-                    return undefined;
-                }
-            }
 
-            const transformedType = callback(subtype, subtypeConstraints);
+            const transformedType = callback(subtype);
             if (transformedType) {
                 newSubtypes.push({ type: transformedType, constraints: subtypeConstraints });
                 if (transformedType !== subtype) {
@@ -160,32 +150,34 @@ export function mapSubtypes(
             } else {
                 typeChanged = true;
             }
-            return undefined;
         });
 
         return typeChanged ? combineConstrainedTypes(newSubtypes) : type;
     }
 
-    const transformedSubtype = callback(type, undefined);
+    const transformedSubtype = callback(type);
     if (!transformedSubtype) {
         return NeverType.create();
     }
     return transformedSubtype;
 }
 
-export function doForEachSubtype(type: Type, callback: (type: Type, constraints: SubtypeConstraints) => void): void {
+export function doForEachSubtype(
+    type: Type,
+    callback: (type: Type, index: number, constraints: SubtypeConstraints) => void
+): void {
     if (type.category === TypeCategory.Union) {
         if (type.constraints) {
             type.subtypes.forEach((subtype, index) => {
-                callback(subtype, type.constraints![index]);
+                callback(subtype, index, type.constraints![index]);
             });
         } else {
             type.subtypes.forEach((subtype, index) => {
-                callback(subtype, undefined);
+                callback(subtype, index, undefined);
             });
         }
     } else {
-        callback(type, undefined);
+        callback(type, 0, undefined);
     }
 }
 
@@ -396,6 +388,11 @@ export function canBeFalsy(type: Type, recursionLevel = 0): boolean {
                 return false;
             }
 
+            // Check for Literal[False] and Literal[True].
+            if (ClassType.isBuiltIn(type.classType, 'bool') && type.classType.literalValue !== undefined) {
+                return type.classType.literalValue === false;
+            }
+
             const lenMethod = lookUpObjectMember(type, '__len__');
             if (lenMethod) {
                 return true;
@@ -404,13 +401,6 @@ export function canBeFalsy(type: Type, recursionLevel = 0): boolean {
             const boolMethod = lookUpObjectMember(type, '__bool__');
             if (boolMethod) {
                 return true;
-            }
-
-            // Check for Literal[False].
-            if (ClassType.isBuiltIn(type.classType, 'bool')) {
-                if (type.classType.literalValue === false) {
-                    return true;
-                }
             }
 
             return false;
@@ -452,11 +442,13 @@ export function canBeTruthy(type: Type, recursionLevel = 0): boolean {
                 }
             }
 
-            // Check for Literal[False].
-            if (ClassType.isBuiltIn(type.classType, 'bool')) {
-                if (type.classType.literalValue === false) {
-                    return false;
-                }
+            // Check for Literal[False], Literal[0], Literal[""].
+            if (
+                type.classType.literalValue === false ||
+                type.classType.literalValue === 0 ||
+                type.classType.literalValue === ''
+            ) {
+                return false;
             }
 
             return true;
@@ -575,8 +567,8 @@ export function partiallySpecializeType(type: Type, contextClassType: ClassType)
 
 // Specializes a (potentially generic) type by substituting
 // type variables from a type var map.
-export function applySolvedTypeVars(type: Type, typeVarMap: TypeVarMap, concreteIfNotFound = false): Type {
-    if (typeVarMap.isEmpty() && !concreteIfNotFound) {
+export function applySolvedTypeVars(type: Type, typeVarMap: TypeVarMap, unknownIfNotFound = false): Type {
+    if (typeVarMap.isEmpty() && !unknownIfNotFound) {
         return type;
     }
 
@@ -584,19 +576,17 @@ export function applySolvedTypeVars(type: Type, typeVarMap: TypeVarMap, concrete
         transformTypeVar: (typeVar: TypeVarType) => {
             // If the type variable is unrelated to the scopes we're solving,
             // don't transform that type variable.
-            if (!typeVar.scopeId || !typeVarMap.hasSolveForScope(typeVar.scopeId)) {
-                return typeVar;
-            }
+            if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId)) {
+                const replacement = typeVarMap.getTypeVar(typeVar);
+                if (replacement) {
+                    return replacement;
+                }
 
-            const replacement = typeVarMap.getTypeVar(typeVar);
-            if (replacement) {
-                return replacement;
-            }
-
-            // If this typeVar is in scope for what we're solving but the type
-            // var map doesn't contain any entry for it, replace with Unknown.
-            if (concreteIfNotFound && typeVarMap.hasSolveForScope(typeVar.scopeId)) {
-                return UnknownType.create();
+                // If this typeVar is in scope for what we're solving but the type
+                // var map doesn't contain any entry for it, replace with Unknown.
+                if (unknownIfNotFound) {
+                    return UnknownType.create();
+                }
             }
 
             return typeVar;
@@ -652,9 +642,8 @@ export function transformExpectedTypeForConstructor(
         newTypeVar.details.boundType = prevTypeVar.details.boundType;
         newTypeVar.details.constraints = prevTypeVar.details.constraints;
 
-        // Also copy the covariant/contravariant flags.
-        newTypeVar.details.isCovariant = prevTypeVar.details.isCovariant;
-        newTypeVar.details.isContravariant = prevTypeVar.details.isContravariant;
+        // Also copy the variance.
+        newTypeVar.details.variance = prevTypeVar.details.variance;
 
         synthesizedTypeVarIndexForExpectedType++;
         return newTypeVar;
@@ -883,15 +872,16 @@ export function getTypeVarArgumentsRecursive(type: Type, recursionCount = 0): Ty
     } else if (type.category === TypeCategory.Function) {
         const combinedList: TypeVarType[] = [];
 
-        type.details.parameters.forEach((param) => {
-            addTypeVarsToListIfUnique(combinedList, getTypeVarArgumentsRecursive(param.type, recursionCount + 1));
-        });
-
-        if (type.details.declaredReturnType) {
+        for (let i = 0; i < type.details.parameters.length; i++) {
             addTypeVarsToListIfUnique(
                 combinedList,
-                getTypeVarArgumentsRecursive(type.details.declaredReturnType, recursionCount + 1)
+                getTypeVarArgumentsRecursive(FunctionType.getEffectiveParameterType(type, i), recursionCount + 1)
             );
+        }
+
+        const returnType = FunctionType.getSpecializedReturnType(type);
+        if (returnType) {
+            addTypeVarsToListIfUnique(combinedList, getTypeVarArgumentsRecursive(returnType, recursionCount + 1));
         }
 
         return combinedList;
@@ -927,14 +917,6 @@ export function specializeClassType(type: ClassType): ClassType {
     });
 
     return applySolvedTypeVars(type, typeVarMap) as ClassType;
-}
-
-// Removes the first parameter of the function and returns a new function.
-export function stripFirstParameter(type: FunctionType): FunctionType {
-    if (type.details.parameters.length > 0 && type.details.parameters[0].category === ParameterCategory.Simple) {
-        return FunctionType.clone(type, /* stripFirstParam */ true);
-    }
-    return type;
 }
 
 // Recursively finds all of the type arguments and sets them

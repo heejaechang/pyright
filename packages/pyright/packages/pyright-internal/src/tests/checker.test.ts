@@ -9,10 +9,7 @@
  * heavily upon).
  */
 
-import * as assert from 'assert';
-
 import { ConfigOptions } from '../common/configOptions';
-import { PythonVersion } from '../common/pythonVersion';
 import * as TestUtils from './testUtils';
 
 test('BadToken1', () => {
@@ -114,6 +111,12 @@ test('With2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['with2.py']);
 
     TestUtils.validateResults(analysisResults, 3);
+});
+
+test('With3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['with3.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('Mro1', () => {

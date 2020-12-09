@@ -2854,7 +2854,12 @@ export class Parser {
             }
 
             const rightExpr =
-                this._tryParseYieldExpression() || this._parseTestExpression(/* allowAssignmentExpression */ false);
+                this._tryParseYieldExpression() ||
+                this._parseTestOrStarListAsExpression(
+                    /* allowAssignmentExpression */ false,
+                    ErrorExpressionCategory.MissingExpression,
+                    Localizer.Diagnostic.expectedAssignRightHandExpr()
+                );
 
             this._isParsingTypeAnnotation = wasParsingTypeAnnotation;
 
@@ -3272,7 +3277,7 @@ export class Parser {
         // Handle Python 3.8 f-string formatting expressions that
         // end in an "=".
         if (this._parseOptions.pythonVersion >= PythonVersion.V3_8 && indexOfDebugEqual !== undefined) {
-            segmentExprLength = indexOfDebugEqual - 1;
+            segmentExprLength = indexOfDebugEqual;
         }
 
         return segmentExprLength;
