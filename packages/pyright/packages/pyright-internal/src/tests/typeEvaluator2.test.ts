@@ -66,6 +66,12 @@ test('Assignment8', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Assignment9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment9.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('AugmentedAssignment1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['augmentedAssignment1.py']);
 
@@ -103,7 +109,10 @@ test('NewType3', () => {
 });
 
 test('isInstance1', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance1.py']);
+    // This test requires Python 3.10 because it uses PEP 604 notation for unions.
+    const configOptions = new ConfigOptions('.');
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance1.py'], configOptions);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -412,7 +421,7 @@ test('GenericTypes33', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportMissingTypeArgument = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes33.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('GenericTypes34', () => {
@@ -439,7 +448,7 @@ test('GenericTypes36', () => {
 test('GenericTypes37', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes37.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('GenericTypes38', () => {
@@ -482,6 +491,18 @@ test('GenericTypes44', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes44.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes45', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes45.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('GenericTypes46', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes46.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('Protocol1', () => {
@@ -639,6 +660,11 @@ test('Metaclass3', () => {
 
 test('Metaclass4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass4.py']);
+    TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Metaclass5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass5.py']);
     TestUtils.validateResults(analysisResults, 1);
 });
 
@@ -839,7 +865,7 @@ test('FString5', () => {
     // Analyze with Python 3.7 settings. This will generate errors.
     configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['fstring5.py'], configOptions);
-    TestUtils.validateResults(analysisResults37, 3);
+    TestUtils.validateResults(analysisResults37, 6);
 
     // Analyze with Python 3.8 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_8;
@@ -947,6 +973,18 @@ test('DataClass11', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('DataClass12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass12.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('DataClass13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass13.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
+});
+
 test('Callable1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable1.py']);
 
@@ -956,7 +994,7 @@ test('Callable1', () => {
 test('Callable2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable2.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('ThreePartVersion1', () => {
@@ -1098,6 +1136,12 @@ test('TypeVar7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar7.py']);
 
     TestUtils.validateResults(analysisResults, 22);
+});
+
+test('TypeVar8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar8.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('Annotated1', () => {

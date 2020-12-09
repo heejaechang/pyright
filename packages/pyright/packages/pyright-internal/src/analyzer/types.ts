@@ -236,24 +236,23 @@ export const enum ClassTypeFlags {
     // from NamedTuple or has a @dataclass class decorator.
     DataClass = 1 << 2,
 
+    // Indicates that the dataclass is frozen.
+    FrozenDataClass = 1 << 3,
+
     // Flags that control whether methods should be
     // synthesized for a dataclass class.
-    SkipSynthesizedDataclassInit = 1 << 3,
-    SkipSynthesizedDataclassEq = 1 << 4,
-    SynthesizedDataclassOrder = 1 << 5,
+    SkipSynthesizedDataClassInit = 1 << 4,
+    SkipSynthesizedDataClassEq = 1 << 5,
+    SynthesizedDataClassOrder = 1 << 6,
 
     // Introduced in PEP 589, TypedDict classes provide a way
     // to specify type hints for dictionaries with different
     // value types and a limited set of static keys.
-    TypedDictClass = 1 << 6,
+    TypedDictClass = 1 << 7,
 
     // Used in conjunction with TypedDictClass, indicates that
     // the dictionary values can be omitted.
-    CanOmitDictValues = 1 << 7,
-
-    // The class has a metaclass of EnumMet or derives from
-    // a class that has this metaclass.
-    EnumClass = 1 << 8,
+    CanOmitDictValues = 1 << 8,
 
     // The class derives from a class that has the ABCMeta
     // metaclass. Such classes are allowed to contain
@@ -304,6 +303,10 @@ export const enum ClassTypeFlags {
     // arguments is variable. Currently, the only class that supports
     // this is tuple.
     VariadicTypeParameter = 1 << 19,
+
+    // The class has a metaclass of EnumMet or derives from
+    // a class that has this metaclass.
+    EnumClass = 1 << 20,
 }
 
 interface ClassDetails {
@@ -484,16 +487,20 @@ export namespace ClassType {
         return !!(classType.details.flags & ClassTypeFlags.DataClass);
     }
 
-    export function isSkipSynthesizedDataclassInit(classType: ClassType) {
-        return !!(classType.details.flags & ClassTypeFlags.SkipSynthesizedDataclassInit);
+    export function isSkipSynthesizedDataClassInit(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.SkipSynthesizedDataClassInit);
     }
 
-    export function isSkipSynthesizedDataclassEq(classType: ClassType) {
-        return !!(classType.details.flags & ClassTypeFlags.SkipSynthesizedDataclassEq);
+    export function isSkipSynthesizedDataClassEq(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.SkipSynthesizedDataClassEq);
+    }
+
+    export function isFrozenDataClass(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.FrozenDataClass);
     }
 
     export function isSynthesizedDataclassOrder(classType: ClassType) {
-        return !!(classType.details.flags & ClassTypeFlags.SynthesizedDataclassOrder);
+        return !!(classType.details.flags & ClassTypeFlags.SynthesizedDataClassOrder);
     }
 
     export function isTypedDictClass(classType: ClassType) {
@@ -608,7 +615,7 @@ export namespace ClassType {
             if (
                 !class1Details.declaredMetaclass ||
                 !class2Details.declaredMetaclass ||
-                !isTypeSame(class1Details.declaredMetaclass, class2Details.declaredMetaclass)
+                !isTypeSame(class1Details.declaredMetaclass, class2Details.declaredMetaclass, recursionCount + 1)
             ) {
                 return false;
             }
@@ -824,6 +831,9 @@ export interface FunctionType extends TypeBase {
     // was stripped from the original unbound function, the
     // (specialized) type of that stripped parameter.
     strippedFirstParamType?: Type;
+
+    // The type var scope for the class that the function was bound to
+    boundTypeVarScopeId?: TypeVarScopeId;
 }
 
 export interface ParamSpecEntry {
@@ -874,7 +884,11 @@ export namespace FunctionType {
 
     // Creates a deep copy of the function type, including a fresh
     // version of _functionDetails.
-    export function clone(type: FunctionType, stripFirstParam = false): FunctionType {
+    export function clone(
+        type: FunctionType,
+        stripFirstParam = false,
+        boundTypeVarScopeId?: TypeVarScopeId
+    ): FunctionType {
         const newFunction = create(
             type.details.name,
             type.details.moduleName,
@@ -885,12 +899,18 @@ export namespace FunctionType {
 
         newFunction.details = { ...type.details };
 
-        // If we strip off the first parameter, this is no longer an
-        // instance method or class method.
         if (stripFirstParam) {
-            // Stash away the effective type of the first parameter.
-            newFunction.strippedFirstParamType = getEffectiveParameterType(type, 0);
-            newFunction.details.parameters = type.details.parameters.slice(1);
+            if (
+                type.details.parameters.length > 0 &&
+                type.details.parameters[0].category === ParameterCategory.Simple
+            ) {
+                // Stash away the effective type of the first parameter.
+                newFunction.strippedFirstParamType = getEffectiveParameterType(type, 0);
+                newFunction.details.parameters = type.details.parameters.slice(1);
+            }
+
+            // If we strip off the first parameter, this is no longer an
+            // instance method or class method.
             newFunction.details.flags &= ~(FunctionTypeFlags.ConstructorMethod | FunctionTypeFlags.ClassMethod);
             newFunction.details.flags |= FunctionTypeFlags.StaticMethod;
         }
@@ -909,6 +929,7 @@ export namespace FunctionType {
         }
 
         newFunction.inferredReturnType = type.inferredReturnType;
+        newFunction.boundTypeVarScopeId = boundTypeVarScopeId;
 
         return newFunction;
     }
@@ -1356,12 +1377,17 @@ export namespace UnionType {
     }
 }
 
+export const enum Variance {
+    Invariant,
+    Covariant,
+    Contravariant,
+}
+
 export interface TypeVarDetails {
     name: string;
     constraints: Type[];
     boundType?: Type;
-    isCovariant: boolean;
-    isContravariant: boolean;
+    variance: Variance;
     isParamSpec: boolean;
 
     // Internally created (e.g. for pseudo-generic classes)
@@ -1430,8 +1456,7 @@ export namespace TypeVarType {
             details: {
                 name,
                 constraints: [],
-                isCovariant: false,
-                isContravariant: false,
+                variance: Variance.Invariant,
                 isParamSpec,
                 isSynthesized,
             },
@@ -1649,7 +1674,7 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
             // We assume here that overloaded functions always appear
             // in the same order from one analysis pass to another.
             for (let i = 0; i < type1.overloads.length; i++) {
-                if (!isTypeSame(type1.overloads[i], functionType2.overloads[i])) {
+                if (!isTypeSame(type1.overloads[i], functionType2.overloads[i], recursionCount + 1)) {
                     return false;
                 }
             }
@@ -1704,11 +1729,7 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
                 }
             }
 
-            if (type1.details.isContravariant !== type2TypeVar.details.isContravariant) {
-                return false;
-            }
-
-            if (type1.details.isCovariant !== type2TypeVar.details.isCovariant) {
+            if (type1.details.variance !== type2TypeVar.details.variance) {
                 return false;
             }
 
