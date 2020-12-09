@@ -7,6 +7,7 @@ const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const JavaScriptObfuscator = require('webpack-obfuscator');
 const TerserPlugin = require('terser-webpack-plugin');
+const { monorepoResourceNameMapper } = require('../pyright/build/lib/webpack');
 
 const outPath = path.resolve(__dirname, 'dist');
 const packages = path.resolve(__dirname, '..');
@@ -73,9 +74,10 @@ module.exports = (_, { mode }) => {
             filename: '[name].bundle.js',
             path: outPath,
             libraryTarget: 'commonjs2',
-            devtoolModuleFilenameTemplate: '../[resource-path]',
+            devtoolModuleFilenameTemplate:
+                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('vscode-pylance'),
         },
-        devtool: mode === 'development' ? 'source-map' : false,
+        devtool: mode === 'development' ? 'source-map' : 'nosources-source-map',
         stats: {
             all: false,
             errors: true,

@@ -91,6 +91,10 @@ jobs:
           name: ${{ env.ARTIFACT_NAME_PYTHIA_PKG }}
           path: packages/pylance-pythia/${{ env.PYTHIA_PKG_NAME }}
 
+      - name: Check for private source maps
+        run: |
+          find packages/{vscode-pylance,pylance}/dist -maxdepth 1 -iname '*.map' -not -iname 'pyright.bundle.js.map' -not -iname 'vendor.bundle.js.map' |& (! grep .)
+
   create_release:
     if: github.repository == 'microsoft/pyrx' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-18.04
