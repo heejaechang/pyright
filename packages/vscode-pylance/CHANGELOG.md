@@ -1,5 +1,11 @@
 # Changelog
 
+## 2020.12.2 (10 December 2020)
+
+Notable changes:
+
+-   Extract method and variable refactorings are now enabled for all users.
+
 ## 2020.12.1 (9 December 2020)
 
 Notable changes:

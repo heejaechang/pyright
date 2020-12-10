@@ -189,14 +189,13 @@ class PylanceServer extends LanguageServerBase {
             autoImportCompletions: true,
             indexing: false,
             completeFunctionParens: false,
-            enableExtractCodeAction: false,
+            enableExtractCodeAction: true,
         };
 
-        const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
         if (IS_PRERELEASE) {
             serverSettings.indexing = true;
-            serverSettings.enableExtractCodeAction = true;
         } else {
+            const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
             serverSettings.indexing = indexingExperiment ?? false;
         }
 
