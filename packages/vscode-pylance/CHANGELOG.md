@@ -1,6 +1,6 @@
 # Changelog
 
-## 2020.12.2 (10 December 2020)
+## 2020.12.2 (11 December 2020)
 
 Notable changes:
 
