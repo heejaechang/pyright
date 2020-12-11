@@ -45,7 +45,6 @@ import {
     isModule,
     isNone,
     isObject,
-    isTypeVar,
     isUnbound,
     isUnknown,
     ObjectType,
@@ -60,6 +59,7 @@ import {
     getMembersForClass,
     getMembersForModule,
     isProperty,
+    transformTypeObjectToClass,
 } from '../analyzer/typeUtils';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions } from '../common/configOptions';
@@ -226,7 +226,7 @@ interface SymbolDetail {
     funcParensDisabled?: boolean;
     autoImportSource?: string;
     autoImportAlias?: string;
-    objectThrough?: ObjectType;
+    boundObject?: ObjectType;
     edits?: Edits;
 }
 
@@ -896,33 +896,27 @@ export class CompletionProvider {
         leftExprNode: ExpressionNode,
         priorWord: string
     ): CompletionResults | undefined {
-        let leftType = this._evaluator.getType(leftExprNode);
         const symbolTable = new Map<string, Symbol>();
         const completionList = CompletionList.create();
         let memberAccessInfo: MemberAccessInfo = {};
 
+        let leftType = this._evaluator.getType(leftExprNode);
+
         if (leftType) {
-            if (isTypeVar(leftType)) {
-                // If the left is a constrained TypeVar, treat it as a union for the
-                // purposes of providing completion suggestions.
-                leftType = this._evaluator.makeTopLevelTypeVarsConcrete(leftType, /* convertConstraintsToUnion */ true);
-            }
+            leftType = this._evaluator.makeTopLevelTypeVarsConcrete(leftType);
 
             doForEachSubtype(leftType, (subtype) => {
-                const specializedSubtype = this._evaluator.makeTopLevelTypeVarsConcrete(
-                    subtype,
-                    /* convertConstraintsToUnion */ false
-                );
+                subtype = transformTypeObjectToClass(subtype);
 
-                if (isObject(specializedSubtype)) {
-                    getMembersForClass(specializedSubtype.classType, symbolTable, /* includeInstanceVars */ true);
-                } else if (isClass(specializedSubtype)) {
-                    getMembersForClass(specializedSubtype, symbolTable, /* includeInstanceVars */ false);
-                } else if (isModule(specializedSubtype)) {
-                    getMembersForModule(specializedSubtype, symbolTable);
+                if (isObject(subtype)) {
+                    getMembersForClass(subtype.classType, symbolTable, /* includeInstanceVars */ true);
+                } else if (isClass(subtype)) {
+                    getMembersForClass(subtype, symbolTable, /* includeInstanceVars */ false);
+                } else if (isModule(subtype)) {
+                    getMembersForModule(subtype, symbolTable);
                 } else if (
-                    specializedSubtype.category === TypeCategory.Function ||
-                    specializedSubtype.category === TypeCategory.OverloadedFunction
+                    subtype.category === TypeCategory.Function ||
+                    subtype.category === TypeCategory.OverloadedFunction
                 ) {
                     const functionClass = this._evaluator.getBuiltInType(leftExprNode, 'function');
                     if (functionClass && isClass(functionClass)) {
@@ -934,21 +928,22 @@ export class CompletionProvider {
                         getMembersForClass(objectClass, symbolTable, TypeBase.isInstance(subtype));
                     }
                 }
+
+                const boundObject = isObject(subtype) ? subtype : undefined;
+                this._addSymbolsForSymbolTable(
+                    symbolTable,
+                    (_) => true,
+                    priorWord,
+                    /* isInImport */ false,
+                    boundObject,
+                    completionList
+                );
             });
+        }
 
-            const specializedLeftType = this._evaluator.makeTopLevelTypeVarsConcrete(
-                leftType,
-                /* convertConstraintsToUnion */ false
-            );
-            const objectThrough: ObjectType | undefined = isObject(specializedLeftType)
-                ? specializedLeftType
-                : undefined;
-            this._addSymbolsForSymbolTable(symbolTable, (_) => true, priorWord, false, objectThrough, completionList);
-
-            // If we don't know this type, look for a module we should stub
-            if (!leftType || isUnknown(leftType) || isUnbound(leftType)) {
-                memberAccessInfo = this._getLastKnownModule(leftExprNode, leftType);
-            }
+        // If we don't know this type, look for a module we should stub.
+        if (!leftType || isUnknown(leftType) || isUnbound(leftType)) {
+            memberAccessInfo = this._getLastKnownModule(leftExprNode, leftType);
         }
 
         return { completionList, memberAccessInfo };
@@ -1401,8 +1396,8 @@ export class CompletionProvider {
                     return !importFromNode.imports.find((imp) => imp.name.value === name);
                 },
                 priorWord,
-                true,
-                undefined,
+                /* isInImport */ true,
+                /* boundObject */ undefined,
                 completionList
             );
         }
@@ -1484,8 +1479,8 @@ export class CompletionProvider {
                         scope.symbolTable,
                         () => true,
                         priorWord,
-                        false,
-                        undefined,
+                        /* isInImport */ false,
+                        /* boundObject */ undefined,
                         completionList
                     );
                     scope = scope.parent;
@@ -1511,8 +1506,8 @@ export class CompletionProvider {
                                             .some((decl) => decl.type === DeclarationType.Variable);
                                     },
                                     priorWord,
-                                    false,
-                                    undefined,
+                                    /* isInImport */ false,
+                                    /* boundObject */ undefined,
                                     completionList
                                 );
                             }
@@ -1531,7 +1526,7 @@ export class CompletionProvider {
         includeSymbolCallback: (name: string) => boolean,
         priorWord: string,
         isInImport: boolean,
-        objectThrough: ObjectType | undefined,
+        boundObject: ObjectType | undefined,
         completionList: CompletionList
     ) {
         symbolTable.forEach((symbol, name) => {
@@ -1543,7 +1538,7 @@ export class CompletionProvider {
                 // added from an inner scope's symbol table.
                 if (!completionList.items.some((item) => item.label === name)) {
                     this._addSymbol(name, symbol, priorWord, completionList, {
-                        objectThrough,
+                        boundObject,
                         funcParensDisabled: isInImport,
                     });
                 }
@@ -1604,11 +1599,11 @@ export class CompletionProvider {
                                 }
                                 case DeclarationType.Function: {
                                     const functionType =
-                                        detail.objectThrough && isFunction(type)
-                                            ? this._evaluator.bindFunctionToClassOrObject(detail.objectThrough, type)
+                                        detail.boundObject && isFunction(type)
+                                            ? this._evaluator.bindFunctionToClassOrObject(detail.boundObject, type)
                                             : type;
                                     if (functionType) {
-                                        if (isProperty(functionType) && detail.objectThrough) {
+                                        if (isProperty(functionType) && detail.boundObject) {
                                             const propertyType =
                                                 this._evaluator.getGetterTypeFromProperty(
                                                     functionType.classType,
