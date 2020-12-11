@@ -905,3 +905,25 @@ await expect(
         ['file:///TestExtractImportOsShouldFail.py']: [],
     })
 ).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractImportRef.py
+////import gc
+////[|/*marker63*/gc.collect()|]
+//@ts-ignore
+await helper.verifyExtractMethod('marker63', {
+    ['file:///TestExtractImportRef.py']: [
+        `def new_func():
+    gc.collect()\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestExtractParameterExpressionShouldFail.py
+////def f([|/*marker64*/x=1|])
+////    x = 2
+//@ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker64', {
+        ['file:///TestExtractParameterExpressionShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionSelected);

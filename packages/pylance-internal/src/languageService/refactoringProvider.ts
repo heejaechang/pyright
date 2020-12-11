@@ -17,6 +17,7 @@ import {
 } from 'pyright-internal/analyzer/parseTreeUtils';
 import * as ParseTreeUtils from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
+import { Scope } from 'pyright-internal/analyzer/scope';
 import { FunctionTypeResult, TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
 import { FunctionType } from 'pyright-internal/analyzer/types';
 import { FileEditAction } from 'pyright-internal/common/editAction';
@@ -212,8 +213,26 @@ export class ExtractMethodProvider {
             throw new Error(CannotExtractReason.InvalidTargetSelected);
         }
 
-        const symbolReferences = this._findSymbolsReferences(selectionInfo.parentNode, parseResults, evaluator, token);
-        const signatureSymbols = this._findSignatureSymbols(symbolReferences, selectionInfo.range, parseResults, token);
+        const executionScope = ParseTreeUtils.getEvaluationScopeNode(selectionInfo.parentNode);
+        const scope = AnalyzerNodeInfo.getScope(executionScope);
+        const globalScope = scope?.getGlobalScope();
+
+        const symbolReferences = this._findSymbolsReferences(
+            selectionInfo.parentNode,
+            scope,
+            parseResults,
+            evaluator,
+            token
+        );
+
+        const signatureSymbols = this._findSignatureSymbols(
+            globalScope,
+            symbolReferences,
+            selectionInfo.range,
+            parseResults,
+            token
+        );
+
         const outputSymbols = this._findOutputSymbols(symbolReferences, selectionInfo.range, parseResults, token);
 
         if (token.isCancellationRequested) {
@@ -234,17 +253,15 @@ export class ExtractMethodProvider {
 
     private static _findSymbolsReferences(
         parentNode: ParseNode | undefined,
+        scope: Scope | undefined,
         parseResults: ParseResults,
         evaluator: TypeEvaluator,
         token: CancellationToken
     ) {
         const symbolReferences = new Map<string, ReferencesResult>();
-        if (parentNode === undefined) {
+        if (scope === undefined || parentNode === undefined) {
             return symbolReferences;
         }
-
-        const executionScope = ParseTreeUtils.getEvaluationScopeNode(parentNode);
-        const scope = AnalyzerNodeInfo.getScope(executionScope);
 
         scope?.symbolTable.forEach((symbol, name) => {
             if (token.isCancellationRequested) {
@@ -426,6 +443,10 @@ export class ExtractMethodProvider {
 
         if (breakAndContinueChecker.hasNonEnclosedBreak) {
             return CannotExtractReason.ContainsBreakWithoutLoop;
+        }
+
+        if (parentNode.nodeType === ParseNodeType.Parameter) {
+            return CannotExtractReason.InvalidExpressionSelected;
         }
 
         // Limit extraction to just a right expression or full statements not both.
@@ -660,8 +681,12 @@ export class ExtractMethodProvider {
         const indention = ' '.repeat(indentionOffset + 4);
         // add return statement to new function definition
         if (selectionInfo.isExpression) {
-            methodBodyStr[0] = indention + 'return ' + methodBodyStr[0];
-        } else if (outputSymbols.length > 0) {
+            const isCall =
+                selectionInfo.bodyNodes.length === 1 && selectionInfo.bodyNodes[0]?.nodeType === ParseNodeType.Call;
+            const returnStr = isCall ? '' : 'return ';
+            methodBodyStr[0] = indention + returnStr + methodBodyStr[0].trimStart();
+        }
+        if (outputSymbols.length > 0) {
             const returnStr = indention + 'return ' + outputSymbols.join(',');
             methodBodyStr.push(returnStr);
         }
@@ -822,7 +847,7 @@ export class ExtractMethodProvider {
 
         // Walk backwards thur the nodes because we can't trust a node end as being a full line because it wont include comments,
         // so instead we copy all the way back to the previous offset which was a node's start.
-        const reverseNodes = nodes.reverse().forEach((node) => {
+        nodes.reverse().forEach((node) => {
             if (!node) {
                 return;
             }
@@ -895,12 +920,13 @@ export class ExtractMethodProvider {
     }
 
     private static _findSignatureSymbols(
+        globalScope: Scope | undefined,
         symbolReferences: Map<string, ReferencesResult>,
         selRange: TextRange,
         parseResults: ParseResults,
         token: CancellationToken
     ): string[] {
-        if (selRange === undefined) {
+        if (selRange === undefined || globalScope === undefined) {
             return [];
         }
 
@@ -920,6 +946,24 @@ export class ExtractMethodProvider {
                 // Note all declaration locations are also refResult locations, so skip checking those reads
                 const isDeclaration = refResults.declarations.find((decl) => readLocation!.start === decl.node.start);
                 if (isDeclaration) {
+                    return;
+                }
+
+                // don't allow import declarations to signature
+                // skipping adding symbol to signature if the symbol's declaration is an import statement
+                // Note: we still want to add variables references if they have the same name as function symbols
+                const globalSymbol = globalScope?.lookUpSymbol(symbolName);
+
+                if (
+                    globalSymbol
+                        ?.getDeclarations()
+                        .find(
+                            (decl) =>
+                                refResults.declarations.find(
+                                    (refDecl) => refDecl.node.start === decl.node.start && isImport(decl.node)
+                                ) !== undefined
+                        )
+                ) {
                     return;
                 }
 
@@ -1181,11 +1225,11 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         adjRange: TextRange
     ) {
-        return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('\n');
+        return this._convertNodesToString(bodyNodes, parseResults, adjRange, 0).join('\n').trimStart();
     }
 }
 
-function isImport(startNode: ParseNode) {
+function isImport(node: ParseNode) {
     const importTypes = [
         ParseNodeType.ModuleName,
         ParseNodeType.Import,
@@ -1195,8 +1239,8 @@ function isImport(startNode: ParseNode) {
     ];
 
     return (
-        importTypes.find((type) => type === startNode.nodeType) !== undefined ||
-        getParentOfType(startNode, importTypes) !== undefined
+        importTypes.find((type) => type === node.nodeType) !== undefined ||
+        getParentOfType(node, importTypes) !== undefined
     );
 }
 

@@ -128,3 +128,21 @@ await expect(
         ['file:///TestExtractParamShouldFail.py']: [],
     })
 ).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestExtractModuleLevelCallSpacing.py
+////import gc
+////[|/*marker13*/gc.collect()|]
+//@ts-ignore
+await helper.verifyExtractVariable('marker13', {
+    ['file:///TestExtractModuleLevelCallSpacing.py']: [`new_var`, `new_var = gc.collect()\n`],
+});
+
+// @filename: TestExtractParameterExpressionShouldFail.py
+////def f([|/*marker14*/x=1|])
+////    x = 2
+//@ts-ignore
+await expect(
+    helper.verifyExtractVariable('marker14', {
+        ['file:///TestExtractParameterExpressionShouldFail.py']: [],
+    })
+).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
