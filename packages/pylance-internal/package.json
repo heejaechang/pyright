@@ -22,7 +22,7 @@
         "posttest:all:pipeline": "npm run combine:coverage",
         "precombine:coverage": "shx mkdir -p reports .nyc_output && shx cp coverage/coverage-final.json reports/coverage-pylance.json && shx cp pyright/server/coverage/coverage-final.json reports/coverage-pyright.json",
         "combine:coverage": "nyc merge reports .nyc_output/out.json && nyc report --reporter html --reporter cobertura  --exclude-after-remap=false --report-dir coverage-merged",
-        "createindices": "ts-node -r tsconfig-paths/register ./src/createIndices.ts"
+        "createindices": "ts-node --project ./tsconfig.withBaseUrl.json -r tsconfig-paths/register ./src/createIndices.ts"
     },
     "dependencies": {
         "assert": "^2.0.0",
@@ -51,6 +51,6 @@
         "ts-mockito": "^2.6.1",
         "ts-node": "^9.0.0",
         "tsconfig-paths": "^3.9.0",
-        "typescript": "^4.0.5"
+        "typescript": "^4.1.3"
     }
 }

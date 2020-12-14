@@ -7,7 +7,6 @@
  */
 
 import * as path from 'path';
-import { PylanceWorkspaceServiceInstance } from 'src/server';
 import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { ImportResolverFactory } from 'pyright-internal/analyzer/importResolver';
@@ -27,6 +26,7 @@ import { MODULE_PATH } from 'pyright-internal/tests/harness/vfs/filesystem';
 import { CommandController } from '../commands/commandController';
 import { CodeActionProvider } from '../languageService/codeActionProvider';
 import { createPylanceImportResolver } from '../pylanceImportResolver';
+import { PylanceWorkspaceServiceInstance } from '../server';
 import { Indexer } from '../services/indexer';
 import { PylanceTestState } from './pylanceTestState';
 
