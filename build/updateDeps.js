@@ -20,6 +20,7 @@ async function main() {
         'vscode-jsonrpc',
         'vscode-languageclient',
         'vscode-languageserver',
+        'vscode-languageserver-protocol',
         'vscode-languageserver-types',
         'onnxruntime',
     ]);
