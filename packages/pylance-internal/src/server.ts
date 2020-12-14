@@ -48,12 +48,7 @@ import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import { Range } from 'pyright-internal/common/textRange';
-import {
-    LanguageServerBase,
-    ProgressReporterConnection,
-    ServerSettings,
-    WorkspaceServiceInstance,
-} from 'pyright-internal/languageServerBase';
+import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
 import { CompletionItemData, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 
@@ -124,7 +119,6 @@ class PylanceServer extends LanguageServerBase {
             version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
-            progressReporterFactory: reporterFactory,
             supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
         });
 
@@ -152,27 +146,6 @@ class PylanceServer extends LanguageServerBase {
 
         this._inExperimentCache = new Map();
         this._getExperimentValueCache = new Map();
-
-        const server = this;
-        function reporterFactory(connection: ProgressReporterConnection): ProgressReporter {
-            return {
-                isEnabled(data: AnalysisResults): boolean {
-                    return !!server._progressBarEnabled;
-                },
-
-                begin(): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.BeginProgress, undefined);
-                },
-
-                report(message: string): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.ReportProgress, message);
-                },
-
-                end(): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.EndProgress, undefined);
-                },
-            };
-        }
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -644,6 +617,21 @@ class PylanceServer extends LanguageServerBase {
         });
         this._getExperimentValueCache.set(experimentName, value);
         return value;
+    }
+
+    protected createProgressReporter(): ProgressReporter {
+        return {
+            isEnabled: (data: AnalysisResults) => !!this._progressBarEnabled,
+            begin: () => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.BeginProgress, undefined);
+            },
+            report: (message: string) => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.ReportProgress, message);
+            },
+            end: () => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.EndProgress, undefined);
+            },
+        };
     }
 }
 
