@@ -1321,18 +1321,18 @@ function adjustRangeForWhitespace(selRange: TextRange, fileContents: string): Te
 
     while (offset < fileContents.length) {
         const curChar = fileContents.substr(offset, 1);
-        if (curChar !== ' ') {
+        if (curChar !== ' ' && curChar !== '\n' && curChar !== '\r') {
             break;
         }
 
         offset++;
     }
+
     const start = offset;
-    offset = TextRange.getEnd(selRange) - 1;
-    while (offset > 0) {
-        const curChar = fileContents.substr(offset, 1);
-        if (curChar !== ' ') {
-            offset++;
+    offset = TextRange.getEnd(selRange);
+    while (offset > start) {
+        const leftChar = fileContents.substr(offset - 1, 1);
+        if (leftChar !== ' ' && leftChar !== '\n' && leftChar !== '\r') {
             break;
         }
 
