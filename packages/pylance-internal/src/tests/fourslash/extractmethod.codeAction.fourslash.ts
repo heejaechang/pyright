@@ -956,3 +956,25 @@ await helper.verifyExtractMethod('marker66', {
         `new_func()`,
     ],
 });
+
+// @filename: TestPartialForLoopGeneratorShouldFail.py
+////list = []
+////x = {print(i) [|/*marker67*/for i in list|]}
+//@ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker67', {
+        ['file:///TestPartialForLoopGeneratorShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestInsideForLoopGenerator.py
+////list = []
+////x = {[|/*marker68*/print(i)|] for i in list}
+//@ts-ignore
+await helper.verifyExtractMethod('marker68', {
+    ['file:///TestInsideForLoopGenerator.py']: [
+        `def new_func(i):
+    print(i)\n\n`,
+        `new_func(i)`,
+    ],
+});

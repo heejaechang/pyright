@@ -1174,6 +1174,13 @@ export class ExtractMethodProvider {
             return;
         }
 
+        // Prevent invalid partial listComprehensions
+        if (startNode.parent?.nodeType === ParseNodeType.ListComprehension) {
+            if (!selectionContainsNode(adjRange, startNode.parent)) {
+                return;
+            }
+        }
+
         return adjRange;
     }
 
