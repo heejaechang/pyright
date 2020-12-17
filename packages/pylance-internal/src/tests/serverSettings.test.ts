@@ -50,17 +50,6 @@ test('duplicated stubPath', () => {
     assert(normalizeSlashes('/typing'), workspace.serviceInstance.getConfigOptions().stubPath);
 });
 
-test('expand workspace folder stubPath', () => {
-    const workspace = createWorkspaceInstance();
-
-    const serverSettings: ServerSettings = {
-        stubPath: normalizeSlashes('${workspaceFolder}/stubs'),
-    };
-
-    AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
-    assert(normalizeSlashes('/stubs'), workspace.serviceInstance.getConfigOptions().stubPath);
-});
-
 test('diagnostic overrides', () => {
     const workspace = createWorkspaceInstance();
 
