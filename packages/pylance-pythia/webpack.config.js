@@ -34,6 +34,7 @@ module.exports = {
         extensions: ['.ts', '.js'],
         plugins: [
             new TsconfigPathsPlugin({
+                configFile: 'tsconfig.withBaseUrl.json', // TODO: Remove once the plugin understands TS 4.1's implicit baseUrl.
                 extensions: ['.ts', '.js'],
             }),
         ],

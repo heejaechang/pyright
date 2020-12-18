@@ -1,0 +1,10 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "pylance-internal/*": ["../pylance-internal/src/*"],
+            "pyright-internal/*": ["../pyright/packages/pyright-internal/src/*"]
+        }
+    }
+}

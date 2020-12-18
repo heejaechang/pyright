@@ -74,7 +74,7 @@ import {
     FileWatcherEventHandler,
     FileWatcherEventType,
 } from './common/fileSystem';
-import { containsPath, convertPathToUri, convertUriToPath } from './common/pathUtils';
+import { containsPath, convertPathToUri, convertUriToPath, getFileExtension } from './common/pathUtils';
 import { ProgressReporter, ProgressReportTracker } from './common/progressReporter';
 import { convertWorkspaceEdits } from './common/textEditUtils';
 import { DocumentRange, Position } from './common/textRange';
@@ -135,12 +135,6 @@ export interface LanguageServerInterface {
     readonly fs: FileSystem;
 }
 
-// This is a subset of the LSP Connection, defined to not expose the LSP library
-// in the public interface.
-export interface ProgressReporterConnection {
-    sendNotification: (method: string, params?: any) => void;
-}
-
 export interface ServerOptions {
     productName: string;
     rootDirectory: string;
@@ -149,7 +143,6 @@ export interface ServerOptions {
     maxAnalysisTimeInForeground?: MaxAnalysisTime;
     supportedCommands?: string[];
     supportedCodeActions?: string[];
-    progressReporterFactory?: (connection: ProgressReporterConnection) => ProgressReporter;
 }
 
 interface InternalFileWatcher extends FileWatcher {
@@ -171,6 +164,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasActiveParameterCapability = false;
     protected _hasSignatureLabelOffsetCapability = false;
     protected _hasHierarchicalDocumentSymbolCapability = false;
+    protected _hasWindowProgressCapability = false;
     protected _hoverContentFormat: MarkupKind = MarkupKind.PlainText;
     protected _completionDocFormat: MarkupKind = MarkupKind.PlainText;
     protected _signatureDocFormat: MarkupKind = MarkupKind.PlainText;
@@ -227,11 +221,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         // Set up callbacks.
         this.setupConnection(_serverOptions.supportedCommands ?? [], _serverOptions.supportedCodeActions ?? []);
 
-        this._progressReporter = new ProgressReportTracker(
-            this._serverOptions.progressReporterFactory
-                ? this._serverOptions.progressReporterFactory(this._connection)
-                : undefined
-        );
+        this._progressReporter = new ProgressReportTracker(this.createProgressReporter());
 
         // Listen on the connection.
         this._connection.listen();
@@ -786,7 +776,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._connection.onDidOpenTextDocument(async (params) => {
             const filePath = convertUriToPath(params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
-            workspace.serviceInstance.setFileOpened(filePath, params.textDocument.version, params.textDocument.text);
+            if (this._isSupportedSourceFileType(filePath)) {
+                workspace.serviceInstance.setFileOpened(
+                    filePath,
+                    params.textDocument.version,
+                    params.textDocument.text
+                );
+            }
         });
 
         this._connection.onDidChangeTextDocument(async (params) => {
@@ -794,17 +790,21 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             const filePath = convertUriToPath(params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
-            workspace.serviceInstance.updateOpenFileContents(
-                filePath,
-                params.textDocument.version,
-                params.contentChanges
-            );
+            if (this._isSupportedSourceFileType(filePath)) {
+                workspace.serviceInstance.updateOpenFileContents(
+                    filePath,
+                    params.textDocument.version,
+                    params.contentChanges
+                );
+            }
         });
 
         this._connection.onDidCloseTextDocument(async (params) => {
             const filePath = convertUriToPath(params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
-            workspace.serviceInstance.setFileClosed(filePath);
+            if (this._isSupportedSourceFileType(filePath)) {
+                workspace.serviceInstance.setFileClosed(filePath);
+            }
         });
 
         this._connection.onDidChangeWatchedFiles((params) => {
@@ -944,6 +944,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(
             (tag) => tag === DiagnosticTag.Unnecessary
         );
+        this._hasWindowProgressCapability = !!capabilities.window?.workDoneProgress;
 
         // Create a service instance for each of the workspace folders.
         if (params.workspaceFolders) {
@@ -1130,6 +1131,15 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         }
     }
 
+    private _isSupportedSourceFileType(filePath: string) {
+        // The language server assumes that all source files are either ".py"
+        // or ".pyi" files. We don't want to attempt to parse other files
+        // (like binaries, etc.). And we need to know whether to use normal
+        // or stub semantics.
+        const extension = getFileExtension(filePath).toLowerCase();
+        return extension === '.py' || extension === '.pyi';
+    }
+
     private _getCompatibleMarkupKind(clientSupportedFormats: MarkupKind[] | undefined) {
         const serverSupportedFormats = [MarkupKind.PlainText, MarkupKind.Markdown];
 
@@ -1233,5 +1243,25 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         // For now, return the same URL for all rules. We can separate these
         // in the future.
         return 'https://github.com/microsoft/pyright/blob/master/docs/configuration.md';
+    }
+
+    protected abstract createProgressReporter(): ProgressReporter;
+
+    // Expands certain predefined variables supported within VS Code settings.
+    // Ideally, VS Code would provide an API for doing this expansion, but
+    // it doesn't. We'll handle the most common variables here as a convenience.
+    protected expandPathVariables(rootPath: string, value: string): string {
+        const regexp = /\$\{(.*?)\}/g;
+        return value.replace(regexp, (match: string, name: string) => {
+            const trimmedName = name.trim();
+            if (trimmedName === 'workspaceFolder') {
+                return rootPath;
+            }
+            if (trimmedName === 'env:HOME' && process.env.HOME !== undefined) {
+                return process.env.HOME;
+            }
+
+            return match;
+        });
     }
 }

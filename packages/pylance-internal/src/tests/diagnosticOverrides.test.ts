@@ -39,7 +39,7 @@ describe('Diagnostic overrides', () => {
             expect(p.enum).toContain(p.default);
         }
 
-        const overrideNamesInCode = Object.values(DiagnosticRule).filter((x) => x.startsWith('report'));
+        const overrideNamesInCode: string[] = Object.values(DiagnosticRule).filter((x) => x.startsWith('report'));
 
         for (const n of overrideNamesInJson) {
             expect(overrideNamesInCode).toContain(n);

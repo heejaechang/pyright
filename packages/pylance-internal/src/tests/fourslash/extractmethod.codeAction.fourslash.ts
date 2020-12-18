@@ -735,7 +735,7 @@ await expect(
 // @ts-ignore
 await helper.verifyExtractMethod('marker48', {
     ['file:///TestBlankLineEndOfSelectionFunctionScope.py']: [
-        `new_func()\n`,
+        `new_func()`,
         `\n
 def new_func():
     x = 1`,
@@ -927,3 +927,54 @@ await expect(
         ['file:///TestExtractParameterExpressionShouldFail.py']: [],
     })
 ).rejects.toThrowError(CannotExtractReason.InvalidExpressionSelected);
+
+// @filename: TestExtractNewLinePre.py
+////import gc
+////[|/*marker65*/
+////
+////gc.collect()|]
+////x = 1
+//@ts-ignore
+await helper.verifyExtractMethod('marker65', {
+    ['file:///TestExtractNewLinePre.py']: [
+        `def new_func():
+    gc.collect()\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestExtractNewLinePost.py
+////import gc
+////[|/*marker66*/gc.collect()
+////|]
+////x = 1
+//@ts-ignore
+await helper.verifyExtractMethod('marker66', {
+    ['file:///TestExtractNewLinePost.py']: [
+        `def new_func():
+    gc.collect()\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestPartialForLoopGeneratorShouldFail.py
+////list = []
+////x = {print(i) [|/*marker67*/for i in list|]}
+//@ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker67', {
+        ['file:///TestPartialForLoopGeneratorShouldFail.py']: [],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+
+// @filename: TestInsideForLoopGenerator.py
+////list = []
+////x = {[|/*marker68*/print(i)|] for i in list}
+//@ts-ignore
+await helper.verifyExtractMethod('marker68', {
+    ['file:///TestInsideForLoopGenerator.py']: [
+        `def new_func(i):
+    print(i)\n\n`,
+        `new_func(i)`,
+    ],
+});

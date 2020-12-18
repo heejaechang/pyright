@@ -146,3 +146,24 @@ await expect(
         ['file:///TestExtractParameterExpressionShouldFail.py']: [],
     })
 ).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+
+// @filename: TestExtractMultilineSpacingPost.py
+////import gc
+////[|/*marker15*/gc.collect()
+////|]
+////x = 1
+//@ts-ignore
+await helper.verifyExtractVariable('marker15', {
+    ['file:///TestExtractMultilineSpacingPost.py']: [`new_var`, `new_var = gc.collect()\n`],
+});
+
+// @filename: TestExtractMultilineSpacingPre.py
+////import gc
+////[|/*marker16*/
+////
+////gc.collect()|]
+////x = 1
+//@ts-ignore
+await helper.verifyExtractVariable('marker16', {
+    ['file:///TestExtractMultilineSpacingPre.py']: [`new_var`, `new_var = gc.collect()\n`],
+});

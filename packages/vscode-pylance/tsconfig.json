@@ -1,7 +1,6 @@
 {
     "extends": "../pyright/tsconfig.json",
     "compilerOptions": {
-        "baseUrl": ".",
         "outDir": "./out",
         "paths": {
             "pylance-internal/*": ["../pylance-internal/src/*"],

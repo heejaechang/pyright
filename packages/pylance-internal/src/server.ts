@@ -48,12 +48,7 @@ import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import { Range } from 'pyright-internal/common/textRange';
-import {
-    LanguageServerBase,
-    ProgressReporterConnection,
-    ServerSettings,
-    WorkspaceServiceInstance,
-} from 'pyright-internal/languageServerBase';
+import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
 import { CompletionItemData, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 
@@ -124,7 +119,6 @@ class PylanceServer extends LanguageServerBase {
             version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
             extension: intelliCode,
             supportedCommands: CommandController.supportedCommands(),
-            progressReporterFactory: reporterFactory,
             supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
         });
 
@@ -152,27 +146,6 @@ class PylanceServer extends LanguageServerBase {
 
         this._inExperimentCache = new Map();
         this._getExperimentValueCache = new Map();
-
-        const server = this;
-        function reporterFactory(connection: ProgressReporterConnection): ProgressReporter {
-            return {
-                isEnabled(data: AnalysisResults): boolean {
-                    return !!server._progressBarEnabled;
-                },
-
-                begin(): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.BeginProgress, undefined);
-                },
-
-                report(message: string): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.ReportProgress, message);
-                },
-
-                end(): void {
-                    CustomLSP.sendNotification(connection, CustomLSP.Notifications.EndProgress, undefined);
-                },
-            };
-        }
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
@@ -206,12 +179,18 @@ class PylanceServer extends LanguageServerBase {
             if (pythonSection) {
                 const pythonPath = pythonSection.pythonPath;
                 if (pythonPath && isString(pythonPath) && !isPythonBinary(pythonPath)) {
-                    serverSettings.pythonPath = resolvePaths(workspace.rootPath, pythonPath);
+                    serverSettings.pythonPath = resolvePaths(
+                        workspace.rootPath,
+                        this.expandPathVariables(workspace.rootPath, pythonPath)
+                    );
                 }
 
                 const venvPath = pythonSection.venvPath;
                 if (venvPath && isString(venvPath)) {
-                    serverSettings.venvPath = resolvePaths(workspace.rootPath, venvPath);
+                    serverSettings.venvPath = resolvePaths(
+                        workspace.rootPath,
+                        this.expandPathVariables(workspace.rootPath, venvPath)
+                    );
                 }
             }
 
@@ -221,13 +200,19 @@ class PylanceServer extends LanguageServerBase {
                 if (typeshedPaths && Array.isArray(typeshedPaths) && typeshedPaths.length > 0) {
                     const typeshedPath = typeshedPaths[0];
                     if (typeshedPath && isString(typeshedPath)) {
-                        serverSettings.typeshedPath = resolvePaths(workspace.rootPath, typeshedPath);
+                        serverSettings.typeshedPath = resolvePaths(
+                            workspace.rootPath,
+                            this.expandPathVariables(workspace.rootPath, typeshedPath)
+                        );
                     }
                 }
 
                 const stubPath = pythonAnalysisSection.stubPath;
                 if (stubPath && isString(stubPath)) {
-                    serverSettings.stubPath = resolvePaths(workspace.rootPath, stubPath);
+                    serverSettings.stubPath = resolvePaths(
+                        workspace.rootPath,
+                        this.expandPathVariables(workspace.rootPath, stubPath)
+                    );
                 }
 
                 const diagnosticSeverityOverrides = pythonAnalysisSection.diagnosticSeverityOverrides;
@@ -254,7 +239,7 @@ class PylanceServer extends LanguageServerBase {
                 if (extraPaths && Array.isArray(extraPaths) && extraPaths.length > 0) {
                     serverSettings.extraPaths = extraPaths
                         .filter((p) => p && isString(p))
-                        .map((p) => resolvePaths(workspace.rootPath, p));
+                        .map((p) => resolvePaths(workspace.rootPath, this.expandPathVariables(workspace.rootPath, p)));
                 }
 
                 serverSettings.autoImportCompletions =
@@ -644,6 +629,21 @@ class PylanceServer extends LanguageServerBase {
         });
         this._getExperimentValueCache.set(experimentName, value);
         return value;
+    }
+
+    protected createProgressReporter(): ProgressReporter {
+        return {
+            isEnabled: (data: AnalysisResults) => !!this._progressBarEnabled,
+            begin: () => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.BeginProgress, undefined);
+            },
+            report: (message: string) => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.ReportProgress, message);
+            },
+            end: () => {
+                CustomLSP.sendNotification(this._connection, CustomLSP.Notifications.EndProgress, undefined);
+            },
+        };
     }
 }
 

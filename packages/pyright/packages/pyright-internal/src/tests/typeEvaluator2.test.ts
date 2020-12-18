@@ -330,7 +330,7 @@ test('GenericTypes18', () => {
 test('GenericTypes19', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes19.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('GenericTypes20', () => {
@@ -484,7 +484,7 @@ test('GenericTypes42', () => {
 test('GenericTypes43', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes43.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('GenericTypes44', () => {
@@ -997,6 +997,12 @@ test('Callable2', () => {
     TestUtils.validateResults(analysisResults, 2);
 });
 
+test('Callable3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable3.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ThreePartVersion1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['threePartVersion1.py']);
 
@@ -1073,7 +1079,7 @@ test('ParamSpec4', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec4.py'], configOptions);
-    TestUtils.validateResults(results, 5);
+    TestUtils.validateResults(results, 5, 2);
 });
 
 test('ParamSpec5', () => {
@@ -1081,6 +1087,14 @@ test('ParamSpec5', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec5.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec6', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec6.py'], configOptions);
     TestUtils.validateResults(results, 0);
 });
 
@@ -1135,13 +1149,19 @@ test('TypeVar6', () => {
 test('TypeVar7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar7.py']);
 
-    TestUtils.validateResults(analysisResults, 22);
+    TestUtils.validateResults(analysisResults, 22, 2);
 });
 
 test('TypeVar8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar8.py']);
 
     TestUtils.validateResults(analysisResults, 2);
+});
+
+test('TypeVar9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar9.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Annotated1', () => {

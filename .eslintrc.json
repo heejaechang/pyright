@@ -15,7 +15,7 @@
         "no-constant-condition": 0,
         "no-inner-declarations": 0,
         "no-undef": 0,
-        "simple-import-sort/sort": [
+        "simple-import-sort/imports": [
             "error",
             {
                 "groups": [
@@ -29,6 +29,7 @@
                 ]
             }
         ],
+        "simple-import-sort/exports": "error",
         "@typescript-eslint/explicit-function-return-type": 0,
         "@typescript-eslint/explicit-module-boundary-types": 0,
         "@typescript-eslint/ban-types": 0,
