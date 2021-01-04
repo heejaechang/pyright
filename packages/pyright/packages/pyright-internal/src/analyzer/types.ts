@@ -627,33 +627,6 @@ export namespace ClassType {
             }
         }
 
-        // If the two types don't have the same symbol table, they are probably
-        // using synthesized (undeclared) symbols. Make sure that they contain the
-        // same number of symbols and types.
-        if (class1Details.fields !== class2Details.fields) {
-            if (class1Details.fields.size !== class2Details.fields.size) {
-                return false;
-            }
-
-            let symbolsMatch = true;
-            class1Details.fields.forEach((symbol1, name) => {
-                const symbol2 = class2Details.fields.get(name);
-                if (!symbol2) {
-                    symbolsMatch = false;
-                } else {
-                    const symbol1Type = symbol1.getSynthesizedType() || UnknownType.create();
-                    const symbol2Type = symbol2.getSynthesizedType() || UnknownType.create();
-                    if (!isTypeSame(symbol1Type, symbol2Type, recursionCount + 1)) {
-                        symbolsMatch = false;
-                    }
-                }
-            });
-
-            if (!symbolsMatch) {
-                return false;
-            }
-        }
-
         return true;
     }
 
@@ -832,6 +805,11 @@ export interface FunctionType extends TypeBase {
     // (specialized) type of that stripped parameter.
     strippedFirstParamType?: Type;
 
+    // If this is a bound function where the first parameter
+    // was stripped from the original unbound function,
+    // the class or object to which the function was bound.
+    boundToType?: ClassType | ObjectType;
+
     // The type var scope for the class that the function was bound to
     boundTypeVarScopeId?: TypeVarScopeId;
 }
@@ -888,6 +866,7 @@ export namespace FunctionType {
     export function clone(
         type: FunctionType,
         stripFirstParam = false,
+        boundToType?: ClassType | ObjectType,
         boundTypeVarScopeId?: TypeVarScopeId
     ): FunctionType {
         const newFunction = create(
@@ -905,12 +884,17 @@ export namespace FunctionType {
                 type.details.parameters.length > 0 &&
                 type.details.parameters[0].category === ParameterCategory.Simple
             ) {
-                // Stash away the effective type of the first parameter.
-                newFunction.strippedFirstParamType = getEffectiveParameterType(type, 0);
+                if (type.details.parameters.length > 0 && !type.details.parameters[0].isTypeInferred) {
+                    // Stash away the effective type of the first parameter if it
+                    // wasn't synthesized.
+                    newFunction.strippedFirstParamType = getEffectiveParameterType(type, 0);
+                }
                 newFunction.details.parameters = type.details.parameters.slice(1);
             } else {
                 stripFirstParam = false;
             }
+
+            newFunction.boundToType = boundToType;
 
             // If we strip off the first parameter, this is no longer an
             // instance method or class method.
@@ -1411,12 +1395,16 @@ export interface TypeVarType extends TypeBase {
     category: TypeCategory.TypeVar;
     details: TypeVarDetails;
 
-    // An ID that uniquely identifies the scope in which this TypeVar is
-    // defined.
+    // An ID that uniquely identifies the scope in which this TypeVar is defined.
     scopeId?: TypeVarScopeId;
 
-    // String formatted as <name>.<scopeId>.
+    // A human-readable name of the function, class, or type alias that
+    // provides the scope for this type variable. This might not be unique,
+    // so it should be used only for error messages.
     scopeName?: string;
+
+    // String formatted as <name>.<scopeId>.
+    nameWithScope?: string;
 }
 
 export namespace TypeVarType {
@@ -1444,14 +1432,15 @@ export namespace TypeVarType {
         return newInstance;
     }
 
-    export function cloneForScopeId(type: TypeVarType, scopeId: string) {
+    export function cloneForScopeId(type: TypeVarType, scopeId: string, scopeName: string) {
         const newInstance: TypeVarType = { ...type };
-        newInstance.scopeName = makeScopeName(type.details.name, scopeId);
+        newInstance.nameWithScope = makeNameWithScope(type.details.name, scopeId);
         newInstance.scopeId = scopeId;
+        newInstance.scopeName = scopeName;
         return newInstance;
     }
 
-    export function makeScopeName(name: string, scopeId: string) {
+    export function makeNameWithScope(name: string, scopeId: string) {
         return `${name}.${scopeId}`;
     }
 
@@ -1474,8 +1463,17 @@ export namespace TypeVarType {
         typeVarType.details.constraints.push(constraintType);
     }
 
-    export function getScopeName(typeVarType: TypeVarType) {
-        return typeVarType.scopeName || typeVarType.details.name;
+    export function getNameWithScope(typeVarType: TypeVarType) {
+        // If there is no name with scope, fall back on the (unscoped) name.
+        return typeVarType.nameWithScope || typeVarType.details.name;
+    }
+
+    export function getReadableName(typeVarType: TypeVarType) {
+        if (typeVarType.scopeName) {
+            return `${typeVarType.details.name}@${typeVarType.scopeName}`;
+        }
+
+        return typeVarType.details.name;
     }
 }
 
@@ -1487,6 +1485,10 @@ export function isNone(type: Type): type is NoneType {
     return type.category === TypeCategory.None;
 }
 
+export function isAny(type: Type): type is AnyType {
+    return type.category === TypeCategory.Any;
+}
+
 export function isUnknown(type: Type): type is UnknownType {
     return type.category === TypeCategory.Unknown;
 }
@@ -1496,7 +1498,7 @@ export function isAnyOrUnknown(type: Type): type is AnyType | UnknownType {
         return true;
     }
 
-    if (type.category === TypeCategory.Union) {
+    if (isUnion(type)) {
         return type.subtypes.find((subtype) => !isAnyOrUnknown(subtype)) === undefined;
     }
 
@@ -1507,12 +1509,16 @@ export function isUnbound(type: Type): type is UnboundType {
     return type.category === TypeCategory.Unbound;
 }
 
+export function isUnion(type: Type): type is UnionType {
+    return type.category === TypeCategory.Union;
+}
+
 export function isPossiblyUnbound(type: Type): boolean {
-    if (type.category === TypeCategory.Unbound) {
+    if (isUnbound(type)) {
         return true;
     }
 
-    if (type.category === TypeCategory.Union) {
+    if (isUnion(type)) {
         return type.subtypes.find((subtype) => isPossiblyUnbound(subtype)) !== undefined;
     }
 
@@ -1784,13 +1790,13 @@ export function removeAnyFromUnion(type: Type): Type {
 // If the type is a union, remove an "unknown" type from the union,
 // returning only the known types.
 export function removeUnknownFromUnion(type: Type): Type {
-    return removeFromUnion(type, (t: Type) => t.category === TypeCategory.Unknown);
+    return removeFromUnion(type, (t: Type) => isUnknown(t));
 }
 
 // If the type is a union, remove an "unbound" type from the union,
 // returning only the known types.
 export function removeUnbound(type: Type): Type {
-    if (type.category === TypeCategory.Union) {
+    if (isUnion(type)) {
         return removeFromUnion(type, (t: Type) => isUnbound(t));
     }
 
@@ -1804,11 +1810,11 @@ export function removeUnbound(type: Type): Type {
 // If the type is a union, remove an "None" type from the union,
 // returning only the known types.
 export function removeNoneFromUnion(type: Type): Type {
-    return removeFromUnion(type, (t: Type) => t.category === TypeCategory.None);
+    return removeFromUnion(type, (t: Type) => isNone(t));
 }
 
 export function removeFromUnion(type: Type, removeFilter: (type: Type, constraints: SubtypeConstraints) => boolean) {
-    if (type.category === TypeCategory.Union) {
+    if (isUnion(type)) {
         const remainingTypes: ConstrainedSubtype[] = [];
         type.subtypes.forEach((subtype, index) => {
             const constraints = type.constraints ? type.constraints[index] : undefined;
@@ -1828,7 +1834,7 @@ export function findSubtype(
     type: Type,
     filter: (type: UnionableType | NeverType, constraints: SubtypeConstraints) => boolean
 ) {
-    if (type.category === TypeCategory.Union) {
+    if (isUnion(type)) {
         return type.subtypes.find((subtype, index) => {
             return filter(subtype, type.constraints ? type.constraints[index] : undefined);
         });
@@ -1881,7 +1887,7 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
     // Expand all union types.
     let expandedTypes: ConstrainedSubtype[] = [];
     for (const constrainedType of subtypes) {
-        if (constrainedType.type.category === TypeCategory.Union) {
+        if (isUnion(constrainedType.type)) {
             const unionType = constrainedType.type;
             unionType.subtypes.forEach((subtype, index) => {
                 expandedTypes.push({
@@ -1940,8 +1946,8 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
         return AnyType.create();
     }
 
-    // If only one type remains, convert it from a union to a simple type.
-    if (newUnionType.subtypes.length === 1) {
+    // If only one type remains and there are no constraints, convert it from a union to a simple type.
+    if (newUnionType.subtypes.length === 1 && !newUnionType.constraints) {
         return newUnionType.subtypes[0];
     }
 

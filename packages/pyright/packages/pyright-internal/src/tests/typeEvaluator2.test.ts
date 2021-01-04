@@ -8,6 +8,8 @@
  * arbitrarily among multiple files so they can run in parallel.
  */
 
+import * as assert from 'assert';
+
 import { ConfigOptions } from '../common/configOptions';
 import { PythonVersion } from '../common/pythonVersion';
 import * as TestUtils from './testUtils';
@@ -520,7 +522,7 @@ test('Protocol2', () => {
 test('Protocol3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol3.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Protocol4', () => {
@@ -567,6 +569,30 @@ test('Protocol10', () => {
 
 test('Protocol11', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol11.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Protocol12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol12.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Protocol13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol13.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Protocol14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol14.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Protocol15', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol15.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -766,6 +792,14 @@ test('Import12', () => {
     TestUtils.validateResults(analysisResults, 0, 0);
 });
 
+test('Import14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import14.py', 'import13.py']);
+
+    assert.strictEqual(analysisResults.length, 2);
+    assert.strictEqual(analysisResults[0].errors.length, 0);
+    assert.strictEqual(analysisResults[1].errors.length, 0);
+});
+
 test('DunderAll1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -910,6 +944,11 @@ test('MemberAccess7', () => {
 
 test('MemberAccess8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess8.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('MemberAccess9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess9.py']);
     TestUtils.validateResults(analysisResults, 0);
 });
 
@@ -1071,7 +1110,7 @@ test('ParamSpec3', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec3.py'], configOptions);
-    TestUtils.validateResults(results, 1);
+    TestUtils.validateResults(results, 2);
 });
 
 test('ParamSpec4', () => {
@@ -1095,6 +1134,14 @@ test('ParamSpec6', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec6.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec7', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec7.py'], configOptions);
     TestUtils.validateResults(results, 0);
 });
 
@@ -1226,6 +1273,12 @@ test('Decorator3', () => {
     TestUtils.validateResults(analysisResults39, 0);
 });
 
+test('Decorator4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator4.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('FunctionAnnotation1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['functionAnnotation1.py']);
 
@@ -1323,4 +1376,9 @@ test('UnusedCallResult1', () => {
     configOptions.diagnosticRuleSet.reportUnusedCallResult = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unusedCallResult1.py'], configOptions);
     TestUtils.validateResults(analysisResults, 3);
+});
+
+test('UnusedCoroutine1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unusedCoroutine1.py']);
+    TestUtils.validateResults(analysisResults, 2);
 });

@@ -1511,16 +1511,7 @@ export class Binder extends ParseTreeWalker {
             }
         } else {
             if (isModuleInitFile) {
-                // If the symbol is going to be immediately replaced with a same-named
-                // imported symbol, skip this.
-                const isImmediatelyReplaced = node.imports.some((importSymbolNode) => {
-                    const nameNode = importSymbolNode.alias || importSymbolNode.name;
-                    return nameNode.value === node.module.nameParts[0].value;
-                });
-
-                if (!isImmediatelyReplaced) {
-                    this._addImplicitFromImport(node, importInfo);
-                }
+                this._addImplicitFromImport(node, importInfo);
             }
 
             node.imports.forEach((importSymbolNode) => {
@@ -2783,12 +2774,12 @@ export class Binder extends ParseTreeWalker {
         if (typeAnnotation) {
             if (this._isTypingAnnotation(typeAnnotation, 'Final')) {
                 isFinal = true;
-            } else if (typeAnnotation.nodeType === ParseNodeType.Index && typeAnnotation.items.items.length === 1) {
+            } else if (typeAnnotation.nodeType === ParseNodeType.Index && typeAnnotation.items.length === 1) {
                 // Recursively call to see if the base expression is "Final".
                 const finalInfo = this._isAnnotationFinal(typeAnnotation.baseExpression);
                 if (finalInfo.isFinal) {
                     isFinal = true;
-                    finalTypeNode = typeAnnotation.items.items[0];
+                    finalTypeNode = typeAnnotation.items[0];
                 }
             }
         }
