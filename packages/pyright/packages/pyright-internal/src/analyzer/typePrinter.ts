@@ -14,9 +14,11 @@ import {
     combineTypes,
     EnumLiteral,
     FunctionType,
+    isAny,
     isAnyOrUnknown,
     isClass,
     isObject,
+    isUnion,
     isUnknown,
     maxTypeRecursionCount,
     ObjectType,
@@ -24,6 +26,7 @@ import {
     Type,
     TypeBase,
     TypeCategory,
+    TypeVarType,
 } from './types';
 import { doForEachSubtype, isOptionalType } from './typeUtils';
 
@@ -109,7 +112,11 @@ export function printType(
             }
         }
 
-        return aliasName;
+        // If it's a TypeVar, don't use the alias name. Instead, use the full
+        // name, which may have a scope associated with it.
+        if (type.category !== TypeCategory.TypeVar) {
+            return aliasName;
+        }
     }
 
     switch (type.category) {
@@ -199,7 +206,7 @@ export function printType(
             // If we're printing "Unknown" as "Any", remove redundant
             // unknowns so we don't see two Any's appear in the union.
             if ((printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0) {
-                if (subtypes.some((t) => t.category === TypeCategory.Any)) {
+                if (subtypes.some((t) => isAny(t))) {
                     subtypes = subtypes.filter((t) => !isUnknown(t));
                 }
             }
@@ -320,10 +327,10 @@ export function printType(
             }
 
             if (type.details.isParamSpec) {
-                return `ParamSpec('${type.details.name}')`;
+                return `${TypeVarType.getReadableName(type)}`;
             }
 
-            return `TypeVar('${type.details.name}')`;
+            return `${TypeVarType.getReadableName(type)}`;
         }
 
         case TypeCategory.None: {
@@ -506,7 +513,7 @@ export function printFunctionParts(
             ? printType(returnType, printTypeFlags, returnTypeCallback, /* expandTypeAlias */ false, recursionCount + 1)
             : '';
 
-    if (printTypeFlags & PrintTypeFlags.PEP604 && returnType.category === TypeCategory.Union && recursionCount > 0) {
+    if (printTypeFlags & PrintTypeFlags.PEP604 && isUnion(returnType) && recursionCount > 0) {
         returnTypeString = `(${returnTypeString})`;
     }
 

@@ -486,6 +486,10 @@ export namespace Localizer {
         export const propertyStaticOrClassMethod = () => getRawString('Diagnostic.propertyStaticOrClassMethod');
         export const protectedUsedOutsideOfClass = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protectedUsedOutsideOfClass'));
+        export const protocolBaseClass = () =>
+            new ParameterizedString<{ classType: string; baseType: string }>(
+                getRawString('Diagnostic.protocolBaseClass')
+            );
         export const protocolIllegal = () => getRawString('Diagnostic.protocolIllegal');
         export const protocolUsedInCall = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protocolUsedInCall'));
@@ -664,6 +668,7 @@ export namespace Localizer {
         export const unsupportedDunderAllOperation = () => getRawString('Diagnostic.unsupportedDunderAllOperation');
         export const unusedCallResult = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.unusedCallResult'));
+        export const unusedCoroutine = () => getRawString('Diagnostic.unusedCoroutine');
         export const varAnnotationIllegal = () => getRawString('Diagnostic.varAnnotationIllegal');
         export const walrusIllegal = () => getRawString('Diagnostic.walrusIllegal');
         export const walrusNotAllowed = () => getRawString('Diagnostic.walrusNotAllowed');
@@ -704,6 +709,9 @@ export namespace Localizer {
             new ParameterizedString<{ expected: number; received: number }>(
                 getRawString('DiagnosticAddendum.functionTooFewParams')
             );
+        export const incompatibleGetter = () => getRawString('DiagnosticAddendum.incompatibleGetter');
+        export const incompatibleSetter = () => getRawString('DiagnosticAddendum.incompatibleSetter');
+        export const incompatibleDeleter = () => getRawString('DiagnosticAddendum.incompatibleDeleter');
         export const functionTooManyParams = () =>
             new ParameterizedString<{ expected: number; received: number }>(
                 getRawString('DiagnosticAddendum.functionTooManyParams')
@@ -730,6 +738,9 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.memberTypeMismatch'));
         export const memberUnknown = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.memberUnknown'));
+        export const missingGetter = () => getRawString('DiagnosticAddendum.missingGetter');
+        export const missingSetter = () => getRawString('DiagnosticAddendum.missingSetter');
+        export const missingDeleter = () => getRawString('DiagnosticAddendum.missingDeleter');
         export const namedParamMissingInDest = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.namedParamMissingInDest'));
         export const namedParamMissingInSource = () =>
@@ -768,6 +779,7 @@ export namespace Localizer {
             new ParameterizedString<{ index: number; sourceType: string; destType: string }>(
                 getRawString('DiagnosticAddendum.paramAssignment')
             );
+        export const paramSpecOverload = () => getRawString('DiagnosticAddendum.paramSpecOverload');
         export const paramType = () =>
             new ParameterizedString<{ paramType: string }>(getRawString('DiagnosticAddendum.paramType'));
         export const propertyMethodIncompatible = () =>
@@ -793,6 +805,10 @@ export namespace Localizer {
         export const tupleSizeMismatch = () =>
             new ParameterizedString<{ expected: number; received: number }>(
                 getRawString('DiagnosticAddendum.tupleSizeMismatch')
+            );
+        export const tupleSizeMismatchIndeterminate = () =>
+            new ParameterizedString<{ expected: number }>(
+                getRawString('DiagnosticAddendum.tupleSizeMismatchIndeterminate')
             );
         export const typeAssignmentMismatch = () =>
             new ParameterizedString<{ sourceType: string; destType: string }>(

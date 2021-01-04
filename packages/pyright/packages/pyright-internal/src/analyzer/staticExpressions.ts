@@ -50,10 +50,10 @@ export function evaluateStaticBoolExpression(
         } else if (
             node.leftExpression.nodeType === ParseNodeType.Index &&
             _isSysVersionInfoExpression(node.leftExpression.baseExpression) &&
-            node.leftExpression.items.items.length === 1 &&
-            node.leftExpression.items.items[0].nodeType === ParseNodeType.Number &&
-            !node.leftExpression.items.items[0].isImaginary &&
-            node.leftExpression.items.items[0].value === 0 &&
+            node.leftExpression.items.length === 1 &&
+            node.leftExpression.items[0].nodeType === ParseNodeType.Number &&
+            !node.leftExpression.items[0].isImaginary &&
+            node.leftExpression.items[0].value === 0 &&
             node.rightExpression.nodeType === ParseNodeType.Number
         ) {
             // Handle the special case of "sys.version_info[0] >= X"
@@ -69,7 +69,7 @@ export function evaluateStaticBoolExpression(
             // Handle the special case of "sys.platform != 'X'"
             const comparisonPlatform = node.rightExpression.strings.map((s) => s.value).join('');
             const expectedPlatformName = _getExpectedPlatformNameFromPlatform(execEnv);
-            return _evaluateStringBinaryOperation(node.operator, expectedPlatformName || '', comparisonPlatform);
+            return _evaluateStringBinaryOperation(node.operator, expectedPlatformName, comparisonPlatform);
         } else if (
             _isOsNameInfoExpression(node.leftExpression) &&
             node.rightExpression.nodeType === ParseNodeType.StringList

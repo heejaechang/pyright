@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.95",
+    "version": "1.1.99",
     "private": true,
     "license": "MIT",
     "author": {
@@ -602,6 +602,17 @@
                             "type": "string",
                             "description": "Diagnostics for call expressions whose results are not consumed and are not None.",
                             "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportUnusedCoroutine": {
+                            "type": "string",
+                            "description": "Diagnostics for call expressions that return a Coroutine and whose results are not consumed.",
+                            "default": "error",
                             "enum": [
                                 "none",
                                 "information",

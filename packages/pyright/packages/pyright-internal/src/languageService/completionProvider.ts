@@ -45,6 +45,7 @@ import {
     isModule,
     isNone,
     isObject,
+    isOverloadedFunction,
     isUnbound,
     isUnknown,
     ObjectType,
@@ -914,10 +915,7 @@ export class CompletionProvider {
                     getMembersForClass(subtype, symbolTable, /* includeInstanceVars */ false);
                 } else if (isModule(subtype)) {
                     getMembersForModule(subtype, symbolTable);
-                } else if (
-                    subtype.category === TypeCategory.Function ||
-                    subtype.category === TypeCategory.OverloadedFunction
-                ) {
+                } else if (isFunction(subtype) || isOverloadedFunction(subtype)) {
                     const functionClass = this._evaluator.getBuiltInType(leftExprNode, 'function');
                     if (functionClass && isClass(functionClass)) {
                         getMembersForClass(functionClass, symbolTable, /* includeInstanceVars */ true);
@@ -1171,12 +1169,7 @@ export class CompletionProvider {
 
         const completionList = CompletionList.create();
 
-        if (parentNode.nodeType === ParseNodeType.IndexItems) {
-            parentNode = parentNode.parent;
-            if (!parentNode || parentNode.nodeType !== ParseNodeType.Index) {
-                return undefined;
-            }
-
+        if (parentNode.nodeType === ParseNodeType.Index) {
             const baseType = this._evaluator.getType(parentNode.baseExpression);
             if (!baseType || !isObject(baseType)) {
                 return undefined;
@@ -1242,16 +1235,11 @@ export class CompletionProvider {
     }
 
     private _getIndexStringLiteral(parseNode: ErrorNode, completionList: CompletionList) {
-        if (!parseNode.parent || parseNode.parent.nodeType !== ParseNodeType.IndexItems) {
+        if (!parseNode.parent || parseNode.parent.nodeType !== ParseNodeType.Index) {
             return;
         }
 
-        const parentNode = parseNode.parent;
-        if (!parentNode.parent || parentNode.parent.nodeType !== ParseNodeType.Index) {
-            return;
-        }
-
-        const baseType = this._evaluator.getType(parentNode.parent.baseExpression);
+        const baseType = this._evaluator.getType(parseNode.parent.baseExpression);
         if (!baseType || !isObject(baseType)) {
             return;
         }
@@ -1597,6 +1585,7 @@ export class CompletionProvider {
                                     typeDetail = name + ': ' + this._evaluator.printType(type, expandTypeAlias);
                                     break;
                                 }
+
                                 case DeclarationType.Function: {
                                     const functionType =
                                         detail.boundObject && isFunction(type)
@@ -1614,7 +1603,7 @@ export class CompletionProvider {
                                                 ': ' +
                                                 this._evaluator.printType(propertyType, /* expandTypeAlias */ false) +
                                                 ' (property)';
-                                        } else if (functionType.category === TypeCategory.OverloadedFunction) {
+                                        } else if (isOverloadedFunction(functionType)) {
                                             typeDetail = functionType.overloads
                                                 .map(
                                                     (overload) =>
@@ -1631,6 +1620,7 @@ export class CompletionProvider {
                                     }
                                     break;
                                 }
+
                                 case DeclarationType.Class:
                                 case DeclarationType.SpecialBuiltInClass: {
                                     typeDetail = 'class ' + name + '()';
@@ -1658,9 +1648,9 @@ export class CompletionProvider {
                                 documentation = getModuleDocString(type, primaryDecl, this._sourceMapper);
                             } else if (isClass(type)) {
                                 documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
-                            } else if (type.category === TypeCategory.Function) {
+                            } else if (isFunction(type)) {
                                 documentation = getFunctionDocStringFromType(type, this._sourceMapper);
-                            } else if (type.category === TypeCategory.OverloadedFunction) {
+                            } else if (isOverloadedFunction(type)) {
                                 documentation = getOverloadedFunctionDocStrings(
                                     type,
                                     primaryDecl,
