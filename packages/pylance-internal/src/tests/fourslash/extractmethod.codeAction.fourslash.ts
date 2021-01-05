@@ -978,3 +978,17 @@ await helper.verifyExtractMethod('marker68', {
         `new_func(i)`,
     ],
 });
+
+// @filename: TestAwait.py
+////async def hello():
+////    [|/*marker69*/await print("")|]
+////
+//@ts-ignore
+await helper.verifyExtractMethod('marker69', {
+    ['file:///TestAwait.py']: [
+        `await new_func()`,
+        `\n
+async def new_func():
+    return await print("")`,
+    ],
+});

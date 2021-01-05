@@ -30,6 +30,7 @@ import { comparePositions, Position, Range, TextRange } from 'pyright-internal/c
 import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
 import { FindReferencesTreeWalker, ReferencesResult } from 'pyright-internal/languageService/referencesProvider';
 import {
+    AwaitNode,
     BreakNode,
     ContinueNode,
     FunctionNode,
@@ -571,12 +572,16 @@ export class ExtractMethodProvider {
             indentionOffset
         );
 
+        const awaitFinder = new AwaitFinder();
+        const isCoroutine = selectionInfo.bodyNodes.some((node) => node && awaitFinder.checkContainsAwait(node));
+
         const functionDef = this._buildFunctionDefinition(
             newFuncName,
             parameterSymbols.join(', '),
             methodBodyStr,
             funcInfo,
-            indentionOffset
+            indentionOffset,
+            isCoroutine
         );
 
         let appendNewline = insertFuncAheadOfSelection ? '' : '\n\n';
@@ -591,7 +596,8 @@ export class ExtractMethodProvider {
             parameterSymbols,
             outputSymbols,
             funcInfo,
-            selectionInfo.bodyNodes
+            selectionInfo.bodyNodes,
+            isCoroutine
         );
 
         // replace selected text with new function call
@@ -717,9 +723,9 @@ export class ExtractMethodProvider {
         parametersStr: string[],
         outputSymbols: string[],
         enclosingFunc: FunctionInfo | undefined,
-        bodyNodes: ParseNodeArray
+        bodyNodes: ParseNodeArray,
+        isCoroutine: boolean
     ): string {
-        const isCoroutine = false; // todo calc
         let callStr = '';
 
         if (outputSymbols.length > 0) {
@@ -763,7 +769,8 @@ export class ExtractMethodProvider {
         paramStr: string,
         bodyStr: string[],
         enclosingFunc: FunctionInfo | undefined,
-        indentionOffset: number
+        indentionOffset: number,
+        isCoroutine: boolean
     ): string {
         let decorator;
         if (enclosingFunc) {
@@ -775,12 +782,14 @@ export class ExtractMethodProvider {
         }
 
         const functionIndention = ' '.repeat(indentionOffset);
+
         let funcStr = '';
         if (decorator) {
             funcStr += `${functionIndention}${decorator}\n`;
         }
 
-        funcStr += `${functionIndention}def ${funcName}`;
+        const awaitStr = isCoroutine ? 'async ' : '';
+        funcStr += `${functionIndention}${awaitStr}def ${funcName}`;
 
         if (paramStr.length > 0) {
             funcStr += `(${paramStr}):\n`;
@@ -1434,4 +1443,18 @@ function getParentOfType(node: ParseNode, typesToMatch: ParseNodeType[]) {
     }
 
     return undefined;
+}
+
+class AwaitFinder extends ParseTreeWalker {
+    private _containsAwait = false;
+
+    checkContainsAwait(node: ParseNode) {
+        this.walk(node);
+        return this._containsAwait;
+    }
+
+    visitAwait(node: AwaitNode): boolean {
+        this._containsAwait = true;
+        return false;
+    }
 }
