@@ -22,6 +22,6 @@ helper.verifySemanticTokens([
     },
     {
         fileOrStartMarker: 'sem2',
-        tokens: [{ type: 'module' }, { type: 'class' }, { type: 'class' }, { type: 'function' }, { type: 'property' }],
+        tokens: [{ type: 'module' }, { type: 'class' }, { type: 'class' }, { type: 'method' }, { type: 'property' }],
     },
 ]);

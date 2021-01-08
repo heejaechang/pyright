@@ -37,6 +37,7 @@
 //// [|/*sem4*/|]
 //// class [|MyClass4|]:
 ////     def [|__init__|]([|self|]):
+////         [|self|].[|field|] = 1
 ////         pass
 ////     def [|not_really_self_param|]([|first|], [|self|]):
 ////         pass
@@ -46,16 +47,16 @@ helper.verifySemanticTokens([
         fileOrStartMarker: 'sem1',
         tokens: [
             { type: 'class', modifiers: ['declaration'] },
-            { type: 'function', modifiers: ['declaration'] },
+            { type: 'method', modifiers: ['declaration'] },
             { type: 'selfParameter', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
             { type: 'variable', modifiers: ['declaration'] },
             { type: 'parameter' },
             { type: 'class', modifiers: ['decorator', 'builtin'] },
-            { type: 'function', modifiers: ['static', 'declaration'] },
+            { type: 'method', modifiers: ['static', 'declaration'] },
             { type: 'clsParameter', modifiers: ['declaration'] },
             { type: 'class', modifiers: ['decorator', 'builtin'] },
-            { type: 'function', modifiers: ['async', 'static', 'declaration'] },
+            { type: 'method', modifiers: ['async', 'static', 'declaration'] },
         ],
     },
     {
@@ -79,7 +80,7 @@ helper.verifySemanticTokens([
             { type: 'variable', modifiers: ['declaration'] },
             { type: 'class' },
             { type: 'variable' },
-            { type: 'function' },
+            { type: 'method' },
             { type: 'variable' },
         ],
     },
@@ -89,7 +90,9 @@ helper.verifySemanticTokens([
             { type: 'class', modifiers: ['declaration'] },
             { type: 'magicFunction', modifiers: ['declaration'] },
             { type: 'selfParameter', modifiers: ['declaration'] },
-            { type: 'function', modifiers: ['declaration'] },
+            { type: 'selfParameter', modifiers: [] },
+            { type: 'property', modifiers: ['declaration'] },
+            { type: 'method', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
             { type: 'parameter', modifiers: ['declaration'] },
         ],

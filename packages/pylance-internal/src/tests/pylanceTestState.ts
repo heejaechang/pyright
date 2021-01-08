@@ -169,7 +169,7 @@ export class PylanceTestState extends TestState {
                 'enumMember',
                 'event',
                 'function',
-                'member',
+                'method',
                 'macro',
                 'keyword',
                 'modifier',

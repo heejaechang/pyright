@@ -6,7 +6,7 @@ import {
     SemanticTokensLegend,
 } from 'vscode-languageserver/node';
 
-import { DeclarationType, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
+import { DeclarationType, FunctionDeclaration, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
 import {
     getEnclosingClass,
     isWithinAnnotationComment,
@@ -50,7 +50,7 @@ enum TokenTypes {
     enumMember = 9,
     typeParameter = 10,
     function = 11,
-    member = 12,
+    method = 12,
     property = 13,
     variable = 14,
     parameter = 15,
@@ -280,9 +280,11 @@ class TokenWalker extends ParseTreeWalker {
         }
     }
 
-    private _getFunctionTokenType(node: NameNode): TokenTypes {
+    private _getFunctionTokenType(node: NameNode, decl: FunctionDeclaration): TokenTypes {
         if (isDunderName(node.value)) {
             return TokenTypes.magicFunction;
+        } else if (decl.isMethod) {
+            return TokenTypes.method;
         } else {
             return TokenTypes.function;
         }
@@ -368,7 +370,7 @@ class TokenWalker extends ParseTreeWalker {
                             }
 
                             if (declaredType.category === TypeCategory.Function) {
-                                tokenType = this._getFunctionTokenType(node);
+                                tokenType = this._getFunctionTokenType(node, resolvedDecl);
 
                                 if (declaredType.details.flags & FunctionTypeFlags.AbstractMethod) {
                                     modifier = modifier | TokenModifiers.abstract;
@@ -397,12 +399,16 @@ class TokenWalker extends ParseTreeWalker {
                             if (classTypeInfo && ClassType.isEnumClass(classTypeInfo.classType)) {
                                 return { type: TokenTypes.enumMember, modifiers: modifier };
                             } else {
-                                return { type: TokenTypes.member, modifiers: modifier };
+                                return { type: TokenTypes.property, modifiers: modifier };
                             }
                         } else {
-                            // To improve: in 'self.field', 'field' should be a member instead of a variable
-                            // this currently works only if the class has a declaration 'field'
-                            // if all you have is a line somewhere self.field = 1, then it doesn't know it's a field
+                            if (
+                                node.parent?.nodeType === ParseNodeType.MemberAccess &&
+                                node.parent?.memberName.id === node.id
+                            ) {
+                                return { type: TokenTypes.property, modifiers: modifier };
+                            }
+
                             return {
                                 type: TokenTypes.variable,
                                 modifiers: isConstantName(node.value) ? modifier | TokenModifiers.readonly : modifier,
