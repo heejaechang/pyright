@@ -192,6 +192,14 @@ class PylanceServer extends LanguageServerBase {
                         this.expandPathVariables(workspace.rootPath, venvPath)
                     );
                 }
+
+                const envPYTHONPATH = pythonSection._envPYTHONPATH;
+                if (envPYTHONPATH && isString(envPYTHONPATH)) {
+                    serverSettings.extraPaths = envPYTHONPATH
+                        .split(path.delimiter)
+                        .filter((p) => p)
+                        .map((p) => resolvePaths(workspace.rootPath, p));
+                }
             }
 
             const pythonAnalysisSection = await this.getConfiguration(workspace.rootUri, pythonAnalysisSectionName);
@@ -237,9 +245,16 @@ class PylanceServer extends LanguageServerBase {
 
                 const extraPaths = pythonAnalysisSection.extraPaths;
                 if (extraPaths && Array.isArray(extraPaths) && extraPaths.length > 0) {
-                    serverSettings.extraPaths = extraPaths
+                    const paths = extraPaths
                         .filter((p) => p && isString(p))
                         .map((p) => resolvePaths(workspace.rootPath, this.expandPathVariables(workspace.rootPath, p)));
+
+                    if (serverSettings.extraPaths) {
+                        // extraPaths before PYTHONPATH, like MPLS.
+                        serverSettings.extraPaths = paths.concat(serverSettings.extraPaths);
+                    } else {
+                        serverSettings.extraPaths = paths;
+                    }
                 }
 
                 serverSettings.autoImportCompletions =
