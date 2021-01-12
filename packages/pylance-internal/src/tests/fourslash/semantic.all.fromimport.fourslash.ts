@@ -18,8 +18,8 @@
 
 // @filename: sem5.py
 //// [|/*sem5*/|]
-//// from package1.not_exist import func_not_exist
-//// from .package1.not_exist import func_not_exist
+//// from [|package1|].not_exist import func_not_exist
+//// from .[|package1|].not_exist import func_not_exist
 
 // @filename: package1/__init__.py
 //// # empty
@@ -47,6 +47,6 @@ helper.verifySemanticTokens([
     },
     {
         fileOrStartMarker: 'sem5',
-        tokens: [],
+        tokens: [{ type: 'module' }, { type: 'module' }],
     },
 ]);

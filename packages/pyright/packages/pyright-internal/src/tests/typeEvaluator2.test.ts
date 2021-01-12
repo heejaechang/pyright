@@ -272,7 +272,7 @@ test('GenericTypes8', () => {
 test('GenericTypes9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes9.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('GenericTypes10', () => {
@@ -692,6 +692,11 @@ test('Metaclass4', () => {
 test('Metaclass5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass5.py']);
     TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Metaclass6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass6.py']);
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('AssignmentExpr1', () => {
@@ -1172,7 +1177,7 @@ test('TypeVar2', () => {
 test('TypeVar3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar3.py']);
 
-    TestUtils.validateResults(analysisResults, 6);
+    TestUtils.validateResults(analysisResults, 11);
 });
 
 test('TypeVar4', () => {
@@ -1220,7 +1225,7 @@ test('Annotated1', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['annotated1.py'], configOptions);
-    TestUtils.validateResults(analysisResults39, 0);
+    TestUtils.validateResults(analysisResults39, 2);
 });
 
 test('Circular1', () => {
@@ -1275,6 +1280,12 @@ test('Decorator3', () => {
 
 test('Decorator4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator4.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Decorator5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['decorator5.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

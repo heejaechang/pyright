@@ -19,7 +19,7 @@
 // @filename: sem5.py
 //// [|/*sem5*/|]
 //// from [|package1|] import not_exist1 as ne1
-//// from .package1.not_exist import not_exist2 as ne2
+//// from .[|package1|].not_exist import not_exist2 as ne2
 
 // @filename: package1/__init__.py
 //// class MyClass:
@@ -48,6 +48,6 @@ helper.verifySemanticTokens([
     },
     {
         fileOrStartMarker: 'sem5',
-        tokens: [{ type: 'module' }],
+        tokens: [{ type: 'module' }, { type: 'module' }],
     },
 ]);
