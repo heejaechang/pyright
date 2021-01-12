@@ -247,7 +247,9 @@ export class Checker extends ParseTreeWalker {
                     const paramType = functionTypeResult.functionType.details.parameters[index].type;
                     if (
                         isUnknown(paramType) ||
-                        (isTypeVar(paramType) && paramType.details.isSynthesized && !paramType.details.boundType)
+                        (isTypeVar(paramType) &&
+                            paramType.details.isSynthesized &&
+                            !paramType.details.isSynthesizedSelfCls)
                     ) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportUnknownParameterType,
@@ -325,7 +327,8 @@ export class Checker extends ParseTreeWalker {
                     if (
                         isTypeVar(paramType) &&
                         paramType.details.variance === Variance.Covariant &&
-                        !paramType.details.isSynthesized
+                        !paramType.details.isSynthesized &&
+                        functionTypeResult.functionType.details.name !== '__init__'
                     ) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
@@ -554,7 +557,15 @@ export class Checker extends ParseTreeWalker {
                 } else {
                     const diagAddendum = new DiagnosticAddendum();
 
-                    if (!this._evaluator.canAssignType(declaredReturnType, returnType, diagAddendum)) {
+                    if (
+                        !this._evaluator.canAssignType(
+                            declaredReturnType,
+                            returnType,
+                            diagAddendum,
+                            /* typeVarMap */ undefined,
+                            CanAssignFlags.AllowBoolTypeGuard
+                        )
+                    ) {
                         this._evaluator.addDiagnostic(
                             this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,

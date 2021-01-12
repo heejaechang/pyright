@@ -118,6 +118,9 @@ export const enum CanAssignFlags {
 
     // For function types, skip the return type check.
     SkipFunctionReturnTypeCheck = 1 << 5,
+
+    // Allow bool values to be assigned to TypeGuard[x] types.
+    AllowBoolTypeGuard = 1 << 6,
 }
 
 interface TypeVarTransformer {
@@ -632,11 +635,8 @@ export function transformExpectedTypeForConstructor(
         }
 
         const isInstance = TypeBase.isInstance(prevTypeVar);
-        let newTypeVar = TypeVarType.createInstance(
-            `__expected_type_${synthesizedTypeVarIndexForExpectedType}`,
-            /* isParamSpec */ false,
-            /* isSynthesized */ true
-        );
+        let newTypeVar = TypeVarType.createInstance(`__expected_type_${synthesizedTypeVarIndexForExpectedType}`);
+        newTypeVar.details.isSynthesized = true;
         newTypeVar.scopeId = dummyScopeId;
         newTypeVar.nameWithScope = TypeVarType.makeNameWithScope(newTypeVar.details.name, dummyScopeId);
         if (!isInstance) {
