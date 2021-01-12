@@ -277,6 +277,17 @@ class PylanceServer extends LanguageServerBase {
             serverSettings.typeCheckingMode !== 'off' ||
             Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
 
+        const te = new TelemetryEvent(TelemetryEventName.SETTINGS);
+        te.Properties['openFilesOnly'] = `${serverSettings.openFilesOnly}`;
+        te.Properties['typeCheckingMode'] = `${serverSettings.typeCheckingMode}`;
+        te.Properties['useLibraryCodeForTypes'] = `${serverSettings.useLibraryCodeForTypes}`;
+        te.Properties['autoSearchPaths'] = `${serverSettings.autoSearchPaths}`;
+        te.Properties['autoImportCompletions'] = `${serverSettings.autoImportCompletions}`;
+        te.Properties['indexing'] = `${serverSettings.indexing}`;
+        te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
+        te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
+        this._telemetry.sendTelemetry(te);
+
         return serverSettings;
     }
 

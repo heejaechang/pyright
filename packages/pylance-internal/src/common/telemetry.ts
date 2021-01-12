@@ -29,6 +29,7 @@ export enum TelemetryEventName {
     WORKSPACEINDEX_SLOW = 'workspaceindex_slow',
     SEMANTICTOKENS_SLOW = 'semantictokens_slow',
     EXECUTE_COMMAND = 'execute_command',
+    SETTINGS = 'settings',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
@@ -62,13 +63,16 @@ export class TelemetryEvent implements TelemetryEventInterface {
 
     readonly Exception: Error | undefined;
 
-    constructor(eventName: string, ex?: Error) {
+    constructor(eventName: TelemetryEventName, ex?: Error) {
         this.EventName = formatEventName(eventName);
         this.Exception = getSerializableError(ex);
     }
 
     clone(): TelemetryEvent {
-        const te = new TelemetryEvent(this.EventName.substr(languageServerEventPrefix.length), this.Exception);
+        const te = new TelemetryEvent(
+            this.EventName.substr(languageServerEventPrefix.length) as TelemetryEventName,
+            this.Exception
+        );
         for (const key in this.Properties) {
             te.Properties[key] = this.Properties[key];
         }
@@ -96,7 +100,7 @@ export class TelemetryService implements TelemetryInterface {
         this._connection?.telemetry.logEvent(event);
     }
 
-    sendExceptionTelemetry(eventName: string, e: Error): void {
+    sendExceptionTelemetry(eventName: TelemetryEventName, e: Error): void {
         this.sendTelemetry(new TelemetryEvent(eventName, e));
     }
 
@@ -267,19 +271,19 @@ export namespace CompletionCoverage {
 
 export function trackPerf<T>(
     service: TelemetryInterface,
-    eventName: string,
+    eventName: TelemetryEventName,
     callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => Promise<T>,
     thresholdInMS: number
 ): Promise<T>;
 export function trackPerf<T>(
     service: TelemetryInterface,
-    eventName: string,
+    eventName: TelemetryEventName,
     callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T,
     thresholdInMS: number
 ): T;
 export function trackPerf<T>(
     service: TelemetryInterface,
-    eventName: string,
+    eventName: TelemetryEventName,
     callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T | Promise<T>,
     thresholdInMS: number
 ): T | Promise<T> {
