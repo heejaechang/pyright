@@ -2490,13 +2490,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     srcExpression || nameNode
                 );
 
-                // If the user has requested that no general type issues be
-                // reported, don't replace the destType with the declaredType
-                // because they won't understand why subsequent errors are
-                // generated.
-                if (fileInfo.diagnosticRuleSet.reportGeneralTypeIssues !== 'none') {
-                    destType = declaredType;
-                }
+                // Replace the assigned type with the (unnarrowed) declared type.
+                destType = declaredType;
             } else {
                 // Constrain the resulting type to match the declared type.
                 destType = narrowTypeBasedOnAssignment(declaredType, type);
@@ -9039,6 +9034,14 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
             functionType.details.declaredReturnType = convertToInstance(typeArg1Type);
         } else {
+            const fileInfo = getFileInfo(errorNode);
+            addDiagnostic(
+                fileInfo.diagnosticRuleSet.reportMissingTypeArgument,
+                DiagnosticRule.reportMissingTypeArgument,
+                Localizer.Diagnostic.callableSecondArg(),
+                errorNode
+            );
+
             functionType.details.declaredReturnType = UnknownType.create();
         }
 
