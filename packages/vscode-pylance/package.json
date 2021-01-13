@@ -36,6 +36,20 @@
         "ms-python.python"
     ],
     "contributes": {
+        "commands": [
+            {
+                "command": "pylance.reportIssue",
+                "title": "Pylance: Report Issue..."
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "pylance.reportIssue",
+                    "when": "editorLangId == python"
+                }
+            ]
+        },
         "configurationDefaults": {
             "[python]": {
                 "editor.wordBasedSuggestions": false

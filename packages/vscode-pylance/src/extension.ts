@@ -8,6 +8,7 @@ import { Commands } from 'pylance-internal/commands/commands';
 
 import { LSExtensionApi } from './api';
 import { ActivatePylanceBanner, PylanceSurveyBanner } from './banners';
+import reportIssue from './commands/reportIssue';
 import { ApplicationShellImpl } from './common/appShell';
 import { licenseErrorText } from './common/license';
 import { loadLocalizedStrings } from './common/localize';
@@ -17,7 +18,7 @@ import { InsidersImpl } from './insiders';
 import { BlobStorageImpl } from './insiders/blobStorage';
 import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
-import { BrowserServiceImpl } from './types/browser';
+import { BrowserService, BrowserServiceImpl } from './types/browser';
 import { Command, CommandManagerImpl } from './types/commandManager';
 
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
@@ -40,9 +41,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         blobStorage,
         commandManager
     );
+    const browser = new BrowserServiceImpl();
 
     showActivatePylanceBanner(context, version).ignoreErrors();
-    showPylanceSurveyBanner(context, version).ignoreErrors();
+    showPylanceSurveyBanner(context, version, browser).ignoreErrors();
     migrateV1Settings(config, appShell).ignoreErrors();
 
     insiders.onStartup().ignoreErrors();
@@ -67,6 +69,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         if (hintsEnabled.get<boolean | undefined>('enabled')) {
             commandManager.executeCommand(Command.TriggerParameterHints);
         }
+    });
+
+    registerCommand(context, Command.ReportIssue, () => {
+        reportIssue(browser, version);
     });
 
     return {
@@ -106,13 +112,12 @@ async function showActivatePylanceBanner(context: vscode.ExtensionContext, versi
     return switchToPylance.show();
 }
 
-async function showPylanceSurveyBanner(context: vscode.ExtensionContext, version: string): Promise<void> {
-    const survey = new PylanceSurveyBanner(
-        new ApplicationShellImpl(),
-        new BrowserServiceImpl(),
-        context.globalState,
-        version
-    );
+async function showPylanceSurveyBanner(
+    context: vscode.ExtensionContext,
+    version: string,
+    browser: BrowserService
+): Promise<void> {
+    const survey = new PylanceSurveyBanner(new ApplicationShellImpl(), browser, context.globalState, version);
     return survey.show();
 }
 

@@ -4,6 +4,7 @@ export enum Command {
     ReloadWindow = 'workbench.action.reloadWindow',
     InstallExtension = 'workbench.extensions.installExtension',
     TriggerParameterHints = 'editor.action.triggerParameterHints',
+    ReportIssue = 'pylance.reportIssue',
 }
 
 export interface CommandManager {
