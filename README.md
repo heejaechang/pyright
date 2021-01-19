@@ -7,43 +7,29 @@
 
 ## Releasing the extension
 
-Release builds are produced automatically by the build pipeline. To release,
-a tag must be pushed to the pyrx repo, then the build fetched from the pipeline
-artficats and uploaded the the extension website.
-
-To do this, you can either clone the main repo and push the tag, or push the tag
-from a fork with the upstream set. For example
-
-```sh
-# If using HTTP auth
-git clone https://www.github.com/microsoft/pyrx pyrx-origin
-# If using SSH auth
-git clone git@github.com:microsoft/pyrx.git pyrx-origin
-```
-
-Then tag and push:
-
-```
-git tag 2020.6.1
-git push --tags
-```
-
-When the build completes for the tag, grab the VSIX from its artifacts, verify its contents,
-then upload to [extension management site](https://marketplace.visualstudio.com/manage/publishers/ms-python/).
-
-## Manual release steps
-
-If a release needs to be done manually, it can be done manually by cleaning.
-
-```sh
-git clean -fdx
-npm install
-npx gulp setVersion --to 2020.6.1
-cd packages/vscode-pylance
-npm run package
-```
+1. Update `CHANGELOG.md` in `package/vscode-pylance`.
+1. Update the NOTICE.txt file by [downloading a plaintext NOTICE from Azure DevOps](https://mseng.visualstudio.com/DSTools/_componentGovernance/535?_a=components&typeId=103424&alerts-view-option=active).
+1. Tag the repo. Do not use the GitHub releases page to create the tag. Tagging the repo can be done
+   by cloning the pyrx repo, tagging the main branch with `git tag 2021.1.1`, then `git push --tags`.
+1. Wait for the builds to complete and the draft releases to be created on the [releases page](https://github.com/microsoft/pyrx/releases).
+1. Download the VSIX, and manually inspect it for potential stray files (extra source maps, source files, etc).
+1. If the build looks good, publish both releases. This will automatically push the packages to the internal package feed.
+1. Upload the VSIX to [the marketplace](https://marketplace.visualstudio.com/manage/publishers/ms-python).
+1. Submit a PR to pylance-release with a copy of `CHANGELOG.md`. If the new version includes any new diagnostics, update `DIAGNOSTIC_SEVERITY_RULES.md`. If the new version includes any new settings, update `README.md`.
+1. Create a [new release on the pylance-release repo](https://github.com/microsoft/pylance-release/releases/new).
+   This should contain the "notable changes" section, plus a link to the section in `CHANGELOG.md`.
+1. Close all "fixed in next version" issues.
 
 ## Running
+
+### Using the main Pylance extension
+
+-   Ensure you've run `npm install`.
+-   Ensure `python.languageServer` is set to `Pylance`.
+-   Run either the "Pylance extension" or "Pylance extension (watch mode)" watch tasks.
+-   To attach to the server, return to the first instance and switch the menu in the debugger panel to
+    "Pylance extension attach server" and hit the play button to attach to the server process.
+    At this point, you should be able to set breakpoints anywhere in the server code.
 
 ### Using Pylance test extension
 
@@ -62,24 +48,6 @@ npm run package
 -   Open `src/intelliCode/extension.ts`
 -   Add `this._modelZipPath = '<path_to_the_model>;'`
 -   You should be able to debug IntelliCode model and recommendations.
-
-### In VS Code Python extension
-
--   Clone [Python Extension](https://github.com/microsoft/vscode-python) and follow its contributing steps.
--   Create `nodeLanguageServer` subfolder in the `vscode-python` folder.
--   Build a version of Pylance compatible with the code extension by running "npm run webpack" in the `packages/vscode-pylance` folder.
--   Copy contents of `dist` folder to `nodeLanguageServer` subfolder in the Python extension.
--   Set these attributes in `settings.json`:
-
-```json
-"python.languageServer": "Pylance"
-"python.downloadLanguageServer": false,
-"python.blobName": "d67e4491-7116-42e0-8d18-5394f74187ce",
-"python.analysis.downloadChannel": "daily",
-"python.packageName": "Python-Language-Server"
-```
-
--   Launch the extension and open a Python file. The extension should then start Pylance language server.
 
 ## Debugging server startup code
 
