@@ -32,7 +32,13 @@ import {
     Type,
     TypeCategory,
 } from './types';
-import { convertToInstance, doForEachSubtype, isEllipsisType, transformTypeObjectToClass } from './typeUtils';
+import {
+    convertToInstance,
+    doForEachSubtype,
+    getFullNameOfType,
+    isEllipsisType,
+    transformTypeObjectToClass,
+} from './typeUtils';
 
 export enum PackageSymbolType {
     Indeterminate,
@@ -57,6 +63,11 @@ export interface PackageModule {
     symbols: PackageSymbol[];
 }
 
+// Used to track types that are re-exported from other
+// modules and therefore have "aliased" full names
+// that don't match the full name of the original declaration.
+export type AlternateSymbolNameMap = Map<string, string[]>;
+
 export interface PackageTypeReport {
     packageName: string;
     rootDirectory: string | undefined;
@@ -67,6 +78,7 @@ export interface PackageTypeReport {
     missingClassDocStringCount: number;
     missingDefaultParamCount: number;
     modules: PackageModule[];
+    alternateSymbolNames: AlternateSymbolNameMap;
     diagnostics: Diagnostic[];
 }
 
@@ -105,22 +117,24 @@ export class PackageTypeVerifier {
 
     verify(packageName: string): PackageTypeReport {
         const trimmedPackageName = packageName.trim();
+        const packageNameParts = trimmedPackageName.split('.');
 
         const report: PackageTypeReport = {
-            packageName: trimmedPackageName,
-            rootDirectory: this._getDirectoryForPackage(trimmedPackageName),
+            packageName: packageNameParts[0],
+            rootDirectory: this._getDirectoryForPackage(packageNameParts[0]),
             pyTypedPath: undefined,
             symbolCount: 0,
             unknownTypeCount: 0,
             missingFunctionDocStringCount: 0,
             missingClassDocStringCount: 0,
             missingDefaultParamCount: 0,
+            alternateSymbolNames: new Map<string, string[]>(),
             modules: [],
             diagnostics: [],
         };
 
         try {
-            if (!trimmedPackageName || trimmedPackageName.includes('.')) {
+            if (!trimmedPackageName) {
                 report.diagnostics.push(
                     new Diagnostic(
                         DiagnosticCategory.Error,
@@ -145,14 +159,29 @@ export class PackageTypeVerifier {
                 } else {
                     report.pyTypedPath = pyTypedInfo.pyTypedPath;
 
-                    const publicModules = this._getListOfPublicModules(report.rootDirectory, trimmedPackageName);
+                    const publicModules = this._getListOfPublicModules(
+                        report.rootDirectory,
+                        packageNameParts[0],
+                        trimmedPackageName
+                    );
+
+                    // If the filter eliminated all modules, report an error.
+                    if (publicModules.length === 0) {
+                        report.diagnostics.push(
+                            new Diagnostic(
+                                DiagnosticCategory.Error,
+                                `Module "${trimmedPackageName}" cannot be resolved`,
+                                getEmptyRange()
+                            )
+                        );
+                    }
 
                     // Build a map of all public symbols exported by this package. We'll
                     // use this map to determine which diagnostics to report. We don't want
                     // to report diagnostics many times for types that include public types.
                     const publicSymbolMap = new Map<string, string>();
                     publicModules.forEach((moduleName) => {
-                        this._getPublicSymbolsForModule(moduleName, publicSymbolMap);
+                        this._getPublicSymbolsForModule(moduleName, publicSymbolMap, report.alternateSymbolNames);
                     });
 
                     publicModules.forEach((moduleName) => {
@@ -217,7 +246,11 @@ export class PackageTypeVerifier {
         return this._importResolver.resolveImport('', this._execEnv, moduleDescriptor);
     }
 
-    private _getPublicSymbolsForModule(moduleName: string, symbolMap: PublicSymbolMap) {
+    private _getPublicSymbolsForModule(
+        moduleName: string,
+        symbolMap: PublicSymbolMap,
+        alternateSymbolNames: AlternateSymbolNameMap
+    ) {
         const importResult = this._resolveImport(moduleName);
 
         if (importResult.isImportFound) {
@@ -237,6 +270,7 @@ export class PackageTypeVerifier {
 
                 this._getPublicSymbolsInSymbolTable(
                     symbolMap,
+                    alternateSymbolNames,
                     module,
                     module.name,
                     moduleScope.symbolTable,
@@ -248,6 +282,7 @@ export class PackageTypeVerifier {
 
     private _getPublicSymbolsInSymbolTable(
         symbolMap: PublicSymbolMap,
+        alternateSymbolNames: AlternateSymbolNameMap,
         module: PackageModule,
         scopeName: string,
         symbolTable: SymbolTable,
@@ -256,34 +291,62 @@ export class PackageTypeVerifier {
         symbolTable.forEach((symbol, name) => {
             if (
                 !isPrivateOrProtectedName(name) &&
-                !symbol.isExternallyHidden() &&
                 !symbol.isIgnoredForProtocolMatch() &&
                 !this._isSymbolTypeImplied(scopeType, name)
             ) {
                 const fullName = `${scopeName}.${name}`;
-                const symbolType = this._program.getTypeForSymbol(symbol);
-                symbolMap.set(fullName, fullName);
 
-                const typedDecls = symbol.getTypedDeclarations();
+                if (!symbol.isExternallyHidden()) {
+                    const symbolType = this._program.getTypeForSymbol(symbol);
+                    symbolMap.set(fullName, fullName);
 
-                // Is this a class declared within this module or class? If so, verify
-                // the symbols defined within it.
-                if (typedDecls.length > 0) {
-                    const classDecl = typedDecls.find((decl) => decl.type === DeclarationType.Class);
-                    if (classDecl) {
-                        if (isClass(symbolType)) {
-                            this._getPublicSymbolsInSymbolTable(
-                                symbolMap,
-                                module,
-                                fullName,
-                                symbolType.details.fields,
-                                ScopeType.Class
-                            );
+                    const typedDecls = symbol.getTypedDeclarations();
+
+                    if (typedDecls.length > 0) {
+                        // Is this a class declared within this module or class? If so, verify
+                        // the symbols defined within it.
+                        const classDecl = typedDecls.find((decl) => decl.type === DeclarationType.Class);
+                        if (classDecl) {
+                            if (isClass(symbolType)) {
+                                this._getPublicSymbolsInSymbolTable(
+                                    symbolMap,
+                                    alternateSymbolNames,
+                                    module,
+                                    fullName,
+                                    symbolType.details.fields,
+                                    ScopeType.Class
+                                );
+                            }
+                        }
+                    }
+
+                    // Is this the re-export of an import? If so, record the alternate name.
+                    const importDecl = symbol.getDeclarations().find((decl) => decl.type === DeclarationType.Alias);
+                    if (importDecl && importDecl.type === DeclarationType.Alias) {
+                        const typeName = getFullNameOfType(this._program.getTypeForSymbol(symbol));
+                        if (typeName) {
+                            this._addAlternateSymbolName(alternateSymbolNames, typeName, fullName);
                         }
                     }
                 }
             }
         });
+    }
+
+    private _addAlternateSymbolName(map: AlternateSymbolNameMap, name: string, altName: string) {
+        if (name !== altName) {
+            let altNameList = map.get(name);
+
+            if (!altNameList) {
+                altNameList = [];
+                map.set(name, altNameList);
+            }
+
+            // Add the alternate name if it's unique.
+            if (!altNameList.some((name) => name === altName)) {
+                altNameList.push(altName);
+            }
+        }
     }
 
     private _verifyTypesForModule(moduleName: string, publicSymbolMap: PublicSymbolMap, report: PackageTypeReport) {
@@ -335,14 +398,18 @@ export class PackageTypeVerifier {
 
     // Scans the directory structure for a list of public modules
     // within the package.
-    private _getListOfPublicModules(rootPath: string, packageName: string): string[] {
-        const publicModules: string[] = [];
+    private _getListOfPublicModules(rootPath: string, packageName: string, moduleFilter: string): string[] {
+        let publicModules: string[] = [];
         this._addPublicModulesRecursive(rootPath, packageName, publicModules);
 
         // Make sure modules are unique. There may be duplicates if a ".py" and ".pyi"
         // exist for some modules.
         const uniqueModules: string[] = [];
         const moduleMap = new Map<string, string>();
+
+        // Apply the filter to limit to only specified submodules.
+        publicModules = publicModules.filter((module) => module.startsWith(moduleFilter));
+
         publicModules.forEach((module) => {
             if (!moduleMap.has(module)) {
                 uniqueModules.push(module);
@@ -654,7 +721,12 @@ export class PackageTypeVerifier {
                                 typeStack
                             )
                         ) {
-                            subDiag.addMessage(`Type partially unknown for parameter "${param.name}"`);
+                            subDiag.addMessage(
+                                `Type "${this._program.printType(
+                                    param.type,
+                                    /* expandTypeAlias */ false
+                                )}" partially unknown for parameter "${param.name}"`
+                            );
                             isKnown = false;
                         }
                     }
@@ -674,7 +746,12 @@ export class PackageTypeVerifier {
                             typeStack
                         )
                     ) {
-                        subDiag.addMessage(`Return type partially unknown`);
+                        subDiag.addMessage(
+                            `Return type "${this._program.printType(
+                                type.details.declaredReturnType,
+                                /* expandTypeAlias */ false
+                            )}" partially unknown`
+                        );
                         isKnown = false;
                     }
                 } else {
