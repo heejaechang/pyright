@@ -38,6 +38,20 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    registerCommand(context, 'pylance.dumpTokens', () => {
+        const fileName = vscode.window.activeTextEditor?.document.fileName;
+        if (fileName) {
+            vscode.commands.executeCommand(Commands.dumpFileDebugInfo, fileName, 'tokens');
+        }
+    });
+
+    registerCommand(context, 'pylance.dumpNodes', () => {
+        const fileName = vscode.window.activeTextEditor?.document.fileName;
+        if (fileName) {
+            vscode.commands.executeCommand(Commands.dumpFileDebugInfo, fileName, 'nodes');
+        }
+    });
+
     cancellationStrategy = new FileBasedCancellationStrategy();
 
     const nonBundlePath = context.asAbsolutePath(path.join('dist', 'server.js'));

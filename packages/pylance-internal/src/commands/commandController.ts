@@ -14,6 +14,7 @@ import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { Commands } from './commands';
+import { DumpFileDebugInfoCommand } from './dumpFileDebugInfoCommand';
 import { ExtractMethodCommand } from './extractMethodCommand';
 import { ExtractVariableCommand } from './extractVariableCommand';
 import { QuickActionCommand } from './quickActionCommand';
@@ -39,6 +40,8 @@ export class CommandController extends PyrightCommandController {
     private _pylanceQuickAction: QuickActionCommand;
     private _extractMethod: ExtractMethodCommand;
     private _extractVariable: ExtractVariableCommand;
+    private _dumpFileDebugInfo: DumpFileDebugInfoCommand;
+
     private _pyrightCommandMap = new Map<string, string>([
         [Commands.createTypeStub, PyrightCommands.createTypeStub],
         [Commands.orderImports, PyrightCommands.orderImports],
@@ -54,6 +57,7 @@ export class CommandController extends PyrightCommandController {
         this._pylanceQuickAction = new QuickActionCommand(ls);
         this._extractMethod = new ExtractMethodCommand(ls);
         this._extractVariable = new ExtractVariableCommand(ls);
+        this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(ls);
     }
 
     static supportedCommands() {
@@ -70,6 +74,7 @@ export class CommandController extends PyrightCommandController {
             Commands.intelliCodeLoadExtension,
             Commands.extractMethod,
             Commands.extractVariable,
+            Commands.dumpFileDebugInfo,
         ];
     }
 
@@ -80,12 +85,12 @@ export class CommandController extends PyrightCommandController {
             case Commands.removeUnusedImport:
             case Commands.addImport:
                 return await this._pylanceQuickAction.execute(cmdParams, token);
-            case Commands.extractMethod: {
+            case Commands.extractMethod:
                 return await this._extractMethod.execute(cmdParams, token);
-            }
-            case Commands.extractVariable: {
+            case Commands.extractVariable:
                 return await this._extractVariable.execute(cmdParams, token);
-            }
+            case Commands.dumpFileDebugInfo:
+                return await this._dumpFileDebugInfo.execute(cmdParams, token);
         }
 
         const pyrightCommand = this._pyrightCommandMap.get(cmdParams.command);

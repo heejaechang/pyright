@@ -41,6 +41,28 @@
                 ]
             }
         ],
+        "commands": [
+            {
+                "command": "pylance.dumpTokens",
+                "title": "Pylance: Dump token streams ..."
+            },
+            {
+                "command": "pylance.dumpNodes",
+                "title": "Pylance: Dump parse tree ..."
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "pylance.dumpTokens",
+                    "when": "editorLangId == python"
+                },
+                {
+                    "command": "pylance.dumpNodes",
+                    "when": "editorLangId == python"
+                }
+            ]
+        },
         "configurationDefaults": {
             "[python]": {
                 "editor.wordBasedSuggestions": false

@@ -20,4 +20,5 @@ export enum Commands {
     triggerParameterHints = 'pylance.triggerParameterHints',
     extractMethod = 'pylance.extractMethod',
     extractVariable = 'pylance.extractVariable',
+    dumpFileDebugInfo = 'pylance.dumpFileDebugInfo',
 }
