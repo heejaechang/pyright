@@ -49,6 +49,10 @@
             {
                 "command": "pylance.dumpNodes",
                 "title": "Pylance: Dump parse tree ..."
+            },
+            {
+                "command": "pylance.dumpTypes",
+                "title": "Pylance: Dump type info ..."
             }
         ],
         "menus": {
@@ -59,6 +63,10 @@
                 },
                 {
                     "command": "pylance.dumpNodes",
+                    "when": "editorLangId == python"
+                },
+                {
+                    "command": "pylance.dumpTypes",
                     "when": "editorLangId == python"
                 }
             ]

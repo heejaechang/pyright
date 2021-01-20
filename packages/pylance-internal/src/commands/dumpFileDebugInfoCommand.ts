@@ -7,8 +7,23 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
+import { findNodeByOffset } from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
+import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
+import {
+    ClassType,
+    ClassTypeFlags,
+    FunctionType,
+    FunctionTypeFlags,
+    ParamSpecEntry,
+    TypeCategory,
+    TypeFlags,
+    TypeVarDetails,
+    TypeVarType,
+    Variance,
+} from 'pyright-internal/analyzer/types';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { isNumber, isString } from 'pyright-internal/common/core';
 import { convertOffsetsToRange } from 'pyright-internal/common/positionUtils';
 import { TextRange } from 'pyright-internal/common/textRange';
 import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
@@ -36,6 +51,7 @@ import {
     ErrorExpressionCategory,
     ErrorNode,
     ExceptNode,
+    ExpressionNode,
     FormatStringNode,
     ForNode,
     FunctionAnnotationNode,
@@ -47,6 +63,7 @@ import {
     ImportFromNode,
     ImportNode,
     IndexNode,
+    isExpressionNode,
     LambdaNode,
     ListComprehensionForNode,
     ListComprehensionIfNode,
@@ -83,6 +100,7 @@ import {
     YieldFromNode,
     YieldNode,
 } from 'pyright-internal/parser/parseNodes';
+import { ParseResults } from 'pyright-internal/parser/parser';
 import {
     KeywordType,
     NewLineType,
@@ -100,7 +118,7 @@ export class DumpFileDebugInfoCommand implements ServerCommand {
     async execute(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         throwIfCancellationRequested(token);
 
-        if (params.arguments?.length !== 2) {
+        if (!params.arguments || params.arguments.length < 2) {
             return [];
         }
 
@@ -127,13 +145,416 @@ export class DumpFileDebugInfoCommand implements ServerCommand {
             }
             case 'nodes': {
                 this._ls.console.info(`* Node info`);
+
                 const dumper = new TreeDumper(parseResults.tokenizerOutput.lines);
                 dumper.walk(parseResults.parseTree);
 
                 this._ls.console.info(dumper.output);
                 break;
             }
+            case 'types': {
+                const evaluator = workspace.serviceInstance.getEvaluator();
+                const start = params.arguments[2];
+                const end = params.arguments[3];
+                if (!evaluator || !start || !end) {
+                    return [];
+                }
+
+                this._ls.console.info(`* Type info`);
+                this._ls.console.info(`${getTypeEvaluatorString(evaluator, parseResults, start, end)}`);
+            }
         }
+    }
+}
+
+function getTypeEvaluatorString(evaluator: TypeEvaluator, results: ParseResults, start: number, end: number) {
+    const dumper = new TreeDumper(results.tokenizerOutput.lines);
+    const node = findNodeByOffset(results.parseTree, start) ?? findNodeByOffset(results.parseTree, end);
+    if (!node) {
+        return 'N/A';
+    }
+
+    const set = new Set();
+
+    if (node.nodeType === ParseNodeType.Name) {
+        switch (node.parent?.nodeType) {
+            case ParseNodeType.Class: {
+                const result = evaluator.getTypeOfClass(node.parent as ClassNode);
+                if (!result) {
+                    return 'N/A';
+                }
+
+                return JSON.stringify(result, replacer, 2);
+            }
+            case ParseNodeType.Function: {
+                const result = evaluator.getTypeOfFunction(node.parent as FunctionNode);
+                if (!result) {
+                    return 'N/A';
+                }
+
+                return JSON.stringify(result, replacer, 2);
+            }
+        }
+    }
+
+    const range = TextRange.fromBounds(start, end);
+    const expr = getExpressionNodeWithRange(node, range);
+    if (!expr) {
+        return 'N/A';
+    }
+
+    const sb = `Expression node found at ${getTextSpanString(
+        expr,
+        results.tokenizerOutput.lines
+    )} from the given span ${getTextSpanString(range, results.tokenizerOutput.lines)}\r\n`;
+
+    const result = evaluator.getType(expr);
+    if (!result) {
+        return sb + 'No result';
+    }
+
+    return sb + JSON.stringify(result, replacer, 2);
+
+    function getExpressionNodeWithRange(node: ParseNode, range: TextRange): ExpressionNode | undefined {
+        // find best expression node that contains both start and end
+        let current: ParseNode | undefined = node;
+        while (current && !TextRange.containsRange(current, range)) {
+            current = current.parent;
+        }
+
+        if (!current) {
+            return undefined;
+        }
+
+        while (!isExpressionNode(current!)) {
+            current = current!.parent;
+        }
+
+        return current;
+    }
+
+    function replacer(this: any, key: string, value: any) {
+        if (value === undefined) {
+            return undefined;
+        }
+
+        if (!isNumber(value) && !isString(value)) {
+            if (set.has(value)) {
+                if (isClassType(value)) {
+                    return `<cycle> class '${value.details.fullName}' typeSourceId:${value.details.typeSourceId}`;
+                }
+
+                if (isFunctionType(value)) {
+                    return `<cycle> function '${value.details.fullName}' parameter count:${value.details.parameters.length}`;
+                }
+
+                if (isTypeVarType(value)) {
+                    return `<cycle> function '${value.details.name}' scope id:${value.nameWithScope}`;
+                }
+
+                return undefined;
+            } else {
+                set.add(value);
+            }
+        }
+
+        if (isTypeBase(this) && key === 'category') {
+            return getTypeCategoryString(value);
+        }
+
+        if (isTypeBase(this) && key === 'flags') {
+            return getTypeFlagsString(value);
+        }
+
+        if (isClassDetail(this) && key === 'flags') {
+            return getClassTypeFlagsString(value);
+        }
+
+        if (isFunctionDetail(this) && key === 'flags') {
+            return getFunctionTypeFlagsString(value);
+        }
+
+        if (isTypeVarDetails(this) && key === 'variance') {
+            return getVarianceString(value);
+        }
+
+        if (isParamSpecEntry(this) && key === 'category') {
+            return getParameterCategoryString(value);
+        }
+
+        if (value.nodeType && value.id) {
+            dumper.visitNode(value as ParseNode);
+
+            const output = dumper.output;
+            dumper.reset();
+            return output;
+        }
+
+        return value;
+    }
+
+    function isTypeBase(type: any): boolean {
+        return type.category && type.flags;
+    }
+
+    function isClassType(type: any): type is ClassType {
+        return isTypeBase(type) && type.details && isClassDetail(type.details);
+    }
+
+    function isClassDetail(type: any): boolean {
+        return (
+            type.name !== undefined && type.fullName !== undefined && type.moduleName !== undefined && type.baseClasses
+        );
+    }
+
+    function isFunctionType(type: any): type is FunctionType {
+        return isTypeBase(type) && type.details && isFunctionDetail(type.details);
+    }
+
+    function isFunctionDetail(type: any): boolean {
+        return (
+            type.name !== undefined && type.fullName !== undefined && type.moduleName !== undefined && type.parameters
+        );
+    }
+
+    function isTypeVarType(type: any): type is TypeVarType {
+        return isTypeBase(type) && type.details && isTypeVarDetails(type.details);
+    }
+
+    function isTypeVarDetails(type: any): type is TypeVarDetails {
+        return type.name !== undefined && type.constraints && type.variance !== undefined;
+    }
+
+    function isParamSpecEntry(type: any): type is ParamSpecEntry {
+        return type.category && type.type;
+    }
+}
+
+function getVarianceString(type: Variance) {
+    switch (type) {
+        case Variance.Invariant:
+            return 'Invariant';
+        case Variance.Covariant:
+            return 'Covariant';
+        case Variance.Contravariant:
+            return 'Contravariant';
+        default:
+            return `Unknown Value!! (${type})`;
+    }
+}
+
+function getFunctionTypeFlagsString(flags: FunctionTypeFlags) {
+    const str = [];
+
+    if (flags & FunctionTypeFlags.ConstructorMethod) {
+        str.push('ConstructorMethod');
+    }
+
+    if (flags & FunctionTypeFlags.ClassMethod) {
+        str.push('ClassMethod');
+    }
+
+    if (flags & FunctionTypeFlags.StaticMethod) {
+        str.push('StaticMethod');
+    }
+
+    if (flags & FunctionTypeFlags.AbstractMethod) {
+        str.push('AbstractMethod');
+    }
+
+    if (flags & FunctionTypeFlags.Generator) {
+        str.push('Generator');
+    }
+
+    if (flags & FunctionTypeFlags.DisableDefaultChecks) {
+        str.push('DisableDefaultChecks');
+    }
+
+    if (flags & FunctionTypeFlags.SynthesizedMethod) {
+        str.push('SynthesizedMethod');
+    }
+
+    if (flags & FunctionTypeFlags.SkipConstructorCheck) {
+        str.push('SkipConstructorCheck');
+    }
+
+    if (flags & FunctionTypeFlags.Overloaded) {
+        str.push('Overloaded');
+    }
+
+    if (flags & FunctionTypeFlags.Async) {
+        str.push('Async');
+    }
+
+    if (flags & FunctionTypeFlags.WrapReturnTypeInAwait) {
+        str.push('WrapReturnTypeInAwait');
+    }
+
+    if (flags & FunctionTypeFlags.StubDefinition) {
+        str.push('StubDefinition');
+    }
+
+    if (flags & FunctionTypeFlags.Final) {
+        str.push('Final');
+    }
+
+    if (flags & FunctionTypeFlags.PyTypedDefinition) {
+        str.push('PyTypedDefinition');
+    }
+
+    if (flags & FunctionTypeFlags.Final) {
+        str.push('Final');
+    }
+
+    if (flags & FunctionTypeFlags.UnannotatedParams) {
+        str.push('UnannotatedParams');
+    }
+
+    if (flags & FunctionTypeFlags.SkipParamCompatibilityCheck) {
+        str.push('SkipParamCompatibilityCheck');
+    }
+
+    if (str.length === 0) return 'None';
+
+    return str.join(',');
+}
+
+function getClassTypeFlagsString(flags: ClassTypeFlags) {
+    const str = [];
+
+    if (flags & ClassTypeFlags.BuiltInClass) {
+        str.push('BuiltInClass');
+    }
+
+    if (flags & ClassTypeFlags.SpecialBuiltIn) {
+        str.push('SpecialBuiltIn');
+    }
+
+    if (flags & ClassTypeFlags.DataClass) {
+        str.push('DataClass');
+    }
+
+    if (flags & ClassTypeFlags.FrozenDataClass) {
+        str.push('FrozenDataClass');
+    }
+
+    if (flags & ClassTypeFlags.SkipSynthesizedDataClassInit) {
+        str.push('SkipSynthesizedDataClassInit');
+    }
+
+    if (flags & ClassTypeFlags.SkipSynthesizedDataClassEq) {
+        str.push('SkipSynthesizedDataClassEq');
+    }
+
+    if (flags & ClassTypeFlags.SynthesizedDataClassOrder) {
+        str.push('SynthesizedDataClassOrder');
+    }
+
+    if (flags & ClassTypeFlags.TypedDictClass) {
+        str.push('TypedDictClass');
+    }
+
+    if (flags & ClassTypeFlags.CanOmitDictValues) {
+        str.push('CanOmitDictValues');
+    }
+
+    if (flags & ClassTypeFlags.SupportsAbstractMethods) {
+        str.push('SupportsAbstractMethods');
+    }
+
+    if (flags & ClassTypeFlags.HasAbstractMethods) {
+        str.push('HasAbstractMethods');
+    }
+
+    if (flags & ClassTypeFlags.PropertyClass) {
+        str.push('PropertyClass');
+    }
+
+    if (flags & ClassTypeFlags.Final) {
+        str.push('Final');
+    }
+
+    if (flags & ClassTypeFlags.ProtocolClass) {
+        str.push('ProtocolClass');
+    }
+
+    if (flags & ClassTypeFlags.PseudoGenericClass) {
+        str.push('PseudoGenericClass');
+    }
+
+    if (flags & ClassTypeFlags.RuntimeCheckable) {
+        str.push('RuntimeCheckable');
+    }
+
+    if (flags & ClassTypeFlags.TypingExtensionClass) {
+        str.push('TypingExtensionClass');
+    }
+
+    if (flags & ClassTypeFlags.PartiallyConstructed) {
+        str.push('PartiallyConstructed');
+    }
+
+    if (flags & ClassTypeFlags.HasCustomClassGetItem) {
+        str.push('HasCustomClassGetItem');
+    }
+
+    if (flags & ClassTypeFlags.VariadicTypeParameter) {
+        str.push('VariadicTypeParameter');
+    }
+
+    if (flags & ClassTypeFlags.EnumClass) {
+        str.push('EnumClass');
+    }
+
+    if (str.length === 0) return 'None';
+
+    return str.join(',');
+}
+
+function getTypeFlagsString(flags: TypeFlags) {
+    const str = [];
+
+    if (flags & TypeFlags.Instantiable) {
+        str.push('Instantiable');
+    }
+
+    if (flags & TypeFlags.Instance) {
+        str.push('Instance');
+    }
+
+    if (str.length === 0) return 'None';
+
+    return str.join(',');
+}
+
+function getTypeCategoryString(type: TypeCategory) {
+    switch (type) {
+        case TypeCategory.Unbound:
+            return 'Unbound';
+        case TypeCategory.Unknown:
+            return 'Unknown';
+        case TypeCategory.Any:
+            return 'Any';
+        case TypeCategory.None:
+            return 'None';
+        case TypeCategory.Never:
+            return 'Never';
+        case TypeCategory.Function:
+            return 'Function';
+        case TypeCategory.OverloadedFunction:
+            return 'OverloadedFunction';
+        case TypeCategory.Class:
+            return 'Class';
+        case TypeCategory.Object:
+            return 'Object';
+        case TypeCategory.Module:
+            return 'Module';
+        case TypeCategory.Union:
+            return 'Union';
+        case TypeCategory.TypeVar:
+            return 'TypeVar';
+        default:
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -166,6 +587,11 @@ class TreeDumper extends ParseTreeWalker {
         return `[${node.id}] (${getParseNodeTypeString(node.nodeType)}, p:${node.start} l:${
             node.length
         } [${getTextSpanString(node, this._lines)}])`;
+    }
+
+    reset() {
+        this._indentation = '';
+        this._output = '';
     }
 
     visitArgument(node: ArgumentNode) {
@@ -526,7 +952,7 @@ function getArgumentCategoryString(type: ArgumentCategory) {
         case ArgumentCategory.UnpackedDictionary:
             return 'UnpackedDictionary';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -659,7 +1085,7 @@ function getParseNodeTypeString(type: ParseNodeType) {
         case ParseNodeType.FunctionAnnotation:
             return 'FunctionAnnotation';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -688,7 +1114,7 @@ function getErrorExpressionCategoryString(type: ErrorExpressionCategory) {
         case ErrorExpressionCategory.MissingFunctionParameterList:
             return 'MissingFunctionParameterList';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -776,7 +1202,7 @@ function getTokenTypeString(type: TokenType) {
         case TokenType.Backtick:
             return 'Backtick';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -791,7 +1217,7 @@ function getNewLineTypeString(type: NewLineType) {
         case NewLineType.Implied:
             return 'Implied';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -884,7 +1310,7 @@ function getOperatorTypeString(type: OperatorType) {
         case OperatorType.NotIn:
             return 'NotIn';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 
@@ -963,7 +1389,7 @@ function getKeywordTypeString(type: KeywordType) {
         case KeywordType.Yield:
             return 'Yield';
         default:
-            return 'Unknown!!';
+            return `Unknown Value!! (${type})`;
     }
 }
 

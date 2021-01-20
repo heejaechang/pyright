@@ -52,6 +52,17 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    registerCommand(context, 'pylance.dumpTypes', () => {
+        const fileName = vscode.window.activeTextEditor?.document.fileName;
+        if (fileName) {
+            const start = vscode.window.activeTextEditor!.selection.start;
+            const end = vscode.window.activeTextEditor!.selection.end;
+            const startOffset = vscode.window.activeTextEditor!.document.offsetAt(start);
+            const endOffset = vscode.window.activeTextEditor!.document.offsetAt(end);
+            vscode.commands.executeCommand(Commands.dumpFileDebugInfo, fileName, 'types', startOffset, endOffset);
+        }
+    });
+
     cancellationStrategy = new FileBasedCancellationStrategy();
 
     const nonBundlePath = context.asAbsolutePath(path.join('dist', 'server.js'));
