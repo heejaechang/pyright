@@ -491,7 +491,7 @@ class PylanceServer extends LanguageServerBase {
                     filePath,
                     position,
                     workspacePath,
-                    this._completionDocFormat,
+                    this.getCompletionOptions(),
                     wellKnownAbbreviationMap,
                     token
                 );
