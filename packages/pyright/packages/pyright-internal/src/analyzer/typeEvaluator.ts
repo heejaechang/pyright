@@ -4348,6 +4348,18 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             };
         }
 
+        // If this is meant to be a type and the base expression is a string expression,
+        // emit an error because this will generate a runtime exception in Python versions
+        // less than 3.10.
+        if (flags & EvaluatorFlags.ExpectingType) {
+            if (node.baseExpression.nodeType === ParseNodeType.StringList) {
+                const fileInfo = getFileInfo(node);
+                if (!fileInfo.isStubFile && fileInfo.executionEnvironment.pythonVersion < PythonVersion.V3_10) {
+                    addError(Localizer.Diagnostic.stringNotSubscriptable(), node.baseExpression);
+                }
+            }
+        }
+
         // Check for builtin classes that will generate runtime exceptions if subscripted.
         if ((flags & EvaluatorFlags.AllowForwardReferences) === 0) {
             const fileInfo = getFileInfo(node);
@@ -9001,6 +9013,31 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         return { type: getBuiltInObject(node, 'slice'), node };
     }
 
+    // Verifies that a type argument's type is not disallowed.
+    function validateTypeArg(argResult: TypeResult): boolean {
+        if (argResult.typeList) {
+            addError(Localizer.Diagnostic.typeArgListNotAllowed(), argResult.node);
+            return false;
+        }
+
+        if (isEllipsisType(argResult.type)) {
+            addError(Localizer.Diagnostic.ellipsisContext(), argResult.node);
+            return false;
+        }
+
+        if (isModule(argResult.type)) {
+            addError(Localizer.Diagnostic.moduleContext(), argResult.node);
+            return false;
+        }
+
+        if (isParamSpecType(argResult.type)) {
+            addError(Localizer.Diagnostic.paramSpecContext(), argResult.node);
+            return false;
+        }
+
+        return true;
+    }
+
     // Converts the type parameters for a Callable type. It should
     // have zero to two parameters. The first parameter, if present, should be
     // either an ellipsis or a list of parameter types. The second parameter, if
@@ -9018,13 +9055,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             if (typeArgs[0].typeList) {
                 typeArgs[0].typeList.forEach((entry, index) => {
                     let entryType = entry.type;
-                    if (isEllipsisType(entry.type)) {
-                        addError(Localizer.Diagnostic.ellipsisContext(), entry.node);
-                    } else if (isModule(entry.type)) {
-                        addError(Localizer.Diagnostic.moduleContext(), entry.node);
-                        entryType = UnknownType.create();
-                    } else if (isParamSpecType(entry.type)) {
-                        addError(Localizer.Diagnostic.paramSpecContext(), entry.node);
+                    if (!validateTypeArg(entry)) {
                         entryType = UnknownType.create();
                     }
 
@@ -9072,13 +9103,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         if (typeArgs && typeArgs.length > 1) {
             let typeArg1Type = typeArgs[1].type;
-            if (isEllipsisType(typeArg1Type)) {
-                addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[1].node);
-            } else if (isModule(typeArg1Type)) {
-                addError(Localizer.Diagnostic.moduleContext(), typeArgs[1].node);
-                typeArg1Type = UnknownType.create();
-            } else if (isParamSpecType(typeArg1Type)) {
-                addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[1].node);
+            if (!validateTypeArg(typeArgs[1])) {
                 typeArg1Type = UnknownType.create();
             }
             functionType.details.declaredReturnType = convertToInstance(typeArg1Type);
@@ -9109,13 +9134,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         let typeArg0Type = typeArgs[0].type;
-        if (isEllipsisType(typeArg0Type)) {
-            addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[0].node);
-        } else if (isModule(typeArg0Type)) {
-            addError(Localizer.Diagnostic.moduleContext(), typeArgs[0].node);
-            typeArg0Type = UnknownType.create();
-        } else if (isParamSpecType(typeArg0Type)) {
-            addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[0].node);
+        if (!validateTypeArg(typeArgs[0])) {
             typeArg0Type = UnknownType.create();
         } else if (!TypeBase.isInstantiable(typeArg0Type)) {
             addExpectedClassDiagnostic(typeArg0Type, typeArgs[0].node);
@@ -9261,14 +9280,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         let typeArg: Type;
         if (typeArgs && typeArgs.length > 0) {
             typeArg = typeArgs[0].type;
-
-            if (isEllipsisType(typeArg)) {
-                addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[0].node);
-            } else if (isModule(typeArg)) {
-                addError(Localizer.Diagnostic.moduleContext(), typeArgs[0].node);
-                typeArg = UnknownType.create();
-            } else if (isParamSpecType(typeArg)) {
-                addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[0].node);
+            if (!validateTypeArg(typeArgs[0])) {
                 typeArg = UnknownType.create();
             }
         } else {
@@ -9327,13 +9339,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
 
         let typeArg0Type = typeArgs[0].type;
-        if (isEllipsisType(typeArg0Type)) {
-            addError(Localizer.Diagnostic.ellipsisContext(), typeArgs[0].node);
-        } else if (isModule(typeArg0Type)) {
-            addError(Localizer.Diagnostic.moduleContext(), typeArgs[0].node);
-            typeArg0Type = UnknownType.create();
-        } else if (isParamSpecType(typeArg0Type)) {
-            addError(Localizer.Diagnostic.paramSpecContext(), typeArgs[1].node);
+        if (!validateTypeArg(typeArgs[0])) {
             typeArg0Type = UnknownType.create();
         }
 
@@ -9360,10 +9366,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     } else if (typeArgs!.length !== 2 || index !== 1) {
                         addError(Localizer.Diagnostic.ellipsisSecondArg(), typeArg.node);
                     }
-                } else if (isModule(typeArg.type)) {
-                    addError(Localizer.Diagnostic.moduleContext(), typeArg.node);
-                } else if (!allowParamSpec && isParamSpecType(typeArg.type)) {
-                    addError(Localizer.Diagnostic.paramSpecContext(), typeArg.node);
+                } else if (!allowParamSpec || !isParamSpecType(typeArg.type)) {
+                    validateTypeArg(typeArg);
                 }
             });
 
@@ -9426,13 +9430,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 let typeArgType = typeArg.type;
 
                 // Verify that we didn't receive any inappropriate ellipses.
-                if (isEllipsisType(typeArgType)) {
-                    addError(Localizer.Diagnostic.ellipsisContext(), typeArg.node);
-                } else if (isModule(typeArgType)) {
-                    addError(Localizer.Diagnostic.moduleContext(), typeArg.node);
-                    typeArgType = UnknownType.create();
-                } else if (isParamSpecType(typeArgType)) {
-                    addError(Localizer.Diagnostic.paramSpecContext(), typeArg.node);
+                if (!validateTypeArg(typeArg)) {
                     typeArgType = UnknownType.create();
                 } else if (!TypeBase.isInstantiable(typeArgType)) {
                     addExpectedClassDiagnostic(typeArgType, typeArg.node);
@@ -13897,14 +13895,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         if (typeArgs) {
             typeArgs.forEach((typeArg) => {
-                // Verify that we didn't receive any inappropriate ellipses or modules.
-                if (isEllipsisType(typeArg.type)) {
-                    addError(Localizer.Diagnostic.ellipsisContext(), typeArg.node);
-                } else if (isModule(typeArg.type)) {
-                    addError(Localizer.Diagnostic.moduleContext(), typeArg.node);
-                } else if (isParamSpecType(typeArg.type)) {
-                    addError(Localizer.Diagnostic.paramSpecContext(), typeArg.node);
-                }
+                validateTypeArg(typeArg);
             });
         }
 
@@ -16530,7 +16521,20 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
         if (isFunction(destType)) {
             let srcFunction: FunctionType | undefined;
-            const concreteSrcType = makeTopLevelTypeVarsConcrete(srcType);
+            let concreteSrcType = makeTopLevelTypeVarsConcrete(srcType);
+
+            if (isObject(concreteSrcType)) {
+                const callMember = lookUpObjectMember(concreteSrcType, '__call__');
+                if (callMember) {
+                    const memberType = getTypeOfMember(callMember);
+                    if (isFunction(memberType) || isOverloadedFunction(memberType)) {
+                        const boundMethod = bindFunctionToClassOrObject(concreteSrcType, memberType);
+                        if (boundMethod) {
+                            concreteSrcType = boundMethod;
+                        }
+                    }
+                }
+            }
 
             if (isOverloadedFunction(concreteSrcType)) {
                 // Overloads are not compatible with ParamSpec.
@@ -16564,17 +16568,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 srcFunction = overloads[overloadIndex];
             } else if (isFunction(concreteSrcType)) {
                 srcFunction = concreteSrcType;
-            } else if (isObject(concreteSrcType)) {
-                const callMember = lookUpObjectMember(concreteSrcType, '__call__');
-                if (callMember) {
-                    const memberType = getTypeOfMember(callMember);
-                    if (isFunction(memberType)) {
-                        const boundMethod = bindFunctionToClassOrObject(concreteSrcType, memberType);
-                        if (boundMethod) {
-                            srcFunction = boundMethod as FunctionType;
-                        }
-                    }
-                }
             } else if (isClass(concreteSrcType)) {
                 // Synthesize a function that represents the constructor for this class.
                 const constructorFunction = FunctionType.createInstance(
@@ -17265,15 +17258,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         let canOverride = true;
         const baseParams = baseMethod.details.parameters;
         const overrideParams = overrideMethod.details.parameters;
+        const overrideArgsParam = overrideParams.find(
+            (param) => param.category === ParameterCategory.VarArgList && !!param.name
+        );
+        const overrideKwargsParam = overrideParams.find(
+            (param) => param.category === ParameterCategory.VarArgDictionary && !!param.name
+        );
 
         // Verify that the param count matches exactly or that the override
         // adds only params that preserve the original signature.
         let foundParamCountMismatch = false;
         if (overrideParams.length < baseParams.length) {
-            foundParamCountMismatch = true;
+            if (!overrideArgsParam || !overrideKwargsParam) {
+                foundParamCountMismatch = true;
+            }
         } else if (overrideParams.length > baseParams.length) {
             // Verify that all of the override parameters that extend the
-            // signature are either *vars, **kwargs or parameters with
+            // signature are either *args, **kwargs or parameters with
             // default values.
 
             for (let i = baseParams.length; i < overrideParams.length; i++) {
@@ -17314,14 +17315,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 baseParam.category === ParameterCategory.Simple &&
                 baseParam.name !== overrideParam.name
             ) {
-                diag.addMessage(
-                    Localizer.DiagnosticAddendum.overrideParamName().format({
-                        index: i + 1,
-                        baseName: baseParam.name || '*',
-                        overrideName: overrideParam.name || '*',
-                    })
-                );
-                canOverride = false;
+                if (overrideParam.category === ParameterCategory.Simple) {
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.overrideParamName().format({
+                            index: i + 1,
+                            baseName: baseParam.name || '*',
+                            overrideName: overrideParam.name || '*',
+                        })
+                    );
+                    canOverride = false;
+                }
             } else {
                 const baseParamType = FunctionType.getEffectiveParameterType(baseMethod, i);
                 const overrideParamType = FunctionType.getEffectiveParameterType(overrideMethod, i);
