@@ -376,6 +376,7 @@ export namespace Localizer {
         export const listInAnnotation = () => getRawString('Diagnostic.listInAnnotation');
         export const literalUnsupportedType = () => getRawString('Diagnostic.literalUnsupportedType');
         export const literalEmptyArgs = () => getRawString('Diagnostic.literalEmptyArgs');
+        export const literalNotCallable = () => getRawString('Diagnostic.literalNotCallable');
         export const memberAccess = () =>
             new ParameterizedString<{ name: string; type: string }>(getRawString('Diagnostic.memberAccess'));
         export const memberDelete = () =>
@@ -407,6 +408,9 @@ export namespace Localizer {
         export const namedTupleNoTypes = () => getRawString('Diagnostic.namedTupleNoTypes');
         export const namedTupleSecondArg = () => getRawString('Diagnostic.namedTupleSecondArg');
         export const newClsParam = () => getRawString('Diagnostic.newClsParam');
+        export const newTypeLiteral = () => getRawString('Diagnostic.newTypeLiteral');
+        export const newTypeNotAClass = () => getRawString('Diagnostic.newTypeNotAClass');
+        export const newTypeProtocolClass = () => getRawString('Diagnostic.newTypeProtocolClass');
         export const nonDefaultAfterDefault = () => getRawString('Diagnostic.nonDefaultAfterDefault');
         export const noneNotCallable = () => getRawString('Diagnostic.noneNotCallable');
         export const noneNotIterable = () => getRawString('Diagnostic.noneNotIterable');
@@ -434,6 +438,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredClassDeclaration'));
         export const obscuredFunctionDeclaration = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredFunctionDeclaration'));
+        export const obscuredMethodDeclaration = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredMethodDeclaration'));
         export const obscuredParameterDeclaration = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.obscuredParameterDeclaration'));
         export const obscuredVariableDeclaration = () =>
@@ -620,6 +626,8 @@ export namespace Localizer {
         export const typeVarBoundAndConstrained = () => getRawString('Diagnostic.typeVarBoundAndConstrained');
         export const typeVarFirstArg = () => getRawString('Diagnostic.typeVarFirstArg');
         export const typeVarGeneric = () => getRawString('Diagnostic.typeVarGeneric');
+        export const typeVarNoMember = () =>
+            new ParameterizedString<{ type: string; name: string }>(getRawString('Diagnostic.typeVarNoMember'));
         export const typeVarNotSubscriptable = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.typeVarNotSubscriptable'));
         export const typeVarNotUsedByOuterScope = () =>

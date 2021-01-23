@@ -1011,7 +1011,7 @@ test('SetComprehension1', () => {
 test('Literals1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['literals1.py']);
 
-    TestUtils.validateResults(analysisResults, 6);
+    TestUtils.validateResults(analysisResults, 7);
 });
 
 test('Literals2', () => {
@@ -1166,7 +1166,7 @@ test('Classes5', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleVariableOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes5.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('Classes6', () => {
