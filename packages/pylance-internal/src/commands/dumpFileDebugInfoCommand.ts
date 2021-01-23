@@ -498,8 +498,8 @@ function getClassTypeFlagsString(flags: ClassTypeFlags) {
         str.push('HasCustomClassGetItem');
     }
 
-    if (flags & ClassTypeFlags.VariadicTypeParameter) {
-        str.push('VariadicTypeParameter');
+    if (flags & ClassTypeFlags.PseudoVariadicTypeParameter) {
+        str.push('PseudoVariadicTypeParameter');
     }
 
     if (flags & ClassTypeFlags.EnumClass) {
