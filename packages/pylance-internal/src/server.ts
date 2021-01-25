@@ -56,7 +56,7 @@ import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
 import { mergeCommands } from './commands/multiCommand';
-import { IS_PRERELEASE, PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { IS_DEV, IS_INSIDERS, IS_PR, PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -165,7 +165,9 @@ class PylanceServer extends LanguageServerBase {
             enableExtractCodeAction: true,
         };
 
-        if (IS_PRERELEASE) {
+        if (IS_INSIDERS) {
+            serverSettings.indexing = false; // Disabled to check performance for a week.
+        } else if (IS_DEV || IS_PR) {
             serverSettings.indexing = true;
         } else {
             const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
