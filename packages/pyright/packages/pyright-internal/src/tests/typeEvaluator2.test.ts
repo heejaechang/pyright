@@ -161,6 +161,12 @@ test('isInstance7', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('isInstance9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance9.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Unbound1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unbound1.py']);
 
@@ -424,7 +430,7 @@ test('GenericTypes33', () => {
 
     // By default, reportMissingTypeArgument is disabled.
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes33.py']);
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 1);
 
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportMissingTypeArgument = 'error';
@@ -889,6 +895,11 @@ test('CallSite2', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('FString1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['fstring1.py']);
+    TestUtils.validateResults(analysisResults, 5, 1);
+});
+
 test('FString2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['fstring2.py']);
     TestUtils.validateResults(analysisResults, 0);
@@ -1154,6 +1165,22 @@ test('ParamSpec7', () => {
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec7.py'], configOptions);
     TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec8', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec8.py'], configOptions);
+    TestUtils.validateResults(results, 5);
+});
+
+test('ParamSpec9', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec9.py'], configOptions);
+    TestUtils.validateResults(results, 9);
 });
 
 test('ClassVar1', () => {

@@ -248,6 +248,9 @@ export class Parser {
             if (exprListResult.parseError) {
                 parseTree = exprListResult.parseError;
             } else {
+                if (exprListResult.list.length === 0) {
+                    this._addError(Localizer.Diagnostic.expectedExpr(), this._peekToken());
+                }
                 parseTree = this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ false);
             }
         }
@@ -905,7 +908,7 @@ export class Parser {
         if (paramList.length > 0) {
             const lastParam = paramList[paramList.length - 1];
             if (lastParam.category === ParameterCategory.VarArgList && !lastParam.name) {
-                this._addError(Localizer.Diagnostic.expectedNamedArgument(), lastParam);
+                this._addError(Localizer.Diagnostic.expectedNamedParameter(), lastParam);
             }
         }
 

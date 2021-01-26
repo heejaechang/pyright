@@ -290,7 +290,7 @@ export namespace Localizer {
         export const expectedMemberName = () => getRawString('Diagnostic.expectedMemberName');
         export const expectedModuleName = () => getRawString('Diagnostic.expectedModuleName');
         export const expectedNameAfterAs = () => getRawString('Diagnostic.expectedNameAfterAs');
-        export const expectedNamedArgument = () => getRawString('Diagnostic.expectedNamedArgument');
+        export const expectedNamedParameter = () => getRawString('Diagnostic.expectedNamedParameter');
         export const expectedNewlineOrSemicolon = () => getRawString('Diagnostic.expectedNewlineOrSemicolon');
         export const expectedOpenParen = () => getRawString('Diagnostic.expectedOpenParen');
         export const expectedParamName = () => getRawString('Diagnostic.expectedParamName');
@@ -400,6 +400,8 @@ export namespace Localizer {
         export const moduleUnknownMember = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.moduleUnknownMember'));
         export const namedExceptAfterCatchAll = () => getRawString('Diagnostic.namedExceptAfterCatchAll');
+        export const namedParamAfterParamSpecArgs = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.namedParamAfterParamSpecArgs'));
         export const namedTupleEmptyName = () => getRawString('Diagnostic.namedTupleEmptyName');
         export const namedTupleFirstArg = () => getRawString('Diagnostic.namedTupleFirstArg');
         export const namedTupleNameString = () => getRawString('Diagnostic.namedTupleNameString');
@@ -466,6 +468,8 @@ export namespace Localizer {
         export const paramSpecContext = () => getRawString('Diagnostic.paramSpecContext');
         export const paramSpecIllegal = () => getRawString('Diagnostic.paramSpecIllegal');
         export const paramSpecFirstArg = () => getRawString('Diagnostic.paramSpecFirstArg');
+        export const paramSpecNotBound = () =>
+            new ParameterizedString<{ type: string }>(getRawString('Diagnostic.paramSpecNotBound'));
         export const paramSpecUnknownArg = () => getRawString('Diagnostic.paramSpecUnknownArg');
         export const paramSpecUnknownMember = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramSpecUnknownMember'));
@@ -673,6 +677,7 @@ export namespace Localizer {
             new ParameterizedString<{ testType: string; classType: string }>(
                 getRawString('Diagnostic.unnecessaryIsSubclassNever')
             );
+        export const unpackedDictArgumentNotMapping = () => getRawString('Diagnostic.unpackedDictArgumentNotMapping');
         export const unpackIllegalInComprehension = () => getRawString('Diagnostic.unpackIllegalInComprehension');
         export const unpackInDict = () => getRawString('Diagnostic.unpackInDict');
         export const unpackInSet = () => getRawString('Diagnostic.unpackInSet');
