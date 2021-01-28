@@ -338,9 +338,7 @@ class FSCache {
     }
 
     getRoots(execEnv: ExecutionEnvironment): string[] {
-        return this._importResolver
-            .getImportRoots(execEnv, /*useTypeshedVersionedFolders*/ true)
-            .filter((r) => r !== execEnv.root && this.existsSync(r));
+        return this._importResolver.getImportRoots(execEnv).filter((r) => r !== execEnv.root && this.existsSync(r));
     }
 
     existsSync(path: string) {
