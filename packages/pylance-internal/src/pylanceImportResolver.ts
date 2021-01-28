@@ -17,6 +17,7 @@ import {
     getDirectoryPath,
     getFileName,
     normalizePath,
+    normalizeSlashes,
     resolvePaths,
 } from 'pyright-internal/common/pathUtils';
 
@@ -175,7 +176,7 @@ export class PylanceImportResolver extends ImportResolver {
         // cases this as a proof-of-concept to only handle builtins.pyi.
         if (mapCompiled) {
             // See SourceFile for this method of checking the file indentity as a builtin.
-            if (getFileName(stubFilePath) === 'builtins.pyi') {
+            if (stubFilePath.endsWith(normalizeSlashes('stdlib/builtins.pyi'))) {
                 const builtinsPath = this._scrapedBuiltinsPath();
                 if (builtinsPath) {
                     return [builtinsPath];
