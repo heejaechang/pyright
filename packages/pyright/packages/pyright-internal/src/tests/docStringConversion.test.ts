@@ -463,6 +463,105 @@ test('SquareBrackets', () => {
     _testConvertToMarkdown(docstring, markdown);
 });
 
+test('ListDashMultiline', () => {
+    const docstring = `Keyword Arguments:
+
+    - option_strings -- A list of command-line option strings which
+        should be associated with this action.
+
+    - dest -- The name of the attribute to hold the created object(s)
+`;
+
+    const markdown = `Keyword Arguments:
+
+- option\\_strings -- A list of command-line option strings which
+should be associated with this action.
+
+- dest -- The name of the attribute to hold the created object(s)`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('HalfIndentOnLeadingDash', () => {
+    const docstring = `Dash List
+- foo
+    - foo
+- bar
+     - baz
+- qux
+    - aaa
+    `;
+
+    const markdown = `Dash List
+- foo
+  - foo
+- bar
+  - baz
+- qux
+  - aaa`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('AsteriskMultilineList', () => {
+    const docstring = `
+This is a list:
+    * this is a long, multi-line paragraph. It
+      seems to go on and on.
+
+    * this is a long, multi-line paragraph. It
+      seems to go on and on.
+`;
+
+    const markdown = `This is a list:
+  * this is a long, multi-line paragraph. It
+seems to go on and on.
+
+  * this is a long, multi-line paragraph. It
+seems to go on and on.
+`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('ListAsteriskAddLeadingSpace', () => {
+    const docstring = `Title
+* First line bullet, no leading space
+  with second line.
+* Second line bullet, no leading space
+  with second line.`;
+
+    const markdown = `Title
+ * First line bullet, no leading space
+with second line.
+ * Second line bullet, no leading space
+with second line.`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('PandasReadCsvListIndent', () => {
+    const docstring = `Title
+keep_default_na : bool, default True
+    Whether or not to include the default NaN values when parsing the data.
+
+    * If \`keep_default_na\` is True, and \`na_values\` are specified, \`na_values\`
+        is appended to the default NaN values used for parsing.   
+
+na_filter : bool, default True`;
+
+    const markdown = `Title
+keep\\_default\\_na : bool, default True
+    Whether or not to include the default NaN values when parsing the data.
+
+  * If \`keep_default_na\` is True, and \`na_values\` are specified, \`na_values\`
+is appended to the default NaN values used for parsing.
+
+na\\_filter : bool, default True`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
 function _testConvertToMarkdown(docstring: string, expectedMarkdown: string) {
     const actualMarkdown = convertDocStringToMarkdown(docstring);
 

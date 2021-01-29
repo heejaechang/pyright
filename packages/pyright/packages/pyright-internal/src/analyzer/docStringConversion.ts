@@ -51,6 +51,8 @@ const CrLfRegExp = /\r?\n/;
 const NonWhitespaceRegExp = /\S/;
 const TildaHeaderRegExp = /^\s*~~~+$/;
 const PlusHeaderRegExp = /^\s*\+\+\++$/;
+const LeadingDashListRegExp = /^(\s*)-/;
+const LeadingAsteriskListRegExp = /^(\s*)\*\s/;
 const LeadingAsteriskRegExp = /^(\s+\* )(.*)$/;
 const SpaceDotDotRegExp = /^\s*\.\. /;
 const DirectiveLikeRegExp = /^\s*\.\.\s+(\w+)::\s*(.*)$/;
@@ -211,7 +213,9 @@ class DocStringConverter {
             return;
         }
 
-        // TODO: Push into Google/Numpy style list parser.
+        if (this._beginList()) {
+            return;
+        }
 
         this._appendTextLine(this._escapeHtml(this._currentLine()));
         this._eatLine();
@@ -462,6 +466,63 @@ class DocStringConverter {
         this._blockIndent = this._nextBlockIndent();
         this._appendDirectiveBlock = false;
         return true;
+    }
+
+    private _beginList(): boolean {
+        const dashMatch = LeadingDashListRegExp.exec(this._currentLine());
+        if (dashMatch?.length === 2) {
+            let line = this._currentLine();
+
+            // Prevent list item from being see as code, by halving leading spaces
+            if (dashMatch[1].length >= 4) {
+                line = ' '.repeat(dashMatch[1].length / 2) + line.trimLeft();
+            }
+
+            this._appendTextLine(line);
+            this._eatLine();
+
+            if (this._state !== this._parseList) {
+                this._pushAndSetState(this._parseList);
+            }
+            return true;
+        }
+
+        const asteriskMatch = LeadingAsteriskListRegExp.exec(this._currentLine());
+        if (asteriskMatch?.length === 2) {
+            let line = this._currentLine();
+
+            if (asteriskMatch[1].length === 0) {
+                line = line = ' ' + line;
+            } else if (asteriskMatch[1].length >= 4) {
+                // Prevent list item from being see as code, by halving leading spaces
+                line = ' '.repeat(asteriskMatch[1].length / 2) + line.trimLeft();
+            }
+
+            this._appendTextLine(line);
+            this._eatLine();
+            if (this._state !== this._parseList) {
+                this._pushAndSetState(this._parseList);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private _parseList(): void {
+        if (_isUndefinedOrWhitespace(this._currentLineOrUndefined()) || this._currentLineIsOutsideBlock()) {
+            this._popState();
+            return;
+        }
+
+        // format any new list item
+        const isMultiLineItem = !this._beginList();
+
+        // remove leading space so that multiline items get appear in a single block
+        if (isMultiLineItem) {
+            this._appendTextLine(this._currentLine().trimLeft());
+            this._eatLine();
+        }
     }
 
     private _parseDirective(): void {
