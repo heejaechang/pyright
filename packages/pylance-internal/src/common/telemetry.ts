@@ -294,12 +294,14 @@ export function trackPerf<T>(
     const parseCallCount = timingStats.parseFileTime.callCount;
     const resolveCallCount = timingStats.resolveImportsTime.callCount;
     const bindCallCount = timingStats.bindTime.callCount;
+    const typeEvalCallCount = timingStats.typeEvaluationTime.callCount;
 
     const readTime = timingStats.readFileTime.totalTime;
     const tokenizeTime = timingStats.tokenizeFileTime.totalTime;
     const parseTime = timingStats.parseFileTime.totalTime;
     const resolveTime = timingStats.resolveImportsTime.totalTime;
     const bindTime = timingStats.bindTime.totalTime;
+    const typeEvalTime = timingStats.typeEvaluationTime.totalTime;
 
     let map:
         | {
@@ -344,12 +346,14 @@ export function trackPerf<T>(
             event.Measurements['parseCallCount'] = timingStats.parseFileTime.callCount - parseCallCount;
             event.Measurements['resolveCallCount'] = timingStats.resolveImportsTime.callCount - resolveCallCount;
             event.Measurements['bindCallCount'] = timingStats.bindTime.callCount - bindCallCount;
+            event.Measurements['typeEvalCount'] = timingStats.typeEvaluationTime.callCount - typeEvalCallCount;
 
             event.Measurements['readFileTime'] = timingStats.readFileTime.totalTime - readTime;
             event.Measurements['tokenizeTime'] = timingStats.tokenizeFileTime.totalTime - tokenizeTime;
             event.Measurements['parseTime'] = timingStats.parseFileTime.totalTime - parseTime;
             event.Measurements['resolveTime'] = timingStats.resolveImportsTime.totalTime - resolveTime;
             event.Measurements['bindTime'] = timingStats.bindTime.totalTime - bindTime;
+            event.Measurements['typeEvalTime'] = timingStats.typeEvaluationTime.totalTime - typeEvalTime;
 
             event.Measurements['totalTime'] = totalTime;
 
