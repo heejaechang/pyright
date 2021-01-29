@@ -428,7 +428,7 @@ export class ImportResolver {
             roots.push(this._configOptions.stubPath);
         }
 
-        const thirdPartyPaths = this._getThirdPartyTypeshedPaths(execEnv, importFailureInfo);
+        const thirdPartyPaths = this._getThirdPartyTypeshedPackagePaths(execEnv, importFailureInfo);
         roots.push(...thirdPartyPaths);
 
         const typeshedPathEx = this.getTypeshedPathEx(execEnv, importFailureInfo);
@@ -1122,7 +1122,7 @@ export class ImportResolver {
         execEnv: ExecutionEnvironment,
         importFailureInfo: string[]
     ) {
-        const typeshedPath = this._getTypeshedSubdirectory(/* isStdLib */ false, execEnv, importFailureInfo);
+        const typeshedPath = this._getThirdPartyTypeshedPath(execEnv, importFailureInfo);
 
         if (!this._cachedTypeshedThirdPartyPackagePaths) {
             this._buildTypeshedThirdPartyPackageMap(typeshedPath);
@@ -1132,8 +1132,8 @@ export class ImportResolver {
         return this._cachedTypeshedThirdPartyPackagePaths!.get(firstNamePart);
     }
 
-    private _getThirdPartyTypeshedPaths(execEnv: ExecutionEnvironment, importFailureInfo: string[]) {
-        const typeshedPath = this._getTypeshedSubdirectory(/* isStdLib */ false, execEnv, importFailureInfo);
+    private _getThirdPartyTypeshedPackagePaths(execEnv: ExecutionEnvironment, importFailureInfo: string[]) {
+        const typeshedPath = this._getThirdPartyTypeshedPath(execEnv, importFailureInfo);
 
         if (!this._cachedTypeshedThirdPartyPackagePaths) {
             this._buildTypeshedThirdPartyPackageMap(typeshedPath);
