@@ -32,7 +32,6 @@ import {
     ensureTrailingDirectorySeparator,
     normalizeSlashes,
 } from 'pyright-internal/common/pathUtils';
-import { getPythonVersionStrings, PythonVersion } from 'pyright-internal/common/pythonVersion';
 import * as StringUtils from 'pyright-internal/common/stringUtils';
 import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/documentSymbolProvider';
 
@@ -244,9 +243,8 @@ export class Indexer {
         const stdLibFallback = PythonPathUtils.getTypeshedSubdirectory(typeshedFallback, true);
 
         const mapByEnv = new Map<string, Map<string, IndexResults>>();
-        const cachePerVersion = new Map<PythonVersion, Map<string, IndexResults>>();
 
-        let original: Map<string, IndexResults> | undefined;
+        let stdLibIndices: Map<string, IndexResults> | undefined;
         for (const execEnv of getExecutionEnvironments(configOptions)) {
             const stdLibPath = importResolver.getTypeshedStdLibPath(execEnv);
             if (stdLibPath !== stdLibFallback) {
@@ -254,7 +252,7 @@ export class Indexer {
                 continue;
             }
 
-            if (!original) {
+            if (!stdLibIndices) {
                 const jsonFile = combinePaths(
                     importResolver.fileSystem.getModulePath(),
                     'bundled',
@@ -262,27 +260,11 @@ export class Indexer {
                     'stdlib.json'
                 );
 
-                original = readStdLibIndices(importResolver, stdLibFallback, console, jsonFile);
-                if (!original) {
+                stdLibIndices = readStdLibIndices(importResolver, stdLibFallback, console, jsonFile);
+                if (!stdLibIndices) {
                     return undefined;
                 }
             }
-
-            const stdLibIndices = getOrAdd(cachePerVersion, execEnv.pythonVersion, () => {
-                const versionStrings = getPythonVersionStrings(execEnv.pythonVersion).map((v) =>
-                    ensureTrailingDirectorySeparator(combinePaths(stdLibPath, v))
-                );
-
-                // Filter out stdlib that doesn't belong to our python version.
-                const map = new Map<string, IndexResults>();
-                for (const [file, results] of original!) {
-                    if (versionStrings.some((v) => file.startsWith(v))) {
-                        map.set(file, results);
-                    }
-                }
-
-                return map;
-            });
 
             mapByEnv.set(execEnv.root, stdLibIndices);
         }
