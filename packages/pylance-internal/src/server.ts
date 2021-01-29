@@ -40,7 +40,7 @@ import { Commands as PyRightCommands } from 'pyright-internal/commands/commands'
 import { getCancellationFolderName } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
-import { isString } from 'pyright-internal/common/core';
+import { isBoolean, isString } from 'pyright-internal/common/core';
 import * as debug from 'pyright-internal/common/debug';
 import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
@@ -238,12 +238,18 @@ class PylanceServer extends LanguageServerBase {
 
                 serverSettings.logLevel = this.convertLogLevel(pythonAnalysisSection.logLevel);
                 serverSettings.openFilesOnly = this.isOpenFilesOnly(pythonAnalysisSection.diagnosticMode);
-                serverSettings.useLibraryCodeForTypes =
-                    pythonAnalysisSection.useLibraryCodeForTypes ?? serverSettings.useLibraryCodeForTypes;
-                serverSettings.autoSearchPaths =
-                    pythonAnalysisSection.autoSearchPaths ?? serverSettings.autoSearchPaths;
-                serverSettings.typeCheckingMode =
-                    pythonAnalysisSection.typeCheckingMode ?? serverSettings.typeCheckingMode;
+
+                if (isBoolean(pythonAnalysisSection.useLibraryCodeForTypes)) {
+                    serverSettings.useLibraryCodeForTypes = pythonAnalysisSection.useLibraryCodeForTypes;
+                }
+
+                if (isBoolean(pythonAnalysisSection.autoSearchPaths)) {
+                    serverSettings.autoSearchPaths = pythonAnalysisSection.autoSearchPaths;
+                }
+
+                if (['off', 'basic', 'strict'].includes(pythonAnalysisSection.typeCheckingMode)) {
+                    serverSettings.typeCheckingMode = pythonAnalysisSection.typeCheckingMode;
+                }
 
                 const extraPaths = pythonAnalysisSection.extraPaths;
                 if (extraPaths && Array.isArray(extraPaths) && extraPaths.length > 0) {
@@ -259,13 +265,21 @@ class PylanceServer extends LanguageServerBase {
                     }
                 }
 
-                serverSettings.autoImportCompletions =
-                    pythonAnalysisSection.autoImportCompletions ?? serverSettings.autoImportCompletions;
-                serverSettings.completeFunctionParens =
-                    pythonAnalysisSection.completeFunctionParens ?? serverSettings.completeFunctionParens;
-                serverSettings.indexing = pythonAnalysisSection.indexing ?? serverSettings.indexing;
-                serverSettings.enableExtractCodeAction =
-                    pythonAnalysisSection.enableExtractCodeAction ?? serverSettings.enableExtractCodeAction;
+                if (isBoolean(pythonAnalysisSection.autoImportCompletions)) {
+                    serverSettings.autoImportCompletions = pythonAnalysisSection.autoImportCompletions;
+                }
+
+                if (isBoolean(pythonAnalysisSection.completeFunctionParens)) {
+                    serverSettings.completeFunctionParens = pythonAnalysisSection.completeFunctionParens;
+                }
+
+                if (isBoolean(pythonAnalysisSection.indexing)) {
+                    serverSettings.indexing = pythonAnalysisSection.indexing;
+                }
+
+                if (isBoolean(pythonAnalysisSection.enableExtractCodeAction)) {
+                    serverSettings.enableExtractCodeAction = pythonAnalysisSection.enableExtractCodeAction;
+                }
 
                 forceProgressBar = !!pythonAnalysisSection._forceProgressBar;
             }
