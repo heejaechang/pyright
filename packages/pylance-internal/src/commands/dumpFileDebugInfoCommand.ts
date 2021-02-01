@@ -498,8 +498,8 @@ function getClassTypeFlagsString(flags: ClassTypeFlags) {
         str.push('HasCustomClassGetItem');
     }
 
-    if (flags & ClassTypeFlags.PseudoVariadicTypeParameter) {
-        str.push('PseudoVariadicTypeParameter');
+    if (flags & ClassTypeFlags.TupleClass) {
+        str.push('TupleClass');
     }
 
     if (flags & ClassTypeFlags.EnumClass) {
