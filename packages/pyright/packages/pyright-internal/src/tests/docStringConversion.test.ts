@@ -16,7 +16,7 @@ const doubleTick = '``';
 const tripleTick = '```';
 
 test('PlaintextIndention', () => {
-    const all: Array<Array<string>> = [
+    const all: string[][] = [
         ['A\nB', 'A\nB'],
         ['A\n\nB', 'A\n\nB'],
         ['A\n    B', 'A\nB'],
@@ -27,8 +27,22 @@ test('PlaintextIndention', () => {
         ['  \n\nA \n    \nB  \n    ', 'A\n\nB'],
     ];
 
-    all.forEach((v) => _testConvertToMarkdown(v[0], v[1]));
     all.forEach((v) => _testConvertToPlainText(v[0], v[1]));
+});
+
+test('MarkdownIndention', () => {
+    const all: string[][] = [
+        ['A\nB', 'A\nB'],
+        ['A\n\nB', 'A\n\nB'],
+        ['A\n    B', 'A\nB'],
+        ['    A\n    B', 'A\nB'],
+        ['\nA\n    B', 'A\\\n&nbsp;&nbsp;&nbsp;&nbsp;B'],
+        ['\n    A\n    B', 'A\nB'],
+        ['\nA\nB\n', 'A\nB'],
+        ['  \n\nA \n    \nB  \n    ', 'A\n\nB'],
+    ];
+
+    all.forEach((v) => _testConvertToMarkdown(v[0], v[1]));
 });
 
 test('NormalText', () => {
@@ -96,10 +110,10 @@ test('AsterisksAtStartOfArgs', () => {
 
     const markdown = `Foo:
 
-Args:
-    foo (Foo): Foo!
-    \\*args: These are positional args.
-    \\*\\*kwargs: These are named args.
+Args:\\
+&nbsp;&nbsp;&nbsp;&nbsp;foo (Foo): Foo!\\
+&nbsp;&nbsp;&nbsp;&nbsp;\\*args: These are positional args.\\
+&nbsp;&nbsp;&nbsp;&nbsp;\\*\\*kwargs: These are named args.
 `;
 
     _testConvertToMarkdown(docstring, markdown);
@@ -114,8 +128,7 @@ test('CopyrightAndLicense', () => {
 
     const markdown = `This is a test.
 
-:copyright: Fake Name
-
+:copyright: Fake Name\\
 :license: ABCv123
 `;
 
@@ -137,19 +150,13 @@ test('CommonRestFieldLists', () => {
 
     const markdown = `This function does something.
 
-:param foo: This is a description of the foo parameter
-    which does something interesting.
-
-:type foo: Foo
-
-:param bar: This is a description of bar.
-
-:type bar: Bar
-
-:return: Something else.
-
-:rtype: Something
-
+:param foo: This is a description of the foo parameter\\
+&nbsp;&nbsp;&nbsp;&nbsp;which does something interesting.\\
+:type foo: Foo\\
+:param bar: This is a description of bar.\\
+:type bar: Bar\\
+:return: Something else.\\
+:rtype: Something\\
 :raises ValueError: If something goes wrong.
 `;
 
@@ -550,14 +557,80 @@ keep_default_na : bool, default True
 
 na_filter : bool, default True`;
 
-    const markdown = `Title
-keep\\_default\\_na : bool, default True
-    Whether or not to include the default NaN values when parsing the data.
+    const markdown = `Title\\
+keep\\_default\\_na : bool, default True\\
+&nbsp;&nbsp;&nbsp;&nbsp;Whether or not to include the default NaN values when parsing the data.
 
   * If \`keep_default_na\` is True, and \`na_values\` are specified, \`na_values\`
 is appended to the default NaN values used for parsing.
 
 na\\_filter : bool, default True`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('FieldListEpyText', () => {
+    const docstring = `
+    1. Epytext:
+         @param param1: description`;
+
+    const markdown = `
+1. Epytext:\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;@param param1: description`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('FieldListRest', () => {
+    const docstring = `
+    2. reST:
+         :param param1: description`;
+
+    const markdown = `
+2. reST:\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:param param1: description`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('FieldListGoogleV1', () => {
+    const docstring = `
+    3. Google (variant 1):
+         Args:
+             param1: description`;
+
+    const markdown = `
+3. Google (variant 1):\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Args:\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;param1: description`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('FieldListGoogleV2', () => {
+    const docstring = `
+    4. Google (variant 2):
+         Args:
+             param1 (type): description`;
+
+    const markdown = `
+4. Google (variant 2):\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Args:\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;param1 (type): description`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('FieldListDontAddLineBreaksToHeaders', () => {
+    const docstring = `
+    Parameters
+    ----------
+    ThisIsAFieldAfterAHeader : str`;
+
+    const markdown = `
+Parameters
+----------
+ThisIsAFieldAfterAHeader : str`;
 
     _testConvertToMarkdown(docstring, markdown);
 });

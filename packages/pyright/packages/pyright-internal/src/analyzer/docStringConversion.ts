@@ -51,8 +51,9 @@ const CrLfRegExp = /\r?\n/;
 const NonWhitespaceRegExp = /\S/;
 const TildaHeaderRegExp = /^\s*~~~+$/;
 const PlusHeaderRegExp = /^\s*\+\+\++$/;
-const LeadingDashListRegExp = /^(\s*)-/;
+const LeadingDashListRegExp = /^(\s*)-\s/;
 const LeadingAsteriskListRegExp = /^(\s*)\*\s/;
+const LeadingNumberListRegExp = /^(\s*)\d+\.\s/;
 const LeadingAsteriskRegExp = /^(\s+\* )(.*)$/;
 const SpaceDotDotRegExp = /^\s*\.\. /;
 const DirectiveLikeRegExp = /^\s*\.\.\s+(\w+)::\s*(.*)$/;
@@ -155,6 +156,10 @@ class DocStringConverter {
         return _countLeadingSpaces(this._currentLine());
     }
 
+    private _prevIndent(): number {
+        return _countLeadingSpaces(this._lineAt(this._lineNum - 1) ?? '');
+    }
+
     private _lineAt(i: number): string | undefined {
         return i < this._lines.length ? this._lines[i] : undefined;
     }
@@ -217,8 +222,51 @@ class DocStringConverter {
             return;
         }
 
-        this._appendTextLine(this._escapeHtml(this._currentLine()));
+        if (this._beginFieldList()) {
+            return;
+        }
+
+        const line = this.formatPlainTextIndent(this._currentLine());
+
+        this._appendTextLine(this._escapeHtml(line));
         this._eatLine();
+    }
+
+    private formatPlainTextIndent(line: string) {
+        const prev = this._lineAt(this._lineNum - 1);
+        const prevIndent = this._prevIndent();
+        const currIndent = this._currentIndent();
+
+        if (
+            currIndent > prevIndent &&
+            !_isUndefinedOrWhitespace(prev) &&
+            !this._builder.endsWith('\\\n') &&
+            !this._builder.endsWith('\n\n') &&
+            !_isHeader(prev)
+        ) {
+            this._builder = this._builder.slice(0, -1) + '\\\n';
+        }
+
+        if (
+            prevIndent > currIndent &&
+            !_isUndefinedOrWhitespace(prev) &&
+            !this._builder.endsWith('\\\n') &&
+            !this._builder.endsWith('\n\n')
+        ) {
+            this._builder = this._builder.slice(0, -1) + '\\\n';
+        }
+
+        if (prevIndent === 0 || this._builder.endsWith('\\\n') || this._builder.endsWith('\n\n')) {
+            line = this._convertIndent(line);
+        } else {
+            line = line.trimStart();
+        }
+        return line;
+    }
+
+    private _convertIndent(line: string) {
+        line = line.replace(/^([ \t]+)(.+)$/g, (_match, g1, g2) => '&nbsp;'.repeat(g1.length) + g2);
+        return line;
     }
 
     private _escapeHtml(line: string): string {
@@ -231,12 +279,6 @@ class DocStringConverter {
 
     private _appendTextLine(line: string): void {
         line = this._preprocessTextLine(line);
-
-        // Attempt to put directives lines into their own paragraphs.
-        // This should be removed once proper list-like parsing is written.
-        if (!this._insideInlineCode && DirectivesExtraNewlineRegExp.test(line)) {
-            this._appendLine();
-        }
 
         const parts = line.split('`');
 
@@ -468,11 +510,59 @@ class DocStringConverter {
         return true;
     }
 
-    private _beginList(): boolean {
-        const dashMatch = LeadingDashListRegExp.exec(this._currentLine());
-        if (dashMatch?.length === 2) {
-            let line = this._currentLine();
+    // https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#field-lists
+    // Python doesn't have a single standard for param documentation. There are four
+    // popular styles.
+    //
+    // 1. Epytext:
+    //      @param param1: description
+    // 2. reST:
+    //      :param param1: description
+    // 3. Google (variant 1):
+    //      Args:
+    //          param1: description
+    // 4. Google (variant 2):
+    //      Args:
+    //          param1 (type): description
+    private _beginFieldList(): boolean {
+        if (this._insideInlineCode) {
+            return false;
+        }
 
+        let line = this._currentLine();
+
+        // catch-all for styles except reST
+        const hasOddNumColons =
+            !line?.endsWith(':') && !line?.endsWith('::') && (line.match(/:/g)?.length ?? 0) % 2 === 1; // odd number of colons
+
+        // reSt params. Attempt to put directives lines into their own paragraphs.
+        const restDirective = DirectivesExtraNewlineRegExp.test(line); //line.match(/^\s*:param/);
+
+        if (hasOddNumColons || restDirective) {
+            const prev = this._lineAt(this._lineNum - 1);
+            // Force a line break, if previous line doesn't already have a break or is blank
+            if (!this._builder.endsWith(`\\\n`) && !this._builder.endsWith(`\n\n`) && !_isHeader(prev)) {
+                this._builder = this._builder.slice(0, -1) + '\\\n';
+            }
+
+            // force indent for fields
+            line = this._convertIndent(line);
+            this._appendTextLine(this._escapeHtml(line));
+            this._eatLine();
+            return true;
+        }
+
+        return false;
+    }
+
+    private _beginList(): boolean {
+        if (this._insideInlineCode) {
+            return false;
+        }
+
+        let line = this._currentLine();
+        const dashMatch = LeadingDashListRegExp.exec(line);
+        if (dashMatch?.length === 2) {
             // Prevent list item from being see as code, by halving leading spaces
             if (dashMatch[1].length >= 4) {
                 line = ' '.repeat(dashMatch[1].length / 2) + line.trimLeft();
@@ -487,10 +577,8 @@ class DocStringConverter {
             return true;
         }
 
-        const asteriskMatch = LeadingAsteriskListRegExp.exec(this._currentLine());
+        const asteriskMatch = LeadingAsteriskListRegExp.exec(line);
         if (asteriskMatch?.length === 2) {
-            let line = this._currentLine();
-
             if (asteriskMatch[1].length === 0) {
                 line = line = ' ' + line;
             } else if (asteriskMatch[1].length >= 4) {
@@ -506,6 +594,13 @@ class DocStringConverter {
             return true;
         }
 
+        const leadingNumberList = LeadingNumberListRegExp.exec(line);
+        if (leadingNumberList?.length === 2) {
+            this._appendTextLine(line);
+            this._eatLine();
+            return true;
+        }
+
         return false;
     }
 
@@ -515,12 +610,13 @@ class DocStringConverter {
             return;
         }
 
-        // format any new list item
+        // Check for the start of a new list item
         const isMultiLineItem = !this._beginList();
 
-        // remove leading space so that multiline items get appear in a single block
+        // Remove leading spaces so that multiline items get appear in a single block
         if (isMultiLineItem) {
-            this._appendTextLine(this._currentLine().trimLeft());
+            const line = this._currentLine().trimStart();
+            this._appendTextLine(this._escapeHtml(line));
             this._eatLine();
         }
     }
@@ -636,4 +732,8 @@ function _countLeadingSpaces(s: string): number {
 
 function _isUndefinedOrWhitespace(s: string | undefined): boolean {
     return s === undefined || !NonWhitespaceRegExp.test(s);
+}
+
+function _isHeader(line: string | undefined): boolean {
+    return line !== undefined && (line.match(/^\s*[#`~=-]{3,}/)?.length ?? 0) > 0;
 }
