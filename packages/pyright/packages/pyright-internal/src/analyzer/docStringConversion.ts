@@ -59,6 +59,8 @@ const SpaceDotDotRegExp = /^\s*\.\. /;
 const DirectiveLikeRegExp = /^\s*\.\.\s+(\w+)::\s*(.*)$/;
 const DoctestRegExp = / *>>> /;
 const DirectivesExtraNewlineRegExp = /^\s*:(param|arg|type|return|rtype|raise|except|var|ivar|cvar|copyright|license)/;
+const epyDocFieldTokensRegExp = /^[.\s\t]+(@\w+)/; // cv2 has leading '.' http://epydoc.sourceforge.net/manual-epytext.html
+const epyDocCv2FixRegExp = /^(\.\s{3})|^(\.)/;
 
 const PotentialHeaders: RegExpReplacement[] = [
     { exp: /^\s*=+(\s+=+)+$/, replacement: '=' },
@@ -114,6 +116,12 @@ class DocStringConverter {
     }
 
     convert(): string {
+        const isEpyDoc = this._lines.some((v) => epyDocFieldTokensRegExp.exec(v));
+        if (isEpyDoc) {
+            // fixup cv2 leading '.'
+            this._lines = this._lines.map((v) => v.replace(epyDocCv2FixRegExp, ''));
+        }
+
         while (this._currentLineOrUndefined() !== undefined) {
             const before = this._state;
             const beforeLine = this._lineNum;
@@ -530,6 +538,14 @@ class DocStringConverter {
         }
 
         let line = this._currentLine();
+
+        // Handle epyDocs
+        if (line.startsWith('@')) {
+            this._appendLine();
+            this._appendTextLine(this._escapeHtml(line));
+            this._eatLine();
+            return true;
+        }
 
         // catch-all for styles except reST
         const hasOddNumColons =

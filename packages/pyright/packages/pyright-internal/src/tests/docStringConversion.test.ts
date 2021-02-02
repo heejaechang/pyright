@@ -635,6 +635,73 @@ ThisIsAFieldAfterAHeader : str`;
     _testConvertToMarkdown(docstring, markdown);
 });
 
+test('EpyDocCv2Imread', () => {
+    const docstring = `imread(filename[, flags]) -> retval
+.   @brief Loads an image from a file.
+.   @anchor imread
+.   
+.   The function imread loads an image from the specified file and returns it. If the image cannot be
+.   read (because of missing file, improper permissions, unsupported or invalid format), the function
+.
+.   Currently, the following file formats are supported:
+.   
+.   -   Windows bitmaps - \\*.bmp, \\*.dib (always supported)
+.   -   JPEG files - \\*.jpeg, \\*.jpg, \\*.jpe (see the *Note* section)`;
+
+    const markdown = `imread(filename\\[, flags\\]) -&gt; retval
+
+@brief Loads an image from a file.
+
+@anchor imread
+
+The function imread loads an image from the specified file and returns it. If the image cannot be
+read (because of missing file, improper permissions, unsupported or invalid format), the function
+
+Currently, the following file formats are supported:
+
+-   Windows bitmaps - \\*.bmp, \\*.dib (always supported)
+-   JPEG files - \\*.jpeg, \\*.jpg, \\*.jpe (see the \\*Note\\* section)`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
+test('EpyDocTest', () => {
+    const docstring = `Return the x intercept of the line M{y=m*x+b}.  The X{x intercept}
+of a line is the point at which it crosses the x axis (M{y=0}).
+
+This function can be used in conjuction with L{z_transform} to
+find an arbitrary function's zeros.
+
+@type  m: number
+@param m: The slope of the line.
+@type  b: number
+@param b: The y intercept of the line.  The X{y intercept} of a
+            line is the point at which it crosses the y axis (M{x=0}).
+@rtype:   number
+@return:  the x intercept of the line M{y=m*x+b}.`;
+
+    const markdown = `Return the x intercept of the line M{y=m\\*x+b}.  The X{x intercept}
+of a line is the point at which it crosses the x axis (M{y=0}).
+
+This function can be used in conjuction with L{z\\_transform} to
+find an arbitrary function's zeros.
+
+@type  m: number
+
+@param m: The slope of the line.
+
+@type  b: number
+
+@param b: The y intercept of the line.  The X{y intercept} of a\\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;line is the point at which it crosses the y axis (M{x=0}).
+
+@rtype:   number
+
+@return:  the x intercept of the line M{y=m\\*x+b}.`;
+
+    _testConvertToMarkdown(docstring, markdown);
+});
+
 function _testConvertToMarkdown(docstring: string, expectedMarkdown: string) {
     const actualMarkdown = convertDocStringToMarkdown(docstring);
 
