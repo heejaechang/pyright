@@ -16,8 +16,8 @@ Notable changes:
 In addition, Pylance's copy of Pyright has been updated from 1.1.106 to 1.1.108, including the following changes:
 
 -   Unreleased in Pyright, but included in Pylance:
-    -   Added perf optimization that avoids reallocation of special form classes (like Protocol and Literal) every time they're used. Since instance of the type is now cached and reused.
-    -   Behavior Change: Added some performance optimizations to handle cases where there are many overloads for a function (>100). Previous code hit n^2 analysis times where n is number of overloads.
+    -   Enhancement: Added perf optimization that avoids reallocation of special form classes (like Protocol and Literal) every time they're used. Since instance of the type is now cached and reused.
+    -   Enhancement: Added some performance optimizations to handle cases where there are many overloads for a function (>100). Previous code hit n^2 analysis times where n is number of overloads.
 -   [1.1.108](https://github.com/microsoft/pyright/releases/tag/1.1.108)
     -   Behavior change: Changed type inference logic for binary expressions of the form `x or []` so `[]` uses the type of `x` to inform its type.
     -   Bug Fix: Fixed bug in the way a specialized variadic type alias is printed (for error messages, hover text, etc.).
