@@ -117,6 +117,10 @@ async function showPylanceSurveyBanner(
     version: string,
     browser: BrowserService
 ): Promise<void> {
+    // Do not show any surveys in Codespaces.
+    if (vscode.env.uiKind === vscode.UIKind.Web) {
+        return;
+    }
     const survey = new PylanceSurveyBanner(new ApplicationShellImpl(), browser, context.globalState, version);
     return survey.show();
 }
