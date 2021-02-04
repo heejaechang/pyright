@@ -67,6 +67,7 @@ import { SourceFile } from './sourceFile';
 import { SourceMapper } from './sourceMapper';
 import { Symbol } from './symbol';
 import { isPrivateOrProtectedName } from './symbolNameUtils';
+import { createTracePrinter } from './tracePrinter';
 import { TypeEvaluator } from './typeEvaluator';
 import { createTypeEvaluatorWithTracker } from './typeEvaluatorWithTracker';
 import { PrintTypeFlags } from './typePrinter';
@@ -154,6 +155,7 @@ export class Program {
         this._logTracker = logTracker ?? new LogTracker(console, 'FG');
         this._importResolver = initialImportResolver;
         this._configOptions = initialConfigOptions;
+
         this._createNewEvaluator();
     }
 
@@ -170,6 +172,11 @@ export class Program {
 
     setImportResolver(importResolver: ImportResolver) {
         this._importResolver = importResolver;
+
+        // Create a new evaluator with the updated import resolver.
+        // Otherwise, lookup import passed to type evaluator might use
+        // older import resolver when resolving imports after parsing.
+        this._createNewEvaluator();
     }
 
     // Sets the list of tracked files that make up the program.
@@ -663,10 +670,23 @@ export class Program {
     }
 
     private _createNewEvaluator() {
-        this._evaluator = createTypeEvaluatorWithTracker(this._lookUpImport, {
-            disableInferenceForPyTypedSources: this._configOptions.disableInferenceForPyTypedSources,
-            printTypeFlags: Program._getPrintTypeFlags(this._configOptions),
-        });
+        this._evaluator = createTypeEvaluatorWithTracker(
+            this._lookUpImport,
+            {
+                disableInferenceForPyTypedSources: this._configOptions.disableInferenceForPyTypedSources,
+                printTypeFlags: Program._getPrintTypeFlags(this._configOptions),
+                logCalls: this._configOptions.logTypeEvaluationTime,
+                minimumLoggingThreshold: this._configOptions.typeEvaluationTimeThreshold,
+            },
+            this._logTracker,
+            this._configOptions.logTypeEvaluationTime
+                ? createTracePrinter(
+                      this._importResolver.getImportRoots(
+                          this._configOptions.findExecEnvironment(this._configOptions.projectRoot)
+                      )
+                  )
+                : undefined
+        );
 
         return this._evaluator;
     }

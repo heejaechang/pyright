@@ -11,7 +11,8 @@ import { DiagnosticSeverityOverrides } from 'pyright-internal/common/commandLine
 import { NullConsole } from 'pyright-internal/common/console';
 import { createDeferred } from 'pyright-internal/common/deferred';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
-import { convertPathToUri, normalizeSlashes } from 'pyright-internal/common/pathUtils';
+import * as pathConsts from 'pyright-internal/common/pathConsts';
+import { combinePaths, convertPathToUri, normalizeSlashes } from 'pyright-internal/common/pathUtils';
 import { ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { AnalyzerServiceExecutor } from 'pyright-internal/languageService/analyzerServiceExecutor';
 import { TestFileSystem } from 'pyright-internal/tests/harness/vfs/filesystem';
@@ -87,11 +88,19 @@ test('mspythonconfig information support', () => {
 });
 
 function createWorkspaceInstance(fs?: FileSystem): WorkspaceServiceInstance {
+    fs = fs ?? new TestFileSystem(/* ignoreCase */ false, { cwd: normalizeSlashes('/') });
+
+    // create type stub folder
+    const typeshedPath = combinePaths(fs.getModulePath(), pathConsts.typeshedFallback);
+    if (!fs.existsSync(typeshedPath)) {
+        fs.mkdirSync(typeshedPath, { recursive: true });
+    }
+
     return {
         workspaceName: `Test`,
         rootPath: rootPath,
         rootUri: convertPathToUri(rootPath),
-        serviceInstance: new AnalyzerService('Test', fs ?? new TestFileSystem(false), new NullConsole()),
+        serviceInstance: new AnalyzerService('Test', fs, new NullConsole()),
         disableLanguageServices: true,
         disableOrganizeImports: true,
         isInitialized: createDeferred<boolean>(),

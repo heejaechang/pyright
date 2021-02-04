@@ -40,7 +40,7 @@ import { Commands as PyRightCommands } from 'pyright-internal/commands/commands'
 import { getCancellationFolderName } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
-import { isBoolean, isString } from 'pyright-internal/common/core';
+import { isBoolean, isNumber, isString } from 'pyright-internal/common/core';
 import * as debug from 'pyright-internal/common/debug';
 import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
@@ -275,6 +275,17 @@ class PylanceServer extends LanguageServerBase {
 
                 if (isBoolean(pythonAnalysisSection.indexing)) {
                     serverSettings.indexing = pythonAnalysisSection.indexing;
+                }
+
+                if (
+                    serverSettings.logLevel === LogLevel.Log &&
+                    isBoolean(pythonAnalysisSection.logTypeEvaluationTime)
+                ) {
+                    serverSettings.logTypeEvaluationTime = pythonAnalysisSection.logTypeEvaluationTime;
+                }
+
+                if (isNumber(pythonAnalysisSection.typeEvaluationTimeThreshold)) {
+                    serverSettings.typeEvaluationTimeThreshold = pythonAnalysisSection.typeEvaluationTimeThreshold;
                 }
 
                 if (isBoolean(pythonAnalysisSection.enableExtractCodeAction)) {

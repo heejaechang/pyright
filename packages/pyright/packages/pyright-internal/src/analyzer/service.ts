@@ -567,6 +567,8 @@ export class AnalyzerService {
         configOptions.checkOnlyOpenFiles = !!commandLineOptions.checkOnlyOpenFiles;
         configOptions.autoImportCompletions = !!commandLineOptions.autoImportCompletions;
         configOptions.indexing = !!commandLineOptions.indexing;
+        configOptions.logTypeEvaluationTime = !!commandLineOptions.logTypeEvaluationTime;
+        configOptions.typeEvaluationTimeThreshold = commandLineOptions.typeEvaluationTimeThreshold;
 
         // If useLibraryCodeForTypes was not specified in the config, allow the settings
         // or command line to override it.

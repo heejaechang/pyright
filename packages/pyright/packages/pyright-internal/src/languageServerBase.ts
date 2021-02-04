@@ -104,6 +104,8 @@ export interface ServerSettings {
     logLevel?: LogLevel;
     autoImportCompletions?: boolean;
     indexing?: boolean;
+    logTypeEvaluationTime?: boolean;
+    typeEvaluationTimeThreshold?: number;
 }
 
 export interface WorkspaceServiceInstance {
