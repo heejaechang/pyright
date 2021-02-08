@@ -1051,12 +1051,12 @@ export class AnalyzerService {
 
                 const isIgnored = ignoredWatchEventFunction(fileList);
                 this._sourceFileWatcher = this._fs.createFileSystemWatcher(fileList, (event, path) => {
-                    if (isIgnored(path)) {
-                        return;
-                    }
-
                     if (this._verboseOutput) {
                         this._console.info(`SourceFile: Received fs event '${event}' for path '${path}'`);
+                    }
+
+                    if (isIgnored(path)) {
+                        return;
                     }
 
                     // Wholesale ignore events that appear to be from tmp file modification.
@@ -1142,12 +1142,12 @@ export class AnalyzerService {
                 }
                 const isIgnored = ignoredWatchEventFunction(watchList);
                 this._libraryFileWatcher = this._fs.createFileSystemWatcher(watchList, (event, path) => {
-                    if (isIgnored(path)) {
-                        return;
-                    }
-
                     if (this._verboseOutput) {
                         this._console.info(`LibraryFile: Received fs event '${event}' for path '${path}'}'`);
+                    }
+
+                    if (isIgnored(path)) {
+                        return;
                     }
 
                     this._scheduleLibraryAnalysis();
