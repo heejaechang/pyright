@@ -1183,6 +1183,14 @@ test('ParamSpec9', () => {
     TestUtils.validateResults(results, 9);
 });
 
+test('ParamSpec10', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec10.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
 test('ClassVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar1.py']);
 
@@ -1287,6 +1295,12 @@ test('TryExcept4', () => {
 
 test('TryExcept5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept5.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
+test('TryExcept6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept6.py']);
 
     TestUtils.validateResults(analysisResults, 1);
 });
@@ -1444,7 +1458,7 @@ test('UnusedCallResult1', () => {
     // Enable it as an error.
     configOptions.diagnosticRuleSet.reportUnusedCallResult = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['unusedCallResult1.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('UnusedCoroutine1', () => {

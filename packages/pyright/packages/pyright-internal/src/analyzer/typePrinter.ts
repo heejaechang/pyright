@@ -14,12 +14,10 @@ import {
     combineTypes,
     EnumLiteral,
     FunctionType,
-    isAny,
     isAnyOrUnknown,
     isClass,
     isObject,
     isUnion,
-    isUnknown,
     isVariadicTypeVar,
     maxTypeRecursionCount,
     ObjectType,
@@ -48,6 +46,10 @@ export const enum PrintTypeFlags {
 
     // Print Union and Optional in PEP 604 format.
     PEP604 = 1 << 3,
+
+    // Include a parentheses around a union if there's more than
+    // one subtype.
+    ParenthesizeUnion = 1 << 4,
 }
 
 export type FunctionReturnTypeCallback = (type: FunctionType) => Type;
@@ -59,6 +61,9 @@ export function printType(
     expandTypeAlias = false,
     recursionCount = 0
 ): string {
+    const parenthesizeUnion = (printTypeFlags & PrintTypeFlags.ParenthesizeUnion) !== 0;
+    printTypeFlags &= ~PrintTypeFlags.ParenthesizeUnion;
+
     if (recursionCount >= maxTypeRecursionCount) {
         return '...';
     }
@@ -235,14 +240,6 @@ export function printType(
                 subtypes.push(subtype);
             });
 
-            // If we're printing "Unknown" as "Any", remove redundant
-            // unknowns so we don't see two Any's appear in the union.
-            if ((printTypeFlags & PrintTypeFlags.PrintUnknownWithAny) !== 0) {
-                if (subtypes.some((t) => isAny(t))) {
-                    subtypes = subtypes.filter((t) => !isUnknown(t));
-                }
-            }
-
             // If one or more subtypes are pseudo-generic, remove any other pseudo-generics
             // of the same type because we don't print type arguments for pseudo-generic
             // types, and we'll end up displaying seemingly-duplicated types.
@@ -313,15 +310,30 @@ export function printType(
                 }
             }
 
-            if (subtypeStrings.length === 1) {
-                return subtypeStrings[0];
+            // Remove any duplicates, which can happen if we're replacing
+            // Unknown with Any or are hiding type arguments.
+            const redundancyMap = new Map<string, string>();
+            const dedupedSubtypeStrings: string[] = [];
+            subtypeStrings.forEach((subtype) => {
+                if (!redundancyMap.has(subtype)) {
+                    dedupedSubtypeStrings.push(subtype);
+                    redundancyMap.set(subtype, subtype);
+                }
+            });
+
+            if (dedupedSubtypeStrings.length === 1) {
+                return dedupedSubtypeStrings[0];
             }
 
             if (printTypeFlags & PrintTypeFlags.PEP604) {
-                return subtypeStrings.join(' | ');
+                const unionString = dedupedSubtypeStrings.join(' | ');
+                if (parenthesizeUnion) {
+                    return `(${unionString})`;
+                }
+                return unionString;
             }
 
-            return `Union[${subtypeStrings.join(', ')}]`;
+            return `Union[${dedupedSubtypeStrings.join(', ')}]`;
         }
 
         case TypeCategory.TypeVar: {
@@ -606,7 +618,13 @@ export function printFunctionParts(
     const returnType = returnTypeCallback(type);
     let returnTypeString =
         recursionCount < maxTypeRecursionCount
-            ? printType(returnType, printTypeFlags, returnTypeCallback, /* expandTypeAlias */ false, recursionCount + 1)
+            ? printType(
+                  returnType,
+                  printTypeFlags | PrintTypeFlags.ParenthesizeUnion,
+                  returnTypeCallback,
+                  /* expandTypeAlias */ false,
+                  recursionCount + 1
+              )
             : '';
 
     if (printTypeFlags & PrintTypeFlags.PEP604 && isUnion(returnType) && recursionCount > 0) {
