@@ -11,7 +11,6 @@
 
 import './common/extensions';
 
-import * as fs from 'fs';
 import {
     CancellationToken,
     CancellationTokenSource,
@@ -69,6 +68,7 @@ import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/d
 import { DiagnosticRule } from './common/diagnosticRules';
 import { LanguageServiceExtension } from './common/extensibility';
 import {
+    ChokidarFileWatcherProvider,
     createFromRealFileSystem,
     FileSystem,
     FileWatcher,
@@ -378,21 +378,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             }
         });
 
-        // For any non-workspace paths, use the node file watcher.
-        let nodeWatchers: FileWatcher[];
+        // For any non-workspace paths, create a file watcher.
+        let nonWorkspaceWatchers: FileWatcher | undefined;
 
         try {
-            nodeWatchers = nonWorkspacePaths.map((path) => {
-                return fs.watch(path, { recursive: true }, (event, filename) =>
-                    listener(event as FileWatcherEventType, filename)
-                );
-            });
+            nonWorkspaceWatchers = new ChokidarFileWatcherProvider(this.console).createFileWatcher(
+                nonWorkspacePaths,
+                listener
+            );
         } catch (e) {
             // Versions of node >= 14 are reportedly throwing exceptions
             // when calling fs.watch with recursive: true. Just swallow
             // the exception and proceed.
             this.console.error(`Exception received when installing recursive file system watcher`);
-            nodeWatchers = [];
         }
 
         const fileWatcher: InternalFileWatcher = {
@@ -400,10 +398,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 // Stop listening for workspace paths.
                 lsBase._fileWatchers = lsBase._fileWatchers.filter((watcher) => watcher !== fileWatcher);
 
-                // Close the node watchers.
-                nodeWatchers.forEach((watcher) => {
-                    watcher.close();
-                });
+                // Close the non-workspace watchers.
+                nonWorkspaceWatchers?.close();
             },
             workspacePaths,
             eventHandler: listener,
