@@ -47,6 +47,7 @@ import {
 import { DocumentRange, Position, Range } from '../common/textRange';
 import { timingStats } from '../common/timing';
 import { AbbreviationMap, CompletionOptions, CompletionResults } from '../languageService/completionProvider';
+import { DefinitionFilter } from '../languageService/definitionProvider';
 import { IndexResults, WorkspaceSymbolCallback } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback } from '../languageService/referencesProvider';
@@ -242,9 +243,10 @@ export class AnalyzerService {
     getDefinitionForPosition(
         filePath: string,
         position: Position,
+        filter: DefinitionFilter,
         token: CancellationToken
     ): DocumentRange[] | undefined {
-        return this._program.getDefinitionsForPosition(filePath, position, token);
+        return this._program.getDefinitionsForPosition(filePath, position, filter, token);
     }
 
     reportReferencesForPosition(

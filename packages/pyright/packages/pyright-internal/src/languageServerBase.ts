@@ -41,6 +41,7 @@ import {
     SignatureHelpTriggerKind,
     SignatureInformation,
     SymbolInformation,
+    TextDocumentPositionParams,
     TextDocumentSyncKind,
     WatchKind,
     WorkDoneProgressReporter,
@@ -80,6 +81,7 @@ import { convertWorkspaceEdits } from './common/textEditUtils';
 import { DocumentRange, Position } from './common/textRange';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
 import { CompletionItemData, CompletionResults } from './languageService/completionProvider';
+import { DefinitionFilter } from './languageService/definitionProvider';
 import { convertToFlatSymbols, WorkspaceSymbolCallback } from './languageService/documentSymbolProvider';
 import { convertHoverResults } from './languageService/hoverProvider';
 import { ReferenceCallback } from './languageService/referencesProvider';
@@ -167,6 +169,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected _hasSignatureLabelOffsetCapability = false;
     protected _hasHierarchicalDocumentSymbolCapability = false;
     protected _hasWindowProgressCapability = false;
+    protected _hasGoToDeclarationCapability = false;
     protected _hoverContentFormat: MarkupKind = MarkupKind.PlainText;
     protected _completionDocFormat: MarkupKind = MarkupKind.PlainText;
     protected _completionSupportsSnippet = false;
@@ -427,7 +430,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         this._connection.onCodeAction((params, token) => this.executeCodeAction(params, token));
 
-        this._connection.onDefinition(async (params, token) => {
+        const getDefinitions = async (
+            params: TextDocumentPositionParams,
+            token: CancellationToken,
+            filter: DefinitionFilter
+        ) => {
             this.recordUserInteractionTime();
 
             const filePath = convertUriToPath(params.textDocument.uri);
@@ -439,14 +446,31 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             const workspace = await this.getWorkspaceForFile(filePath);
             if (workspace.disableLanguageServices) {
-                return;
+                return undefined;
             }
-            const locations = workspace.serviceInstance.getDefinitionForPosition(filePath, position, token);
+
+            const locations = workspace.serviceInstance.getDefinitionForPosition(filePath, position, filter, token);
             if (!locations) {
                 return undefined;
             }
             return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
-        });
+        };
+
+        this._connection.onDefinition((params, token) =>
+            getDefinitions(
+                params,
+                token,
+                this._hasGoToDeclarationCapability ? DefinitionFilter.PreferSource : DefinitionFilter.All
+            )
+        );
+
+        this._connection.onDeclaration((params, token) =>
+            getDefinitions(
+                params,
+                token,
+                this._hasGoToDeclarationCapability ? DefinitionFilter.PreferStubs : DefinitionFilter.All
+            )
+        );
 
         this._connection.onReferences(async (params, token, workDoneReporter, resultReporter) => {
             if (this._pendingFindAllRefsCancellationSource) {
@@ -943,6 +967,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             (tag) => tag === DiagnosticTag.Unnecessary
         );
         this._hasWindowProgressCapability = !!capabilities.window?.workDoneProgress;
+        this._hasGoToDeclarationCapability = !!capabilities.textDocument?.declaration;
 
         // Create a service instance for each of the workspace folders.
         if (params.workspaceFolders) {
@@ -958,6 +983,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             capabilities: {
                 textDocumentSync: TextDocumentSyncKind.Incremental,
                 definitionProvider: { workDoneProgress: true },
+                declarationProvider: { workDoneProgress: true },
                 referencesProvider: { workDoneProgress: true },
                 documentSymbolProvider: { workDoneProgress: true },
                 workspaceSymbolProvider: { workDoneProgress: true },

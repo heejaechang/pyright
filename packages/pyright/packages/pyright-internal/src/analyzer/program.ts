@@ -51,6 +51,7 @@ import {
 } from '../languageService/autoImporter';
 import { CallHierarchyProvider } from '../languageService/callHierarchyProvider';
 import { AbbreviationMap, CompletionOptions, CompletionResults } from '../languageService/completionProvider';
+import { DefinitionFilter } from '../languageService/definitionProvider';
 import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
@@ -1102,6 +1103,7 @@ export class Program {
     getDefinitionsForPosition(
         filePath: string,
         position: Position,
+        filter: DefinitionFilter,
         token: CancellationToken
     ): DocumentRange[] | undefined {
         return this._runEvaluatorWithCancellationToken(token, () => {
@@ -1116,6 +1118,7 @@ export class Program {
             return sourceFileInfo.sourceFile.getDefinitionsForPosition(
                 this._createSourceMapper(execEnv),
                 position,
+                filter,
                 this._evaluator!,
                 token
             );
