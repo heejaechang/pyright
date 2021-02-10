@@ -17,6 +17,7 @@ from .fields import (
     IntegerField as IntegerField,
     PositiveIntegerField as PositiveIntegerField,
     PositiveSmallIntegerField as PositiveSmallIntegerField,
+    PositiveBigIntegerField as PositiveBigIntegerField,
     SmallIntegerField as SmallIntegerField,
     BigIntegerField as BigIntegerField,
     FloatField as FloatField,
@@ -60,6 +61,7 @@ from .fields.files import (
     FileDescriptor as FileDescriptor,
 )
 from .fields.proxy import OrderWrt as OrderWrt
+from .fields.json import JSONField as JSONField
 
 from .deletion import (
     CASCADE as CASCADE,
@@ -130,6 +132,7 @@ from . import signals as signals
 from .constraints import (
     BaseConstraint as BaseConstraint,
     CheckConstraint as CheckConstraint,
+    Deferrable as Deferrable,
     UniqueConstraint as UniqueConstraint,
 )
 
