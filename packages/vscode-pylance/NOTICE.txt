@@ -3062,6 +3062,8 @@ THE SOFTWARE.
 buffer 5.7.1 - MIT
 https://github.com/feross/buffer
 
+Copyright (c) Feross Aboukhadijeh, and other contributors.
+Copyright (c) Feross Aboukhadijeh (http://feross.org), and other contributors.
 
 The MIT License (MIT)
 
@@ -7184,7 +7186,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.108 - MIT
+pyright 1.1.109 - MIT
 https://github.com/Microsoft/pyright#readme
 
 Copyright (c) 2014-2016, Jon Schlinkert.
