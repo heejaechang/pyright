@@ -17,6 +17,7 @@ import {
     isAnyOrUnknown,
     isClass,
     isObject,
+    isParamSpec,
     isUnion,
     isVariadicTypeVar,
     maxTypeRecursionCount,
@@ -201,7 +202,12 @@ export function printType(
                 }
                 return `Callable[${type.details.paramSpec.details.name}, ${parts[1]}]`;
             }
-            return `(${parts[0].join(', ')}) -> ${parts[1]}`;
+
+            const paramSignature = `(${parts[0].join(', ')})`;
+            if (FunctionType.isParamSpecValue(type)) {
+                return paramSignature;
+            }
+            return `${paramSignature} -> ${parts[1]}`;
         }
 
         case TypeCategory.OverloadedFunction: {
@@ -531,7 +537,6 @@ export function printFunctionParts(
     type: FunctionType,
     printTypeFlags: PrintTypeFlags,
     returnTypeCallback: FunctionReturnTypeCallback,
-
     recursionCount = 0
 ): [string[], string] {
     const paramTypeStrings: string[] = [];
@@ -589,6 +594,14 @@ export function printFunctionParts(
                           )
                         : '';
                 paramString += ': ' + paramTypeString;
+
+                if (isParamSpec(paramType)) {
+                    if (param.category === ParameterCategory.VarArgList) {
+                        paramString += '.args';
+                    } else if (param.category === ParameterCategory.VarArgDictionary) {
+                        paramString += '.kwargs';
+                    }
+                }
 
                 // PEP8 indicates that the "=" for the default value should have surrounding
                 // spaces when used with a type annotation.

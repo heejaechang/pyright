@@ -22,6 +22,7 @@ import {
     ExecutionScopeNode,
     ExpressionNode,
     FunctionNode,
+    IndexNode,
     isExpressionNode,
     LambdaNode,
     ModuleNode,
@@ -1199,6 +1200,23 @@ export function getCallNodeAndActiveParameterIndex(
     }
 }
 
+// Returns the integer subscript if a simple numeric literal is used.
+export function getIntegerSubscriptValue(node: IndexNode): number | undefined {
+    if (
+        node.items.length === 1 &&
+        !node.trailingComma &&
+        node.items[0].argumentCategory === ArgumentCategory.Simple &&
+        !node.items[0].name
+    ) {
+        const expr = node.items[0].valueExpression;
+        if (expr.nodeType === ParseNodeType.Number && expr.isInteger && !expr.isImaginary) {
+            return expr.value;
+        }
+    }
+
+    return undefined;
+}
+
 export function printParseNodeType(type: ParseNodeType) {
     switch (type) {
         case ParseNodeType.Error:
@@ -1389,6 +1407,42 @@ export function printParseNodeType(type: ParseNodeType) {
 
         case ParseNodeType.FunctionAnnotation:
             return 'FunctionAnnotation';
+
+        case ParseNodeType.Match:
+            return 'Match';
+
+        case ParseNodeType.Case:
+            return 'Case';
+
+        case ParseNodeType.PatternSequence:
+            return 'PatternSequence';
+
+        case ParseNodeType.PatternAs:
+            return 'PatternAs';
+
+        case ParseNodeType.PatternLiteral:
+            return 'PatternLiteral';
+
+        case ParseNodeType.PatternClass:
+            return 'PatternClass';
+
+        case ParseNodeType.PatternCapture:
+            return 'PatternCapture';
+
+        case ParseNodeType.PatternMapping:
+            return 'PatternMapping';
+
+        case ParseNodeType.PatternMappingKeyEntry:
+            return 'PatternMappingKeyEntry';
+
+        case ParseNodeType.PatternMappingExpandEntry:
+            return 'PatternMappingExpandEntry';
+
+        case ParseNodeType.PatternValue:
+            return 'PatternValue';
+
+        case ParseNodeType.PatternClassArgument:
+            return 'PatternClassArgument';
     }
 
     assertNever(type);

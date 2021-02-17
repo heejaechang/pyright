@@ -9,6 +9,7 @@
 
 import { assert } from 'console';
 
+import { ParameterCategory } from '../parser/parseNodes';
 import { DeclarationType } from './declaration';
 import { Symbol, SymbolFlags, SymbolTable } from './symbol';
 import { isTypedDictMemberAccessedThroughIndex } from './symbolUtils';
@@ -21,13 +22,16 @@ import {
     EnumLiteral,
     findSubtype,
     FunctionType,
+    FunctionTypeFlags,
     isAny,
     isAnyOrUnknown,
     isClass,
     isFunction,
+    isNever,
     isNone,
     isObject,
     isOverloadedFunction,
+    isParamSpec,
     isTypeSame,
     isTypeVar,
     isUnbound,
@@ -41,6 +45,7 @@ import {
     ObjectType,
     OverloadedFunctionType,
     ParamSpecEntry,
+    ParamSpecValue,
     removeFromUnion,
     SpecializedFunctionTypes,
     SubtypeConstraints,
@@ -417,16 +422,7 @@ export function canBeFalsy(type: Type, recursionLevel = 0): boolean {
         case TypeCategory.Object: {
             // Handle tuples specially.
             if (isTupleClass(type.classType) && type.classType.tupleTypeArguments) {
-                if (type.classType.tupleTypeArguments.length === 0) {
-                    return true;
-                }
-
-                const lastTypeArg = type.classType.tupleTypeArguments[type.classType.tupleTypeArguments.length - 1];
-                if (isEllipsisType(lastTypeArg)) {
-                    return true;
-                }
-
-                return false;
+                return isOpenEndedTupleClass(type.classType) || type.classType.tupleTypeArguments.length === 0;
             }
 
             // Check for Literal[False] and Literal[True].
@@ -546,12 +542,16 @@ export function getSpecializedTupleType(type: Type): ClassType | undefined {
     return applySolvedTypeVars(tupleClass, typeVarMap) as ClassType;
 }
 
-export function isLiteralType(type: Type, allowLiteralUnions = true): boolean {
+export function isLiteralType(type: ObjectType): boolean {
+    return type.classType.literalValue !== undefined;
+}
+
+export function isLiteralTypeOrUnion(type: Type): boolean {
     if (isObject(type)) {
         return type.classType.literalValue !== undefined;
     }
 
-    if (allowLiteralUnions && isUnion(type)) {
+    if (isUnion(type)) {
         return !findSubtype(type, (subtype) => !isObject(subtype) || subtype.classType.literalValue === undefined);
     }
 
@@ -576,6 +576,15 @@ export function isProperty(type: Type): type is ObjectType {
 
 export function isTupleClass(type: ClassType) {
     return ClassType.isBuiltIn(type, 'tuple');
+}
+
+// Indicates whether the type is a tuple class of
+// the form tuple[x, ...] where the number of elements
+// in the tuple is unknown.
+export function isOpenEndedTupleClass(type: ClassType) {
+    return (
+        type.tupleTypeArguments && type.tupleTypeArguments.length === 2 && isEllipsisType(type.tupleTypeArguments[1])
+    );
 }
 
 // Partially specializes a type within the context of a specified
@@ -1053,13 +1062,33 @@ export function buildTypeVarMap(
         let typeArgType: Type;
 
         if (typeArgs) {
-            if (index >= typeArgs.length) {
-                typeArgType = AnyType.create();
-            } else {
-                typeArgType = typeArgs[index];
-            }
+            if (isParamSpec(typeParam)) {
+                const paramSpecEntries: ParamSpecValue = [];
 
-            typeVarMap.setTypeVar(typeParam, typeArgType, /* isNarrowable */ false);
+                if (index < typeArgs.length) {
+                    typeArgType = typeArgs[index];
+                    if (isFunction(typeArgType) && FunctionType.isParamSpecValue(typeArgType)) {
+                        typeArgType.details.parameters.forEach((param) => {
+                            paramSpecEntries.push({
+                                category: param.category,
+                                name: param.name,
+                                hasDefault: !!param.hasDefault,
+                                type: param.type,
+                            });
+                        });
+                    }
+                }
+
+                typeVarMap.setParamSpec(typeParam, paramSpecEntries);
+            } else {
+                if (index >= typeArgs.length) {
+                    typeArgType = AnyType.create();
+                } else {
+                    typeArgType = typeArgs[index];
+                }
+
+                typeVarMap.setTypeVar(typeParam, typeArgType, /* isNarrowable */ false);
+            }
         }
     });
 
@@ -1406,10 +1435,13 @@ export function isPartlyUnknown(type: Type, allowUnknownTypeArgsForClasses = fal
     }
 
     if (isClass(type)) {
-        if (type.typeArguments && !allowUnknownTypeArgsForClasses && !ClassType.isPseudoGenericClass(type)) {
-            for (const argType of type.typeArguments) {
-                if (isPartlyUnknown(argType, allowUnknownTypeArgsForClasses, recursionCount + 1)) {
-                    return true;
+        if (!allowUnknownTypeArgsForClasses && !ClassType.isPseudoGenericClass(type)) {
+            const typeArgs = type.tupleTypeArguments || type.typeArguments;
+            if (typeArgs) {
+                for (const argType of typeArgs) {
+                    if (isPartlyUnknown(argType, allowUnknownTypeArgsForClasses, recursionCount + 1)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -1446,6 +1478,93 @@ export function isPartlyUnknown(type: Type, allowUnknownTypeArgsForClasses = fal
     }
 
     return false;
+}
+
+// If the type is a union of same-sized tuples, these are combined into
+// a single tuple with that size. Otherwise, returns undefined.
+export function combineSameSizedTuples(type: Type, tupleType: Type | undefined) {
+    if (!tupleType || !isClass(tupleType)) {
+        return undefined;
+    }
+
+    let tupleEntries: Type[][] | undefined;
+    let isValid = true;
+
+    doForEachSubtype(type, (subtype) => {
+        if (
+            isObject(subtype) &&
+            isTupleClass(subtype.classType) &&
+            !isOpenEndedTupleClass(subtype.classType) &&
+            subtype.classType.tupleTypeArguments
+        ) {
+            if (tupleEntries) {
+                if (tupleEntries.length === subtype.classType.tupleTypeArguments.length) {
+                    subtype.classType.tupleTypeArguments.forEach((entry, index) => {
+                        tupleEntries![index].push(entry);
+                    });
+                } else {
+                    isValid = false;
+                }
+            } else {
+                tupleEntries = subtype.classType.tupleTypeArguments.map((entry) => [entry]);
+            }
+        } else {
+            isValid = false;
+        }
+    });
+
+    if (!isValid || !tupleEntries) {
+        return undefined;
+    }
+
+    return convertToInstance(
+        specializeTupleClass(
+            tupleType,
+            tupleEntries.map((entry) => combineTypes(entry))
+        )
+    );
+}
+
+// Tuples require special handling for specialization. This method computes
+// the "effective" type argument, which is a union of the variadic type
+// arguments. If stripLiterals is true, literal values are stripped when
+// computing the effective type args.
+export function specializeTupleClass(
+    classType: ClassType,
+    typeArgs: Type[],
+    isTypeArgumentExplicit = true,
+    stripLiterals = true,
+    isForUnpackedVariadicTypeVar = false
+): ClassType {
+    let combinedTupleType: Type = AnyType.create(/* isEllipsis */ false);
+    if (typeArgs.length === 2 && isEllipsisType(typeArgs[1])) {
+        combinedTupleType = typeArgs[0];
+    } else {
+        combinedTupleType = combineTypes(typeArgs);
+    }
+
+    if (stripLiterals) {
+        combinedTupleType = stripLiteralValue(combinedTupleType);
+    }
+
+    // An empty tuple has an effective type of Any.
+    if (isNever(combinedTupleType)) {
+        combinedTupleType = AnyType.create();
+    }
+
+    const clonedClassType = ClassType.cloneForSpecialization(
+        classType,
+        [combinedTupleType],
+        isTypeArgumentExplicit,
+        /* skipAbstractClassTest */ undefined,
+        typeArgs
+    );
+
+    if (isForUnpackedVariadicTypeVar) {
+        clonedClassType.isTupleForUnpackedVariadicTypeVar = true;
+    }
+
+    return clonedClassType;
 }
 
 // Recursively walks a type and calls a callback for each TypeVar, allowing
@@ -1640,14 +1759,38 @@ function _transformTypeVarsInClassType(
         typeParams.forEach((typeParam) => {
             let replacementType: Type = typeParam;
 
-            const typeParamName = TypeVarType.getNameWithScope(typeParam);
-            if (!recursionMap.has(typeParamName)) {
-                replacementType = callbacks.transformTypeVar(typeParam);
-                if (replacementType !== typeParam) {
-                    recursionMap.set(typeParamName, typeParam);
-                    replacementType = _transformTypeVars(replacementType, callbacks, recursionMap, recursionLevel + 1);
-                    recursionMap.delete(typeParamName);
-                    specializationNeeded = true;
+            if (typeParam.details.isParamSpec) {
+                const paramSpecEntries = callbacks.transformParamSpec(typeParam);
+                if (paramSpecEntries) {
+                    // Create a function type from the param spec entries.
+                    const functionType = FunctionType.createInstance('', '', '', FunctionTypeFlags.ParamSpecValue);
+                    paramSpecEntries.forEach((entry) => {
+                        FunctionType.addParameter(functionType, {
+                            category: entry.category,
+                            name: entry.name,
+                            hasDefault: entry.hasDefault,
+                            hasDeclaredType: true,
+                            type: entry.type,
+                        });
+                    });
+
+                    replacementType = functionType;
+                }
+            } else {
+                const typeParamName = TypeVarType.getNameWithScope(typeParam);
+                if (!recursionMap.has(typeParamName)) {
+                    replacementType = callbacks.transformTypeVar(typeParam);
+                    if (replacementType !== typeParam) {
+                        recursionMap.set(typeParamName, typeParam);
+                        replacementType = _transformTypeVars(
+                            replacementType,
+                            callbacks,
+                            recursionMap,
+                            recursionLevel + 1
+                        );
+                        recursionMap.delete(typeParamName);
+                        specializationNeeded = true;
+                    }
                 }
             }
 
@@ -1726,6 +1869,35 @@ function _transformTypeVarsInFunctionType(
         parameterTypes: [],
         returnType: specializedReturnType,
     };
+
+    // Does this function end with *args: P.args, **args: P.kwargs? If so, we'll
+    // modify the function and replace these parameters with the signature captured
+    // by the ParamSpec.
+    if (functionType.details.parameters.length >= 2) {
+        const argsParam = functionType.details.parameters[functionType.details.parameters.length - 2];
+        const kwargsParam = functionType.details.parameters[functionType.details.parameters.length - 1];
+        const argsParamType = FunctionType.getEffectiveParameterType(
+            functionType,
+            functionType.details.parameters.length - 2
+        );
+        const kwargsParamType = FunctionType.getEffectiveParameterType(
+            functionType,
+            functionType.details.parameters.length - 1
+        );
+
+        if (
+            argsParam.category === ParameterCategory.VarArgList &&
+            kwargsParam.category === ParameterCategory.VarArgDictionary &&
+            isParamSpec(argsParamType) &&
+            isParamSpec(kwargsParamType) &&
+            isTypeSame(argsParamType, kwargsParamType)
+        ) {
+            const paramSpecType = callbacks.transformParamSpec(argsParamType);
+            if (paramSpecType) {
+                functionType = FunctionType.cloneForParamSpecApplication(functionType, paramSpecType);
+            }
+        }
+    }
 
     for (let i = 0; i < functionType.details.parameters.length; i++) {
         const paramType = FunctionType.getEffectiveParameterType(functionType, i);
