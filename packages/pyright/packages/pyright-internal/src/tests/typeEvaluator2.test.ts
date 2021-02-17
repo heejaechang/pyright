@@ -519,6 +519,12 @@ test('GenericTypes46', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('GenericTypes47', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes47.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1188,6 +1194,14 @@ test('ParamSpec10', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec10.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec11', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec11.py'], configOptions);
     TestUtils.validateResults(results, 0);
 });
 

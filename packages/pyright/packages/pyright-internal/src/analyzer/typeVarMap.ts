@@ -13,11 +13,12 @@ import { assert } from '../common/debug';
 import {
     ClassType,
     maxTypeRecursionCount,
-    ParamSpecEntry,
+    ParamSpecValue,
     Type,
     TypeCategory,
     TypeVarScopeId,
     TypeVarType,
+    WildcardTypeVarScopeId,
 } from './types';
 import { doForEachSubtype } from './typeUtils';
 
@@ -29,7 +30,7 @@ export interface TypeVarMapEntry {
 
 export interface ParamSpecMapEntry {
     paramSpec: TypeVarType;
-    type: ParamSpecEntry[];
+    type: ParamSpecValue;
 }
 
 export interface VariadicTypeVarMapEntry {
@@ -99,7 +100,7 @@ export class TypeVarMap {
         return (
             scopeId !== undefined &&
             this._solveForScopes !== undefined &&
-            this._solveForScopes.some((s) => s === scopeId)
+            this._solveForScopes.some((s) => s === scopeId || s === WildcardTypeVarScopeId)
         );
     }
 
@@ -184,11 +185,11 @@ export class TypeVarMap {
         return this._paramSpecMap.has(this._getKey(reference));
     }
 
-    getParamSpec(reference: TypeVarType): ParamSpecEntry[] | undefined {
+    getParamSpec(reference: TypeVarType): ParamSpecValue | undefined {
         return this._paramSpecMap.get(this._getKey(reference))?.type;
     }
 
-    setParamSpec(reference: TypeVarType, type: ParamSpecEntry[]) {
+    setParamSpec(reference: TypeVarType, type: ParamSpecValue) {
         assert(!this._isLocked);
         this._paramSpecMap.set(this._getKey(reference), { paramSpec: reference, type });
     }
