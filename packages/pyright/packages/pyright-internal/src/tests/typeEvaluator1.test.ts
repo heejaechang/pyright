@@ -340,6 +340,12 @@ test('TypeNarrowing20', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowing21', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing21.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ReturnTypes1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['returnTypes1.py']);
 
@@ -1328,7 +1334,7 @@ test('Match1', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['match1.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 10);
+    TestUtils.validateResults(analysisResults, 18);
 });
 
 test('Match2', () => {

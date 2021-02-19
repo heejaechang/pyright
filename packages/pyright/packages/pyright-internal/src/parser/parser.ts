@@ -508,6 +508,14 @@ export class Parser {
             this._addError(Localizer.Diagnostic.matchIncompatible(), matchToken);
         }
 
+        // Validate that only the last entry uses an irrefutable pattern.
+        for (let i = 0; i < matchNode.cases.length - 1; i++) {
+            const caseNode = matchNode.cases[i];
+            if (!caseNode.guardExpression && this._isPatternIrrefutable(caseNode.pattern)) {
+                this._addError(Localizer.Diagnostic.casePatternIsIrrefutable(), caseNode.pattern);
+            }
+        }
+
         return matchNode;
     }
 
@@ -549,6 +557,73 @@ export class Parser {
 
         const suite = this._parseSuite(this._isInFunction);
         return CaseNode.create(caseToken, casePattern, guardExpression, suite);
+    }
+
+    // PEP 634 defines the concept of an "irrefutable" pattern - a pattern that
+    // will always be matched.
+    private _isPatternIrrefutable(node: PatternAtomNode): boolean {
+        if (node.nodeType === ParseNodeType.PatternCapture) {
+            return true;
+        }
+
+        if (node.nodeType === ParseNodeType.PatternAs) {
+            return node.orPatterns.some((pattern) => this._isPatternIrrefutable(pattern));
+        }
+
+        return false;
+    }
+
+    private _getPatternTargetNames(node: PatternAtomNode, nameMap: Map<string, boolean>): void {
+        switch (node.nodeType) {
+            case ParseNodeType.PatternSequence: {
+                node.entries.forEach((subpattern) => {
+                    this._getPatternTargetNames(subpattern, nameMap);
+                });
+                break;
+            }
+
+            case ParseNodeType.PatternClass: {
+                node.arguments.forEach((arg) => {
+                    this._getPatternTargetNames(arg.pattern, nameMap);
+                });
+                break;
+            }
+
+            case ParseNodeType.PatternAs: {
+                if (node.target) {
+                    nameMap.set(node.target.value, true);
+                }
+                node.orPatterns.forEach((subpattern) => {
+                    this._getPatternTargetNames(subpattern, nameMap);
+                });
+                break;
+            }
+
+            case ParseNodeType.PatternCapture: {
+                if (!node.isWildcard) {
+                    nameMap.set(node.target.value, true);
+                }
+                break;
+            }
+
+            case ParseNodeType.PatternMapping: {
+                node.entries.forEach((mapEntry) => {
+                    if (mapEntry.nodeType === ParseNodeType.PatternMappingExpandEntry) {
+                        nameMap.set(mapEntry.target.value, true);
+                    } else {
+                        this._getPatternTargetNames(mapEntry.keyPattern, nameMap);
+                        this._getPatternTargetNames(mapEntry.valuePattern, nameMap);
+                    }
+                });
+                break;
+            }
+
+            case ParseNodeType.PatternLiteral:
+            case ParseNodeType.PatternValue:
+            case ParseNodeType.Error: {
+                break;
+            }
+        }
     }
 
     private _parsePatternSequence() {
@@ -634,6 +709,35 @@ export class Parser {
             this._addError(Localizer.Diagnostic.starPatternInAsPattern(), orPatterns[0]);
         }
 
+        // Validate that irrefutable patterns are not in any entries other than the last.
+        orPatterns.forEach((orPattern, index) => {
+            if (index < orPatterns.length - 1 && this._isPatternIrrefutable(orPattern)) {
+                this._addError(Localizer.Diagnostic.orPatternIrrefutable(), orPattern);
+            }
+        });
+
+        // Validate that all bound variables are the same within all or patterns.
+        const fullNameMap = new Map<string, boolean>();
+        orPatterns.forEach((orPattern) => {
+            this._getPatternTargetNames(orPattern, fullNameMap);
+        });
+
+        orPatterns.forEach((orPattern) => {
+            const localNameMap = new Map<string, boolean>();
+            this._getPatternTargetNames(orPattern, localNameMap);
+
+            if (localNameMap.size < fullNameMap.size) {
+                const missingNames = Array.from(fullNameMap.keys()).filter((name) => !localNameMap.has(name));
+                const diag = new DiagnosticAddendum();
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.orPatternMissingName().format({
+                        name: missingNames.map((name) => `"${name}"`).join(', '),
+                    })
+                );
+                this._addError(Localizer.Diagnostic.orPatternMissingName() + diag.getString(), orPattern);
+            }
+        });
+
         return PatternAsNode.create(orPatterns, target);
     }
 
@@ -683,8 +787,6 @@ export class Parser {
                 // Extend the node's range to include the rest of the line.
                 // This helps the signatureHelpProvider.
                 extendRange(classPattern, this._peekToken());
-            } else {
-                // TODO - verify arguments
             }
 
             return classPattern;
@@ -723,6 +825,8 @@ export class Parser {
                 } else {
                     casePattern = patternList.list[0];
                 }
+
+                extendRange(casePattern, nextToken);
             } else {
                 casePattern = PatternSequenceNode.create(startToken, patternList.list);
             }
@@ -1653,15 +1757,29 @@ export class Parser {
     }
 
     // with_stmt: 'with' with_item (',' with_item)*  ':' suite
+    // Python 3.10 adds support for optional parentheses around
+    // with_item list.
     private _parseWithStatement(asyncToken?: KeywordToken): WithNode {
         const withToken = this._getKeywordToken(KeywordType.With);
         const withItemList: WithItemNode[] = [];
+
+        const possibleParen = this._peekToken();
+        const inParen = this._consumeTokenIfType(TokenType.OpenParenthesis);
+        if (inParen && this._getLanguageVersion() < PythonVersion.V3_10) {
+            this._addError(Localizer.Diagnostic.parenthesizedContextManagerIllegal(), possibleParen);
+        }
 
         while (true) {
             withItemList.push(this._parseWithItem());
 
             if (!this._consumeTokenIfType(TokenType.Comma)) {
                 break;
+            }
+        }
+
+        if (inParen) {
+            if (!this._consumeTokenIfType(TokenType.CloseParenthesis)) {
+                this._addError(Localizer.Diagnostic.expectedCloseParen(), this._peekToken());
             }
         }
 

@@ -47,6 +47,7 @@ import {
     IfNode,
     ImportAsNode,
     ImportFromNode,
+    IndexNode,
     LambdaNode,
     ListComprehensionNode,
     MatchNode,
@@ -79,6 +80,7 @@ import { KeywordType, OperatorType } from '../parser/tokenizerTypes';
 import { AnalyzerFileInfo, ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import {
+    CodeFlowReferenceExpressionNode,
     createKeyForReference,
     FlowAssignment,
     FlowAssignmentAlias,
@@ -130,8 +132,6 @@ interface FinalInfo {
     isFinal: boolean;
     finalTypeNode?: ExpressionNode;
 }
-
-type NarrowingExpressionNode = NameNode | MemberAccessNode;
 
 export interface BinderResults {
     moduleDocString?: string;
@@ -860,7 +860,7 @@ export class Binder extends ParseTreeWalker {
         // annotations), we need to populate the reference map. Otherwise the type
         // analyzer's code flow engine won't run and detect cases where the variable
         // is unbound.
-        const expressionList: NarrowingExpressionNode[] = [];
+        const expressionList: CodeFlowReferenceExpressionNode[] = [];
         if (this._isNarrowingExpression(node.valueExpression, expressionList)) {
             expressionList.forEach((expr) => {
                 const referenceKey = createKeyForReference(expr);
@@ -966,6 +966,11 @@ export class Binder extends ParseTreeWalker {
 
         // Name nodes have no children.
         return false;
+    }
+
+    visitIndex(node: IndexNode): boolean {
+        AnalyzerNodeInfo.setFlowNode(node, this._currentFlowNode!);
+        return true;
     }
 
     visitIf(node: IfNode): boolean {
@@ -1839,7 +1844,17 @@ export class Binder extends ParseTreeWalker {
     }
 
     visitPatternAs(node: PatternAsNode) {
+        const postOrLabel = this._createBranchLabel();
+
+        node.orPatterns.forEach((orPattern) => {
+            this.walk(orPattern);
+            this._addAntecedent(postOrLabel, this._currentFlowNode!);
+        });
+
+        this._currentFlowNode = this._finishFlowLabel(postOrLabel);
+
         if (node.target) {
+            this.walk(node.target);
             const symbol = this._bindNameToScope(this._currentScope, node.target.value);
             this._createAssignmentTargetFlowNodes(node.target, /* walkTargets */ false, /* unbound */ false);
 
@@ -1861,7 +1876,7 @@ export class Binder extends ParseTreeWalker {
             }
         }
 
-        return true;
+        return false;
     }
 
     visitPatternCapture(node: PatternCaptureNode) {
@@ -2188,7 +2203,7 @@ export class Binder extends ParseTreeWalker {
             return Binder._unreachableFlowNode;
         }
 
-        const expressionList: NarrowingExpressionNode[] = [];
+        const expressionList: CodeFlowReferenceExpressionNode[] = [];
         if (!this._isNarrowingExpression(expression, expressionList)) {
             return antecedent;
         }
@@ -2225,10 +2240,14 @@ export class Binder extends ParseTreeWalker {
         return false;
     }
 
-    private _isNarrowingExpression(expression: ExpressionNode, expressionList: NarrowingExpressionNode[]): boolean {
+    private _isNarrowingExpression(
+        expression: ExpressionNode,
+        expressionList: CodeFlowReferenceExpressionNode[]
+    ): boolean {
         switch (expression.nodeType) {
             case ParseNodeType.Name:
-            case ParseNodeType.MemberAccess: {
+            case ParseNodeType.MemberAccess:
+            case ParseNodeType.Index: {
                 if (isCodeFlowSupportedForReference(expression)) {
                     expressionList.push(expression);
                     return true;
@@ -2355,6 +2374,14 @@ export class Binder extends ParseTreeWalker {
                 break;
             }
 
+            case ParseNodeType.Index: {
+                this._createFlowAssignment(target, unbound);
+                if (walkTargets) {
+                    this.walk(target);
+                }
+                break;
+            }
+
             case ParseNodeType.Tuple: {
                 target.expressions.forEach((expr) => {
                     this._createAssignmentTargetFlowNodes(expr, walkTargets, unbound);
@@ -2438,7 +2465,7 @@ export class Binder extends ParseTreeWalker {
         }
     }
 
-    private _createFlowAssignment(node: NameNode | MemberAccessNode, unbound = false) {
+    private _createFlowAssignment(node: CodeFlowReferenceExpressionNode, unbound = false) {
         let targetSymbolId = indeterminateSymbolId;
         if (node.nodeType === ParseNodeType.Name) {
             const symbolWithScope = this._currentScope.lookUpSymbolRecursive(node.value);

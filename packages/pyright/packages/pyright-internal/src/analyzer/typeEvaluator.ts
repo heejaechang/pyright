@@ -83,6 +83,7 @@ import * as DeclarationUtils from './aliasDeclarationUtils';
 import { AnalyzerFileInfo, ImportLookup } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import {
+    CodeFlowReferenceExpressionNode,
     createKeyForReference,
     FlowAssignment,
     FlowAssignmentAlias,
@@ -594,7 +595,7 @@ export interface TypeEvaluator {
 
 interface CodeFlowAnalyzer {
     getTypeFromCodeFlow: (
-        reference: NameNode | MemberAccessNode,
+        reference: CodeFlowReferenceExpressionNode,
         targetSymbolId: number,
         initialType: Type | undefined
     ) => FlowNodeTypeResult;
@@ -1190,7 +1191,11 @@ export function createTypeEvaluator(
     }
 
     function isAnnotationEvaluationPostponed(fileInfo: AnalyzerFileInfo) {
-        return fileInfo.futureImports.get('annotations') !== undefined || fileInfo.isStubFile;
+        return (
+            fileInfo.futureImports.get('annotations') !== undefined ||
+            fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_10 ||
+            fileInfo.isStubFile
+        );
     }
 
     function getTypeOfAnnotation(
@@ -1346,7 +1351,8 @@ export function createTypeEvaluator(
         memberName: string,
         usage: EvaluatorUsage = { method: 'get' },
         diag: DiagnosticAddendum = new DiagnosticAddendum(),
-        memberAccessFlags = MemberAccessFlags.None
+        memberAccessFlags = MemberAccessFlags.None,
+        bindToType?: ClassType | ObjectType | TypeVarType
     ): Type | undefined {
         let memberInfo: ClassMemberLookup | undefined;
 
@@ -1357,7 +1363,8 @@ export function createTypeEvaluator(
                 memberName,
                 usage,
                 diag,
-                memberAccessFlags | MemberAccessFlags.AccessClassMembersOnly
+                memberAccessFlags | MemberAccessFlags.AccessClassMembersOnly,
+                bindToType
             );
         }
 
@@ -3824,7 +3831,15 @@ export function createTypeEvaluator(
             }
 
             case TypeCategory.Class: {
-                type = getTypeFromClassMember(node.memberName, baseType, memberName, usage, diag);
+                type = getTypeFromClassMember(
+                    node.memberName,
+                    baseType,
+                    memberName,
+                    usage,
+                    diag,
+                    MemberAccessFlags.None,
+                    baseTypeResult.bindToType
+                );
                 break;
             }
 
@@ -4576,7 +4591,20 @@ export function createTypeEvaluator(
             }
         }
 
-        return getTypeFromIndexWithBaseType(node, baseTypeResult.type, { method: 'get' }, flags);
+        const indexTypeResult = getTypeFromIndexWithBaseType(node, baseTypeResult.type, { method: 'get' }, flags);
+
+        if (isCodeFlowSupportedForReference(node)) {
+            // Before performing code flow analysis, update the cache to prevent recursion.
+            writeTypeCache(node, indexTypeResult.type);
+
+            // See if we can refine the type based on code flow analysis.
+            const codeFlowType = getFlowTypeOfReference(node, indeterminateSymbolId, indexTypeResult.type);
+            if (codeFlowType) {
+                indexTypeResult.type = codeFlowType;
+            }
+        }
+
+        return indexTypeResult;
     }
 
     function adjustTypeArgumentsForVariadicTypeVar(
@@ -14274,7 +14302,7 @@ export function createTypeEvaluator(
     // point in the code. If the code flow analysis has nothing to say
     // about that expression, it return undefined.
     function getFlowTypeOfReference(
-        reference: NameNode | MemberAccessNode,
+        reference: CodeFlowReferenceExpressionNode,
         targetSymbolId: number,
         initialType: Type | undefined
     ): Type | undefined {
@@ -14331,7 +14359,7 @@ export function createTypeEvaluator(
         const flowNodeTypeCacheSet = new Map<string, TypeCache>();
 
         function getTypeFromCodeFlow(
-            reference: NameNode | MemberAccessNode,
+            reference: CodeFlowReferenceExpressionNode,
             targetSymbolId: number,
             initialType: Type | undefined
         ): FlowNodeTypeResult {
@@ -14473,7 +14501,7 @@ export function createTypeEvaluator(
             // returned.
             function getTypeFromFlowNode(
                 flowNode: FlowNode,
-                reference: NameNode | MemberAccessNode,
+                reference: CodeFlowReferenceExpressionNode,
                 targetSymbolId: number,
                 initialType: Type | undefined
             ): FlowNodeTypeResult {
