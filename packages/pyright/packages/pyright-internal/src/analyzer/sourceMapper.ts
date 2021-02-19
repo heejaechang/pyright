@@ -30,9 +30,7 @@ import { TypeEvaluator } from './typeEvaluator';
 import { isClass, isFunction, isOverloadedFunction } from './types';
 import { lookUpClassMember } from './typeUtils';
 
-type ClassOrTypeAliasDeclaration = ClassDeclaration | VariableDeclaration;
-type FunctionOrTypeAliasDeclaration = FunctionDeclaration | VariableDeclaration;
-type ClassOrFunctionOrVariableDeclaration = ClassOrTypeAliasDeclaration | FunctionOrTypeAliasDeclaration;
+type ClassOrFunctionOrVariableDeclaration = ClassDeclaration | FunctionDeclaration | VariableDeclaration;
 
 // Creates and binds a shadowed file within the program.
 export type ShadowFileBinder = (stubFilePath: string, implFilePath: string) => SourceFile | undefined;
@@ -91,7 +89,7 @@ export class SourceMapper {
     private _findFunctionOrTypeAliasDeclarations(
         stubDecl: FunctionDeclaration,
         recursiveDeclCache = new Set<string>()
-    ): FunctionOrTypeAliasDeclaration[] {
+    ): ClassOrFunctionOrVariableDeclaration[] {
         const functionName = stubDecl.node.name.value;
         const sourceFiles = this._getBoundSourceFilesFromStubFile(stubDecl.path);
 
@@ -226,7 +224,7 @@ export class SourceMapper {
         className: string,
         functionName: string,
         recursiveDeclCache: Set<string>
-    ): FunctionOrTypeAliasDeclaration[] {
+    ): ClassOrFunctionOrVariableDeclaration[] {
         return this._findMemberDeclarationsByName(
             sourceFile,
             className,
@@ -267,31 +265,12 @@ export class SourceMapper {
         return result;
     }
 
-    private _addVariableDeclarations(
-        decl: Declaration,
-        result: ClassOrFunctionOrVariableDeclaration[],
-        recursiveDeclCache: Set<string>
-    ) {
-        if (isVariableDeclaration(decl)) {
-            if (isStubFile(decl.path)) {
-                result.push(...this._findVariableDeclarations(decl, recursiveDeclCache));
-            } else {
-                result.push(decl);
-            }
-        } else if (isAliasDeclaration(decl)) {
-            const resolvedDecl = this._evaluator.resolveAliasDeclaration(decl, /* resolveLocalNames */ true);
-            if (resolvedDecl) {
-                this._addVariableDeclarations(resolvedDecl, result, recursiveDeclCache);
-            }
-        }
-    }
-
     private _findFunctionDeclarationsByName(
         sourceFile: SourceFile,
         functionName: string,
         recursiveDeclCache: Set<string>
-    ): FunctionOrTypeAliasDeclaration[] {
-        const result: FunctionOrTypeAliasDeclaration[] = [];
+    ): ClassOrFunctionOrVariableDeclaration[] {
+        const result: ClassOrFunctionOrVariableDeclaration[] = [];
 
         const uniqueId = sourceFile.getFilePath() + functionName;
         if (recursiveDeclCache.has(uniqueId)) {
@@ -302,57 +281,19 @@ export class SourceMapper {
 
         const decls = this._lookUpSymbolDeclarations(sourceFile.getParseResults()?.parseTree, functionName);
         for (const decl of decls) {
-            this._addFunctionDeclarations(decl, result, recursiveDeclCache);
+            this._addClassOrFunctionDeclarations(decl, result, recursiveDeclCache);
         }
 
         recursiveDeclCache.delete(uniqueId);
         return result;
     }
 
-    private _addFunctionDeclarations(
-        decl: Declaration,
-        result: FunctionOrTypeAliasDeclaration[],
-        recursiveDeclCache: Set<string>
-    ) {
-        if (isFunctionDeclaration(decl)) {
-            if (isStubFile(decl.path)) {
-                result.push(...this._findFunctionOrTypeAliasDeclarations(decl, recursiveDeclCache));
-            } else {
-                result.push(decl);
-            }
-        } else if (isAliasDeclaration(decl)) {
-            const resolvedDecl = this._evaluator.resolveAliasDeclaration(decl, /* resolveLocalNames */ true);
-            if (resolvedDecl) {
-                this._addFunctionDeclarations(resolvedDecl, result, recursiveDeclCache);
-            }
-        } else if (isVariableDeclaration(decl)) {
-            // Always add decl. This handles a case where function is dynamically generated such as pandas.read_csv or type alias.
-            this._addVariableDeclarations(decl, result, recursiveDeclCache);
-
-            // And try to add the real decl if we can. Sometimes, we can't since import resolver can't follow up the type alias or assignment.
-            // Import resolver can't resolve an import that only exists in the lib but not in the stub in certain circumstance.
-            const nodeToBind = decl.typeAliasName ?? decl.node;
-            const functionType = this._evaluator.getType(nodeToBind);
-            if (!functionType) {
-                return;
-            }
-
-            if (isFunction(functionType) && functionType.details.declaration) {
-                this._addFunctionDeclarations(functionType.details.declaration, result, recursiveDeclCache);
-            } else if (isOverloadedFunction(functionType)) {
-                for (const overloadDecl of functionType.overloads.map((o) => o.details.declaration).filter(isDefined)) {
-                    this._addFunctionDeclarations(overloadDecl, result, recursiveDeclCache);
-                }
-            }
-        }
-    }
-
     private _findClassDeclarationsByName(
         sourceFile: SourceFile,
         fullClassName: string,
         recursiveDeclCache: Set<string>
-    ): ClassOrTypeAliasDeclaration[] {
-        let classDecls: ClassOrTypeAliasDeclaration[] = [];
+    ): ClassOrFunctionOrVariableDeclaration[] {
+        let classDecls: ClassOrFunctionOrVariableDeclaration[] = [];
 
         // fullClassName is period delimited, for example: 'OuterClass.InnerClass'
         const parentNode = sourceFile.getParseResults()?.parseTree;
@@ -378,8 +319,8 @@ export class SourceMapper {
         className: string,
         parentNode: ParseNode,
         recursiveDeclCache: Set<string>
-    ): ClassOrTypeAliasDeclaration[] {
-        const result: ClassOrTypeAliasDeclaration[] = [];
+    ): ClassOrFunctionOrVariableDeclaration[] {
+        const result: ClassOrFunctionOrVariableDeclaration[] = [];
 
         const uniqueId = sourceFile.getFilePath() + `@[${parentNode.start}]${className}`;
         if (recursiveDeclCache.has(uniqueId)) {
@@ -390,16 +331,35 @@ export class SourceMapper {
 
         const decls = this._lookUpSymbolDeclarations(parentNode, className);
         for (const decl of decls) {
-            this._addClassDeclarations(decl, result, recursiveDeclCache);
+            this._addClassOrFunctionDeclarations(decl, result, recursiveDeclCache);
         }
 
         recursiveDeclCache.delete(uniqueId);
         return result;
     }
 
-    private _addClassDeclarations(
+    private _addVariableDeclarations(
         decl: Declaration,
-        result: ClassOrTypeAliasDeclaration[],
+        result: ClassOrFunctionOrVariableDeclaration[],
+        recursiveDeclCache: Set<string>
+    ) {
+        if (isVariableDeclaration(decl)) {
+            if (isStubFile(decl.path)) {
+                result.push(...this._findVariableDeclarations(decl, recursiveDeclCache));
+            } else {
+                result.push(decl);
+            }
+        } else if (isAliasDeclaration(decl)) {
+            const resolvedDecl = this._evaluator.resolveAliasDeclaration(decl, /* resolveLocalNames */ true);
+            if (resolvedDecl) {
+                this._addVariableDeclarations(resolvedDecl, result, recursiveDeclCache);
+            }
+        }
+    }
+
+    private _addClassOrFunctionDeclarations(
+        decl: Declaration,
+        result: ClassOrFunctionOrVariableDeclaration[],
         recursiveDeclCache: Set<string>
     ) {
         if (isClassDeclaration(decl)) {
@@ -408,23 +368,39 @@ export class SourceMapper {
             } else {
                 result.push(decl);
             }
+        } else if (isFunctionDeclaration(decl)) {
+            if (isStubFile(decl.path)) {
+                result.push(...this._findFunctionOrTypeAliasDeclarations(decl, recursiveDeclCache));
+            } else {
+                result.push(decl);
+            }
         } else if (isAliasDeclaration(decl)) {
             const resolvedDecl = this._evaluator.resolveAliasDeclaration(decl, /* resolveLocalNames */ true);
             if (resolvedDecl) {
-                this._addClassDeclarations(resolvedDecl, result, recursiveDeclCache);
+                this._addClassOrFunctionDeclarations(resolvedDecl, result, recursiveDeclCache);
             }
-        } else if (isVariableDeclaration(decl) && decl.typeAliasName) {
-            // Always add type alias decl first.
+        } else if (isVariableDeclaration(decl)) {
+            // Always add decl. This handles a case where function is dynamically generated such as pandas.read_csv or type alias.
             this._addVariableDeclarations(decl, result, recursiveDeclCache);
 
-            // And try to add the real decl for type alias if we can. Sometime, we can't since
-            // import resolver can't follow up the type alias. Import resolver can't resolve an import
-            // that only exists in the lib but not in the stub in certain circumstance.
-            const classType = this._evaluator.getType(decl.typeAliasName);
-            if (classType && isClass(classType)) {
+            // And try to add the real decl if we can. Sometimes, we can't since import resolver can't follow up the type alias or assignment.
+            // Import resolver can't resolve an import that only exists in the lib but not in the stub in certain circumstance.
+            const nodeToBind = decl.typeAliasName ?? decl.node;
+            const type = this._evaluator.getType(nodeToBind);
+            if (!type) {
+                return;
+            }
+
+            if (isFunction(type) && type.details.declaration) {
+                this._addClassOrFunctionDeclarations(type.details.declaration, result, recursiveDeclCache);
+            } else if (isOverloadedFunction(type)) {
+                for (const overloadDecl of type.overloads.map((o) => o.details.declaration).filter(isDefined)) {
+                    this._addClassOrFunctionDeclarations(overloadDecl, result, recursiveDeclCache);
+                }
+            } else if (type && isClass(type)) {
                 const importResult = this._importResolver.resolveImport(decl.path, this._execEnv, {
                     leadingDots: 0,
-                    nameParts: classType.details.moduleName.split('.'),
+                    nameParts: type.details.moduleName.split('.'),
                     importedSymbols: [],
                 });
 
@@ -433,8 +409,8 @@ export class SourceMapper {
                         importResult.resolvedPaths[importResult.resolvedPaths.length - 1]
                     );
                     if (sourceFile) {
-                        const fullClassName = classType.details.fullName.substring(
-                            classType.details.moduleName.length + 1 /* +1 for trailing dot */
+                        const fullClassName = type.details.fullName.substring(
+                            type.details.moduleName.length + 1 /* +1 for trailing dot */
                         );
                         result.push(
                             ...this._findClassDeclarationsByName(sourceFile, fullClassName, recursiveDeclCache)

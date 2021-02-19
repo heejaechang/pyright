@@ -9,6 +9,8 @@
 //// class C3: ...
 ////
 //// class C4: ...
+////
+//// def C5(a, b): ...
 
 // @filename: testLib1/__init__.py
 // @library: true
@@ -20,6 +22,10 @@
 ////
 //// [|C3|] = D.C3
 //// [|C4|] = D.N.C4
+////
+//// class [|C5|]:
+////     def __init__(self, a, b):
+////         pass
 
 // @filename: testLib1/M.py
 // @library: true
@@ -42,6 +48,7 @@
 //// a = testLib1.[|/*marker2*/C2|]()
 //// a = testLib1.[|/*marker3*/C3|]()
 //// a = testLib1.[|/*marker4*/C4|]()
+//// a = testLib1.[|/*marker5*/C5|](1, 2)
 
 {
     const rangeMap = helper.getRangesByText();
@@ -75,6 +82,14 @@
             marker4: {
                 definitions: rangeMap
                     .get('C4')!
+                    .filter((r) => !r.marker)
+                    .map((r) => {
+                        return { path: r.fileName, range: helper.convertPositionRange(r) };
+                    }),
+            },
+            marker5: {
+                definitions: rangeMap
+                    .get('C5')!
                     .filter((r) => !r.marker)
                     .map((r) => {
                         return { path: r.fileName, range: helper.convertPositionRange(r) };
