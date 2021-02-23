@@ -114,7 +114,7 @@ import { Scope, ScopeType } from './scope';
 import * as ScopeUtils from './scopeUtils';
 import { evaluateStaticBoolExpression } from './staticExpressions';
 import { indeterminateSymbolId, Symbol, SymbolFlags } from './symbol';
-import { isConstantName, isPrivateOrProtectedName } from './symbolNameUtils';
+import { isConstantName, isDunderName, isPrivateOrProtectedName } from './symbolNameUtils';
 import { getLastTypedDeclaredForSymbol, isFinalVariable } from './symbolUtils';
 import { PrintableType, TracePrinter } from './tracePrinter';
 import {
@@ -1895,7 +1895,7 @@ export function createTypeEvaluator(
         };
 
         return mapSubtypes(type, (subtype) => {
-            subtype = getClassFromPotentialTypeObject(subtype);
+            subtype = transformTypeObjectToClass(subtype);
 
             if (isAnyOrUnknown(subtype)) {
                 return subtype;
@@ -3456,7 +3456,7 @@ export function createTypeEvaluator(
                 } else if (isObject(type)) {
                     // If this is an object that contains a Type[X], transform it
                     // into class X.
-                    type = getClassFromPotentialTypeObject(type);
+                    type = transformTypeObjectToClass(type);
                 }
 
                 if (
@@ -3885,7 +3885,7 @@ export function createTypeEvaluator(
             }
 
             case TypeCategory.Object: {
-                const classFromTypeObject = getClassFromPotentialTypeObject(baseType);
+                const classFromTypeObject = transformTypeObjectToClass(baseType);
                 if (TypeBase.isInstantiable(classFromTypeObject)) {
                     // Handle the case where the object is a 'type' object, which
                     // represents a class.
@@ -4069,23 +4069,6 @@ export function createTypeEvaluator(
         return { type, node };
     }
 
-    // If the object type is a 'Type' object, converts it to the corresponding
-    // class that it represents and returns that class. Otherwise returns the
-    // original type.
-    function getClassFromPotentialTypeObject(potentialTypeObject: Type): Type {
-        if (isObject(potentialTypeObject)) {
-            if (ClassType.isBuiltIn(potentialTypeObject.classType, 'Type')) {
-                const typeArgs = potentialTypeObject.classType.typeArguments;
-
-                if (typeArgs && typeArgs.length > 0) {
-                    return convertToInstantiable(typeArgs[0]);
-                }
-            }
-        }
-
-        return potentialTypeObject;
-    }
-
     function getTypeFromClassMemberName(
         errorNode: ExpressionNode,
         classType: ClassType,
@@ -4147,13 +4130,6 @@ export function createTypeEvaluator(
                 }
             }
 
-            if (usage.method === 'set' && memberInfo.symbol.isClassVar()) {
-                if (flags & MemberAccessFlags.DisallowClassVarWrites) {
-                    diag.addMessage(Localizer.DiagnosticAddendum.memberSetClassVar().format({ name: memberName }));
-                    return undefined;
-                }
-            }
-
             // Don't include variables within typed dict classes.
             if (ClassType.isTypedDictClass(classType)) {
                 const typedDecls = memberInfo.symbol.getTypedDeclarations();
@@ -4176,7 +4152,7 @@ export function createTypeEvaluator(
                 classType,
                 bindToType,
                 /* isAccessedThroughObject */ (flags & MemberAccessFlags.AccessClassMembersOnly) === 0,
-                (flags & MemberAccessFlags.TreatConstructorAsClassMethod) !== 0,
+                flags,
                 errorNode,
                 memberName,
                 usage,
@@ -4237,7 +4213,7 @@ export function createTypeEvaluator(
                     classType,
                     bindToType,
                     /* isAccessedThroughObject */ false,
-                    (flags & MemberAccessFlags.TreatConstructorAsClassMethod) !== 0,
+                    flags,
                     errorNode,
                     memberName,
                     usage,
@@ -4268,12 +4244,13 @@ export function createTypeEvaluator(
         baseTypeClass: ClassType,
         bindToType: ObjectType | ClassType | TypeVarType | undefined,
         isAccessedThroughObject: boolean,
-        treatConstructorAsClassMember: boolean,
+        flags: MemberAccessFlags,
         errorNode: ExpressionNode,
         memberName: string,
         usage: EvaluatorUsage,
         diag: DiagnosticAddendum
     ): Type | undefined {
+        const treatConstructorAsClassMember = (flags & MemberAccessFlags.TreatConstructorAsClassMethod) !== 0;
         let isTypeValid = true;
 
         type = mapSubtypes(type, (subtype) => {
@@ -4437,6 +4414,13 @@ export function createTypeEvaluator(
             }
 
             if (usage.method === 'set') {
+                if (memberInfo?.symbol.isClassVar()) {
+                    if (flags & MemberAccessFlags.DisallowClassVarWrites) {
+                        diag.addMessage(Localizer.DiagnosticAddendum.memberSetClassVar().format({ name: memberName }));
+                        return undefined;
+                    }
+                }
+
                 let enforceTargetType = false;
 
                 if (memberInfo && memberInfo.symbol.hasTypedDeclarations()) {
@@ -4756,7 +4740,7 @@ export function createTypeEvaluator(
         }
 
         const type = mapSubtypes(baseType, (subtype) => {
-            subtype = getClassFromPotentialTypeObject(subtype);
+            subtype = transformTypeObjectToClass(subtype);
             const concreteSubtype = makeTopLevelTypeVarsConcrete(subtype);
 
             if (isAnyOrUnknown(concreteSubtype)) {
@@ -6141,7 +6125,7 @@ export function createTypeEvaluator(
         const returnType = mapSubtypes(callType, (subtype) => {
             let isTypeObject = false;
             if (isObject(subtype) && ClassType.isBuiltIn(subtype.classType, 'Type')) {
-                subtype = getClassFromPotentialTypeObject(subtype);
+                subtype = transformTypeObjectToClass(subtype);
                 isTypeObject = true;
             }
 
@@ -9894,7 +9878,7 @@ export function createTypeEvaluator(
                 typeList.forEach((entry, index) => {
                     let entryType = entry.type;
                     let paramCategory: ParameterCategory = ParameterCategory.Simple;
-                    let paramName = `p${index.toString()}`;
+                    let paramName = `_p${index.toString()}`;
 
                     if (index === typeList.length - 1 && isVariadicTypeVar(entryType)) {
                         validateVariadicTypeVarIsUnpacked(entryType, entry.node);
@@ -10362,22 +10346,40 @@ export function createTypeEvaluator(
             const enumClassInfo = getTypeOfClass(enclosingClassNode);
 
             if (enumClassInfo && ClassType.isEnumClass(enumClassInfo.classType)) {
-                if (ClassType.isBuiltIn(enumClassInfo.classType)) {
-                    // Handle several built-in classes specially. We don't
-                    // want to interpret their class variables as enumerations.
-                    const className = enumClassInfo.classType.details.name;
-                    const builtInEnumClasses = ['Enum', 'IntEnum', 'Flag', 'IntFlag'];
-                    if (builtInEnumClasses.find((c) => c === className)) {
-                        return typeOfExpr;
+                // In ".py" files, the transform applies only to members that are
+                // assigned within the class. In stub files, it applies to most variables
+                // even if they are not assigned. This unfortunate convention means
+                // there is no way in a stub to specify both enum members and instance
+                // variables used within each enum instance. Unless/until there is
+                // a change to this convention and all type checkers and stubs adopt
+                // it, we're stuck with this limitation.
+                let isMemberOfEnumeration =
+                    (node.parent?.nodeType === ParseNodeType.Assignment && node.parent.leftExpression === node) ||
+                    (node.parent?.nodeType === ParseNodeType.TypeAnnotation &&
+                        node.parent.valueExpression === node &&
+                        node.parent.parent?.nodeType === ParseNodeType.Assignment);
+
+                if (!isMemberOfEnumeration && getFileInfo(node).isStubFile) {
+                    // Specifically exclude "value", "name" and any dunder variables.
+                    // These are reserved by the enum metaclass.
+                    if (
+                        node.parent?.nodeType === ParseNodeType.TypeAnnotation &&
+                        node.parent.valueExpression === node
+                    ) {
+                        if (node.value !== 'value' && node.value !== 'name' && !isDunderName(node.value)) {
+                            isMemberOfEnumeration = true;
+                        }
                     }
                 }
 
-                return ObjectType.create(
-                    ClassType.cloneWithLiteral(
-                        enumClassInfo.classType,
-                        new EnumLiteral(enumClassInfo.classType.details.name, node.value)
-                    )
-                );
+                if (isMemberOfEnumeration) {
+                    return ObjectType.create(
+                        ClassType.cloneWithLiteral(
+                            enumClassInfo.classType,
+                            new EnumLiteral(enumClassInfo.classType.details.name, node.value)
+                        )
+                    );
+                }
             }
         }
 
@@ -15624,7 +15626,7 @@ export function createTypeEvaluator(
                 }
 
                 case TypeCategory.Object: {
-                    const classFromTypeObject = getClassFromPotentialTypeObject(subtype);
+                    const classFromTypeObject = transformTypeObjectToClass(subtype);
                     if (TypeBase.isInstantiable(classFromTypeObject)) {
                         // It's a Type object, which is a class.
                         return isPositiveTest ? subtype : undefined;
@@ -17487,6 +17489,11 @@ export function createTypeEvaluator(
                             srcArgCount = 1;
                         }
 
+                        if (isDestVariadic && isSrcHomogeneousType) {
+                            diag.addMessage(Localizer.DiagnosticAddendum.typeVarTupleRequiresKnownLength());
+                            return false;
+                        }
+
                         if (
                             (srcTypeArgs.length === destArgCount && !isSrcHomogeneousType) ||
                             isDestHomogenousType ||
@@ -17813,9 +17820,10 @@ export function createTypeEvaluator(
                 isObject(srcType) &&
                 isTupleClass(srcType.classType) &&
                 !!srcType.classType.isTupleForUnpackedVariadicTypeVar;
+
             if (!isVariadicTypeVar(srcType) && !isVariadicTuple) {
-                // Package up the type into a tuple.
                 if (tupleClassType && isClass(tupleClassType)) {
+                    // Package up the type into a tuple.
                     srcType = convertToInstance(
                         specializeTupleClass(
                             tupleClassType,
@@ -18374,11 +18382,11 @@ export function createTypeEvaluator(
             if (srcTypeArgs && srcTypeArgs.length >= 1) {
                 if (isAnyOrUnknown(srcTypeArgs[0])) {
                     return true;
-                } else if (isObject(srcTypeArgs[0])) {
+                } else if (isObject(srcTypeArgs[0]) || isTypeVar(srcTypeArgs[0])) {
                     if (
                         canAssignType(
-                            destType,
-                            srcTypeArgs[0].classType,
+                            transformTypeObjectToClass(destType),
+                            convertToInstantiable(srcTypeArgs[0]),
                             diag.createAddendum(),
                             typeVarMap,
                             flags,
@@ -18434,10 +18442,11 @@ export function createTypeEvaluator(
             if (ClassType.isBuiltIn(destClassType, 'Type')) {
                 const destTypeArgs = destClassType.typeArguments;
                 if (destTypeArgs && destTypeArgs.length >= 1) {
-                    if (TypeBase.isInstance(destTypeArgs[0]) && TypeBase.isInstantiable(srcType)) {
+                    const convertedSrc = transformTypeObjectToClass(srcType);
+                    if (TypeBase.isInstance(destTypeArgs[0]) && TypeBase.isInstantiable(convertedSrc)) {
                         return canAssignType(
                             destTypeArgs[0],
-                            convertToInstance(srcType),
+                            convertToInstance(convertedSrc),
                             diag,
                             typeVarMap,
                             flags,
@@ -18862,14 +18871,28 @@ export function createTypeEvaluator(
         if (!FunctionType.shouldSkipParamCompatibilityCheck(destType)) {
             // Match positional parameters.
             for (let paramIndex = 0; paramIndex < positionalsToMatch; paramIndex++) {
-                const srcParamType = FunctionType.getEffectiveParameterType(
-                    srcType,
-                    srcParams.findIndex((p) => p === srcPositionals[paramIndex])
-                );
-                const destParamType = FunctionType.getEffectiveParameterType(
-                    destType,
-                    destParams.findIndex((p) => p === destPositionals[paramIndex])
-                );
+                const srcParamIndex = srcParams.findIndex((p) => p === srcPositionals[paramIndex]);
+                const srcParamType = FunctionType.getEffectiveParameterType(srcType, srcParamIndex);
+                const destParamIndex = destParams.findIndex((p) => p === destPositionals[paramIndex]);
+                const destParamType = FunctionType.getEffectiveParameterType(destType, destParamIndex);
+
+                const destParamName = destPositionals[paramIndex].name;
+                const srcParamName = srcPositionals[paramIndex].name || '';
+                if (
+                    destParamName &&
+                    !isPrivateOrProtectedName(destParamName) &&
+                    !isPrivateOrProtectedName(srcParamName)
+                ) {
+                    if (destParamName !== srcParamName) {
+                        diag.createAddendum().addMessage(
+                            Localizer.DiagnosticAddendum.functionParamName().format({
+                                srcName: srcParamName,
+                                destName: destParamName,
+                            })
+                        );
+                        canAssign = false;
+                    }
+                }
 
                 if (
                     !canAssignFunctionParameter(
@@ -19408,6 +19431,19 @@ export function createTypeEvaluator(
         );
 
         for (let i = 0; i < paramCount; i++) {
+            // If the first parameter is a "self" or "cls" parameter, skip the
+            // test because these are allowed to violate the Liskov substitution
+            // principle.
+            if (i === 0) {
+                if (
+                    FunctionType.isInstanceMethod(overrideMethod) ||
+                    FunctionType.isClassMethod(overrideMethod) ||
+                    FunctionType.isConstructorMethod(overrideMethod)
+                ) {
+                    continue;
+                }
+            }
+
             const baseParam = baseParams[i];
             const overrideParam = overrideParams[i];
 

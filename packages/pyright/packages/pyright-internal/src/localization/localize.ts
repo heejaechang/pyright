@@ -570,6 +570,7 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.symbolIsPossiblyUnbound'));
         export const symbolOverridden = () =>
             new ParameterizedString<{ name: string; className: string }>(getRawString('Diagnostic.symbolOverridden'));
+        export const tryWithoutExcept = () => getRawString('Diagnostic.tryWithoutExcept');
         export const tupleInAnnotation = () => getRawString('Diagnostic.tupleInAnnotation');
         export const tupleIndexOutOfRange = () =>
             new ParameterizedString<{ length: number; index: number }>(getRawString('Diagnostic.tupleIndexOutOfRange'));
@@ -767,6 +768,10 @@ export namespace Localizer {
         export const dataclassFrozen = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.dataclassFrozen'));
         export const finalMethod = () => getRawString('DiagnosticAddendum.finalMethod');
+        export const functionParamName = () =>
+            new ParameterizedString<{ destName: string; srcName: string }>(
+                getRawString('DiagnosticAddendum.functionParamName')
+            );
         export const functionReturnTypeMismatch = () =>
             new ParameterizedString<{ sourceType: string; destType: string }>(
                 getRawString('DiagnosticAddendum.functionReturnTypeMismatch')
@@ -932,6 +937,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.typeVarIsCovariant'));
         export const typeVarIsInvariant = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.typeVarIsInvariant'));
+        export const typeVarTupleRequiresKnownLength = () =>
+            getRawString('DiagnosticAddendum.typeVarTupleRequiresKnownLength');
         export const typeVarNotAllowed = () => getRawString('DiagnosticAddendum.typeVarNotAllowed');
         export const useDictInstead = () => getRawString('DiagnosticAddendum.useDictInstead');
         export const useListInstead = () => getRawString('DiagnosticAddendum.useListInstead');
