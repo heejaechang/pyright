@@ -233,6 +233,12 @@ test('NameBindings3', () => {
     TestUtils.validateResults(analysisResults, 3);
 });
 
+test('NameBindings4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['nameBindings4.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('GenericTypes1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes1.py']);
 
@@ -868,7 +874,14 @@ test('Overload4', () => {
 });
 
 test('Overload5', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload5.py']);
+    const configOptions = new ConfigOptions('.');
+
+    // By default, reportOverlappingOverload is off.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload5.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0);
+
+    configOptions.diagnosticRuleSet.reportOverlappingOverload = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload5.py'], configOptions);
     TestUtils.validateResults(analysisResults, 5);
 });
 
@@ -1291,6 +1304,12 @@ test('Annotated1', () => {
 
 test('Circular1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circular1.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('TryExcept1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept1.py']);
 
     TestUtils.validateResults(analysisResults, 2);
 });

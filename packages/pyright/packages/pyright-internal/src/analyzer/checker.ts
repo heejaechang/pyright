@@ -1039,8 +1039,8 @@ export class Checker extends ParseTreeWalker {
             const prevOverload = prevOverloads[i];
             if (this._isOverlappingOverload(functionType, prevOverload)) {
                 this._evaluator.addDiagnostic(
-                    this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                    DiagnosticRule.reportGeneralTypeIssues,
+                    this._fileInfo.diagnosticRuleSet.reportOverlappingOverload,
+                    DiagnosticRule.reportOverlappingOverload,
                     Localizer.Diagnostic.overlappingOverload().format({
                         name: node.name.value,
                         obscured: prevOverloads.length + 1,
@@ -1071,8 +1071,8 @@ export class Checker extends ParseTreeWalker {
                 ) {
                     const altNode = this._findNodeForOverload(node, prevOverload);
                     this._evaluator.addDiagnostic(
-                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                        DiagnosticRule.reportGeneralTypeIssues,
+                        this._fileInfo.diagnosticRuleSet.reportOverlappingOverload,
+                        DiagnosticRule.reportOverlappingOverload,
                         Localizer.Diagnostic.overloadReturnTypeMismatch().format({
                             name: node.name.value,
                             newIndex: prevOverloads.length + 1,
@@ -2581,7 +2581,7 @@ export class Checker extends ParseTreeWalker {
             if (
                 node.parameters.length === 0 ||
                 !node.parameters[0].name ||
-                (node.parameters[0].name.value !== 'cls' && node.parameters[0].name.value !== 'mcs')
+                !['cls', '_cls', '__cls', '__mcls'].some((name) => node.parameters[0].name!.value === name)
             ) {
                 this._evaluator.addDiagnostic(
                     this._fileInfo.diagnosticRuleSet.reportSelfClsParameterName,
