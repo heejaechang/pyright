@@ -758,7 +758,7 @@
     },
     "scripts": {
         "clean": "shx rm -rf ./dist ./out",
-        "package": "vsce package",
+        "package": "vsce package --githubBranch main",
         "vscode:prepublish": "npm run clean && webpack --mode production --progress",
         "webpack": "webpack --mode development --progress",
         "webpack-dev": "npm run clean && webpack --mode development --watch --progress",
