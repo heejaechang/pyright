@@ -14,7 +14,8 @@ Quick Start
 
 Features
 =========
-![ screencast ](screencap.gif)
+
+![ features ](images/all-features.gif)
 
 Pylance provides some awesome features for Python 3, including:
 
