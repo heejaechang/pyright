@@ -524,6 +524,23 @@ class PylanceServer extends LanguageServerBase {
                 );
 
                 cm.addCustomMeasure('completionItems', completionResults?.completionList?.items.length ?? -1);
+
+                if (completionResults?.autoImportInfo) {
+                    cm.addCustomMeasure(
+                        'autoImportAdditionTimeInMS',
+                        completionResults.autoImportInfo.additionTimeInMS
+                    );
+                    cm.addCustomMeasure('autoImportTotalTimeInMS', completionResults.autoImportInfo.totalTimeInMS);
+                    cm.addCustomMeasure('autoImportItemCount', completionResults.autoImportInfo.itemCount);
+                    cm.addCustomMeasure('autoImportIndexTimeInMS', completionResults.autoImportInfo.indexTimeInMS);
+                    cm.addCustomMeasure('autoImportIndexCount', completionResults.autoImportInfo.indexCount);
+                    cm.addCustomMeasure('autoImportEditTimeInMS', completionResults.autoImportInfo.editTimeInMS);
+                    cm.addCustomMeasure(
+                        'autoImportModuleResolveTimeInMS',
+                        completionResults.autoImportInfo.moduleResolveTimeInMS
+                    );
+                }
+
                 return completionResults;
             },
             1000

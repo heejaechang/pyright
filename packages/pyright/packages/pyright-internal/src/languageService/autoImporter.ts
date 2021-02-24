@@ -27,6 +27,7 @@ import { TextEditAction } from '../common/editAction';
 import { combinePaths, getDirectoryPath, getFileName, stripFileExtension } from '../common/pathUtils';
 import * as StringUtils from '../common/stringUtils';
 import { Position } from '../common/textRange';
+import { Duration } from '../common/timing';
 import { ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 import { IndexAliasData, IndexResults } from './documentSymbolProvider';
@@ -151,6 +152,13 @@ export class AutoImporter {
     private _importStatements: ImportStatements;
     private _patternMatcher: (pattern: string, name: string) => boolean;
 
+    // Track some auto import internal perf numbers.
+    private _stopWatch = new Duration();
+    private _indexCount = 0;
+    private _indexTimeInMS = 0;
+    private _editTimeInMS = 0;
+    private _resolveModuleTimeInMS = 0;
+
     constructor(
         private _execEnvironment: ExecutionEnvironment,
         private _importResolver: ImportResolver,
@@ -188,6 +196,16 @@ export class AutoImporter {
         return results;
     }
 
+    getPerfInfo() {
+        return {
+            totalInMs: this._stopWatch.getDurationInMilliseconds(),
+            indexCount: this._indexCount,
+            indexTimeInMS: this._indexTimeInMS,
+            editTimeInMS: this._editTimeInMS,
+            moduleResolveTimeInMS: this._resolveModuleTimeInMS,
+        };
+    }
+
     private _getCandidates(
         word: string,
         similarityLimit: number,
@@ -212,6 +230,8 @@ export class AutoImporter {
         results: AutoImportResultMap,
         token: CancellationToken
     ) {
+        const startTime = this._stopWatch.getDurationInMilliseconds();
+
         this._libraryMap?.forEach((indexResults, filePath) => {
             if (indexResults.privateOrProtected) {
                 return;
@@ -222,6 +242,8 @@ export class AutoImporter {
                 // user code.
                 return;
             }
+
+            this._indexCount += indexResults.symbols.length;
 
             // See if this file should be offered as an implicit import.
             const isStubFileOrHasInit = this._isStubFileOrHasInit(this._libraryMap!, filePath);
@@ -237,6 +259,8 @@ export class AutoImporter {
                 token
             );
         });
+
+        this._indexTimeInMS = this._stopWatch.getDurationInMilliseconds() - startTime;
     }
 
     private _addImportsFromModuleMap(
@@ -586,7 +610,13 @@ export class AutoImporter {
     // convert to a module name that can be used in an
     // 'import from' statement.
     private _getModuleNameAndTypeFromFilePath(filePath: string): ModuleNameAndType {
-        return this._importResolver.getModuleNameForImport(filePath, this._execEnvironment);
+        const startTime = this._stopWatch.getDurationInMilliseconds();
+        try {
+            return this._importResolver.getModuleNameForImport(filePath, this._execEnvironment);
+        } finally {
+            const endTime = this._stopWatch.getDurationInMilliseconds();
+            this._resolveModuleTimeInMS += endTime - startTime;
+        }
     }
 
     private _getImportGroupFromModuleNameAndType(moduleNameAndType: ModuleNameAndType): ImportGroup {
@@ -601,6 +631,30 @@ export class AutoImporter {
     }
 
     private _getTextEditsForAutoImportByFilePath(
+        moduleName: string,
+        importName: string | undefined,
+        abbrFromUsers: string | undefined,
+        insertionText: string,
+        importGroup: ImportGroup,
+        filePath: string
+    ) {
+        const startTime = this._stopWatch.getDurationInMilliseconds();
+        try {
+            return this._getTextEditsForAutoImportByFilePathInternal(
+                moduleName,
+                importName,
+                abbrFromUsers,
+                insertionText,
+                importGroup,
+                filePath
+            );
+        } finally {
+            const endTime = this._stopWatch.getDurationInMilliseconds();
+            this._editTimeInMS += endTime - startTime;
+        }
+    }
+
+    private _getTextEditsForAutoImportByFilePathInternal(
         moduleName: string,
         importName: string | undefined,
         abbrFromUsers: string | undefined,
