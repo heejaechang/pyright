@@ -34,7 +34,7 @@ import { IndexAliasData, IndexResults } from './documentSymbolProvider';
 export interface AutoImportSymbol {
     readonly importAlias?: IndexAliasData;
     readonly symbol?: Symbol;
-    readonly kind?: CompletionItemKind;
+    readonly kind?: SymbolKind;
 }
 
 export interface ModuleSymbolTable {
@@ -95,7 +95,7 @@ export function buildModuleSymbolsMap(files: SourceFileInfo[], token: Cancellati
                             declaration.type === DeclarationType.Variable &&
                             !declaration.isConstant &&
                             !declaration.isFinal
-                                ? CompletionItemKind.Variable
+                                ? SymbolKind.Variable
                                 : undefined;
                         callbackfn({ symbol, kind: variableKind }, name);
                     });
@@ -142,7 +142,7 @@ interface ImportAliasData {
     importParts: ImportParts;
     importGroup: ImportGroup;
     symbol?: Symbol;
-    kind?: CompletionItemKind;
+    kind?: SymbolKind;
 }
 
 type AutoImportResultMap = Map<string, AutoImportResult[]>;
@@ -297,7 +297,7 @@ export class AutoImporter {
 
             if (
                 !isStubOrHasInit.isStub &&
-                autoImportSymbol.kind === CompletionItemKind.Variable &&
+                autoImportSymbol.kind === SymbolKind.Variable &&
                 !SymbolNameUtils.isPublicConstantOrTypeAlias(name)
             ) {
                 // If it is not a stub file and symbol is Variable, we only include it if
@@ -333,7 +333,7 @@ export class AutoImporter {
                         },
                         importGroup,
                         symbol: autoImportSymbol.symbol,
-                        kind: convertSymbolKindToCompletionItemKind(autoImportSymbol.importAlias.kind),
+                        kind: autoImportSymbol.importAlias.kind,
                     },
                     importAliasMap
                 );
@@ -354,7 +354,7 @@ export class AutoImporter {
                 alias: abbrFromUsers,
                 symbol: autoImportSymbol.symbol,
                 source: importSource,
-                kind: autoImportSymbol.kind,
+                kind: convertSymbolKindToCompletionItemKind(autoImportSymbol.kind),
                 insertionText: autoImportTextEdits.insertionText,
                 edits: autoImportTextEdits.edits,
             });
@@ -446,7 +446,7 @@ export class AutoImporter {
                     name: importAliasData.importParts.importName,
                     alias: abbrFromUsers,
                     symbol: importAliasData.symbol,
-                    kind: importAliasData.kind,
+                    kind: convertSymbolKindToCompletionItemKind(importAliasData.kind),
                     source: importAliasData.importParts.importFrom,
                     insertionText: autoImportTextEdits.insertionText,
                     edits: autoImportTextEdits.edits,
@@ -741,7 +741,7 @@ function createModuleSymbolTableFromIndexResult(indexResults: IndexResults): Mod
                 callbackfn(
                     {
                         importAlias: data.alias,
-                        kind: convertSymbolKindToCompletionItemKind(data.kind),
+                        kind: data.kind,
                     },
                     data.name
                 );
@@ -750,7 +750,7 @@ function createModuleSymbolTableFromIndexResult(indexResults: IndexResults): Mod
     };
 }
 
-function convertSymbolKindToCompletionItemKind(kind: SymbolKind) {
+function convertSymbolKindToCompletionItemKind(kind: SymbolKind | undefined) {
     switch (kind) {
         case SymbolKind.File:
             return CompletionItemKind.File;
