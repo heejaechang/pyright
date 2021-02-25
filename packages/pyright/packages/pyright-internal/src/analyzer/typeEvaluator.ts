@@ -4564,7 +4564,11 @@ export function createTypeEvaluator(
                 !baseTypeResult.type.aliasName
             ) {
                 const minPythonVersion = nonSubscriptableBuiltinTypes[baseTypeResult.type.details.fullName];
-                if (minPythonVersion !== undefined && fileInfo.executionEnvironment.pythonVersion < minPythonVersion) {
+                if (
+                    minPythonVersion !== undefined &&
+                    fileInfo.executionEnvironment.pythonVersion < minPythonVersion &&
+                    !fileInfo.isStubFile
+                ) {
                     addError(
                         Localizer.Diagnostic.classNotRuntimeSubscriptable().format({
                             name: baseTypeResult.type.aliasName || baseTypeResult.type.details.name,
@@ -10191,8 +10195,11 @@ export function createTypeEvaluator(
     }
 
     function createAnnotatedType(errorNode: ParseNode, typeArgs: TypeResult[] | undefined): Type {
-        if (!typeArgs || typeArgs.length < 2) {
+        if (typeArgs && typeArgs.length < 2) {
             addError(Localizer.Diagnostic.annotatedTypeArgMissing(), errorNode);
+        }
+
+        if (!typeArgs || typeArgs.length === 0) {
             return AnyType.create();
         }
 
