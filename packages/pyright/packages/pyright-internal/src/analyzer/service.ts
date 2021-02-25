@@ -8,6 +8,7 @@
  * Python files.
  */
 
+import * as JSONC from 'jsonc-parser';
 import {
     AbstractCancellationTokenSource,
     CancellationToken,
@@ -451,6 +452,11 @@ export class AnalyzerService {
         const configOptions = new ConfigOptions(projectRoot, this._typeCheckingMode);
         const defaultExcludes = ['**/node_modules', '**/__pycache__', '.git'];
 
+        // The pythonPlatform and pythonVersion from the command-line can be overridden
+        // by the config file, so initialize them upfront.
+        configOptions.defaultPythonPlatform = commandLineOptions.pythonPlatform;
+        configOptions.defaultPythonVersion = commandLineOptions.pythonVersion;
+
         if (commandLineOptions.fileSpecs.length > 0) {
             commandLineOptions.fileSpecs.forEach((fileSpec) => {
                 configOptions.include.push(getFileSpec(projectRoot, fileSpec));
@@ -834,7 +840,7 @@ export class AnalyzerService {
             let configObj: any;
             let parseFailed = false;
             try {
-                configObj = JSON.parse(configContents);
+                configObj = JSONC.parse(configContents);
                 return configObj;
             } catch {
                 parseFailed = true;
