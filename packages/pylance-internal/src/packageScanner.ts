@@ -7,6 +7,7 @@
 import { CancellationToken } from 'vscode-languageserver';
 
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { getPyTypedInfo } from 'pyright-internal/analyzer/pyTypedUtils';
 import { isPrivateOrProtectedName } from 'pyright-internal/analyzer/symbolNameUtils';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
@@ -21,11 +22,12 @@ import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from 'pyrigh
 
 import { getExecutionEnvironments, getOrAdd } from './common/collectionUtils';
 
-interface PackageInfo {
+export interface PackageInfo {
     stdLib: boolean;
     isStub: boolean;
     filePath: string;
     shadowed: boolean;
+    pyTypedPackage: boolean;
 }
 
 export class PackageScanner<T> {
@@ -62,8 +64,8 @@ export class PackageScanner<T> {
     getModuleFilesPerExecEnv() {
         // Indices is organized by module names. Regroup them
         // by module file path.
-        const map = new Map<string, string[]>();
-        const set = new Set<string>();
+        const packageInfoPerExecEnv = new Map<string, PackageInfo[]>();
+        const packgeInfoPerFilePath = new Map<string, PackageInfo>();
         for (const [execEnvRoot, moduleMap] of this._indicesPerExecEnv) {
             for (const [_, packageInfo] of moduleMap) {
                 if (!packageInfo.stdLib && packageInfo.isStub && !packageInfo.shadowed) {
@@ -81,14 +83,14 @@ export class PackageScanner<T> {
                     debug.fail(`${packageInfo.filePath} shouldn't be included with no third party flag on`);
                 }
 
-                set.add(packageInfo.filePath);
+                packgeInfoPerFilePath.set(packageInfo.filePath, packageInfo);
             }
 
-            map.set(execEnvRoot, [...set]);
-            set.clear();
+            packageInfoPerExecEnv.set(execEnvRoot, [...packgeInfoPerFilePath.values()]);
+            packgeInfoPerFilePath.clear();
         }
 
-        return map;
+        return packageInfoPerExecEnv;
     }
 
     scan(token: CancellationToken): void {
@@ -123,9 +125,9 @@ export class PackageScanner<T> {
 
                         // Stub file
                         if (current.isStub) {
-                            const moduleName = this._fs.getModuleNameForImport(current.filePath, execEnv);
+                            const moduleName = this._fs.getModuleNameForImport(current.fullPath, execEnv);
                             if (moduleName) {
-                                this._setMap(execEnv, stdLib, moduleName, current, 1, this._defaultDepthLimit);
+                                this._setMap(execEnv, stdLib, moduleName, false, current, 1, this._defaultDepthLimit);
                             }
                             continue;
                         }
@@ -135,7 +137,7 @@ export class PackageScanner<T> {
                         // moduleDepthLimit map contains top level module name and its max depth to dig in. If not defined,
                         // we will use default depth limit
                         const maxDpeth = this._moduleDepthLimit?.get(current.name) ?? this._defaultDepthLimit;
-                        this._scan(roots, execEnv, stdLib, current.filePath, 1, maxDpeth, token);
+                        this._scan(roots, execEnv, stdLib, undefined, current.fullPath, 1, maxDpeth, token);
                     }
                 }
             }
@@ -146,6 +148,7 @@ export class PackageScanner<T> {
         roots: string[],
         execEnv: ExecutionEnvironment,
         stdLib: boolean,
+        pyTypedPackage: boolean | undefined,
         path: string,
         depth: number,
         maxDepth: number,
@@ -165,27 +168,37 @@ export class PackageScanner<T> {
 
             if (current.isFile) {
                 if (current.isInit) {
-                    const moduleName = this._fs.getModuleNameForImport(current.filePath, execEnv);
+                    const moduleName = this._fs.getModuleNameForImport(current.fullPath, execEnv);
                     if (moduleName) {
-                        this._setMap(execEnv, stdLib, moduleName, current, depth, maxDepth);
+                        pyTypedPackage = this._getPyTypedInfo(pyTypedPackage, depth, current.directory!);
+                        this._setMap(execEnv, stdLib, moduleName, pyTypedPackage, current, depth, maxDepth);
                     }
                     continue;
                 }
 
                 // Stub file or a python file under a directory that has the init file.
                 if (current.isStub || current.containsInit) {
-                    const moduleName = this._fs.getModuleNameForImport(current.filePath, execEnv);
+                    const moduleName = this._fs.getModuleNameForImport(current.fullPath, execEnv);
                     if (moduleName) {
-                        this._setMap(execEnv, stdLib, moduleName, current, nextDepth, maxDepth);
+                        pyTypedPackage = this._getPyTypedInfo(pyTypedPackage, depth, current.directory!);
+                        this._setMap(execEnv, stdLib, moduleName, pyTypedPackage, current, nextDepth, maxDepth);
                     }
                     continue;
                 }
             }
 
             if (!current.isFile && current.public && this._include(stdLib, nextDepth, maxDepth)) {
-                this._scan(roots, execEnv, stdLib, current.filePath, nextDepth, maxDepth, token);
+                this._scan(roots, execEnv, stdLib, pyTypedPackage, current.fullPath, nextDepth, maxDepth, token);
             }
         }
+    }
+
+    private _getPyTypedInfo(pyTypedPackage: boolean | undefined, depth: number, directory: string) {
+        if (pyTypedPackage === undefined) {
+            pyTypedPackage = depth === 1 ? !!getPyTypedInfo(this._fs.realFS, directory) : false;
+        }
+
+        return pyTypedPackage;
     }
 
     private _populateStdLibInfo(execEnv: ExecutionEnvironment) {
@@ -197,9 +210,10 @@ export class PackageScanner<T> {
                     execEnv,
                     true,
                     moduleName,
+                    false,
                     {
                         isStub: getFileExtension(stdLibFile) === 'pyi',
-                        filePath: stdLibFile,
+                        fullPath: stdLibFile,
                     },
                     1,
                     this._defaultDepthLimit
@@ -212,7 +226,8 @@ export class PackageScanner<T> {
         execEnv: ExecutionEnvironment,
         stdLib: boolean,
         fullModuleName: string,
-        entry: { isStub: boolean; filePath: string },
+        pyTypedPackage: boolean,
+        entry: { isStub: boolean; fullPath: string },
         depth: number,
         maxDepth: number
     ) {
@@ -228,8 +243,9 @@ export class PackageScanner<T> {
                 moduleNameMap.set(fullModuleName, {
                     stdLib,
                     isStub: entry.isStub,
-                    filePath: entry.filePath,
+                    filePath: entry.fullPath,
                     shadowed: false,
+                    pyTypedPackage,
                 });
             }
             return;
@@ -237,12 +253,31 @@ export class PackageScanner<T> {
 
         if (existingPath.isStub) {
             existingPath.shadowed = true;
+
+            // If the real package has py.typed and stub doesn't, then
+            // index the real package.
+            if (!existingPath.pyTypedPackage && pyTypedPackage) {
+                existingPath.isStub = false;
+                existingPath.filePath = entry.fullPath;
+                existingPath.pyTypedPackage = pyTypedPackage;
+            }
+
             return;
         }
 
-        existingPath.filePath = entry.filePath;
+        // If the real package has py.typed and stub doesn't, then
+        // index the real package. We don't care about partial py.typed
+        // since indexing is per file. If both has py.typed
+        // (ex, both are under same directory or under stub package), we use
+        // stubs for indexing.
+        if (!pyTypedPackage && existingPath.pyTypedPackage) {
+            return;
+        }
+
+        existingPath.filePath = entry.fullPath;
         existingPath.isStub = true;
         existingPath.shadowed = true;
+        existingPath.pyTypedPackage = pyTypedPackage;
     }
 
     private _include(stdLib: boolean, depth: number, maxDepth: number) {
@@ -264,12 +299,13 @@ type ImportsMap = Map<FullImportName, PackageInfo>;
 
 interface Entry {
     readonly name: string;
-    readonly filePath: string;
+    readonly fullPath: string;
     readonly isFile: boolean;
     readonly isInit: boolean;
     readonly containsInit: boolean;
     readonly isStub: boolean;
     readonly public: boolean;
+    readonly directory?: string;
 }
 
 class FSCache {
@@ -278,7 +314,7 @@ class FSCache {
 
     constructor(private _importResolver: ImportResolver) {}
 
-    private get _fs() {
+    get realFS() {
         return this._importResolver.fileSystem;
     }
 
@@ -289,7 +325,7 @@ class FSCache {
         }
 
         const newEntries: Entry[] = [];
-        for (const entry of this._fs.readdirEntriesSync(path)) {
+        for (const entry of this.realFS.readdirEntriesSync(path)) {
             if (entry.isFile()) {
                 const extension = getFileExtension(entry.name);
                 const isStub = extension === '.pyi';
@@ -299,12 +335,13 @@ class FSCache {
                 }
 
                 const isInit = entry.name === '__init__.py' || entry.name === '__init__.pyi';
-                const containsInit = this._fs.existsSync(combinePaths(path, '__init__.py'));
+                const containsInit = this.realFS.existsSync(combinePaths(path, '__init__.py'));
                 const filePath = combinePaths(path, entry.name);
 
                 newEntries.push({
                     name: entry.name,
-                    filePath,
+                    directory: path,
+                    fullPath: filePath,
                     isFile: true,
                     isInit,
                     containsInit,
@@ -314,7 +351,7 @@ class FSCache {
             } else if (entry.isDirectory()) {
                 newEntries.push({
                     name: entry.name,
-                    filePath: combinePaths(path, entry.name),
+                    fullPath: combinePaths(path, entry.name),
                     isFile: false,
                     isInit: false,
                     containsInit: false,
@@ -346,6 +383,6 @@ class FSCache {
             return true;
         }
 
-        return this._fs.existsSync(path);
+        return this.realFS.existsSync(path);
     }
 }

@@ -155,33 +155,41 @@ export class Indexer {
 
             const result = new Map<string, Map<string, IndexResults>>();
             const program = new Program(importResolver, configOptions, console, undefined, logTracker);
-            for (const [execEnvRoot, filePaths] of moduleFilesMap) {
+            for (const [execEnvRoot, packageInfo] of moduleFilesMap) {
                 logTracker.log(`index execution environment ${execEnvRoot}`, (ls) => {
                     const execEnv = getExecutionEnvironments(configOptions).find((e) => e.root === execEnvRoot)!;
 
-                    const filteredFiles =
+                    const filteredInfo =
                         excludes.length <= 0
-                            ? filePaths
-                            : filePaths.filter((f) => !excludes.some((e) => f.startsWith(e)));
+                            ? packageInfo
+                            : packageInfo.filter((p) => !excludes.some((e) => p.filePath.startsWith(e)));
 
                     const map = new Map<string, IndexResults>();
-                    for (const filePath of filteredFiles) {
-                        const results = cache.get(filePath);
+                    for (const info of filteredInfo) {
+                        const results = cache.get(info.filePath);
                         if (results) {
-                            map.set(filePath, results);
+                            map.set(info.filePath, results);
                         }
                     }
 
-                    const newFilePaths = filteredFiles.filter((f) => !map.get(f));
-                    program.addTrackedFiles(newFilePaths);
-                    Indexer._IndexProgram(program, filteredFiles, map, token);
+                    const newInfo = filteredInfo.filter((p) => !map.get(p.filePath));
+                    for (const info of newInfo) {
+                        program.addTrackedFile(info.filePath, /* isThirdPartyImprot */ true, info.pyTypedPackage);
+                    }
+
+                    Indexer._IndexProgram(
+                        program,
+                        newInfo.map((p) => p.filePath),
+                        map,
+                        token
+                    );
 
                     removeDuplicates(importResolver, execEnv, map);
 
-                    for (const filePath of newFilePaths) {
-                        const results = map.get(filePath);
+                    for (const info of newInfo) {
+                        const results = map.get(info.filePath);
                         if (results) {
-                            cache.set(filePath, results);
+                            cache.set(info.filePath, results);
                         }
                     }
 
@@ -287,7 +295,7 @@ export class Indexer {
 
                 const files = scanner.getModuleFilesPerExecEnv().get(configOptions.projectRoot)!;
                 ls.add(`found ${files.length}`);
-                return files;
+                return files.map((p) => p.filePath);
             });
 
             const program = new Program(importResolver, configOptions, console, undefined, logTracker);
