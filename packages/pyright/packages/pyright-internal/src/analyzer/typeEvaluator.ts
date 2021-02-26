@@ -359,6 +359,11 @@ export const enum EvaluatorFlags {
     // normally not allowed if ExpectingType is set.
     GenericClassTypeAllowed = 1 << 9,
 
+    // A type annotation restricts the types of expressions that are
+    // allowed. If this flag is set, illegal type expressions are
+    // flagged as errors.
+    ExpectingTypeAnnotation = 1 << 10,
+
     // TypeVars within this expression must not refer to type vars
     // used in an outer scope that.
     DisallowTypeVarsWithScopeId = 1 << 11,
@@ -922,7 +927,17 @@ export function createTypeEvaluator(
             }
 
             case ParseNodeType.Call: {
-                typeResult = getTypeFromCall(node, expectedTypeAlt);
+                if ((flags & EvaluatorFlags.ExpectingTypeAnnotation) !== 0) {
+                    addDiagnostic(
+                        getFileInfo(node).diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.typeAnnotationCall(),
+                        node
+                    );
+                    typeResult = { node, type: UnknownType.create() };
+                } else {
+                    typeResult = getTypeFromCall(node, expectedTypeAlt);
+                }
                 break;
             }
 
@@ -1114,7 +1129,21 @@ export function createTypeEvaluator(
             }
 
             case ParseNodeType.Unpack: {
-                const iterType = getTypeOfExpression(node.expression, expectedTypeAlt, flags).type;
+                let iterExpectedType: Type | undefined;
+                if (expectedTypeAlt) {
+                    const iterableType = getBuiltInType(node, 'Iterable');
+                    if (iterableType && isClass(iterableType)) {
+                        iterExpectedType = ObjectType.create(
+                            ClassType.cloneForSpecialization(
+                                iterableType,
+                                [expectedTypeAlt],
+                                /* isTypeArgumentExplicit */ true
+                            )
+                        );
+                    }
+                }
+
+                const iterType = getTypeOfExpression(node.expression, iterExpectedType, flags).type;
                 if (
                     (flags & EvaluatorFlags.TypeVarTupleDisallowed) === 0 &&
                     isVariadicTypeVar(iterType) &&
@@ -1135,7 +1164,8 @@ export function createTypeEvaluator(
                     EvaluatorFlags.EvaluateStringLiteralAsType |
                         EvaluatorFlags.ParamSpecDisallowed |
                         EvaluatorFlags.TypeVarTupleDisallowed |
-                        EvaluatorFlags.ExpectingType
+                        EvaluatorFlags.ExpectingType |
+                        EvaluatorFlags.ExpectingTypeAnnotation
                 );
                 break;
             }
@@ -1217,6 +1247,7 @@ export function createTypeEvaluator(
 
         let evaluatorFlags =
             EvaluatorFlags.ExpectingType |
+            EvaluatorFlags.ExpectingTypeAnnotation |
             EvaluatorFlags.ConvertEllipsisToAny |
             EvaluatorFlags.EvaluateStringLiteralAsType |
             EvaluatorFlags.ParamSpecDisallowed;
@@ -3048,7 +3079,7 @@ export function createTypeEvaluator(
                     EvaluatorFlags.DoNotSpecialize
                 );
 
-                const indexTypeResult = getTypeFromIndexWithBaseType(
+                getTypeFromIndexWithBaseType(
                     target,
                     baseTypeResult.type,
                     {
@@ -3060,7 +3091,7 @@ export function createTypeEvaluator(
                     EvaluatorFlags.None
                 );
 
-                writeTypeCache(target, indexTypeResult.type);
+                writeTypeCache(target, type);
                 break;
             }
 
@@ -3751,6 +3782,7 @@ export function createTypeEvaluator(
             EvaluatorFlags.DoNotSpecialize |
             (flags &
                 (EvaluatorFlags.ExpectingType |
+                    EvaluatorFlags.ExpectingTypeAnnotation |
                     EvaluatorFlags.AllowForwardReferences |
                     EvaluatorFlags.AssociateTypeVarsWithCurrentScope));
         const baseTypeResult = getTypeOfExpression(node.leftExpression, undefined, baseTypeFlags);
@@ -5229,6 +5261,7 @@ export function createTypeEvaluator(
         let adjustedFlags =
             flags |
             EvaluatorFlags.ExpectingType |
+            EvaluatorFlags.ExpectingTypeAnnotation |
             EvaluatorFlags.ConvertEllipsisToAny |
             EvaluatorFlags.EvaluateStringLiteralAsType |
             EvaluatorFlags.FinalDisallowed;
@@ -5372,7 +5405,9 @@ export function createTypeEvaluator(
     }
 
     function buildTupleTypesList(entryTypeResults: TypeResult[]): Type[] {
-        let tupleTypes: Type[] = [];
+        const entryTypes: Type[] = [];
+        let isOpenEnded = false;
+
         for (const typeResult of entryTypeResults) {
             if (typeResult.unpackedType) {
                 // Is this an unpacked tuple? If so, we can append the individual
@@ -5384,24 +5419,26 @@ export function createTypeEvaluator(
 
                     // If the Tuple wasn't specialized or has a "..." type parameter, we can't
                     // make any determination about its contents.
-                    if (!typeArgs || typeArgs.some((t) => isEllipsisType(t))) {
-                        tupleTypes = [AnyType.create(/* isEllipsis */ false), AnyType.create(/* isEllipsis */ true)];
-                        break;
-                    }
-
-                    for (const typeArg of typeArgs) {
-                        tupleTypes.push(typeArg);
+                    if (!typeArgs || isOpenEndedTupleClass(typeResult.unpackedType.classType)) {
+                        entryTypes.push(typeResult.type);
+                        isOpenEnded = true;
+                    } else {
+                        entryTypes.push(...typeArgs);
                     }
                 } else {
-                    tupleTypes = [AnyType.create(/* isEllipsis */ false), AnyType.create(/* isEllipsis */ true)];
-                    break;
+                    entryTypes.push(typeResult.type);
+                    isOpenEnded = true;
                 }
             } else {
-                tupleTypes.push(typeResult.type);
+                entryTypes.push(typeResult.type);
             }
         }
 
-        return tupleTypes;
+        if (isOpenEnded) {
+            return [combineTypes(entryTypes), AnyType.create(/* isEllipsis */ true)];
+        }
+
+        return entryTypes;
     }
 
     function updateNamedTupleBaseClass(classType: ClassType, typeArgs: Type[], isTypeArgumentExplicit: boolean) {
@@ -13916,7 +13953,9 @@ export function createTypeEvaluator(
         if (nodeToEvaluate.nodeType === ParseNodeType.TypeAnnotation) {
             evaluateTypeAnnotationExpression(nodeToEvaluate);
         } else {
-            getTypeOfExpression(nodeToEvaluate);
+            const fileInfo = getFileInfo(nodeToEvaluate);
+            const flags = fileInfo.isStubFile ? EvaluatorFlags.AllowForwardReferences : EvaluatorFlags.None;
+            getTypeOfExpression(nodeToEvaluate, /* expectedType */ undefined, flags);
         }
     }
 
@@ -16210,7 +16249,8 @@ export function createTypeEvaluator(
                 }
             }
         } else {
-            let allowForwardReferences = false;
+            const fileInfo = getFileInfo(node);
+            let allowForwardReferences = fileInfo.isStubFile;
 
             // Determine if this node is within a quoted type annotation.
             if (ParseTreeUtils.isWithinTypeAnnotation(node, !isAnnotationEvaluationPostponed(getFileInfo(node)))) {
@@ -19365,6 +19405,9 @@ export function createTypeEvaluator(
                         if (result) {
                             assignedSubtype = ObjectType.create(result);
                         }
+                    } else if (isAnyOrUnknown(assignedSubtype)) {
+                        // Any or Unknown do not narrow because they're assignable to all types.
+                        return declaredType;
                     }
 
                     return assignedSubtype;
