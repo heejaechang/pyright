@@ -266,7 +266,7 @@ function getSolutionsAlreadyParsed(prevOutputPrefix: string): string[] {
 
     const outputPaths = fs
         .readdirSync(prevOutputPrefix, { withFileTypes: true })
-        .filter((f) => f.isFile && path.extname(f.name) === '*.json');
+        .filter((f) => f.isFile() && path.extname(f.name) === '*.json');
     for (const op of outputPaths) {
         const fileName = path.basename(op.name);
         const parts = fileName.split('_');

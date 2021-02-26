@@ -32,7 +32,7 @@ export function prepareNativesForCurrentPlatform(fs: FileSystem, platform: Platf
         // Other platforms may not have 'dll' extension.
         const onnxFiles = fs
             .readdirEntriesSync(targetFolder)
-            .filter((f) => f.isFile && f.name.startsWith(onnxruntime) && path.extname(f.name) !== '.node');
+            .filter((f) => f.isFile() && f.name.startsWith(onnxruntime) && path.extname(f.name) !== '.node');
         if (onnxFiles.length > 0) {
             return; // File already copied;
         }
@@ -48,7 +48,7 @@ export function prepareNativesForCurrentPlatform(fs: FileSystem, platform: Platf
 function copyFiles(srcFolder: string, dstFolder: string, fs: FileSystem): void {
     const files = fs
         .readdirEntriesSync(srcFolder)
-        .filter((f) => f.isFile)
+        .filter((f) => f.isFile())
         .map((f) => f.name);
     for (const f of files) {
         fs.copyFileSync(path.join(srcFolder, f), path.join(dstFolder, f));

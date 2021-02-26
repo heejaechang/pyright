@@ -5,9 +5,10 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const JavaScriptObfuscator = require('webpack-obfuscator');
+const WebpackObfuscator = require('webpack-obfuscator');
 const TerserPlugin = require('terser-webpack-plugin');
 const { monorepoResourceNameMapper } = require('../pyright/build/lib/webpack');
+const webpack = require('webpack');
 
 const outPath = path.resolve(__dirname, 'dist');
 const packages = path.resolve(__dirname, '..');
@@ -35,12 +36,20 @@ module.exports = (_, { mode }) => {
                 { from: scripts, to: 'scripts' },
             ],
         }),
+        new webpack.SourceMapDevToolPlugin({
+            filename: '[name].bundle.js.map',
+            exclude: mode === 'production' ? ['extension.bundle.js', 'server.bundle.js'] : undefined,
+            moduleFilenameTemplate:
+                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('vscode-pylance'),
+            noSources: mode === 'production',
+        }),
     ];
 
     if (mode === 'production') {
         plugins.push(
-            new JavaScriptObfuscator(
+            new WebpackObfuscator(
                 {
+                    sourceMap: false,
                     seed: 258096062,
                     rotateStringArray: true,
                     shuffleStringArray: true,
@@ -74,10 +83,7 @@ module.exports = (_, { mode }) => {
             filename: '[name].bundle.js',
             path: outPath,
             libraryTarget: 'commonjs2',
-            devtoolModuleFilenameTemplate:
-                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('vscode-pylance'),
         },
-        devtool: mode === 'development' ? 'source-map' : 'nosources-source-map',
         stats: {
             all: false,
             errors: true,
