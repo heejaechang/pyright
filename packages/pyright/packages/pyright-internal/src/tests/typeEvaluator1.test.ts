@@ -557,7 +557,7 @@ test('Function14', () => {
 test('Annotations1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['annotations1.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Annotations2', () => {
@@ -832,6 +832,12 @@ test('Tuples11', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples11.py']);
 
     TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Tuples12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples12.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('NamedTuples1', () => {
