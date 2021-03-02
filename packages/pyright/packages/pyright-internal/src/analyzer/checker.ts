@@ -127,6 +127,11 @@ import {
 } from './typeUtils';
 import { TypeVarMap } from './typeVarMap';
 
+interface LocalTypeVarInfo {
+    isExempt: boolean;
+    nodes: NameNode[];
+}
+
 export class Checker extends ParseTreeWalker {
     private readonly _moduleNode: ModuleNode;
     private readonly _fileInfo: AnalyzerFileInfo;
@@ -988,16 +993,41 @@ export class Checker extends ParseTreeWalker {
             return;
         }
 
-        const localTypeVarUsage = new Map<string, NameNode[]>();
+        const localTypeVarUsage = new Map<string, LocalTypeVarInfo>();
 
-        const nameWalker = new ParseTreeUtils.NameNodeWalker((nameNode) => {
+        const nameWalker = new ParseTreeUtils.NameNodeWalker((nameNode, subscriptIndex, baseExpression) => {
             const nameType = this._evaluator.getType(nameNode);
+            ``;
             if (nameType && isTypeVar(nameType)) {
                 if (nameType.scopeId === this._evaluator.getScopeIdForNode(node)) {
+                    // We exempt constrained TypeVars and bound TypeVars that are type arguments of
+                    // other types. There are legitimate uses for singleton instances
+                    // in this particular case.
+                    let isExempt =
+                        nameType.details.constraints.length > 0 ||
+                        (nameType.details.boundType !== undefined && subscriptIndex !== undefined);
+
+                    if (!isExempt && baseExpression && subscriptIndex !== undefined) {
+                        // Is this a type argument for a generic type alias? If so,
+                        // exempt it from the check because the type alias may repeat
+                        // the TypeVar multiple times.
+                        const baseType = this._evaluator.getType(baseExpression);
+                        if (
+                            baseType?.typeAliasInfo &&
+                            baseType.typeAliasInfo.typeParameters &&
+                            subscriptIndex < baseType.typeAliasInfo.typeParameters.length
+                        ) {
+                            isExempt = true;
+                        }
+                    }
+
                     if (!localTypeVarUsage.has(nameType.details.name)) {
-                        localTypeVarUsage.set(nameType.details.name, [nameNode]);
+                        localTypeVarUsage.set(nameType.details.name, {
+                            nodes: [nameNode],
+                            isExempt,
+                        });
                     } else {
-                        localTypeVarUsage.get(nameType.details.name)!.push(nameNode);
+                        localTypeVarUsage.get(nameType.details.name)!.nodes.push(nameNode);
                     }
                 }
             }
@@ -1016,15 +1046,15 @@ export class Checker extends ParseTreeWalker {
         }
 
         // Report errors for all local type variables that appear only once.
-        localTypeVarUsage.forEach((nameNodes) => {
-            if (nameNodes.length === 1) {
+        localTypeVarUsage.forEach((usage) => {
+            if (usage.nodes.length === 1 && !usage.isExempt) {
                 this._evaluator.addDiagnostic(
                     this._fileInfo.diagnosticRuleSet.reportInvalidTypeVarUse,
                     DiagnosticRule.reportInvalidTypeVarUse,
                     Localizer.Diagnostic.typeVarUsedOnlyOnce().format({
-                        name: nameNodes[0].value,
+                        name: usage.nodes[0].value,
                     }),
-                    nameNodes[0]
+                    usage.nodes[0]
                 );
             }
         });
@@ -1037,7 +1067,11 @@ export class Checker extends ParseTreeWalker {
     ) {
         for (let i = 0; i < prevOverloads.length; i++) {
             const prevOverload = prevOverloads[i];
-            if (this._isOverlappingOverload(functionType, prevOverload)) {
+            if (
+                FunctionType.isOverloaded(functionType) &&
+                FunctionType.isOverloaded(prevOverload) &&
+                this._isOverlappingOverload(functionType, prevOverload)
+            ) {
                 this._evaluator.addDiagnostic(
                     this._fileInfo.diagnosticRuleSet.reportOverlappingOverload,
                     DiagnosticRule.reportOverlappingOverload,
@@ -1054,7 +1088,11 @@ export class Checker extends ParseTreeWalker {
 
         for (let i = 0; i < prevOverloads.length; i++) {
             const prevOverload = prevOverloads[i];
-            if (this._isOverlappingOverload(prevOverload, functionType)) {
+            if (
+                FunctionType.isOverloaded(functionType) &&
+                FunctionType.isOverloaded(prevOverload) &&
+                this._isOverlappingOverload(prevOverload, functionType)
+            ) {
                 const prevReturnType = FunctionType.getSpecializedReturnType(prevOverload);
                 const returnType = FunctionType.getSpecializedReturnType(functionType);
 
@@ -1117,6 +1155,51 @@ export class Checker extends ParseTreeWalker {
                 CanAssignFlags.SkipFunctionReturnTypeCheck |
                 CanAssignFlags.DisallowAssignFromAny
         );
+    }
+
+    private _isLegalOverloadImplementation(
+        overload: FunctionType,
+        implementation: FunctionType,
+        diag: DiagnosticAddendum
+    ): boolean {
+        // First check the parameters to see if they are assignable.
+        let isLegal = this._evaluator.canAssignType(
+            overload,
+            implementation,
+            diag,
+            /* typeVarMap */ undefined,
+            CanAssignFlags.SkipSolveTypeVars |
+                CanAssignFlags.SkipFunctionReturnTypeCheck |
+                CanAssignFlags.DisallowAssignFromAny
+        );
+
+        // Now check the return types.
+        const overloadReturnType =
+            overload.details.declaredReturnType || this._evaluator.getFunctionInferredReturnType(overload);
+        const implementationReturnType =
+            implementation.details.declaredReturnType || this._evaluator.getFunctionInferredReturnType(implementation);
+
+        const returnDiag = new DiagnosticAddendum();
+        if (
+            !this._evaluator.canAssignType(
+                implementationReturnType,
+                overloadReturnType,
+                returnDiag.createAddendum(),
+                /* typeVarMap */ undefined,
+                CanAssignFlags.SkipSolveTypeVars
+            )
+        ) {
+            returnDiag.addMessage(
+                Localizer.DiagnosticAddendum.functionReturnTypeMismatch().format({
+                    sourceType: this._evaluator.printType(overloadReturnType, /* expandTypeAlias */ false),
+                    destType: this._evaluator.printType(implementationReturnType, /* expandTypeAlias */ false),
+                })
+            );
+            diag.addAddendum(returnDiag);
+            isLegal = false;
+        }
+
+        return isLegal;
     }
 
     private _walkStatementsAndReportUnreachable(statements: StatementNode[]) {
@@ -1314,12 +1397,15 @@ export class Checker extends ParseTreeWalker {
 
     private _reportInvalidOverload(name: string, symbol: Symbol) {
         const typedDecls = symbol.getTypedDeclarations();
-        if (typedDecls.length === 1) {
+        if (typedDecls.length >= 1) {
             const primaryDecl = typedDecls[0];
+
             if (primaryDecl.type === DeclarationType.Function) {
                 const type = this._evaluator.getEffectiveTypeOfSymbol(symbol);
+                const functions = isOverloadedFunction(type) ? type.overloads : isFunction(type) ? [type] : [];
+                const overloadedFunctions = functions.filter((func) => FunctionType.isOverloaded(func));
 
-                if (isFunction(type) && FunctionType.isOverloaded(type)) {
+                if (overloadedFunctions.length === 1) {
                     // There should never be a single overload.
                     this._evaluator.addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
@@ -1327,6 +1413,62 @@ export class Checker extends ParseTreeWalker {
                         Localizer.Diagnostic.singleOverload().format({ name }),
                         primaryDecl.node.name
                     );
+                }
+
+                // If the file is not a stub and this is the first overload,
+                // verify that there is an implementation.
+                if (!this._fileInfo.isStubFile && overloadedFunctions.length > 0) {
+                    let implementationFunction: FunctionType | undefined;
+
+                    if (
+                        isOverloadedFunction(type) &&
+                        !FunctionType.isOverloaded(type.overloads[type.overloads.length - 1])
+                    ) {
+                        implementationFunction = type.overloads[type.overloads.length - 1];
+                    } else if (isFunction(type) && !FunctionType.isOverloaded(type)) {
+                        implementationFunction = type;
+                    }
+
+                    if (!implementationFunction) {
+                        this._evaluator.addDiagnostic(
+                            this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            Localizer.Diagnostic.overloadWithoutImplementation().format({
+                                name: primaryDecl.node.name.value,
+                            }),
+                            primaryDecl.node.name
+                        );
+                    } else if (isOverloadedFunction(type)) {
+                        // Verify that all overload signatures are assignable to implementation signature.
+                        type.overloads.forEach((overload, index) => {
+                            if (overload === implementationFunction || !FunctionType.isOverloaded(overload)) {
+                                return;
+                            }
+
+                            const diag = new DiagnosticAddendum();
+                            if (!this._isLegalOverloadImplementation(overload, implementationFunction!, diag)) {
+                                if (implementationFunction!.details.declaration) {
+                                    const diagnostic = this._evaluator.addDiagnostic(
+                                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                                        DiagnosticRule.reportGeneralTypeIssues,
+                                        Localizer.Diagnostic.overloadImplementationMismatch().format({
+                                            name,
+                                            index: index + 1,
+                                        }) + diag.getString(),
+                                        implementationFunction!.details.declaration.node.name
+                                    );
+
+                                    if (diagnostic && overload.details.declaration) {
+                                        diagnostic.addRelatedInfo(
+                                            Localizer.DiagnosticAddendum.overloadMethod(),
+                                            primaryDecl.path,
+                                            primaryDecl.range
+                                        );
+                                    }
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -1397,10 +1539,6 @@ export class Checker extends ParseTreeWalker {
         // that are overloads or property setters/deleters.
         if (primaryDecl.type === DeclarationType.Function) {
             const primaryDeclTypeInfo = this._evaluator.getTypeOfFunction(primaryDecl.node);
-            const isPrimaryProperty =
-                primaryDeclTypeInfo &&
-                isObject(primaryDeclTypeInfo.decoratedType) &&
-                ClassType.isPropertyClass(primaryDeclTypeInfo.decoratedType.classType);
 
             otherDecls = otherDecls.filter((decl) => {
                 if (decl.type !== DeclarationType.Function) {
@@ -1412,13 +1550,20 @@ export class Checker extends ParseTreeWalker {
                     return true;
                 }
 
-                // Is it a property?
+                // We need to handle properties in a careful manner because of
+                // the way that setters and deleters are often defined using multiple
+                // methods with the same name.
                 if (
-                    isPrimaryProperty &&
+                    primaryDeclTypeInfo &&
+                    isObject(primaryDeclTypeInfo.decoratedType) &&
+                    ClassType.isPropertyClass(primaryDeclTypeInfo.decoratedType.classType) &&
                     isObject(funcTypeInfo.decoratedType) &&
                     ClassType.isPropertyClass(funcTypeInfo.decoratedType.classType)
                 ) {
-                    return false;
+                    return (
+                        funcTypeInfo.decoratedType.classType.details.typeSourceId !==
+                        primaryDeclTypeInfo!.decoratedType.classType.details.typeSourceId
+                    );
                 }
 
                 return !FunctionType.isOverloaded(funcTypeInfo.functionType);

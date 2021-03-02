@@ -705,6 +705,24 @@ test('TypedDict12', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Required1', () => {
+    // Analyze with Python 3.10 settings.
+    const configOptions = new ConfigOptions('.');
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['required1.py'], configOptions);
+
+    TestUtils.validateResults(analysisResults, 8);
+});
+
+test('Required2', () => {
+    // Analyze with Python 3.10 settings.
+    const configOptions = new ConfigOptions('.');
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['required2.py'], configOptions);
+
+    TestUtils.validateResults(analysisResults, 7);
+});
+
 test('Metaclass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['metaclass1.py']);
     TestUtils.validateResults(analysisResults, 0);
@@ -747,7 +765,7 @@ test('AssignmentExpr2', () => {
 
 test('AssignmentExpr3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr3.py']);
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('AssignmentExpr4', () => {
@@ -876,7 +894,7 @@ test('Overload3', () => {
 
 test('Overload4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload4.py']);
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Overload5', () => {
@@ -888,12 +906,17 @@ test('Overload5', () => {
 
     configOptions.diagnosticRuleSet.reportOverlappingOverload = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload5.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 5);
+    TestUtils.validateResults(analysisResults, 10);
 });
 
 test('Overload6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload6.py']);
     TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Overload7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload7.py']);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Final1', () => {
@@ -1281,7 +1304,7 @@ test('TypeVar6', () => {
 test('TypeVar7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar7.py']);
 
-    TestUtils.validateResults(analysisResults, 22, 2);
+    TestUtils.validateResults(analysisResults, 22);
 });
 
 test('TypeVar8', () => {
@@ -1293,7 +1316,7 @@ test('TypeVar8', () => {
 test('TypeVar9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar9.py']);
 
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('Annotated1', () => {
@@ -1311,7 +1334,7 @@ test('Annotated1', () => {
 test('Circular1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circular1.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('TryExcept1', () => {
