@@ -1768,9 +1768,40 @@ export class Parser {
         const withItemList: WithItemNode[] = [];
 
         const possibleParen = this._peekToken();
-        const inParen = this._consumeTokenIfType(TokenType.OpenParenthesis);
-        if (inParen && this._getLanguageVersion() < PythonVersion.V3_10) {
-            this._addError(Localizer.Diagnostic.parenthesizedContextManagerIllegal(), possibleParen);
+
+        // If the expression starts with a paren, parse it as though the
+        // paren is enclosing the list of "with items". This is done as a
+        // "dry run" to determine whether the entire list of "with items"
+        // is enclosed in parentheses.
+        let isParenthesizedWithItemList = false;
+        if (possibleParen.type === TokenType.OpenParenthesis) {
+            const openParenTokenIndex = this._tokenIndex;
+
+            this._suppressErrors(() => {
+                this._getNextToken();
+                while (true) {
+                    this._parseWithItem();
+                    if (!this._consumeTokenIfType(TokenType.Comma)) {
+                        break;
+                    }
+                }
+
+                if (
+                    this._peekToken().type === TokenType.CloseParenthesis &&
+                    this._peekToken(1).type === TokenType.Colon
+                ) {
+                    isParenthesizedWithItemList = true;
+                }
+
+                this._tokenIndex = openParenTokenIndex;
+            });
+        }
+
+        if (isParenthesizedWithItemList) {
+            this._consumeTokenIfType(TokenType.OpenParenthesis);
+            if (this._getLanguageVersion() < PythonVersion.V3_10) {
+                this._addError(Localizer.Diagnostic.parenthesizedContextManagerIllegal(), possibleParen);
+            }
         }
 
         while (true) {
@@ -1781,7 +1812,7 @@ export class Parser {
             }
         }
 
-        if (inParen) {
+        if (isParenthesizedWithItemList) {
             if (!this._consumeTokenIfType(TokenType.CloseParenthesis)) {
                 this._addError(Localizer.Diagnostic.expectedCloseParen(), this._peekToken());
             }
@@ -3148,7 +3179,11 @@ export class Parser {
 
         // If this was a simple expression with no colons return it.
         if (!sawColon) {
-            return sliceExpressions[0]!;
+            if (sliceExpressions[0]) {
+                return sliceExpressions[0];
+            }
+
+            return ErrorNode.create(this._peekToken(), ErrorExpressionCategory.MissingIndexOrSlice);
         }
 
         const sliceNode = SliceNode.create(firstToken);
