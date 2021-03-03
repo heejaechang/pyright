@@ -117,8 +117,13 @@ export class PylanceImportResolver extends ImportResolver {
                     execEnv,
                     moduleDescriptor,
                     importName,
-                    importFailureInfo
+                    importFailureInfo,
+                    /* allowPartial */ undefined,
+                    /* allowNativeLib */ undefined,
+                    /* useStubPackage */ true,
+                    allowPyi
                 );
+
                 if (result && result.isImportFound) {
                     // We will treat bundled stubs files as "third party".
                     result.importType = ImportType.ThirdParty;

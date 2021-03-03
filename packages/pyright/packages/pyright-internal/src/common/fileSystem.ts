@@ -75,6 +75,9 @@ export interface FileSystem {
     // The directory returned by tmpdir must exist and be the same each time tmpdir is called.
     tmpdir(): string;
     tmpfile(options?: TmpfileOptions): string;
+
+    // augment file path for logging
+    isVirtual(filepath: string): boolean;
 }
 
 export interface FileWatcherProvider {
@@ -216,6 +219,10 @@ class RealFileSystem implements FileSystem {
     tmpfile(options?: TmpfileOptions): string {
         const f = tmp.fileSync({ dir: this.tmpdir(), discardDescriptor: true, ...options });
         return f.name;
+    }
+
+    isVirtual(filepath: string): boolean {
+        return false;
     }
 }
 
