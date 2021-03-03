@@ -1622,7 +1622,7 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ---------------------------------------------------------
 
-type 2.1.0 - ISC
+type 2.3.0 - ISC
 https://github.com/medikoo/type#readme
 
 
@@ -1798,7 +1798,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ---------------------------------------------------------
 
-@azure/abort-controller 1.0.2 - MIT
+@azure/abort-controller 1.0.3 - MIT
 https://github.com/Azure/azure-sdk-for-js/tree/master/sdk/core/abort-controller/README.md
 
 Copyright (c) Microsoft Corporation.
@@ -1862,7 +1862,7 @@ Copyright (c) Microsoft Corporation.
 
 ---------------------------------------------------------
 
-@azure/core-auth 1.1.4 - MIT
+@azure/core-auth 1.2.0 - MIT
 https://github.com/Azure/azure-sdk-for-js/blob/master/sdk/core/core-auth/README.md
 
 Copyright (c) Microsoft Corporation.
@@ -1894,7 +1894,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-@azure/core-http 1.2.2 - MIT
+@azure/core-http 1.2.3 - MIT
 https://github.com/Azure/azure-sdk-for-js/blob/master/sdk/core/core-http/README.md
 
 Copyright (c) Microsoft Corporation.
@@ -2056,7 +2056,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-@azure/storage-blob 12.4.0 - MIT
+@azure/storage-blob 12.4.1 - MIT
 https://github.com/Azure/azure-sdk-for-js/blob/master/sdk/storage/storage-blob/
 
 Copyright (c) Microsoft Corporation.
@@ -2088,7 +2088,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-@types/node 12.19.14 - MIT
+@types/node 12.20.4 - MIT
 
 
 Copyright (c) Microsoft Corporation.
@@ -2107,7 +2107,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ---------------------------------------------------------
 
-@types/node 14.14.21 - MIT
+@types/node 14.14.31 - MIT
 
 
 Copyright (c) Microsoft Corporation.
@@ -2971,9 +2971,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ---------------------------------------------------------
 
-bl 4.0.3 - MIT
+bl 4.1.0 - MIT
 https://github.com/rvagg/bl
 
+Copyright (c) 2013-2019 bl contributors
 
 The MIT License (MIT)
 =====================
@@ -3959,7 +3960,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-es-abstract 1.18.0-next.1 - MIT
+es-abstract 1.18.0-next.2 - MIT
 https://github.com/ljharb/es-abstract#readme
 
 (c) Object C
@@ -4408,7 +4409,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-form-data 3.0.0 - MIT
+form-data 3.0.1 - MIT
 https://github.com/form-data/form-data#readme
 
 Copyright (c) 2012 Felix Geisendorfer (felix@debuggable.com) and contributors
@@ -4504,7 +4505,7 @@ THE SOFTWARE.
 
 ---------------------------------------------------------
 
-fsevents 2.3.1 - MIT
+fsevents 2.3.2 - MIT
 https://github.com/fsevents/fsevents
 
 
@@ -4600,7 +4601,7 @@ THE SOFTWARE.
 
 ---------------------------------------------------------
 
-get-intrinsic 1.0.2 - MIT
+get-intrinsic 1.1.1 - MIT
 https://github.com/ljharb/get-intrinsic#readme
 
 
@@ -5197,7 +5198,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ---------------------------------------------------------
 
-is-callable 1.2.2 - MIT
+is-callable 1.2.3 - MIT
 https://github.com/ljharb/is-callable#readme
 
 Copyright (c) 2015 Jordan Harband
@@ -5521,8 +5522,8 @@ THE SOFTWARE.
 
 ---------------------------------------------------------
 
-is-regex 1.1.1 - MIT
-https://github.com/ljharb/is-regex
+is-regex 1.1.2 - MIT
+https://github.com/inspect-js/is-regex
 
 Copyright (c) 2014 Jordan Harband
 
@@ -5618,7 +5619,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-is-typed-array 1.1.4 - MIT
+is-typed-array 1.1.5 - MIT
 https://github.com/inspect-js/is-typed-array#readme
 
 Copyright (c) 2015 Jordan Harband
@@ -5786,7 +5787,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-just-debounce 1.0.0 - MIT
+just-debounce 1.1.0 - MIT
 https://github.com/hayes/just-debounce
 
 Copyright (c) 2014 Michael Hayes
@@ -6130,7 +6131,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-mime-db 1.45.0 - MIT
+mime-db 1.46.0 - MIT
 https://github.com/jshttp/mime-db#readme
 
 Copyright (c) 2014 Jonathan Ong
@@ -6164,7 +6165,7 @@ THE SOFTWARE.
 
 ---------------------------------------------------------
 
-mime-types 2.1.28 - MIT
+mime-types 2.1.29 - MIT
 https://github.com/jshttp/mime-types#readme
 
 Copyright (c) 2014 Jonathan Ong
@@ -6663,7 +6664,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-object-is 1.1.4 - MIT
+object-is 1.1.5 - MIT
 https://github.com/es-shims/object-is
 
 Copyright (c) 2014 Jordan Harband
@@ -7220,7 +7221,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.114 - MIT
+pyright 1.1.117 - MIT
 https://github.com/Microsoft/pyright#readme
 
 Copyright (c) 2014-2016, Jon Schlinkert.
@@ -7975,7 +7976,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ---------------------------------------------------------
 
-string.prototype.trimend 1.0.3 - MIT
+string.prototype.trimend 1.0.4 - MIT
 https://github.com/es-shims/String.prototype.trimEnd#readme
 
 Copyright (c) 2017 Khaled Al-Ansari
@@ -8007,7 +8008,7 @@ SOFTWARE.
 
 ---------------------------------------------------------
 
-string.prototype.trimstart 1.0.3 - MIT
+string.prototype.trimstart 1.0.4 - MIT
 https://github.com/es-shims/String.prototype.trimStart#readme
 
 Copyright (c) 2017 Khaled Al-Ansari
