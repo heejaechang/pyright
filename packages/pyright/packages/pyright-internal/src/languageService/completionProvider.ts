@@ -198,10 +198,19 @@ export interface MemberAccessInfo {
 }
 
 export interface AutoImportInfo {
-    itemCount: number;
-    indexCount: number;
+    indexUsed: boolean;
     totalTimeInMS: number;
+
+    moduleTimeInMS: number;
     indexTimeInMS: number;
+    importAliasTimeInMS: number;
+
+    itemCount: number;
+    symbolCount: number;
+    userIndexCount: number;
+    indexCount: number;
+    importAliasCount: number;
+
     editTimeInMS: number;
     moduleResolveTimeInMS: number;
     additionTimeInMS: number;
@@ -1419,10 +1428,19 @@ export class CompletionProvider {
         }
 
         completionResults.autoImportInfo = {
-            itemCount: results.length,
-            indexCount: perfInfo.indexCount,
-            indexTimeInMS: perfInfo.indexTimeInMS,
+            indexUsed: perfInfo.indexUsed,
             totalTimeInMS: perfInfo.totalInMs,
+
+            moduleTimeInMS: perfInfo.moduleTimeInMS,
+            indexTimeInMS: perfInfo.indexTimeInMS,
+            importAliasTimeInMS: perfInfo.importAliasTimeInMS,
+
+            itemCount: results.length,
+            symbolCount: perfInfo.symbolCount,
+            userIndexCount: perfInfo.userIndexCount,
+            indexCount: perfInfo.indexCount,
+            importAliasCount: perfInfo.userIndexCount,
+
             editTimeInMS: perfInfo.editTimeInMS,
             moduleResolveTimeInMS: perfInfo.moduleResolveTimeInMS,
             additionTimeInMS: additionDuration.getDurationInMilliseconds(),

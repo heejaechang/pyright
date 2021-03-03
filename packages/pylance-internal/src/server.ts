@@ -530,10 +530,25 @@ class PylanceServer extends LanguageServerBase {
                         'autoImportAdditionTimeInMS',
                         completionResults.autoImportInfo.additionTimeInMS
                     );
+                    cm.addCustomMeasure('autoImportIndexUsed', completionResults.autoImportInfo.indexUsed ? 1 : 0);
                     cm.addCustomMeasure('autoImportTotalTimeInMS', completionResults.autoImportInfo.totalTimeInMS);
+
                     cm.addCustomMeasure('autoImportItemCount', completionResults.autoImportInfo.itemCount);
-                    cm.addCustomMeasure('autoImportIndexTimeInMS', completionResults.autoImportInfo.indexTimeInMS);
+                    cm.addCustomMeasure('autoImportSymbolCount', completionResults.autoImportInfo.symbolCount);
+                    cm.addCustomMeasure('autoImportUserIndexCount', completionResults.autoImportInfo.userIndexCount);
                     cm.addCustomMeasure('autoImportIndexCount', completionResults.autoImportInfo.indexCount);
+                    cm.addCustomMeasure(
+                        'autoImportImportAliasCount',
+                        completionResults.autoImportInfo.importAliasCount
+                    );
+
+                    cm.addCustomMeasure('autoImportModuleTimeInMS', completionResults.autoImportInfo.moduleTimeInMS);
+                    cm.addCustomMeasure('autoImportIndexTimeInMS', completionResults.autoImportInfo.indexTimeInMS);
+                    cm.addCustomMeasure(
+                        'autoImportImportAliasTimeInMS',
+                        completionResults.autoImportInfo.importAliasTimeInMS
+                    );
+
                     cm.addCustomMeasure('autoImportEditTimeInMS', completionResults.autoImportInfo.editTimeInMS);
                     cm.addCustomMeasure(
                         'autoImportModuleResolveTimeInMS',
