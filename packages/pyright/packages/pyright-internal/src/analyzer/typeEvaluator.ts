@@ -3184,9 +3184,17 @@ export function createTypeEvaluator(
                 const diagAddendum = new DiagnosticAddendum();
 
                 doForEachSubtype(exceptionType, (subtype) => {
-                    if (!isAnyOrUnknown(subtype)) {
-                        if (isClass(subtype) && subtype.literalValue === undefined) {
-                            if (!derivesFromClassRecursive(subtype, baseExceptionType, /* ignoreUnknown */ false)) {
+                    const concreteSubtype = makeTopLevelTypeVarsConcrete(subtype);
+
+                    if (!isAnyOrUnknown(concreteSubtype)) {
+                        if (isClass(concreteSubtype) && concreteSubtype.literalValue === undefined) {
+                            if (
+                                !derivesFromClassRecursive(
+                                    concreteSubtype,
+                                    baseExceptionType,
+                                    /* ignoreUnknown */ false
+                                )
+                            ) {
                                 diagAddendum.addMessage(
                                     Localizer.Diagnostic.exceptionTypeIncorrect().format({
                                         type: printType(subtype, /* expandTypeAlias */ false),
@@ -3198,7 +3206,7 @@ export function createTypeEvaluator(
                                     callResult = validateConstructorArguments(
                                         node.typeExpression!,
                                         [],
-                                        subtype,
+                                        concreteSubtype,
                                         /* skipUnknownArgCheck */ false,
                                         /* expectedType */ undefined
                                     );
@@ -3212,10 +3220,10 @@ export function createTypeEvaluator(
                                     );
                                 }
                             }
-                        } else if (isObject(subtype)) {
+                        } else if (isObject(concreteSubtype)) {
                             if (
                                 !derivesFromClassRecursive(
-                                    subtype.classType,
+                                    concreteSubtype.classType,
                                     baseExceptionType,
                                     /* ignoreUnknown */ false
                                 )
@@ -11559,9 +11567,9 @@ export function createTypeEvaluator(
         // Allow recursion by registering the partially-constructed
         // function type.
         const scope = ScopeUtils.getScopeForNode(node);
-        const functionSymbol = scope?.lookUpSymbol(node.name.value);
-        if (functionDecl) {
-            setSymbolResolutionPartialType(functionSymbol!, functionDecl, functionType);
+        const functionSymbol = scope?.lookUpSymbolRecursive(node.name.value);
+        if (functionDecl && functionSymbol) {
+            setSymbolResolutionPartialType(functionSymbol.symbol, functionDecl, functionType);
         }
         writeTypeCache(node, functionType);
         writeTypeCache(node.name, functionType);

@@ -113,6 +113,7 @@ function processArgs() {
         { name: 'dependencies', type: Boolean },
         { name: 'files', type: String, multiple: true, defaultOption: true },
         { name: 'help', alias: 'h', type: Boolean },
+        { name: 'ignoreexternal', type: Boolean },
         { name: 'lib', type: Boolean },
         { name: 'outputjson', type: Boolean },
         { name: 'project', alias: 'p', type: String },
@@ -242,7 +243,15 @@ function processArgs() {
 
     // The package type verification uses a different path.
     if (args['verifytypes'] !== undefined) {
-        verifyPackageTypes(realFileSystem, args['verifytypes'] || '', !!args.verbose, !!args.outputjson);
+        verifyPackageTypes(
+            realFileSystem,
+            args['verifytypes'] || '',
+            !!args.verbose,
+            !!args.outputjson,
+            args['ignoreexternal']
+        );
+    } else if (args['ignoreexternal'] !== undefined) {
+        console.error(`'--ignoreexternal' is valid only when used with '--verifytypes'`);
     }
 
     const watch = args.watch !== undefined;
@@ -329,19 +338,11 @@ function verifyPackageTypes(
     realFileSystem: FileSystem,
     packageName: string,
     verboseOutput: boolean,
-    outputJson: boolean
+    outputJson: boolean,
+    ignoreUnknownTypesFromImports: boolean
 ): never {
     try {
         const verifier = new PackageTypeVerifier(realFileSystem);
-
-        // If the package name ends with a bang, we'll take that
-        // to mean that the caller wants to ignore unknown types from imports
-        // outside of the package.
-        let ignoreUnknownTypesFromImports = false;
-        if (packageName.endsWith('!')) {
-            ignoreUnknownTypesFromImports = true;
-            packageName = packageName.substr(0, packageName.length - 1);
-        }
 
         const report = verifier.verify(packageName, ignoreUnknownTypesFromImports);
         const jsonReport = buildTypeCompletenessReport(packageName, report);
@@ -381,17 +382,19 @@ function buildTypeCompletenessReport(packageName: string, completenessReport: Pa
     };
 
     // Add the general diagnostics.
-    completenessReport.diagnostics.forEach((diag) => {
-        const jsonDiag = convertDiagnosticToJson('', diag);
-        report.diagnostics.push(jsonDiag);
+    completenessReport.fileDiagnostics.forEach((fileDiagnostics) => {
+        fileDiagnostics.diagnostics.forEach((diag) => {
+            const jsonDiag = convertDiagnosticToJson(fileDiagnostics.filePath, diag);
+            report.diagnostics.push(jsonDiag);
 
-        if (jsonDiag.severity === 'error') {
-            report.summary.errorCount++;
-        } else if (jsonDiag.severity === 'warning') {
-            report.summary.warningCount++;
-        } else if (jsonDiag.severity === 'information') {
-            report.summary.informationCount++;
-        }
+            if (jsonDiag.severity === 'error') {
+                report.summary.errorCount++;
+            } else if (jsonDiag.severity === 'warning') {
+                report.summary.warningCount++;
+            } else if (jsonDiag.severity === 'information') {
+                report.summary.informationCount++;
+            }
+        });
     });
 
     report.typeCompleteness = {
@@ -507,6 +510,7 @@ function printUsage() {
             '  --createstub IMPORT              Create type stub file(s) for import\n' +
             '  --dependencies                   Emit import dependency information\n' +
             '  -h,--help                        Show this help message\n' +
+            '  --ignoreexternal                 Ignore external imports for --verifytypes\n' +
             '  --lib                            Use library code to infer types when stubs are missing\n' +
             '  --outputjson                     Output results in JSON format\n' +
             '  -p,--project FILE OR DIRECTORY   Use the configuration file at this location\n' +
@@ -646,6 +650,9 @@ function reportDiagnosticsAsText(fileDiagnostics: FileDiagnostics[]): Diagnostic
 
 function logDiagnosticToConsole(diag: PyrightJsonDiagnostic, prefix = '  ') {
     let message = prefix;
+    if (diag.file) {
+        message += `${diag.file}:`;
+    }
     if (diag.range && !isEmptyRange(diag.range)) {
         message +=
             chalk.yellow(`${diag.range.start.line + 1}`) +
