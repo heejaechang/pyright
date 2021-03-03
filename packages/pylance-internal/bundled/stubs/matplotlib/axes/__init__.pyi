@@ -1,5 +1,3 @@
-# pyright: strict
-
 from typing import Any, Optional, Sequence, Union
 
 from matplotlib.colors import _ColorLike
@@ -28,10 +26,12 @@ class Axes:
         **kwargs: Any
     ) -> None: ...
 
+    def __getattr__(self, name: str) -> Any: ...  # incomplete
 
 class SubplotBase:
     # TODO: write overloads for various forms
     def __init__(self, fig: Figure, *args: Any, **kwargs: Any) -> None: ...
 
-# INCOMPLETE
-def __getattr__(name: str) -> Any: ...
+    def __getattr__(self, name: str) -> Any: ...  # incomplete
+
+def __getattr__(name: str) -> Any: ...  # incomplete

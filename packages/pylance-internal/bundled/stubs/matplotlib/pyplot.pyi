@@ -1,19 +1,39 @@
-# pyright: strict
 # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.html#module-matplotlib.pyplot
 
 from datetime import tzinfo
 from typing import (
-    Any, BinaryIO, Callable, ContextManager, Dict, IO, List, Literal, Mapping,
-    NewType, Optional, Sequence, Tuple, Type, Union, overload)
+    Any,
+    BinaryIO,
+    Callable,
+    ContextManager,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    overload,
+)
+
+from PIL.Image import Image
 
 from matplotlib._typing import ArrayLike, Scalar, ndarray
 from matplotlib.artist import Artist
-from matplotlib.axes import Axes
+from matplotlib.axes import Axes, SubplotBase
 from matplotlib.backend_bases import Event, FigureManagerBase
-from matplotlib.cm import Colormap, ScalarMappable, SubplotBase
+from matplotlib.cm import Colormap, ScalarMappable
 from matplotlib.collections import (
-    BrokenBarHCollection, Collection, EventCollection, LineCollection,
-    PathCollection, PolyCollection, QuadMesh)
+    BrokenBarHCollection,
+    Collection,
+    EventCollection,
+    LineCollection,
+    PathCollection,
+    PolyCollection,
+    QuadMesh,
+)
 from matplotlib.colorbar import Colorbar
 from matplotlib.colors import Normalize, _ColorLike
 from matplotlib.container import BarContainer, ErrorbarContainer, StemContainer
@@ -30,7 +50,11 @@ from matplotlib.table import Table
 from matplotlib.text import Annotation, Text
 from matplotlib.transforms import Bbox
 from matplotlib.widgets import SubplotTool
-from PIL.Image import Image
+
+# Not documented, but commonly used and in matplotlib's tests.
+from . import style as style
+
+_DetrendCallable = Callable[[ArrayLike], ArrayLike]
 
 # TODO: data params need to be Dicts/mappings?
 # TODO: Are some of these more reasonable in tooltips when split out as overloads?
@@ -148,7 +172,7 @@ def cohere(
     NFFT: int = ...,
     Fs: Scalar = ...,
     Fc: int = ...,
-    detrend: Union[Literal["none", "mean", "linear"], Callable] = ...,
+    detrend: Union[Literal["none", "mean", "linear"], _DetrendCallable] = ...,
     window: Union[Callable, ndarray] = ...,
     noverlap: int = ...,
     pad_to: Optional[int] = ...,
@@ -176,7 +200,7 @@ def csd(
     NFFT: int = ...,
     Fs: Scalar = ...,
     Fc: int = ...,
-    detrend: Union[Literal["none", "mean", "linear"], Callable] = ...,
+    detrend: Union[Literal["none", "mean", "linear"], _DetrendCallable] = ...,
     window: Union[Callable, ndarray] = ...,
     noverlap: int = ...,
     pad_to: Optional[int] = ...,
@@ -558,7 +582,7 @@ def psd(
     NFFT: int = ...,
     Fs: Scalar = ...,
     Fc: int = ...,
-    detrend: Union[Literal["none", "mean", "linear"], Callable] = ...,
+    detrend: Union[Literal["none", "mean", "linear"], _DetrendCallable] = ...,
     window: Union[Callable, ndarray] = ...,
     noverlap: int = ...,
     pad_to: Optional[int] = ...,
@@ -638,7 +662,7 @@ def specgram(
     NFFT: int = ...,
     Fs: Scalar = ...,
     Fc: int = ...,
-    detrend: Union[Literal["none", "mean", "linear"], Callable] = ...,
+    detrend: Union[Literal["none", "mean", "linear"], _DetrendCallable] = ...,
     window: Union[Callable, ndarray] = ...,
     noverlap: int = ...,
     cmap: Optional[Colormap] = ...,
@@ -849,7 +873,7 @@ def xcorr(
     x: ArrayLike,
     y: ArrayLike,
     normed: bool = ...,
-    detrend: Callable = ...,
+    detrend: _DetrendCallable = ...,
     usevlines: bool = ...,
     maxlags: int = ...,
     *,

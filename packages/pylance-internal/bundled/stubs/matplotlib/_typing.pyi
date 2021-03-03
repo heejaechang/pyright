@@ -1,26 +1,9 @@
-# Internally defined types, which should be moved elsewhere.
+from numpy import ndarray as ndarray
+from numpy.typing import ArrayLike as ArrayLike, _ScalarLike
 
-# This should come from numpy.
-from typing import Any, List, NewType, Sequence, Union
-
-
-ndarray = NewType("ndarray", object)
-
-# TODO: This should come from numpy, whatever np.isscalar() accepts.
-Scalar = Union[
-    int,
-    float,
-    bool,
-    complex,
-]
-# Scalar = Any
+Scalar = _ScalarLike
 
 
-# TODO: This should come from numpy, whatever np.array() accepts.
-ArrayLike = Union[
-    ndarray,
-    List[Any],
-    Sequence[Scalar],
-    Scalar, # TODO: Should this be here?
-]
+# ndarray = NewType("ndarray", object)
 # ArrayLike = Any
+# Scalar = Any

@@ -1,11 +1,8 @@
-# pyright: strict
-
 from typing import Any
 
 
 class StreamplotSet:
-    ...
+    def __getattr__(self, name: str) -> Any: ...  # incomplete
 
 
-# INCOMPLETE
-def __getattr__(name: str) -> Any: ...
+def __getattr__(name: str) -> Any: ...  # incomplete

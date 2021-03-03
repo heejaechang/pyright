@@ -1,13 +1,10 @@
-# pyright: strict
-
-
 from typing import Any
+
 from matplotlib.artist import Artist
 
 
 class Figure(Artist):
-    ...
+    def __getattr__(self, name: str) -> Any: ...  # incomplete
 
 
-# INCOMPLETE
-def __getattr__(name: str) -> Any: ...
+def __getattr__(name: str) -> Any: ...  # incomplete
