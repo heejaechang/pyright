@@ -143,6 +143,10 @@ export class PyrightFileSystem implements FileSystem {
         for (const path of paths) {
             this._rootSearched.add(path);
 
+            if (!this._realFS.existsSync(path)) {
+                continue;
+            }
+
             for (const entry of this._realFS.readdirEntriesSync(path)) {
                 if (!entry.isDirectory() || !entry.name.endsWith(stubsSuffix)) {
                     continue;

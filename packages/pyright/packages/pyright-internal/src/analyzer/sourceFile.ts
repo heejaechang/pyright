@@ -46,6 +46,7 @@ import { Localizer } from '../localization/localize';
 import { ModuleNode } from '../parser/parseNodes';
 import { ModuleImport, ParseOptions, Parser, ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
+import { PyrightFileSystem } from '../pyrightFileSystem';
 import { AnalyzerFileInfo, ImportLookup } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { Binder, BinderResults } from './binder';
@@ -1151,7 +1152,7 @@ export class SourceFile {
     }
 
     private _getPathForLogging(filepath: string) {
-        if (!this.fileSystem.isVirtual(filepath)) {
+        if (!(this.fileSystem instanceof PyrightFileSystem) || !this.fileSystem.isVirtual(filepath)) {
             return filepath;
         }
 
