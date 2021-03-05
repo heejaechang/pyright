@@ -32,7 +32,7 @@ jobs:
 
       - script: mv *.vsix vscode-pylance.vsix
         displayName: Rename VSIX
-        workingDirectory: packages/pylance
+        workingDirectory: packages/vscode-pylance
 
       - publish: packages/vscode-pylance/vscode-pylance.vsix
         artifact: VSIX
