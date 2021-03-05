@@ -26,37 +26,31 @@ jobs:
       - template: templates/node.yml
       - template: templates/set-version.yml
 
-      - script: npx vsce package -o vscode-pylance.vsix
+      - script: npm run package
         displayName: Package vscode-pylance
         workingDirectory: packages/vscode-pylance
+
+      - script: mv *.vsix vscode-pylance.vsix
+        displayName: Rename VSIX
+        workingDirectory: packages/pylance
 
       - publish: packages/vscode-pylance/vscode-pylance.vsix
         artifact: VSIX
 
   - job: pylance
-    displayName: Pylance
+    displayName: NPM zip
 
     steps:
       - template: templates/node.yml
       - template: templates/set-version.yml
 
-      - script: npm run build
-        displayName: Build pylance
+      - script: npm run pack-zip
+        displayName: Package pylance zip
         workingDirectory: packages/pylance
 
-      # - publish: packages/pylance/dist
-      #   artifact: pylance
+      - script: mv *.zip pylance.zip
+        displayName: Rename zip
+        workingDirectory: packages/pylance
 
-  - job: pythia
-    displayName: Pythia
-
-    steps:
-      - template: templates/node.yml
-      - template: templates/set-version.yml
-
-      - script: npm run build
-        displayName: Build pythia
-        workingDirectory: packages/pylance-pythia
-
-      - publish: packages/pylance-pythia/dist
-        artifact: pythia
+      - publish: packages/pylance/pylance.zip
+        artifact: npm
