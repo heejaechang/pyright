@@ -319,7 +319,7 @@ test('TypeNarrowing16', () => {
 test('TypeNarrowing17', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing17.py']);
 
-    TestUtils.validateResults(analysisResults, 8);
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('TypeNarrowing18', () => {
@@ -634,6 +634,12 @@ test('CodeFlow2', () => {
 
 test('CodeFlow3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow3.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('CodeFlow4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow4.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

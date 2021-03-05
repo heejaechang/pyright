@@ -1010,6 +1010,13 @@ export class Binder extends ParseTreeWalker {
             constExprValue === true ? Binder._unreachableFlowNode : this._finishFlowLabel(elseLabel);
         if (node.elseSuite) {
             this.walk(node.elseSuite);
+        } else {
+            // Create a flow node that gates the missing "else" clause based
+            // on whether the narrowing of the expression in th negative case
+            // evaluates to "never".
+            if (this._shouldBindNeverCondition()) {
+                this._bindNeverCondition(node.testExpression, postIfLabel, /* isPositiveTest */ false);
+            }
         }
         this._addAntecedent(postIfLabel, this._currentFlowNode);
         this._currentFlowNode = this._finishFlowLabel(postIfLabel);
@@ -2182,6 +2189,87 @@ export class Binder extends ParseTreeWalker {
         return node;
     }
 
+    // The extra code flow nodes required for a "never condition" can result in
+    // significant extra computation at analysis time, especially for code that
+    // doesn't contain any type declarations. We'll disable it if we're within
+    // a function that has no input parameter type annotations.
+    private _shouldBindNeverCondition() {
+        if (this._targetFunctionDeclaration) {
+            // Skip this heuristic for methods with 0 or 1 parameters, since the
+            // param might be a "self" or "cls".
+            const params = this._targetFunctionDeclaration.node.parameters;
+            const isMethod = this._targetFunctionDeclaration.isMethod;
+            if ((isMethod && params.length > 1) || (!isMethod && params.length > 0)) {
+                if (!params.some((param) => !!param.typeAnnotation || !!param.typeAnnotationComment)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Creates a node that creates a "gate" that is closed (doesn't allow for code
+    // flow) if the specified expression is never once it is narrowed (in either the
+    // positive or negative case).
+    private _bindNeverCondition(node: ExpressionNode, target: FlowLabel, isPositiveTest: boolean) {
+        const expressionList: CodeFlowReferenceExpressionNode[] = [];
+
+        if (node.nodeType === ParseNodeType.UnaryOperation && node.operator === OperatorType.Not) {
+            this._bindNeverCondition(node.expression, target, !isPositiveTest);
+        } else if (
+            node.nodeType === ParseNodeType.BinaryOperation &&
+            (node.operator === OperatorType.And || node.operator === OperatorType.Or)
+        ) {
+            if (node.operator === OperatorType.And) {
+                // In the And case, we need to gate the synthesized else clause if both
+                // of the operands evaluate to never once they are narrowed.
+                const savedCurrentFlowNode = this._currentFlowNode;
+                this._bindNeverCondition(node.leftExpression, target, isPositiveTest);
+                this._currentFlowNode = savedCurrentFlowNode;
+                this._bindNeverCondition(node.rightExpression, target, isPositiveTest);
+            } else {
+                const initialCurrentFlowNode = this._currentFlowNode;
+
+                // In the Or case, we need to gate the synthesized else clause if either
+                // of the operands evaluate to never.
+                const afterLabel = this._createBranchLabel();
+                this._bindNeverCondition(node.leftExpression, afterLabel, isPositiveTest);
+
+                // If the condition didn't result in any new flow nodes, we can skip
+                // checking the other condition.
+                if (initialCurrentFlowNode !== this._currentFlowNode) {
+                    this._currentFlowNode = this._finishFlowLabel(afterLabel);
+
+                    const prevCurrentNode = this._currentFlowNode;
+                    this._bindNeverCondition(node.rightExpression, target, isPositiveTest);
+
+                    // If the second condition resulted in no new control flow node, we can
+                    // eliminate this entire subgraph.
+                    if (prevCurrentNode === this._currentFlowNode) {
+                        this._currentFlowNode = initialCurrentFlowNode;
+                    }
+                }
+            }
+        } else {
+            // Limit only to expressions that contain a narrowable subexpression
+            // that is a name. This avoids complexities with composite expressions like
+            // member access or index expressions.
+            if (this._isNarrowingExpression(node, expressionList, /* neverNarrowingExpressions */ true)) {
+                const filteredExprList = expressionList.filter((expr) => expr.nodeType === ParseNodeType.Name);
+                if (filteredExprList.length > 0) {
+                    this._currentFlowNode = this._createFlowConditional(
+                        isPositiveTest ? FlowFlags.TrueNeverCondition : FlowFlags.FalseNeverCondition,
+                        this._currentFlowNode!,
+                        node
+                    );
+                }
+            }
+
+            this._addAntecedent(target, this._currentFlowNode!);
+        }
+    }
+
     private _bindConditional(node: ExpressionNode, trueTarget: FlowLabel, falseTarget: FlowLabel) {
         const savedTrueTarget = this._currentTrueTarget;
         const savedFalseTarget = this._currentFalseTarget;
@@ -2232,9 +2320,13 @@ export class Binder extends ParseTreeWalker {
             this._currentExecutionScopeReferenceMap!.set(referenceKey, referenceKey);
         });
 
+        // Select the first name expression.
+        const filteredExprList = expressionList.filter((expr) => expr.nodeType === ParseNodeType.Name);
+
         const conditionalFlowNode: FlowCondition = {
             flags,
             id: getUniqueFlowNodeId(),
+            reference: filteredExprList.length > 0 ? filteredExprList[0] : undefined,
             expression,
             antecedent,
         };
@@ -2259,14 +2351,39 @@ export class Binder extends ParseTreeWalker {
         return false;
     }
 
+    // Determines whether the specified expression can be used for conditional
+    // type narrowing. The expression atoms (names, member accesses and index)
+    // are provided as an output in the expressionList.
+    // If filterForNeverNarrowing is true, we limit some types of narrowing
+    // expressions for performance reasons.
+    // The isComplexExpression parameter is used internally to determine whether
+    // the call is an atom (name, member access, index - plus a "not" form of
+    // these) or something more complex (binary operator, call, etc.).
     private _isNarrowingExpression(
         expression: ExpressionNode,
-        expressionList: CodeFlowReferenceExpressionNode[]
+        expressionList: CodeFlowReferenceExpressionNode[],
+        filterForNeverNarrowing = false,
+        isComplexExpression = false
     ): boolean {
         switch (expression.nodeType) {
             case ParseNodeType.Name:
             case ParseNodeType.MemberAccess:
             case ParseNodeType.Index: {
+                if (filterForNeverNarrowing) {
+                    // Never narrowing doesn't support member access or index
+                    // expressions.
+                    if (expression.nodeType !== ParseNodeType.Name) {
+                        return false;
+                    }
+
+                    // Never narrowing doesn't support simple names (falsy
+                    // or truthy narrowing) because it's too expensive and
+                    // provides relatively little utility.
+                    if (!isComplexExpression) {
+                        return false;
+                    }
+                }
+
                 if (isCodeFlowSupportedForReference(expression)) {
                     expressionList.push(expression);
                     return true;
@@ -2293,7 +2410,12 @@ export class Binder extends ParseTreeWalker {
                         expression.rightExpression.nodeType === ParseNodeType.Constant &&
                         expression.rightExpression.constType === KeywordType.None
                     ) {
-                        return this._isNarrowingExpression(expression.leftExpression, expressionList);
+                        return this._isNarrowingExpression(
+                            expression.leftExpression,
+                            expressionList,
+                            filterForNeverNarrowing,
+                            /* isComplexExpression */ true
+                        );
                     }
 
                     // Look for "type(X) is Y" or "type(X) is not Y".
@@ -2307,11 +2429,18 @@ export class Binder extends ParseTreeWalker {
                     ) {
                         return this._isNarrowingExpression(
                             expression.leftExpression.arguments[0].valueExpression,
-                            expressionList
+                            expressionList,
+                            filterForNeverNarrowing,
+                            /* isComplexExpression */ true
                         );
                     }
 
-                    const isLeftNarrowing = this._isNarrowingExpression(expression.leftExpression, expressionList);
+                    const isLeftNarrowing = this._isNarrowingExpression(
+                        expression.leftExpression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ true
+                    );
 
                     // Look for "X is Y" or "X is not Y".
                     if (isOrIsNotOperator) {
@@ -2322,7 +2451,9 @@ export class Binder extends ParseTreeWalker {
                     if (equalsOrNotEqualsOperator) {
                         const isRightNarrowing = this._isNarrowingExpression(
                             expression.rightExpression,
-                            expressionList
+                            expressionList,
+                            filterForNeverNarrowing,
+                            /* isComplexExpression */ true
                         );
                         return isLeftNarrowing || isRightNarrowing;
                     }
@@ -2330,14 +2461,26 @@ export class Binder extends ParseTreeWalker {
 
                 // Look for "<string> in Y" or "<string> not in Y".
                 if (expression.operator === OperatorType.In || expression.operator === OperatorType.NotIn) {
-                    if (this._isNarrowingExpression(expression.rightExpression, expressionList)) {
+                    if (
+                        this._isNarrowingExpression(
+                            expression.rightExpression,
+                            expressionList,
+                            filterForNeverNarrowing,
+                            /* isComplexExpression */ true
+                        )
+                    ) {
                         return true;
                     }
                 }
 
                 // Look for "X in Y".
                 if (expression.operator === OperatorType.In) {
-                    return this._isNarrowingExpression(expression.leftExpression, expressionList);
+                    return this._isNarrowingExpression(
+                        expression.leftExpression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ true
+                    );
                 }
 
                 return false;
@@ -2346,12 +2489,22 @@ export class Binder extends ParseTreeWalker {
             case ParseNodeType.UnaryOperation: {
                 return (
                     expression.operator === OperatorType.Not &&
-                    this._isNarrowingExpression(expression.expression, expressionList)
+                    this._isNarrowingExpression(
+                        expression.expression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ false
+                    )
                 );
             }
 
             case ParseNodeType.AugmentedAssignment: {
-                return this._isNarrowingExpression(expression.rightExpression, expressionList);
+                return this._isNarrowingExpression(
+                    expression.rightExpression,
+                    expressionList,
+                    filterForNeverNarrowing,
+                    /* isComplexExpression */ true
+                );
             }
 
             case ParseNodeType.Call: {
@@ -2361,7 +2514,12 @@ export class Binder extends ParseTreeWalker {
                         expression.leftExpression.value === 'issubclass') &&
                     expression.arguments.length === 2
                 ) {
-                    return this._isNarrowingExpression(expression.arguments[0].valueExpression, expressionList);
+                    return this._isNarrowingExpression(
+                        expression.arguments[0].valueExpression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ true
+                    );
                 }
 
                 if (
@@ -2369,12 +2527,28 @@ export class Binder extends ParseTreeWalker {
                     expression.leftExpression.value === 'callable' &&
                     expression.arguments.length === 1
                 ) {
-                    return this._isNarrowingExpression(expression.arguments[0].valueExpression, expressionList);
+                    return this._isNarrowingExpression(
+                        expression.arguments[0].valueExpression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ true
+                    );
                 }
 
                 // Is this potentially a call to a user-defined type guard function?
                 if (expression.arguments.length >= 1) {
-                    return this._isNarrowingExpression(expression.arguments[0].valueExpression, expressionList);
+                    // Never narrowing doesn't support type guards because they do not
+                    // offer negative narrowing.
+                    if (filterForNeverNarrowing) {
+                        return false;
+                    }
+
+                    return this._isNarrowingExpression(
+                        expression.arguments[0].valueExpression,
+                        expressionList,
+                        filterForNeverNarrowing,
+                        /* isComplexExpression */ true
+                    );
                 }
             }
         }
