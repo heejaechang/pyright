@@ -22,6 +22,7 @@ import {
     OperationCanceledException,
     throwIfCancellationRequested,
 } from 'pyright-internal/common/cancellationUtils';
+import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, log, LogLevel } from 'pyright-internal/common/console';
 import * as debug from 'pyright-internal/common/debug';
@@ -35,7 +36,7 @@ import {
 import * as StringUtils from 'pyright-internal/common/stringUtils';
 import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/documentSymbolProvider';
 
-import { deleteElement, getExecutionEnvironments, getOrAdd } from '../common/collectionUtils';
+import { deleteElement, getExecutionEnvironments } from '../common/collectionUtils';
 import { mainFilename } from '../common/mainModuleFileName';
 import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from '../common/telemetry';
 import { PackageScanner } from '../packageScanner';

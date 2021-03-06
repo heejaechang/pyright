@@ -9,6 +9,7 @@
 import * as fs from 'fs';
 
 import { getPyTypedInfo } from './analyzer/pyTypedUtils';
+import { getOrAdd } from './common/collectionUtils';
 import { ExecutionEnvironment } from './common/configOptions';
 import {
     FileSystem,
@@ -275,16 +276,4 @@ class FakeFile extends fs.Dirent {
     isSocket(): boolean {
         return false;
     }
-}
-
-function getOrAdd<K, V>(map: Map<K, V>, key: K, newValueFactory: () => V): V {
-    const value = map.get(key);
-    if (value !== undefined) {
-        return value;
-    }
-
-    const newValue = newValueFactory();
-    map.set(key, newValue);
-
-    return newValue;
 }

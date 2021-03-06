@@ -10,6 +10,7 @@ import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { getPyTypedInfo } from 'pyright-internal/analyzer/pyTypedUtils';
 import { isPrivateOrProtectedName } from 'pyright-internal/analyzer/symbolNameUtils';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import * as debug from 'pyright-internal/common/debug';
 import {
@@ -20,7 +21,7 @@ import {
 } from 'pyright-internal/common/pathUtils';
 import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from 'pyright-internal/common/stringUtils';
 
-import { getExecutionEnvironments, getOrAdd } from './common/collectionUtils';
+import { getExecutionEnvironments } from './common/collectionUtils';
 
 export interface PackageInfo {
     stdLib: boolean;

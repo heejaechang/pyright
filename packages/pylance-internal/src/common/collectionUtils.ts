@@ -7,18 +7,6 @@
 
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 
-export function getOrAdd<K, V>(map: Map<K, V>, key: K, newValueFactory: () => V): V {
-    const value = map.get(key);
-    if (value !== undefined) {
-        return value;
-    }
-
-    const newValue = newValueFactory();
-    map.set(key, newValue);
-
-    return newValue;
-}
-
 export function deleteElement<T>(arr: T[], element: T) {
     const index = arr.findIndex((e) => e === element);
     if (index < 0) {
