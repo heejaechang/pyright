@@ -550,7 +550,9 @@ export namespace Localizer {
         export const returnTypeUnknown = () => getRawString('Diagnostic.returnTypeUnknown');
         export const returnTypePartiallyUnknown = () =>
             new ParameterizedString<{ returnType: string }>(getRawString('Diagnostic.returnTypePartiallyUnknown'));
+        export const revealLocalsArgs = () => getRawString('Diagnostic.revealLocalsArgs');
         export const revealLocalsNone = () => getRawString('Diagnostic.revealLocalsNone');
+        export const revealTypeArgs = () => getRawString('Diagnostic.revealTypeArgs');
         export const setterGetterTypeMismatch = () => getRawString('Diagnostic.setterGetterTypeMismatch');
         export const starPatternInAsPattern = () => getRawString('Diagnostic.starPatternInAsPattern');
         export const starPatternInOrPattern = () => getRawString('Diagnostic.starPatternInOrPattern');
@@ -739,8 +741,7 @@ export namespace Localizer {
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.unusedCallResult'));
         export const unusedCoroutine = () => getRawString('Diagnostic.unusedCoroutine');
         export const varAnnotationIllegal = () => getRawString('Diagnostic.varAnnotationIllegal');
-        export const variadicTypeParamNotAtEnd = () =>
-            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.variadicTypeParamNotAtEnd'));
+        export const variadicTypeArgsTooMany = () => getRawString('Diagnostic.variadicTypeArgsTooMany');
         export const variadicTypeParamTooManyAlias = () =>
             new ParameterizedString<{ names: string }>(getRawString('Diagnostic.variadicTypeParamTooManyAlias'));
         export const variadicTypeParamTooManyClass = () =>

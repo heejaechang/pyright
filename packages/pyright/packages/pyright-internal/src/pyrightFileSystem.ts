@@ -3,13 +3,15 @@
  * Copyright (c) Microsoft Corporation.
  * Licensed under the MIT license.
  *
- * a file system that knows how to deal with partial stub files.
+ * A file system that knows how to deal with partial stub files.
+ * Files within a partial stub package act as though they are
+ * copied into the associated package, and the combined set of
+ * files is treated as one.
  */
 
 import * as fs from 'fs';
 
 import { getPyTypedInfo } from './analyzer/pyTypedUtils';
-import { getOrAdd } from './common/collectionUtils';
 import { ExecutionEnvironment } from './common/configOptions';
 import {
     FileSystem,
@@ -20,7 +22,13 @@ import {
     TmpfileOptions,
 } from './common/fileSystem';
 import { stubsSuffix } from './common/pathConsts';
-import { combinePaths, ensureTrailingDirectorySeparator, getDirectoryPath, getFileName } from './common/pathUtils';
+import {
+    combinePaths,
+    ensureTrailingDirectorySeparator,
+    getDirectoryPath,
+    getFileName,
+    isDirectory,
+} from './common/pathUtils';
 
 export class PyrightFileSystem implements FileSystem {
     private readonly _pathMap = new Map<string, string>();
@@ -33,8 +41,8 @@ export class PyrightFileSystem implements FileSystem {
 
     existsSync(path: string): boolean {
         if (this._partialStubPackagePaths.has(path)) {
-            // Pretend partial stub package directory doesn't exist.
-            // To be 100% correct, we need to check whether a file is under partial stub package path,
+            // Pretend partial stub package directory doesn't exist. To be 100% correct,
+            // we need to check whether a file is under partial stub package path,
             // but for now, this is enough to make import resolver to skip this folder.
             return false;
         }
@@ -51,7 +59,11 @@ export class PyrightFileSystem implements FileSystem {
     }
 
     readdirEntriesSync(path: string): fs.Dirent[] {
-        const entries = this._realFS.readdirEntriesSync(path);
+        const entries = this._realFS.readdirEntriesSync(path).filter((item) => {
+            // Filter out the stub package directory.
+            const dirPath = combinePaths(path, item.name);
+            return !this._partialStubPackagePaths.has(dirPath);
+        });
 
         const partialStubs = this._folderMap.get(ensureTrailingDirectorySeparator(path));
         if (!partialStubs) {
@@ -62,7 +74,11 @@ export class PyrightFileSystem implements FileSystem {
     }
 
     readdirSync(path: string): string[] {
-        const entries = this._realFS.readdirSync(path);
+        const entries = this._realFS.readdirSync(path).filter((item) => {
+            // Filter out the stub package directory.
+            const dirPath = combinePaths(path, item);
+            return !this._partialStubPackagePaths.has(dirPath);
+        });
 
         const partialStubs = this._folderMap.get(ensureTrailingDirectorySeparator(path));
         if (!partialStubs) {
@@ -144,7 +160,7 @@ export class PyrightFileSystem implements FileSystem {
         for (const path of paths) {
             this._rootSearched.add(path);
 
-            if (!this._realFS.existsSync(path)) {
+            if (!this._realFS.existsSync(path) || !isDirectory(this._realFS, path)) {
                 continue;
             }
 
@@ -193,7 +209,15 @@ export class PyrightFileSystem implements FileSystem {
                             this._pathMap.set(pyiFile, combinePaths(partialStubPackagePath, partialStub));
 
                             const directory = ensureTrailingDirectorySeparator(getDirectoryPath(pyiFile));
-                            getOrAdd(this._folderMap, directory, () => []).push(getFileName(pyiFile));
+                            let folderInfo = this._folderMap.get(directory);
+                            if (!folderInfo) {
+                                folderInfo = [];
+                                this._folderMap.set(directory, folderInfo);
+                            }
+                            const pyiFileName = getFileName(pyiFile);
+                            if (!folderInfo.some((entry) => entry === pyiFileName)) {
+                                folderInfo.push(pyiFileName);
+                            }
                         }
                     } catch {
                         // ignore
