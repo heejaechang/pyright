@@ -233,6 +233,31 @@ describe('Insiders', () => {
             await verifyUpdate(async () => await insiders.onStartup(), blob, true, false);
         });
 
+        test('no downgrade for dev build', async () => {
+            const insiders = new InsidersImpl(
+                '2020.10.1-dev.1',
+                downloadDir,
+                instance(appConfig),
+                instance(appShell),
+                instance(persistentState),
+                instance(blobStorage),
+                instance(commandManager)
+            );
+
+            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            when(currentChannelState.value).thenReturn('off');
+
+            await insiders.onStartup();
+
+            verify(
+                appShell.showInformationMessage(
+                    localize.Insiders.downgradeInsiders(),
+                    localize.LanguageServer.turnItOn(),
+                    localize.Common.no()
+                )
+            ).never();
+        });
+
         test('daily, and ready to check', async () => {
             const insiders = new InsidersImpl(
                 '2020.10.1',

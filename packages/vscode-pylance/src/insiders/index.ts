@@ -44,6 +44,13 @@ export class InsidersImpl {
     }
 
     async onStartup(): Promise<void> {
+        const prerelease = this._version.prerelease;
+        if (prerelease.length !== 0 && prerelease[0] !== 'pre') {
+            // If the version has a prerelease section and it's not "pre",
+            // then it's a dev/PR build. Do nothing.
+            return;
+        }
+
         const [current, changed] = this._updateChannel();
 
         if (current === 'off') {
