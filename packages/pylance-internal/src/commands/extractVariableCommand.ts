@@ -7,7 +7,7 @@
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
-import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
+import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { ExtractMethodProvider } from '../languageService/refactoringProvider';
@@ -35,6 +35,6 @@ export class ExtractVariableCommand implements ServerCommand {
 
         const results = ExtractMethodProvider.extractVariable(filePath, parseResults, range, token);
 
-        return convertWorkspaceEdits(results);
+        return convertWorkspaceEdits(this._ls.fs, results);
     }
 }

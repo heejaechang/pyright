@@ -99,7 +99,7 @@ function createWorkspaceInstance(fs?: FileSystem): WorkspaceServiceInstance {
     return {
         workspaceName: `Test`,
         rootPath: rootPath,
-        rootUri: convertPathToUri(rootPath),
+        rootUri: convertPathToUri(fs, rootPath),
         serviceInstance: new AnalyzerService('Test', fs, new NullConsole()),
         disableLanguageServices: true,
         disableOrganizeImports: true,

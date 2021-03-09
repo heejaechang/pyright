@@ -34,7 +34,6 @@ import * as debug from '../../../common/debug';
 import { createDeferred } from '../../../common/deferred';
 import { DiagnosticCategory } from '../../../common/diagnostic';
 import { FileEditAction } from '../../../common/editAction';
-import { FileSystem } from '../../../common/fileSystem';
 import {
     combinePaths,
     comparePaths,
@@ -97,7 +96,7 @@ export class TestState {
     private readonly _hostSpecificFeatures: HostSpecificFeatures;
     private readonly _testFS: vfs.TestFileSystem;
 
-    readonly fs: FileSystem;
+    readonly fs: PyrightFileSystem;
     readonly workspace: WorkspaceServiceInstance;
     readonly console: ConsoleInterface;
     readonly rawConfigJson: any | undefined;
@@ -168,7 +167,7 @@ export class TestState {
         this.workspace = {
             workspaceName: 'test workspace',
             rootPath: this.fs.getModulePath(),
-            rootUri: convertPathToUri(this.fs.getModulePath()),
+            rootUri: convertPathToUri(this.fs, this.fs.getModulePath()),
             serviceInstance: service,
             disableLanguageServices: false,
             disableOrganizeImports: false,
@@ -227,6 +226,11 @@ export class TestState {
             this.goToMarker(markers[i]);
             action(markers[i], i);
         }
+    }
+
+    getMappedFilePath(path: string): string {
+        this.importResolver.ensurePartialStubPackages(this.configOptions.findExecEnvironment(path));
+        return this.fs.getMappedFilePath(path);
     }
 
     getMarkerName(m: Marker): string {

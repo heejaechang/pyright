@@ -9,7 +9,7 @@ import { CancellationToken, ExecuteCommandParams, TextEdit } from 'vscode-langua
 import { CommandController as PyrightCommandController } from 'pyright-internal/commands/commandController';
 import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
 import { convertUriToPath } from 'pyright-internal/common/pathUtils';
-import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
+import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
@@ -51,13 +51,13 @@ export class CommandController extends PyrightCommandController {
         [PyrightCommands.addMissingOptionalToParam, PyrightCommands.addMissingOptionalToParam],
     ]);
 
-    constructor(ls: LanguageServerInterface, private _telemetry: TelemetryService | undefined) {
-        super(ls);
+    constructor(private _ls: LanguageServerInterface, private _telemetry: TelemetryService | undefined) {
+        super(_ls);
 
-        this._pylanceQuickAction = new QuickActionCommand(ls);
-        this._extractMethod = new ExtractMethodCommand(ls);
-        this._extractVariable = new ExtractVariableCommand(ls);
-        this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(ls);
+        this._pylanceQuickAction = new QuickActionCommand(_ls);
+        this._extractMethod = new ExtractMethodCommand(_ls);
+        this._extractVariable = new ExtractVariableCommand(_ls);
+        this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(_ls);
     }
 
     static supportedCommands() {
@@ -110,12 +110,13 @@ export class CommandController extends PyrightCommandController {
             cmdParams.arguments.length >= 1
         ) {
             const docUri = cmdParams.arguments[0];
-            const filePath = convertUriToPath(docUri);
+            const filePath = convertUriToPath(this._ls.fs, docUri);
             const edits = result as TextEdit[];
 
             // return workspace edits so that we can handle it
             // without support from client
             return convertWorkspaceEdits(
+                this._ls.fs,
                 edits.map((e) => {
                     return {
                         filePath,

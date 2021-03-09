@@ -8,7 +8,7 @@
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
-import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
+import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { addImportSimilarityLimit, wellKnownAbbreviationMap } from '../common/importUtils';
@@ -48,7 +48,7 @@ export class AddImportCommand implements ServerCommand {
 
         // Add the import and replace the text where diagnostic is on to the auto import name
         // for fuzzy matching case
-        return convertWorkspaceEdits([
+        return convertWorkspaceEdits(this._ls.fs, [
             ...result.edits!.map((e) => {
                 return { filePath, range: e.range, replacementText: e.replacementText };
             }),

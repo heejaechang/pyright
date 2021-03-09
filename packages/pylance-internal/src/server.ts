@@ -367,7 +367,7 @@ class PylanceServer extends LanguageServerBase {
 
         this._connection.languages.semanticTokens.on(
             async (params: SemanticTokensParams, token: CancellationToken): Promise<SemanticTokens> => {
-                const filePath = convertUriToPath(params.textDocument.uri);
+                const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
                 const workspace = await this.getWorkspaceForFile(filePath);
                 if (workspace.disableLanguageServices) {
@@ -390,7 +390,7 @@ class PylanceServer extends LanguageServerBase {
                 params: SemanticTokensDeltaParams,
                 token: CancellationToken
             ): Promise<SemanticTokens | SemanticTokensDelta> => {
-                const filePath = convertUriToPath(params.textDocument.uri);
+                const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
                 const workspace = await this.getWorkspaceForFile(filePath);
                 if (workspace.disableLanguageServices) {
@@ -410,7 +410,7 @@ class PylanceServer extends LanguageServerBase {
 
         this._connection.languages.semanticTokens.onRange(
             async (params: SemanticTokensRangeParams, token: CancellationToken): Promise<SemanticTokens> => {
-                const filePath = convertUriToPath(params.textDocument.uri);
+                const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
                 const workspace = await this.getWorkspaceForFile(filePath);
                 if (workspace.disableLanguageServices) {
@@ -484,7 +484,7 @@ class PylanceServer extends LanguageServerBase {
     ): Promise<(Command | CodeAction)[] | undefined | null> {
         this.recordUserInteractionTime();
 
-        const filePath = convertUriToPath(params.textDocument.uri);
+        const filePath = convertUriToPath(this.fs, params.textDocument.uri);
         const workspace = (await this.getWorkspaceForFile(filePath)) as PylanceWorkspaceServiceInstance;
         const actions1 = await PyrightCodeActionProvider.getCodeActionsForPosition(
             workspace,
@@ -603,7 +603,7 @@ class PylanceServer extends LanguageServerBase {
     ): Promise<CompletionList | undefined> {
         const completionList = await super.onCompletion(params, token);
         const workspace = (await this.getWorkspaceForFile(
-            convertUriToPath(params.textDocument.uri)
+            convertUriToPath(this.fs, params.textDocument.uri)
         )) as PylanceWorkspaceServiceInstance;
 
         if (completionList && this.client.hasVisualStudioExtensionsCapability) {

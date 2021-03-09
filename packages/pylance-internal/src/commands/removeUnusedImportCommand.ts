@@ -13,9 +13,9 @@ import { Commands as PyrightCommands } from 'pyright-internal/commands/commands'
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
 import { convertOffsetsToRange } from 'pyright-internal/common/positionUtils';
-import { convertWorkspaceEdits } from 'pyright-internal/common/textEditUtils';
 import { doRangesIntersect, doRangesOverlap, Range, TextRange } from 'pyright-internal/common/textRange';
 import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
+import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { ServerCommand } from './commandController';
@@ -85,7 +85,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
         }
 
         if (nameLeft === 0) {
-            return convertWorkspaceEdits([
+            return convertWorkspaceEdits(this._ls.fs, [
                 { filePath: filePath, range: this._adjustRange(importRange, lines), replacementText: '' },
             ]);
         }
@@ -113,7 +113,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
             editSpan = { start, length };
         }
 
-        return convertWorkspaceEdits([
+        return convertWorkspaceEdits(this._ls.fs, [
             {
                 filePath,
                 range: convertOffsetsToRange(editSpan.start, TextRange.getEnd(editSpan), lines),

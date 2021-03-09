@@ -1159,7 +1159,7 @@ export class SourceFile {
     }
 
     private _getPathForLogging(filepath: string) {
-        if (!(this.fileSystem instanceof PyrightFileSystem) || !this.fileSystem.isVirtual(filepath)) {
+        if (!(this.fileSystem instanceof PyrightFileSystem) || !this.fileSystem.isMappedFilePath(filepath)) {
             return filepath;
         }
 

@@ -78,8 +78,8 @@ import {
 } from './common/fileSystem';
 import { containsPath, convertPathToUri, convertUriToPath } from './common/pathUtils';
 import { ProgressReporter, ProgressReportTracker } from './common/progressReporter';
-import { convertWorkspaceEdits } from './common/textEditUtils';
 import { DocumentRange, Position } from './common/textRange';
+import { convertWorkspaceEdits } from './common/workspaceEditUtils';
 import { AnalyzerServiceExecutor } from './languageService/analyzerServiceExecutor';
 import { CompletionItemData, CompletionResults } from './languageService/completionProvider';
 import { DefinitionFilter } from './languageService/definitionProvider';
@@ -464,7 +464,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         ) => {
             this.recordUserInteractionTime();
 
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -480,7 +480,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             if (!locations) {
                 return undefined;
             }
-            return locations.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
+            return locations.map((loc) => Location.create(convertPathToUri(this.fs, loc.path), loc.range));
         };
 
         this._connection.onDefinition((params, token) =>
@@ -518,7 +518,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             this._pendingFindAllRefsCancellationSource = source;
 
             try {
-                const filePath = convertUriToPath(params.textDocument.uri);
+                const filePath = convertUriToPath(this.fs, params.textDocument.uri);
                 const position: Position = {
                     line: params.position.line,
                     character: params.position.character,
@@ -530,7 +530,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 }
 
                 const convert = (locs: DocumentRange[]): Location[] => {
-                    return locs.map((loc) => Location.create(convertPathToUri(loc.path), loc.range));
+                    return locs.map((loc) => Location.create(convertPathToUri(this.fs, loc.path), loc.range));
                 };
 
                 const locations: Location[] = [];
@@ -556,7 +556,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this._connection.onDocumentSymbol(async (params, token) => {
             this.recordUserInteractionTime();
 
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const workspace = await this.getWorkspaceForFile(filePath);
             if (workspace.disableLanguageServices) {
@@ -590,7 +590,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onHover(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -608,7 +608,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onDocumentHighlight(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -620,7 +620,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onSignatureHelp(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -722,7 +722,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onRenameRequest(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -745,11 +745,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return undefined;
             }
 
-            return convertWorkspaceEdits(editActions);
+            return convertWorkspaceEdits(this.fs, editActions);
         });
 
         this._connection.languages.callHierarchy.onPrepare(async (params, token) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
 
             const position: Position = {
                 line: params.position.line,
@@ -767,13 +767,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             }
 
             // Convert the file path in the item to proper URI.
-            callItem.uri = convertPathToUri(callItem.uri);
+            callItem.uri = convertPathToUri(this.fs, callItem.uri);
 
             return [callItem];
         });
 
         this._connection.languages.callHierarchy.onIncomingCalls(async (params, token) => {
-            const filePath = convertUriToPath(params.item.uri);
+            const filePath = convertUriToPath(this.fs, params.item.uri);
 
             const position: Position = {
                 line: params.item.range.start.line,
@@ -792,14 +792,14 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             // Convert the file paths in the items to proper URIs.
             callItems.forEach((item) => {
-                item.from.uri = convertPathToUri(item.from.uri);
+                item.from.uri = convertPathToUri(this.fs, item.from.uri);
             });
 
             return callItems;
         });
 
         this._connection.languages.callHierarchy.onOutgoingCalls(async (params, token) => {
-            const filePath = convertUriToPath(params.item.uri);
+            const filePath = convertUriToPath(this.fs, params.item.uri);
 
             const position: Position = {
                 line: params.item.range.start.line,
@@ -818,22 +818,30 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
             // Convert the file paths in the items to proper URIs.
             callItems.forEach((item) => {
-                item.to.uri = convertPathToUri(item.to.uri);
+                item.to.uri = convertPathToUri(this.fs, item.to.uri);
             });
 
             return callItems;
         });
 
         this._connection.onDidOpenTextDocument(async (params) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            let filePath = convertUriToPath(this.fs, params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
+
+            // Make sure partial stub packages are processed for the given exe environment.
+            // This can happen if a user opens file inside of a partial stub package directly out of band.
+            if (workspace.serviceInstance.ensurePartialStubPackages(filePath)) {
+                // If mapping happened, re-check mapped file path.
+                filePath = convertUriToPath(this.fs, params.textDocument.uri);
+            }
+
             workspace.serviceInstance.setFileOpened(filePath, params.textDocument.version, params.textDocument.text);
         });
 
         this._connection.onDidChangeTextDocument(async (params) => {
             this.recordUserInteractionTime();
 
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
             workspace.serviceInstance.updateOpenFileContents(
                 filePath,
@@ -843,14 +851,14 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         });
 
         this._connection.onDidCloseTextDocument(async (params) => {
-            const filePath = convertUriToPath(params.textDocument.uri);
+            const filePath = convertUriToPath(this.fs, params.textDocument.uri);
             const workspace = await this.getWorkspaceForFile(filePath);
             workspace.serviceInstance.setFileClosed(filePath);
         });
 
         this._connection.onDidChangeWatchedFiles((params) => {
             params.changes.forEach((change) => {
-                const filePath = convertUriToPath(change.uri);
+                const filePath = convertUriToPath(this.fs, change.uri);
                 const eventType: FileWatcherEventType = change.type === 1 ? 'add' : 'change';
                 this._fileWatchers.forEach((watcher) => {
                     if (watcher.workspacePaths.some((dirPath) => containsPath(dirPath, filePath))) {
@@ -864,12 +872,12 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             if (this.client.hasWorkspaceFoldersCapability) {
                 this._connection.workspace.onDidChangeWorkspaceFolders((event) => {
                     event.removed.forEach((workspace) => {
-                        const rootPath = convertUriToPath(workspace.uri);
+                        const rootPath = convertUriToPath(this.fs, workspace.uri);
                         this._workspaceMap.delete(rootPath);
                     });
 
                     event.added.forEach(async (workspace) => {
-                        const rootPath = convertUriToPath(workspace.uri);
+                        const rootPath = convertUriToPath(this.fs, workspace.uri);
                         const newWorkspace = this.createWorkspaceServiceInstance(workspace, rootPath);
                         this._workspaceMap.set(rootPath, newWorkspace);
                         await this.updateSettingsForWorkspace(newWorkspace);
@@ -1012,7 +1020,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         // Create a service instance for each of the workspace folders.
         if (params.workspaceFolders) {
             params.workspaceFolders.forEach((folder) => {
-                const path = convertUriToPath(folder.uri);
+                const path = convertUriToPath(this.fs, folder.uri);
                 this._workspaceMap.set(path, this.createWorkspaceServiceInstance(folder, path));
             });
         } else if (params.rootPath) {
@@ -1073,7 +1081,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         // Send the computed diagnostics to the client.
         results.diagnostics.forEach((fileDiag) => {
             this._connection.sendDiagnostics({
-                uri: convertPathToUri(fileDiag.filePath),
+                uri: convertPathToUri(this.fs, fileDiag.filePath),
                 diagnostics: this._convertDiagnostics(fileDiag.diagnostics),
             });
         });
@@ -1146,7 +1154,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         this._lastTriggerKind = params.context?.triggerKind;
 
-        const filePath = convertUriToPath(params.textDocument.uri);
+        const filePath = convertUriToPath(this.fs, params.textDocument.uri);
         const position: Position = {
             line: params.position.line,
             character: params.position.character,
@@ -1260,7 +1268,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             if (relatedInfo.length > 0) {
                 vsDiag.relatedInformation = relatedInfo.map((info) => {
                     return DiagnosticRelatedInformation.create(
-                        Location.create(convertPathToUri(info.filePath), info.range),
+                        Location.create(convertPathToUri(this.fs, info.filePath), info.range),
                         info.message
                     );
                 });
