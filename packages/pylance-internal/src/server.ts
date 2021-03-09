@@ -503,6 +503,21 @@ class PylanceServer extends LanguageServerBase {
         return [...actions1, ...actions2];
     }
 
+    protected resolveWorkspaceCompletionItem(
+        workspace: WorkspaceServiceInstance,
+        filePath: string,
+        item: CompletionItem,
+        token: CancellationToken
+    ): void {
+        workspace.serviceInstance.resolveCompletionItem(
+            filePath,
+            item,
+            this.getCompletionOptions(),
+            wellKnownAbbreviationMap,
+            token
+        );
+    }
+
     protected async getWorkspaceCompletionsForPosition(
         workspace: WorkspaceServiceInstance,
         filePath: string,
@@ -591,7 +606,7 @@ class PylanceServer extends LanguageServerBase {
             convertUriToPath(params.textDocument.uri)
         )) as PylanceWorkspaceServiceInstance;
 
-        if (completionList && this._hasVisualStudioExtensionsCapability) {
+        if (completionList && this.client.hasVisualStudioExtensionsCapability) {
             // See this for the unicode designations as understood by Visual Studio:
             // https://docs.microsoft.com/en-us/dotnet/api/system.globalization.unicodecategory
             // Any characters not in those classes will cause VS to dismiss the completion list.

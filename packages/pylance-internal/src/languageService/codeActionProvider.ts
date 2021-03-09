@@ -69,6 +69,7 @@ export class CodeActionProvider {
                 diagRange,
                 addImportSimilarityLimit,
                 wellKnownAbbreviationMap,
+                /* lazyEdit */ true,
                 token
             );
 

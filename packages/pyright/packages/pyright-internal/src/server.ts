@@ -221,7 +221,7 @@ class PyrightServer extends LanguageServerBase {
         return {
             isEnabled: (data: AnalysisResults) => true,
             begin: () => {
-                if (this._hasWindowProgressCapability) {
+                if (this.client.hasWindowProgressCapability) {
                     workDoneProgress = this._connection.window.createWorkDoneProgress();
                     workDoneProgress
                         .then((progress) => {

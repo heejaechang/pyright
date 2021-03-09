@@ -37,6 +37,7 @@ export class AddImportCommand implements ServerCommand {
             range,
             addImportSimilarityLimit,
             wellKnownAbbreviationMap,
+            /* lazyEdit */ false,
             token
         );
 
@@ -48,7 +49,7 @@ export class AddImportCommand implements ServerCommand {
         // Add the import and replace the text where diagnostic is on to the auto import name
         // for fuzzy matching case
         return convertWorkspaceEdits([
-            ...result.edits.map((e) => {
+            ...result.edits!.map((e) => {
                 return { filePath, range: e.range, replacementText: e.replacementText };
             }),
             { filePath, range, replacementText: result.insertionText },
