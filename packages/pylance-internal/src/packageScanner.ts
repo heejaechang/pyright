@@ -295,7 +295,6 @@ export class PackageScanner<T> {
 }
 
 type FullImportName = string;
-type Venv = string | undefined;
 type ImportsMap = Map<FullImportName, PackageInfo>;
 
 interface Entry {
@@ -311,7 +310,6 @@ interface Entry {
 
 class FSCache {
     private _mapByPath = new Map<string, Entry[]>();
-    private _fullImportNameMap = new Map<string, Map<Venv, FullImportName>>();
 
     constructor(private _importResolver: ImportResolver) {}
 
@@ -366,13 +364,7 @@ class FSCache {
     }
 
     getModuleNameForImport(path: string, execEnv: ExecutionEnvironment) {
-        return getOrAdd(
-            getOrAdd(this._fullImportNameMap, path, () => new Map<Venv, FullImportName>()),
-            execEnv.venv,
-            () => {
-                return this._importResolver.getModuleNameForImport(path, execEnv).moduleName;
-            }
-        );
+        return this._importResolver.getModuleNameForImport(path, execEnv).moduleName;
     }
 
     getRoots(execEnv: ExecutionEnvironment): string[] {
