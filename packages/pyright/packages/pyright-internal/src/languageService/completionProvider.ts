@@ -95,6 +95,7 @@ import { ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
 import { AbbreviationInfo, AutoImporter, AutoImportResult, ModuleSymbolMap } from './autoImporter';
 import { IndexResults } from './documentSymbolProvider';
+import { getOverloadedFunctionTooltip } from './tooltipUtils';
 
 const _keywords: string[] = [
     // Expression keywords
@@ -1699,7 +1700,7 @@ export class CompletionProvider {
 
                                 case DeclarationType.Function: {
                                     const functionType =
-                                        detail.boundObject && isFunction(type)
+                                        detail.boundObject && (isFunction(type) || isOverloadedFunction(type))
                                             ? this._evaluator.bindFunctionToClassOrObject(detail.boundObject, type)
                                             : type;
                                     if (functionType) {
@@ -1715,13 +1716,12 @@ export class CompletionProvider {
                                                 this._evaluator.printType(propertyType, /* expandTypeAlias */ false) +
                                                 ' (property)';
                                         } else if (isOverloadedFunction(functionType)) {
-                                            typeDetail = functionType.overloads
-                                                .map(
-                                                    (overload) =>
-                                                        name +
-                                                        this._evaluator.printType(overload, /* expandTypeAlias */ false)
-                                                )
-                                                .join('\n');
+                                            // 35 is completion tooltip's default width size
+                                            typeDetail = getOverloadedFunctionTooltip(
+                                                functionType,
+                                                this._evaluator,
+                                                /* columnThreshold */ 35
+                                            );
                                         } else {
                                             typeDetail =
                                                 name +
