@@ -21,6 +21,7 @@ import {
     getFileSystemEntries,
     isDirectory,
     normalizePath,
+    tryStat,
 } from '../common/pathUtils';
 
 interface PythonPathResult {
@@ -72,15 +73,14 @@ export function getTypeshedSubdirectory(typeshedPath: string, isStdLib: boolean)
 export function findPythonSearchPaths(
     fs: FileSystem,
     configOptions: ConfigOptions,
-    venv: string | undefined,
     importFailureInfo: string[],
     includeWatchPathsOnly?: boolean | undefined,
     workspaceRoot?: string | undefined
 ): string[] | undefined {
     importFailureInfo.push('Finding python search paths');
 
-    if (configOptions.venvPath !== undefined && (venv !== undefined || configOptions.defaultVenv)) {
-        const venvDir = venv !== undefined ? venv : configOptions.defaultVenv;
+    if (configOptions.venvPath !== undefined && configOptions.venv) {
+        const venvDir = configOptions.venv;
         const venvPath = combinePaths(configOptions.venvPath, venvDir);
 
         const foundPaths: string[] = [];
@@ -268,15 +268,15 @@ function getPathsFromPthFiles(fs: FileSystem, parentDir: string): string[] {
     // Get a list of all *.pth files within the specified directory.
     const pthFiles = fs
         .readdirEntriesSync(parentDir)
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.pth'))
+        .filter((entry) => (entry.isFile() || entry.isSymbolicLink()) && entry.name.endsWith('.pth'))
         .sort((a, b) => compareComparableValues(a.name, b.name));
 
     pthFiles.forEach((pthFile) => {
         const filePath = combinePaths(parentDir, pthFile.name);
-        const fileStats = fs.statSync(filePath);
+        const fileStats = tryStat(fs, filePath);
 
         // Skip all files that are much larger than expected.
-        if (fileStats.size > 0 && fileStats.size < 64 * 1024) {
+        if (fileStats?.isFile() && fileStats.size > 0 && fileStats.size < 64 * 1024) {
             const data = fs.readFileSync(filePath, 'utf8');
             const lines = data.split(/\r?\n/);
             lines.forEach((line) => {

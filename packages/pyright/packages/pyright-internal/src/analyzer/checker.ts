@@ -92,6 +92,7 @@ import {
     isNone,
     isObject,
     isOverloadedFunction,
+    isParamSpec,
     isTypeSame,
     isTypeVar,
     isUnion,
@@ -328,6 +329,28 @@ export class Checker extends ParseTreeWalker {
                     }
                 }
             });
+
+            // Check for invalid use of ParamSpec P.args and P.kwargs.
+            const paramSpecParams = node.parameters.filter((param, index) => {
+                const paramInfo = functionTypeResult.functionType.details.parameters[index];
+                if (paramInfo.typeAnnotation && isTypeVar(paramInfo.type) && isParamSpec(paramInfo.type)) {
+                    if (
+                        paramInfo.category !== ParameterCategory.Simple &&
+                        paramInfo.typeAnnotation.nodeType === ParseNodeType.MemberAccess
+                    ) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+            if (paramSpecParams.length === 1) {
+                this._evaluator.addError(
+                    Localizer.Diagnostic.paramSpecArgsKwargsUsage(),
+                    paramSpecParams[0].typeAnnotation || paramSpecParams[0].typeAnnotationComment!
+                );
+            }
 
             // If this is a stub, ensure that the return type is specified.
             if (this._fileInfo.isStubFile) {
@@ -1000,12 +1023,13 @@ export class Checker extends ParseTreeWalker {
             ``;
             if (nameType && isTypeVar(nameType)) {
                 if (nameType.scopeId === this._evaluator.getScopeIdForNode(node)) {
-                    // We exempt constrained TypeVars and bound TypeVars that are type arguments of
-                    // other types. There are legitimate uses for singleton instances
-                    // in this particular case.
+                    // We exempt constrained TypeVars, bound TypeVars that are type arguments of
+                    // other types, and ParamSpecs. There are legitimate uses for singleton
+                    // instances in these particular cases.
                     let isExempt =
                         nameType.details.constraints.length > 0 ||
-                        (nameType.details.boundType !== undefined && subscriptIndex !== undefined);
+                        (nameType.details.boundType !== undefined && subscriptIndex !== undefined) ||
+                        isParamSpec(nameType);
 
                     if (!isExempt && baseExpression && subscriptIndex !== undefined) {
                         // Is this a type argument for a generic type alias? If so,

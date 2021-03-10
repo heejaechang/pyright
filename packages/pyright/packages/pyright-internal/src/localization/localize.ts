@@ -215,6 +215,8 @@ export namespace Localizer {
         export const classNotRuntimeSubscriptable = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.classNotRuntimeSubscriptable'));
         export const classDecoratorTypeUnknown = () => getRawString('Diagnostic.classDecoratorTypeUnknown');
+        export const classDefinitionCycle = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.classDefinitionCycle'));
         export const classGetItemClsParam = () => getRawString('Diagnostic.classGetItemClsParam');
         export const classVarFirstArgMissing = () => getRawString('Diagnostic.classVarFirstArgMissing');
         export const classVarTooManyArgs = () => getRawString('Diagnostic.classVarTooManyArgs');
@@ -490,13 +492,18 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramAlreadyAssigned'));
         export const paramNameMissing = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramNameMissing'));
+        export const paramSpecArgsKwargsUsage = () => getRawString('Diagnostic.paramSpecArgsKwargsUsage');
+        export const paramSpecArgsUsage = () => getRawString('Diagnostic.paramSpecArgsUsage');
         export const paramSpecAssignedName = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramSpecAssignedName'));
         export const paramSpecContext = () => getRawString('Diagnostic.paramSpecContext');
         export const paramSpecIllegal = () => getRawString('Diagnostic.paramSpecIllegal');
         export const paramSpecFirstArg = () => getRawString('Diagnostic.paramSpecFirstArg');
+        export const paramSpecKwargsUsage = () => getRawString('Diagnostic.paramSpecKwargsUsage');
         export const paramSpecNotBound = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.paramSpecNotBound'));
+        export const paramSpecNotUsedByOuterScope = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramSpecNotUsedByOuterScope'));
         export const paramSpecUnknownArg = () => getRawString('Diagnostic.paramSpecUnknownArg');
         export const paramSpecUnknownMember = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramSpecUnknownMember'));
@@ -757,6 +764,7 @@ export namespace Localizer {
             new ParameterizedString<{ exprType: string; yieldType: string }>(
                 getRawString('Diagnostic.yieldTypeMismatch')
             );
+        export const yieldWithinListCompr = () => getRawString('Diagnostic.yieldWithinListCompr');
         export const zeroCaseStatementsFound = () => getRawString('Diagnostic.zeroCaseStatementsFound');
         export const zeroLengthTupleNotAllowed = () => getRawString('Diagnostic.zeroLengthTupleNotAllowed');
     }
@@ -800,6 +808,8 @@ export namespace Localizer {
             new ParameterizedString<{ expected: number; received: number }>(
                 getRawString('DiagnosticAddendum.functionTooManyParams')
             );
+        export const keyNotRequired = () =>
+            new ParameterizedString<{ name: string; type: string }>(getRawString('DiagnosticAddendum.keyNotRequired'));
         export const keyUndefined = () =>
             new ParameterizedString<{ name: string; type: string }>(getRawString('DiagnosticAddendum.keyUndefined'));
         export const literalAssignmentMismatch = () =>

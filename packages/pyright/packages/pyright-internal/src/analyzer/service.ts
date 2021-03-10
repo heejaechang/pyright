@@ -32,7 +32,7 @@ import { ConsoleInterface, log, LogLevel, StandardConsole } from '../common/cons
 import { Diagnostic } from '../common/diagnostic';
 import { FileEditAction, TextEditAction } from '../common/editAction';
 import { LanguageServiceExtension } from '../common/extensibility';
-import { FileSystem, FileWatcher, ignoredWatchEventFunction, Stats } from '../common/fileSystem';
+import { FileSystem, FileWatcher, ignoredWatchEventFunction } from '../common/fileSystem';
 import {
     combinePaths,
     FileSpec,
@@ -44,6 +44,7 @@ import {
     isDirectory,
     normalizePath,
     stripFileExtension,
+    tryStat,
 } from '../common/pathUtils';
 import { DocumentRange, Position, Range } from '../common/textRange';
 import { timingStats } from '../common/timing';
@@ -620,24 +621,23 @@ export class AnalyzerService {
                 this._console.error(`venvPath ${configOptions.venvPath} is not a valid directory.`);
             }
 
-            // venvPath without defaultVenv means it won't do anything while resolveImport.
-            // so first, try to set defaultVenv from existing configOption if it is null. if both are null,
+            // venvPath without venv means it won't do anything while resolveImport.
+            // so first, try to set venv from existing configOption if it is null. if both are null,
             // then, resolveImport won't consider venv
-            configOptions.defaultVenv = configOptions.defaultVenv ?? this._configOptions.defaultVenv;
-            if (configOptions.defaultVenv) {
-                const fullVenvPath = combinePaths(configOptions.venvPath, configOptions.defaultVenv);
+            configOptions.venv = configOptions.venv ?? this._configOptions.venv;
+            if (configOptions.venv) {
+                const fullVenvPath = combinePaths(configOptions.venvPath, configOptions.venv);
 
                 if (!this._fs.existsSync(fullVenvPath) || !isDirectory(this._fs, fullVenvPath)) {
                     this._console.error(
-                        `venv ${configOptions.defaultVenv} subdirectory not found ` +
-                            `in venv path ${configOptions.venvPath}.`
+                        `venv ${configOptions.venv} subdirectory not found in venv path ${configOptions.venvPath}.`
                     );
                 } else {
                     const importFailureInfo: string[] = [];
-                    if (findPythonSearchPaths(this._fs, configOptions, undefined, importFailureInfo) === undefined) {
+                    if (findPythonSearchPaths(this._fs, configOptions, importFailureInfo) === undefined) {
                         this._console.error(
                             `site-packages directory cannot be located for venvPath ` +
-                                `${configOptions.venvPath} and venv ${configOptions.defaultVenv}.`
+                                `${configOptions.venvPath} and venv ${configOptions.venv}.`
                         );
 
                         if (configOptions.verboseOutput) {
@@ -681,7 +681,7 @@ export class AnalyzerService {
         }
 
         // Is there a reference to a venv? If so, there needs to be a valid venvPath.
-        if (configOptions.defaultVenv || configOptions.executionEnvironments.find((e) => !!e.venv)) {
+        if (configOptions.venv) {
             if (!configOptions.venvPath) {
                 this._console.warn(`venvPath not specified, so venv settings will be ignored.`);
             }
@@ -1086,12 +1086,7 @@ export class AnalyzerService {
                         return;
                     }
 
-                    let stats: Stats | undefined;
-                    try {
-                        stats = this._fs.statSync(path);
-                    } catch {
-                        stats = undefined;
-                    }
+                    const stats = tryStat(this._fs, path);
 
                     if (stats && stats.isFile() && !path.endsWith('.py') && !path.endsWith('.pyi')) {
                         return;
@@ -1151,7 +1146,6 @@ export class AnalyzerService {
         const watchList = findPythonSearchPaths(
             this._fs,
             this._backgroundAnalysisProgram.configOptions,
-            undefined,
             importFailureInfo,
             true,
             this._executionRootPath

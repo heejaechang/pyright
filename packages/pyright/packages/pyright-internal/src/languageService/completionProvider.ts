@@ -969,7 +969,7 @@ export class CompletionProvider {
             leftType = this._evaluator.makeTopLevelTypeVarsConcrete(leftType);
 
             doForEachSubtype(leftType, (subtype) => {
-                subtype = transformTypeObjectToClass(subtype);
+                subtype = this._evaluator.makeTopLevelTypeVarsConcrete(transformTypeObjectToClass(subtype));
 
                 if (isObject(subtype)) {
                     getMembersForClass(subtype.classType, symbolTable, /* includeInstanceVars */ true);
@@ -1261,7 +1261,7 @@ export class CompletionProvider {
                 return;
             }
 
-            const entries = this._evaluator.getTypedDictMembersForClass(classType);
+            const entries = this._evaluator.getTypedDictMembersForClass(classType, /* allowNarrowed */ true);
             const quoteValue = this._getQuoteValueFromPriorText(priorText);
 
             entries.forEach((_, key) => {
@@ -1330,7 +1330,7 @@ export class CompletionProvider {
             return;
         }
 
-        const entries = this._evaluator.getTypedDictMembersForClass(classType);
+        const entries = this._evaluator.getTypedDictMembersForClass(classType, /* allowNarrowed */ true);
         entries.forEach((_, key) => {
             this._addStringLiteralToCompletionList(
                 key,
