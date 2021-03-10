@@ -105,11 +105,7 @@ export function buildModuleSymbolsMap(files: SourceFileInfo[], token: Cancellati
             return;
         }
 
-        const indexResults = file.sourceFile.getCachedIndexResults();
-        if (indexResults && !indexResults.privateOrProtected) {
-            moduleSymbolMap.set(filePath, createModuleSymbolTableFromIndexResult(indexResults, /* library */ false));
-            return;
-        }
+        // For now, don't iterate through closed user files using indices.
     });
 
     return moduleSymbolMap;
