@@ -18,6 +18,7 @@ import {
     getFileExtension,
     isFileSystemCaseSensitive,
     stripFileExtension,
+    tryStat,
 } from 'pyright-internal/common/pathUtils';
 import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from 'pyright-internal/common/stringUtils';
 
@@ -325,7 +326,19 @@ class FSCache {
 
         const newEntries: Entry[] = [];
         for (const entry of this.realFS.readdirEntriesSync(path)) {
-            if (entry.isFile()) {
+            const filePath = combinePaths(path, entry.name);
+
+            let isFile = entry.isFile();
+            let isDirectory = entry.isDirectory();
+            if (entry.isSymbolicLink()) {
+                const stat = tryStat(this.realFS, filePath);
+                if (stat) {
+                    isFile = stat.isFile();
+                    isDirectory = stat.isDirectory();
+                }
+            }
+
+            if (isFile) {
                 const extension = getFileExtension(entry.name);
                 const isStub = extension === '.pyi';
                 const isRegular = extension === '.py';
@@ -335,7 +348,6 @@ class FSCache {
 
                 const isInit = entry.name === '__init__.py' || entry.name === '__init__.pyi';
                 const containsInit = this.realFS.existsSync(combinePaths(path, '__init__.py'));
-                const filePath = combinePaths(path, entry.name);
 
                 newEntries.push({
                     name: entry.name,
@@ -347,10 +359,10 @@ class FSCache {
                     isStub,
                     public: true,
                 });
-            } else if (entry.isDirectory()) {
+            } else if (isDirectory) {
                 newEntries.push({
                     name: entry.name,
-                    fullPath: combinePaths(path, entry.name),
+                    fullPath: filePath,
                     isFile: false,
                     isInit: false,
                     containsInit: false,
