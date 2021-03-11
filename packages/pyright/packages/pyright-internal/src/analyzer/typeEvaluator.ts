@@ -208,6 +208,7 @@ import {
     enumerateLiteralsForType,
     getDeclaredGeneratorReturnType,
     getDeclaredGeneratorSendType,
+    getGeneratorTypeArgs,
     getSpecializedTupleType,
     getTypeVarArgumentsRecursive,
     getTypeVarScopeId,
@@ -560,7 +561,7 @@ export interface TypeEvaluator {
     getTypeForDeclaration: (declaration: Declaration) => Type | undefined;
     resolveAliasDeclaration: (declaration: Declaration, resolveLocalNames: boolean) => Declaration | undefined;
     getTypeFromIterable: (type: Type, isAsync: boolean, errorNode: ParseNode) => Type;
-    getTypedDictMembersForClass: (classType: ClassType) => Map<string, TypedDictEntry>;
+    getTypedDictMembersForClass: (classType: ClassType, allowNarrowed: boolean) => Map<string, TypedDictEntry>;
     getGetterTypeFromProperty: (propertyClass: ClassType, inferTypeIfNeeded: boolean) => Type | undefined;
     markNamesAccessed: (node: ParseNode, names: string[]) => void;
     getScopeIdForNode: (node: ParseNode) => string;
@@ -1150,13 +1151,9 @@ export function createTypeEvaluator(
                 break;
             }
 
-            case ParseNodeType.Yield: {
-                typeResult = getTypeFromYield(node);
-                break;
-            }
-
+            case ParseNodeType.Yield:
             case ParseNodeType.YieldFrom: {
-                typeResult = getTypeFromYieldFrom(node);
+                typeResult = getTypeFromYield(node);
                 break;
             }
 
@@ -1427,6 +1424,16 @@ export function createTypeEvaluator(
         bindToType?: ClassType | ObjectType | TypeVarType
     ): TypeResult | undefined {
         let memberInfo: ClassMemberLookup | undefined;
+
+        if (ClassType.isPartiallyConstructed(classType)) {
+            addDiagnostic(
+                getFileInfo(errorNode).diagnosticRuleSet.reportGeneralTypeIssues,
+                DiagnosticRule.reportGeneralTypeIssues,
+                Localizer.Diagnostic.classDefinitionCycle().format({ name: classType.details.name }),
+                errorNode
+            );
+            return { node: errorNode, type: UnknownType.create() };
+        }
 
         if ((memberAccessFlags & MemberAccessFlags.ConsiderMetaclassOnly) === 0) {
             memberInfo = getTypeFromClassMemberName(
@@ -2309,7 +2316,7 @@ export function createTypeEvaluator(
             defaultTypeVar.details.isSynthesized = true;
             defaultTypeVar = TypeVarType.cloneForScopeId(defaultTypeVar, typeVarScopeId, classType.details.name);
 
-            const createGetMethod = (keyType: Type, valueType: Type) => {
+            const createGetMethod = (keyType: Type, valueType: Type, includeDefault: boolean) => {
                 const getOverload = FunctionType.createInstance(
                     'get',
                     '',
@@ -2323,14 +2330,18 @@ export function createTypeEvaluator(
                     type: keyType,
                     hasDeclaredType: true,
                 });
-                FunctionType.addParameter(getOverload, {
-                    category: ParameterCategory.Simple,
-                    name: 'default',
-                    type: valueType,
-                    hasDeclaredType: true,
-                    hasDefault: true,
-                });
-                getOverload.details.declaredReturnType = valueType;
+                if (includeDefault) {
+                    FunctionType.addParameter(getOverload, {
+                        category: ParameterCategory.Simple,
+                        name: 'default',
+                        type: valueType,
+                        hasDeclaredType: true,
+                        hasDefault: true,
+                    });
+                    getOverload.details.declaredReturnType = valueType;
+                } else {
+                    getOverload.details.declaredReturnType = combineTypes([valueType, NoneType.createInstance()]);
+                }
                 return getOverload;
             };
 
@@ -2425,7 +2436,10 @@ export function createTypeEvaluator(
             entries.forEach((entry, name) => {
                 const nameLiteralType = ObjectType.create(ClassType.cloneWithLiteral(strClass, name));
 
-                getOverloads.push(createGetMethod(nameLiteralType, entry.valueType));
+                if (!entry.isRequired) {
+                    getOverloads.push(createGetMethod(nameLiteralType, entry.valueType, /* includeDefault */ false));
+                }
+                getOverloads.push(createGetMethod(nameLiteralType, entry.valueType, /* includeDefault */ true));
                 popOverloads.push(...createPopMethods(nameLiteralType, entry.valueType));
                 setDefaultOverloads.push(createSetDefaultMethod(nameLiteralType, entry.valueType, entry.isRequired));
             });
@@ -2433,7 +2447,8 @@ export function createTypeEvaluator(
             // Provide a final overload that handles the general case where the key is
             // a str but the literal value isn't known.
             const strType = ObjectType.create(strClass);
-            getOverloads.push(createGetMethod(strType, AnyType.create()));
+            getOverloads.push(createGetMethod(strType, AnyType.create(), /* includeDefault */ false));
+            getOverloads.push(createGetMethod(strType, AnyType.create(), /* includeDefault */ true));
             popOverloads.push(...createPopMethods(strType, AnyType.create()));
             setDefaultOverloads.push(createSetDefaultMethod(strType, AnyType.create()));
 
@@ -3743,15 +3758,23 @@ export function createTypeEvaluator(
                                 node.parent?.nodeType === ParseNodeType.MemberAccess &&
                                 node.parent.leftExpression === node
                             ) {
-                                if (
-                                    node.parent.memberName.value === 'args' ||
-                                    node.parent.memberName.value === 'kwargs'
-                                ) {
+                                const memberName = node.parent.memberName.value;
+                                if (memberName === 'args' || memberName === 'kwargs') {
                                     const outerFunctionScope = ParseTreeUtils.getEnclosingClassOrFunction(
                                         enclosingScope
                                     );
+
                                     if (outerFunctionScope?.nodeType === ParseNodeType.Function) {
                                         enclosingScope = outerFunctionScope;
+                                    } else if (!scopedTypeVarInfo.type.scopeId) {
+                                        addDiagnostic(
+                                            getFileInfo(node).diagnosticRuleSet.reportGeneralTypeIssues,
+                                            DiagnosticRule.reportGeneralTypeIssues,
+                                            Localizer.Diagnostic.paramSpecNotUsedByOuterScope().format({
+                                                name: type.details.name,
+                                            }),
+                                            node
+                                        );
                                     }
                                 }
                             }
@@ -3777,13 +3800,15 @@ export function createTypeEvaluator(
                 } else if ((flags & EvaluatorFlags.DisallowTypeVarsWithoutScopeId) !== 0) {
                     if (
                         (type.scopeId === undefined || scopedTypeVarInfo.foundInterveningClass) &&
-                        !type.details.isSynthesized &&
-                        !type.details.isParamSpec
+                        !type.details.isSynthesized
                     ) {
+                        const message = isParamSpec(type)
+                            ? Localizer.Diagnostic.paramSpecNotUsedByOuterScope()
+                            : Localizer.Diagnostic.typeVarNotUsedByOuterScope();
                         addDiagnostic(
                             getFileInfo(node).diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.typeVarNotUsedByOuterScope().format({ name: type.details.name }),
+                            message.format({ name: type.details.name }),
                             node
                         );
                     }
@@ -3839,7 +3864,11 @@ export function createTypeEvaluator(
         assert(TypeBase.isInstantiable(type));
 
         while (curNode) {
-            curNode = ParseTreeUtils.getTypeVarScopeNode(curNode);
+            // Generally, getTypeVarScopeNode should not include the function
+            // that contains the TypeVar in its signature, but we make an exception
+            // for TypeVars that are used in a member access expression to accommodate
+            // ParamSpecs (P.args and P.kwargs).
+            curNode = ParseTreeUtils.getTypeVarScopeNode(curNode, node.parent?.nodeType === ParseNodeType.MemberAccess);
             if (!curNode) {
                 break;
             }
@@ -3920,6 +3949,8 @@ export function createTypeEvaluator(
                 (EvaluatorFlags.ExpectingType |
                     EvaluatorFlags.ExpectingTypeAnnotation |
                     EvaluatorFlags.AllowForwardReferences |
+                    EvaluatorFlags.DisallowTypeVarsWithScopeId |
+                    EvaluatorFlags.DisallowTypeVarsWithoutScopeId |
                     EvaluatorFlags.AssociateTypeVarsWithCurrentScope));
         const baseTypeResult = getTypeOfExpression(node.leftExpression, undefined, baseTypeFlags);
 
@@ -4029,9 +4060,28 @@ export function createTypeEvaluator(
 
             case TypeCategory.TypeVar: {
                 if (baseType.details.isParamSpec) {
-                    if (memberName === 'args' || memberName === 'kwargs') {
+                    if (memberName === 'args') {
+                        if (
+                            node.parent?.nodeType !== ParseNodeType.Parameter ||
+                            node.parent.category !== ParameterCategory.VarArgList
+                        ) {
+                            addError(Localizer.Diagnostic.paramSpecArgsUsage(), node);
+                            return { type: UnknownType.create(), node };
+                        }
                         return { type: baseType, node };
                     }
+
+                    if (memberName === 'kwargs') {
+                        if (
+                            node.parent?.nodeType !== ParseNodeType.Parameter ||
+                            node.parent.category !== ParameterCategory.VarArgDictionary
+                        ) {
+                            addError(Localizer.Diagnostic.paramSpecKwargsUsage(), node);
+                            return { type: UnknownType.create(), node };
+                        }
+                        return { type: baseType, node };
+                    }
+
                     addDiagnostic(
                         fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                         DiagnosticRule.reportGeneralTypeIssues,
@@ -5302,7 +5352,7 @@ export function createTypeEvaluator(
             return undefined;
         }
 
-        const entries = getTypedDictMembersForClass(baseType.classType);
+        const entries = getTypedDictMembersForClass(baseType.classType, /* allowNarrowed */ true);
 
         const indexTypeResult = getTypeOfExpression(node.items[0].valueExpression);
         const indexType = indexTypeResult.type;
@@ -5331,6 +5381,13 @@ export function createTypeEvaluator(
                         })
                     );
                     return UnknownType.create();
+                } else if (!entry.isRequired && usage.method === 'get') {
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.keyNotRequired().format({
+                            name: entryName,
+                            type: printType(baseType),
+                        })
+                    );
                 }
 
                 if (usage.method === 'set') {
@@ -9888,7 +9945,7 @@ export function createTypeEvaluator(
         return { type, node };
     }
 
-    function getTypeFromYield(node: YieldNode): TypeResult {
+    function getTypeFromYield(node: YieldNode | YieldFromNode): TypeResult {
         let sentType: Type | undefined;
 
         const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
@@ -9899,37 +9956,16 @@ export function createTypeEvaluator(
             }
         }
 
-        if (!sentType) {
-            sentType = UnknownType.create();
-        }
-
+        let returnedType: Type | undefined;
         if (node.expression) {
-            getTypeOfExpression(node.expression, sentType);
-        }
-
-        return { type: sentType, node };
-    }
-
-    function getTypeFromYieldFrom(node: YieldFromNode): TypeResult {
-        let sentType: Type | undefined;
-
-        const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
-        if (enclosingFunction) {
-            const functionTypeInfo = getTypeOfFunction(enclosingFunction);
-            if (functionTypeInfo) {
-                sentType = getDeclaredGeneratorSendType(functionTypeInfo.functionType);
+            const generatorType = getTypeOfExpression(node.expression, sentType).type;
+            const generatorTypeArgs = getGeneratorTypeArgs(generatorType);
+            if (generatorTypeArgs && generatorTypeArgs.length >= 2) {
+                returnedType = generatorTypeArgs[2];
             }
         }
 
-        if (!sentType) {
-            sentType = UnknownType.create();
-        }
-
-        if (node.expression) {
-            getTypeOfExpression(node.expression, sentType);
-        }
-
-        return { type: sentType, node };
+        return { type: returnedType || UnknownType.create(), node };
     }
 
     function getTypeFromLambda(node: LambdaNode, expectedType: Type | undefined): TypeResult {
@@ -12973,6 +13009,8 @@ export function createTypeEvaluator(
         const exceptionTypes = getTypeOfExpression(node.typeExpression!).type;
 
         function getExceptionType(exceptionType: Type, errorNode: ParseNode) {
+            exceptionType = makeTopLevelTypeVarsConcrete(exceptionType);
+
             if (isAnyOrUnknown(exceptionType)) {
                 return exceptionType;
             }
@@ -16011,11 +16049,40 @@ export function createTypeEvaluator(
     function narrowTypeForTypedDictKey(referenceType: Type, literalKey: ClassType, isPositiveTest: boolean): Type {
         const narrowedType = mapSubtypes(referenceType, (subtype) => {
             if (isObject(subtype) && ClassType.isTypedDictClass(subtype.classType)) {
-                const entries = getTypedDictMembersForClass(subtype.classType);
+                const entries = getTypedDictMembersForClass(subtype.classType, /* allowNarrowed */ true);
                 const tdEntry = entries.get(literalKey.literalValue as string);
 
                 if (isPositiveTest) {
-                    return tdEntry === undefined ? undefined : subtype;
+                    if (!tdEntry) {
+                        return undefined;
+                    }
+
+                    // If the entry is currently not required, we can mark it as required
+                    // after this guard expression confirms it is.
+                    if (tdEntry.isRequired) {
+                        return subtype;
+                    }
+
+                    const oldNarrowedEntriesMap = subtype.classType.typedDictNarrowedEntries;
+                    const newNarrowedEntriesMap = new Map<string, TypedDictEntry>();
+                    if (oldNarrowedEntriesMap) {
+                        // Copy the old entries.
+                        oldNarrowedEntriesMap.forEach((value, key) => {
+                            newNarrowedEntriesMap.set(key, value);
+                        });
+                    }
+
+                    // Add the new entry.
+                    newNarrowedEntriesMap.set(literalKey.literalValue as string, {
+                        valueType: tdEntry.valueType,
+                        isRequired: true,
+                        isProvided: true,
+                    });
+
+                    // Clone the TypedDict object with the new entries.
+                    return ObjectType.create(
+                        ClassType.cloneForNarrowedTypedDictEntries(subtype.classType, newNarrowedEntriesMap)
+                    );
                 } else {
                     return tdEntry !== undefined && tdEntry.isRequired ? undefined : subtype;
                 }
@@ -17834,7 +17901,7 @@ export function createTypeEvaluator(
     ) {
         let typesAreConsistent = true;
         const destEntries = getTypedDictMembersForClass(destType);
-        const srcEntries = getTypedDictMembersForClass(srcType);
+        const srcEntries = getTypedDictMembersForClass(srcType, /* allowNarrowed */ true);
 
         destEntries.forEach((destEntry, name) => {
             const srcEntry = srcEntries.get(name);
@@ -19046,11 +19113,9 @@ export function createTypeEvaluator(
                     );
                 }
 
-                // All functions are assignable to "object".
-                if (ClassType.isBuiltIn(destType.classType, 'object')) {
-                    if ((flags & CanAssignFlags.EnforceInvariance) === 0) {
-                        return true;
-                    }
+                // All functions are objects, so try to assign as an object.
+                if (objectType && isObject(objectType)) {
+                    return canAssignType(destType, objectType, diag, typeVarMap, flags, recursionCount + 1);
                 }
             } else if (isModule(concreteSrcType)) {
                 // Is the destination the built-in "ModuleType"?
@@ -20379,7 +20444,7 @@ export function createTypeEvaluator(
         return isMatch;
     }
 
-    function getTypedDictMembersForClass(classType: ClassType) {
+    function getTypedDictMembersForClass(classType: ClassType, allowNarrowed = false) {
         // Were the entries already calculated and cached?
         if (!classType.details.typedDictEntries) {
             const entries = new Map<string, TypedDictEntry>();
@@ -20394,6 +20459,13 @@ export function createTypeEvaluator(
         classType.details.typedDictEntries!.forEach((value, key) => {
             entries.set(key, { ...value });
         });
+
+        // Apply narrowed types on top of existing entries if present.
+        if (allowNarrowed && classType.typedDictNarrowedEntries) {
+            classType.typedDictNarrowedEntries.forEach((value, key) => {
+                entries.set(key, { ...value });
+            });
+        }
 
         return entries;
     }

@@ -325,7 +325,7 @@ test('TypeNarrowing17', () => {
 test('TypeNarrowing18', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing18.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('TypeNarrowing19', () => {
@@ -550,6 +550,12 @@ test('Function13', () => {
 
 test('Function14', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function14.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Function15', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function15.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -934,6 +940,12 @@ test('Generators10', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators10.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Generators11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators11.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('Coroutines1', () => {

@@ -26,9 +26,12 @@ import {
     getFileSystemEntriesFromDirEntries,
     getPathComponents,
     getRelativePathComponentsFromDirectory,
+    isDirectory,
+    isFile,
     resolvePaths,
     stripFileExtension,
     stripTrailingDirectorySeparator,
+    tryStat,
 } from '../common/pathUtils';
 import { equateStringsCaseInsensitive } from '../common/stringUtils';
 import * as StringUtils from '../common/stringUtils';
@@ -492,17 +495,23 @@ export class ImportResolver {
             if (!this.fileSystem.existsSync(path)) {
                 return false;
             }
-            try {
-                const stats = this.fileSystem.statSync(path);
-                return stats.isFile();
-            } catch {
-                return false;
-            }
+            return tryStat(this.fileSystem, path)?.isFile() ?? false;
         }
 
         const entries = this.readdirEntriesCached(splitPath[0]);
         const entry = entries.find((entry) => entry.name === splitPath[1]);
-        return entry !== undefined && entry.isFile();
+        if (entry?.isFile()) {
+            return true;
+        }
+
+        if (entry?.isSymbolicLink()) {
+            const realPath = this.fileSystem.realpathSync(path);
+            if (this.fileSystem.existsSync(realPath) && isFile(this.fileSystem, realPath)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected dirExistsCached(path: string): boolean {
@@ -512,17 +521,23 @@ export class ImportResolver {
             if (!this.fileSystem.existsSync(path)) {
                 return false;
             }
-            try {
-                const stats = this.fileSystem.statSync(path);
-                return stats.isDirectory();
-            } catch {
-                return false;
-            }
+            return tryStat(this.fileSystem, path)?.isDirectory() ?? false;
         }
 
         const entries = this.readdirEntriesCached(splitPath[0]);
         const entry = entries.find((entry) => entry.name === splitPath[1]);
-        return entry !== undefined && entry.isDirectory();
+        if (entry?.isDirectory()) {
+            return true;
+        }
+
+        if (entry?.isSymbolicLink()) {
+            const realPath = this.fileSystem.realpathSync(path);
+            if (this.fileSystem.existsSync(realPath) && isDirectory(this.fileSystem, realPath)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     ensurePartialStubPackages(execEnv: ExecutionEnvironment) {
@@ -1155,17 +1170,12 @@ export class ImportResolver {
     }
 
     private _getPythonSearchPaths(execEnv: ExecutionEnvironment, importFailureInfo: string[]) {
-        const cacheKey = execEnv.venv ? execEnv.venv : '<default>';
+        const cacheKey = '<default>';
 
         // Find the site packages for the configured virtual environment.
         if (!this._cachedPythonSearchPaths.has(cacheKey)) {
             let paths =
-                PythonPathUtils.findPythonSearchPaths(
-                    this.fileSystem,
-                    this._configOptions,
-                    execEnv.venv,
-                    importFailureInfo
-                ) || [];
+                PythonPathUtils.findPythonSearchPaths(this.fileSystem, this._configOptions, importFailureInfo) || [];
 
             // Remove duplicates (yes, it happens).
             paths = [...new Set(paths)];
@@ -1409,9 +1419,18 @@ export class ImportResolver {
     }
 
     private _getFilesInDirectory(dirPath: string): string[] {
-        return this.readdirEntriesCached(dirPath)
-            .filter((f) => f.isFile())
-            .map((f) => f.name);
+        const entriesInDir = this.readdirEntriesCached(dirPath);
+        const filesInDir = entriesInDir.filter((f) => f.isFile()).map((f) => f.name);
+
+        // Add any symbolic links that point to files.
+        entriesInDir.forEach((f) => {
+            const linkPath = combinePaths(dirPath, f.name);
+            if (f.isSymbolicLink() && tryStat(this.fileSystem, linkPath)?.isFile()) {
+                filesInDir.push(f.name);
+            }
+        });
+
+        return filesInDir;
     }
 
     private _getCompletionSuggestionsAbsolute(
@@ -1452,7 +1471,12 @@ export class ImportResolver {
     }
 
     private _addFilteredSuggestions(dirPath: string, filter: string, suggestions: string[], similarityLimit: number) {
-        const entries = getFileSystemEntriesFromDirEntries(this.readdirEntriesCached(dirPath));
+        // Enumerate all of the files and directories in the path, expanding links.
+        const entries = getFileSystemEntriesFromDirEntries(
+            this.readdirEntriesCached(dirPath),
+            this.fileSystem,
+            dirPath
+        );
 
         entries.files.forEach((file) => {
             // Strip multi-dot extensions to handle file names like "foo.cpython-32m.so". We want
@@ -1527,8 +1551,12 @@ export class ImportResolver {
     private _findImplicitImports(importingModuleName: string, dirPath: string, exclusions: string[]): ImplicitImport[] {
         const implicitImportMap = new Map<string, ImplicitImport>();
 
-        // Enumerate all of the files and directories in the path.
-        const entries = getFileSystemEntriesFromDirEntries(this.readdirEntriesCached(dirPath));
+        // Enumerate all of the files and directories in the path, expanding links.
+        const entries = getFileSystemEntriesFromDirEntries(
+            this.readdirEntriesCached(dirPath),
+            this.fileSystem,
+            dirPath
+        );
 
         // Add implicit file-based modules.
         for (const fileName of entries.files) {
