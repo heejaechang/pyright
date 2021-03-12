@@ -70,6 +70,7 @@ export class CodeActionProvider {
                 addImportSimilarityLimit,
                 wellKnownAbbreviationMap,
                 /* lazyEdit */ true,
+                /* allowVariableInAll */ true,
                 token
             );
 

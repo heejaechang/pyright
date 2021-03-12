@@ -38,6 +38,7 @@ export class AddImportCommand implements ServerCommand {
             addImportSimilarityLimit,
             wellKnownAbbreviationMap,
             /* lazyEdit */ false,
+            /* allowVariableInAll */ true,
             token
         );
 
