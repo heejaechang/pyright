@@ -28,6 +28,7 @@ import {
 } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
+import { isString } from 'pyright-internal/common/core';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Range } from 'pyright-internal/common/textRange';
 
@@ -127,10 +128,11 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     protected onMessage(msg: AnalysisRequest) {
         switch (msg.requestType) {
             case 'getSemanticTokens': {
-                this.log(LogLevel.Log, `Background analysis message: ${msg.requestType}`);
+                const { filePath, range, previousResultId, cancellationId } = msg.data;
+                const subtype = range !== undefined ? 'range' : isString(previousResultId) ? 'delta' : 'full';
+                this.log(LogLevel.Log, `Background analysis message: ${msg.requestType} ${subtype}`);
 
                 run(() => {
-                    const { filePath, range, previousResultId, cancellationId } = msg.data;
                     const token = getCancellationTokenFromId(cancellationId);
                     throwIfCancellationRequested(token);
 
@@ -138,7 +140,10 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
                         this._telemetry,
                         TelemetryEventName.SEMANTICTOKENS_SLOW,
                         (cm) => {
-                            const tokens = getSemanticTokens(this.program, filePath, range, previousResultId, token);
+                            const info = _getSemanticInfoAsString(subtype, range, previousResultId);
+                            const tokens = this._logTracker.log(`getSemanticTokens ${info} at ${filePath}`, (ls) => {
+                                return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+                            });
 
                             cm.addCustomMeasure('count', tokens.data.length);
                             return tokens;
@@ -196,4 +201,21 @@ export function runBackgroundThread() {
         const runner = new BackgroundIndexRunner();
         runner.start();
     }
+}
+
+function _getSemanticInfoAsString(
+    subtype: string,
+    range: Range | undefined,
+    previousResultId: string | undefined
+): string {
+    let details = `${subtype}`;
+    if (range) {
+        details += ` ${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`;
+    }
+
+    if (previousResultId) {
+        details += ` previousResultId:${previousResultId}`;
+    }
+
+    return details;
 }
