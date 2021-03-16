@@ -13,7 +13,7 @@ const typeshedFallback = path.resolve(packages, 'pyright', 'packages', 'pyright-
 const bundled = path.resolve(packages, 'pylance-internal', 'bundled');
 const schemas = path.resolve(packages, 'pyright', 'packages', 'vscode-pyright', 'schemas');
 const scripts = path.resolve(packages, 'pylance-internal', 'scripts');
-const nativeLoader = path.resolve(packages, 'vscode-pylance', 'build', 'nativeLoader.js');
+const onnxLoader = path.resolve(packages, 'vscode-pylance', 'build', 'onnxLoader.js');
 
 const onnxRoot = require(path.resolve(packages, 'pylance-internal', 'build', 'findonnx'));
 const onnxBin = path.join(onnxRoot, 'bin');
@@ -54,15 +54,15 @@ module.exports = {
     module: {
         rules: [
             {
+                test: /onnxruntime[/\\]lib[/\\]binding.js$/,
+                loader: onnxLoader,
+            },
+            {
                 test: /\.ts$/,
                 loader: 'ts-loader',
                 options: {
                     configFile: 'tsconfig.json',
                 },
-            },
-            {
-                test: /\.node$/,
-                loader: nativeLoader,
             },
         ],
     },
