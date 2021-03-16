@@ -5,4 +5,4 @@
 
 const path = require('path');
 
-module.exports = path.resolve(require.resolve('onnxruntime'), '..', '..');
+module.exports = path.resolve(__dirname, '..', 'node_modules', '.onnxruntime');

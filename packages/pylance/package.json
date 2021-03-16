@@ -29,7 +29,6 @@
         "clean-webpack-plugin": "^3.0.0",
         "copy-webpack-plugin": "^7.0.0",
         "javascript-obfuscator": "^2.10.7",
-        "native-ext-loader": "^2.3.0",
         "npm-pack-zip": "^1.2.9",
         "shx": "^0.3.3",
         "ts-loader": "^8.0.17",

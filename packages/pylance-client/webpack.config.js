@@ -13,6 +13,7 @@ const typeshedFallback = path.resolve(packages, 'pyright', 'packages', 'pyright-
 const bundled = path.resolve(packages, 'pylance-internal', 'bundled');
 const schemas = path.resolve(packages, 'pyright', 'packages', 'vscode-pyright', 'schemas');
 const scripts = path.resolve(packages, 'pylance-internal', 'scripts');
+const nativeLoader = path.resolve(packages, 'vscode-pylance', 'build', 'nativeLoader.js');
 
 const onnxRoot = require(path.resolve(packages, 'pylance-internal', 'build', 'findonnx'));
 const onnxBin = path.join(onnxRoot, 'bin');
@@ -60,13 +61,8 @@ module.exports = {
                 },
             },
             {
-                // Native node bindings: rewrite 'require' calls.
-                // Actual binaries are deployed with CopyPlugin below.
-                test: /\.(node)$/,
-                loader: 'native-ext-loader',
-                options: {
-                    emit: false, // The CopyPlugin step will produce these.
-                },
+                test: /\.node$/,
+                loader: nativeLoader,
             },
         ],
     },

@@ -96,6 +96,10 @@ platforms.forEach(async (platform) => {
     let upackPath;
     try {
         const upackPath = require('./findonnx');
+        if (!fs.existsSync(upackPath)) {
+            fs.mkdirSync(upackPath);
+        }
+
         tar.x({
             file: archiveFilePath,
             cwd: upackPath,

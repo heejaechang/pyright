@@ -43,7 +43,7 @@ import { ConsoleInterface, ConsoleWithLogLevel, LogLevel } from 'pyright-interna
 import { isBoolean, isNumber, isString } from 'pyright-internal/common/core';
 import * as debug from 'pyright-internal/common/debug';
 import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
-import { createFromRealFileSystem, FileSystem } from 'pyright-internal/common/fileSystem';
+import { FileSystem } from 'pyright-internal/common/fileSystem';
 import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
@@ -73,7 +73,6 @@ import {
 import { CustomLSP } from './customLSP';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { ModelSubFolder } from './intelliCode/models';
-import { prepareNativesForCurrentPlatform } from './intelliCode/nativeInit';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
 import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
@@ -807,7 +806,6 @@ export function main() {
     }
 
     if (isMainThread) {
-        prepareNativesForCurrentPlatform(createFromRealFileSystem(), new Platform());
         new PylanceServer();
     } else {
         runBackgroundThread();
