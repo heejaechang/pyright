@@ -19,7 +19,6 @@ import {
     combineConstrainedTypes,
     combineTypes,
     ConstrainedSubtype,
-    EnumLiteral,
     findSubtype,
     FunctionType,
     FunctionTypeFlags,
@@ -304,35 +303,6 @@ export function stripLiteralValue(type: Type): Type {
     }
 
     return type;
-}
-
-export function enumerateLiteralsForType(type: ObjectType): ObjectType[] | undefined {
-    if (ClassType.isBuiltIn(type.classType, 'bool')) {
-        // Booleans have only two types: True and False.
-        return [
-            ObjectType.create(ClassType.cloneWithLiteral(type.classType, true)),
-            ObjectType.create(ClassType.cloneWithLiteral(type.classType, false)),
-        ];
-    }
-
-    if (ClassType.isEnumClass(type.classType)) {
-        // Enumerate all of the values in this enumeration.
-        const enumList: ObjectType[] = [];
-        const fields = type.classType.details.fields;
-        fields.forEach((symbol, name) => {
-            if (!symbol.isIgnoredForProtocolMatch() && !symbol.isInstanceMember()) {
-                enumList.push(
-                    ObjectType.create(
-                        ClassType.cloneWithLiteral(type.classType, new EnumLiteral(type.classType.details.name, name))
-                    )
-                );
-            }
-        });
-
-        return enumList;
-    }
-
-    return undefined;
 }
 
 // If the type is a concrete class X described by the object Type[X],
@@ -641,7 +611,7 @@ export function applySolvedTypeVars(type: Type, typeVarMap: TypeVarMap, unknownI
             // If the type variable is unrelated to the scopes we're solving,
             // don't transform that type variable.
             if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId)) {
-                const replacement = typeVarMap.getTypeVar(typeVar);
+                const replacement = typeVarMap.getTypeVarType(typeVar);
                 if (replacement) {
                     return replacement;
                 }
@@ -1017,7 +987,7 @@ export function specializeClassType(type: ClassType): ClassType {
     const typeVarMap = new TypeVarMap(getTypeVarScopeId(type));
     const typeParams = ClassType.getTypeParameters(type);
     typeParams.forEach((typeParam) => {
-        typeVarMap.setTypeVar(typeParam, UnknownType.create(), /* isNarrowable */ false);
+        typeVarMap.setTypeVarType(typeParam, UnknownType.create());
     });
 
     return applySolvedTypeVars(type, typeVarMap) as ClassType;
@@ -1094,7 +1064,7 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type, typeVar
 
         case TypeCategory.TypeVar:
             if (!typeVarMap.hasTypeVar(destType)) {
-                typeVarMap.setTypeVar(destType, srcType, typeVarMap.isNarrowable(destType));
+                typeVarMap.setTypeVarType(destType, srcType);
             }
             break;
     }
@@ -1158,7 +1128,7 @@ export function buildTypeVarMap(
                     typeArgType = typeArgs[index];
                 }
 
-                typeVarMap.setTypeVar(typeParam, typeArgType, /* isNarrowable */ false);
+                typeVarMap.setTypeVarType(typeParam, typeArgType);
             }
         }
     });
