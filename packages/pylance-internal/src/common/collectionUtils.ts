@@ -25,7 +25,8 @@ export function getExecutionEnvironments(configOptions: ConfigOptions) {
         new ExecutionEnvironment(
             configOptions.projectRoot,
             configOptions.defaultPythonVersion,
-            configOptions.defaultPythonPlatform
+            configOptions.defaultPythonPlatform,
+            configOptions.defaultExtraPaths
         ),
     ];
 }
