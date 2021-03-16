@@ -13,8 +13,7 @@
    by cloning the pyrx repo, tagging the main branch with `git tag 2021.1.1`, then `git push --tags`.
 1. Wait for the builds to complete and the draft releases to be created on the [releases page](https://github.com/microsoft/pyrx/releases).
 1. Download the VSIX, and manually inspect it for potential stray files (extra source maps, source files, etc).
-1. If the build looks good, publish both releases. This will automatically push the packages to the internal package feed.
-1. Upload the VSIX to [the marketplace](https://marketplace.visualstudio.com/manage/publishers/ms-python).
+1. If the build looks good, publish both releases. This will automatically push the packages to the internal package feed and publish the VSIX to the marketplace.
 1. Submit a PR to pylance-release with a copy of `CHANGELOG.md`. If the new version includes any new diagnostics, update `DIAGNOSTIC_SEVERITY_RULES.md`. If the new version includes any new settings, update `README.md`.
 1. Create a [new release on the pylance-release repo](https://github.com/microsoft/pylance-release/releases/new).
    This should contain the "notable changes" section, plus a link to the section in `CHANGELOG.md`.

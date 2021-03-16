@@ -12,8 +12,7 @@ env:
 
 jobs:
   publish_extension:
-    # if: github.repository == 'microsoft/pyrx' && !github.event.release.prerelease
-    if: false
+    if: github.repository == 'microsoft/pyrx' && !github.event.release.prerelease
     runs-on: ubuntu-18.04
     name: Publish extension to marketplace
 
@@ -27,6 +26,7 @@ jobs:
           file: ${{ env.VSIX_NAME }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token
       - name: Publish VSIX
         run: npx vsce publish --packagePath ${{ env.VSIX_NAME }} --pat ${{ secrets.VSCE_TOKEN }} --noVerify
 
