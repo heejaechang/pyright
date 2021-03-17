@@ -34,7 +34,7 @@ class _iLocIndexerFrame(_iLocIndexer):
     @overload
     def __getitem__(self, idx: Union[IndexType, slice, Tuple[IndexType, IndexType]]) -> DataFrame: ...
     @overload
-    def __getitem__(self, idx: Union[int, Tuple[IndexType, int, Tuple[int, IndexType]]]) -> Series: ...
+    def __getitem__(self, idx: Union[int, Tuple[IndexType, int, Tuple[int, IndexType]]]) -> Series[Dtype]: ...
     def __setitem__(
         self,
         idx: Union[
@@ -52,7 +52,7 @@ class _LocIndexerFrame(_LocIndexer):
     @overload
     def __getitem__(self, idx: Union[int, slice, MaskType],) -> DataFrame: ...
     @overload
-    def __getitem__(self, idx: StrLike,) -> Series: ...
+    def __getitem__(self, idx: StrLike,) -> Series[Dtype]: ...
     @overload
     def __getitem__(self, idx: Tuple[StrLike, StrLike],) -> float: ...
     @overload
@@ -84,7 +84,7 @@ class DataFrame(NDFrame):
     def to_string(self, buf: Optional[FilePathOrBuffer[_str]]=..., columns: Optional[Sequence[str]]=..., col_space: Optional[int]=..., header: Union[bool, Sequence[str]]=..., index: bool=..., na_rep: str=..., formatters: Optional[fmt.formatters_type]=..., float_format: Optional[fmt.float_format_type]=..., sparsify: Optional[bool]=..., index_names: bool=..., justify: Optional[str]=..., max_rows: Optional[int]=..., min_rows: Optional[int]=..., max_cols: Optional[int]=..., show_dimensions: bool=..., decimal: str=..., line_width: Optional[int]=..., max_colwidth: Optional[int]=..., encoding: Optional[str]=...) -> Optional[str]: ...
     @property
     def style(self) -> Styler: ...
-    def items(self) -> Iterable[Tuple[Optional[Hashable], Series]]:
+    def items(self) -> Iterable[Tuple[Optional[Hashable], Series[Dtype]]]:
         """Iterate over (column name, Series) pairs.
 
 Iterates over the DataFrame columns, returning a tuple with
@@ -132,7 +132,7 @@ koala    80000
 Name: population, dtype: int64
 """
         pass
-    def iteritems(self) -> Iterable[Tuple[Label, Series]]:
+    def iteritems(self) -> Iterable[Tuple[Label, Series[Dtype]]]:
         """Iterate over (column name, Series) pairs.
 
 Iterates over the DataFrame columns, returning a tuple with
@@ -180,7 +180,7 @@ koala    80000
 Name: population, dtype: int64
 """
         pass
-    def iterrows(self) -> Iterable[Tuple[Label, Series]]: ...
+    def iterrows(self) -> Iterable[Tuple[Label, Series[Dtype]]]: ...
     def itertuples(self, index: _bool = ..., name: str = ...): ...
     def __len__(self) -> int: ...
     @overload
@@ -326,12 +326,12 @@ str
         encoding: Optional[_str] = ...,
     ) -> _str: ...
     def info(self, verbose=..., buf=..., max_cols=..., memory_usage=..., null_counts=...) -> None: ...
-    def memory_usage(self, index: _bool = ..., deep: _bool = ...) -> Series: ...
+    def memory_usage(self, index: _bool = ..., deep: _bool = ...) -> Series[Dtype]: ...
     def transpose(self, *args, copy: _bool = ...) -> DataFrame: ...
     @property
     def T(self) -> DataFrame: ...
     @overload
-    def __getitem__(self, idx: _str) -> Series: ...
+    def __getitem__(self, idx: _str) -> Series[Dtype]: ...
     @overload
     def __getitem__(self, rows: slice) -> DataFrame: ...
     @overload
@@ -339,7 +339,7 @@ str
         self, idx: Union[Series[_bool], DataFrame, List[_str], Index[_str], np.ndarray_str],
     ) -> DataFrame: ...
     @overload
-    def __getitem__(self, idx: Tuple) -> Series: ...
+    def __getitem__(self, idx: Tuple) -> Series[Dtype]: ...
     @overload
     def __setitem__(self, key, value): ...
     def query(self, expr: _str, inplace: _bool = ..., **kwargs) -> DataFrame: ...
@@ -646,7 +646,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
     @overload
     def fillna(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         method: Optional[Literal["backfill", "bfill", "ffill", "pad"]] = ...,
         axis: Optional[AxisType] = ...,
         limit: int = ...,
@@ -753,7 +753,7 @@ Only replace the first NaN element.
     @overload
     def fillna(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         method: Optional[Literal["backfill", "bfill", "ffill", "pad"]] = ...,
         axis: Optional[AxisType] = ...,
         limit: int = ...,
@@ -764,7 +764,7 @@ Only replace the first NaN element.
     @overload
     def fillna(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         method: Optional[Union[_str, Literal["backfill", "bfill", "ffill", "pad"]]] = ...,
         axis: Optional[AxisType] = ...,
         *,
@@ -774,7 +774,7 @@ Only replace the first NaN element.
     @overload
     def fillna(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         method: Optional[Union[_str, Literal["backfill", "bfill", "ffill", "pad"]]] = ...,
         axis: Optional[AxisType] = ...,
         inplace: Optional[_bool] = ...,
@@ -1555,7 +1555,7 @@ dtype: bool
         self,
         subset: Optional[Union[Hashable, Sequence[Hashable]]] = ...,
         keep: Union[_str, Literal["first", "last"], _bool] = ...,
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def sort_values(
         self,
@@ -2167,11 +2167,11 @@ foo large  2.000000  5.0  4.500000  4.0
     small  2.333333  6.0  4.333333  2.0
 """
         pass
-    def stack(self, level: Level = ..., dropna: _bool = ...) -> Union[DataFrame, Series]: ...
+    def stack(self, level: Level = ..., dropna: _bool = ...) -> Union[DataFrame, Series[Dtype]]: ...
     def explode(self, column: Union[str, Tuple]) -> DataFrame: ...
     def unstack(
         self, level: Level = ..., fill_value: Optional[Union[int, _str, Dict]] = ...,
-    ) -> Union[DataFrame, Series]: ...
+    ) -> Union[DataFrame, Series[Dtype]]: ...
     def melt(
         self,
         id_vars: Optional[Tuple, Sequence, np.ndarray] = ...,
@@ -2277,11 +2277,11 @@ If you have multi-index columns:
         pass
     def diff(self, periods: int = ..., axis: AxisType = ...) -> DataFrame: ...
     @overload
-    def agg(self, func: Union[Callable, _str], axis: AxisType = ..., **kwargs) -> Series: ...
+    def agg(self, func: Union[Callable, _str], axis: AxisType = ..., **kwargs) -> Series[Dtype]: ...
     @overload
     def agg(self, func: Union[List[Callable], Dict[_str, Callable]], axis: AxisType = ..., **kwargs) -> DataFrame: ...
     @overload
-    def aggregate(self, func: Union[Callable, _str], axis: AxisType = ..., **kwargs) -> Series:
+    def aggregate(self, func: Union[Callable, _str], axis: AxisType = ..., **kwargs) -> Series[Dtype]:
         """Aggregate using one or more operations over the specified axis.
 
 .. versionadded:: 0.20.0
@@ -2451,7 +2451,7 @@ dtype: int64
 """
         pass
     @overload
-    def apply(self, f: Callable[..., int]) -> Series: ...
+    def apply(self, f: Callable[..., int]) -> Series[Dtype]: ...
     @overload
     def apply(
         self, f: Callable, axis: AxisType = ..., raw: _bool = ..., result_type: Optional[_str] = ...,
@@ -2641,14 +2641,14 @@ ValueError: columns overlap but no suffix specified:
         axis: Optional[AxisType] = ...,
         drop: _bool = ...,
         method: Union[_str, Literal["pearson", "kendall", "spearman"]] = ...,
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def count(self, axis: AxisType = ..., numeric_only: _bool = ..., *, level: Level) -> DataFrame: ...
     @overload
-    def count(self, axis: AxisType = ..., level: None = ..., numeric_only: _bool = ...) -> Series: ...
-    def nunique(self, axis: AxisType = ..., dropna=True) -> Series: ...
-    def idxmax(self, axis: AxisType, skipna: _bool = ...) -> Series: ...
-    def idxmin(self, axis: AxisType, skipna: _bool = ...) -> Series: ...
+    def count(self, axis: AxisType = ..., level: None = ..., numeric_only: _bool = ...) -> Series[Dtype]: ...
+    def nunique(self, axis: AxisType = ..., dropna=True) -> Series[Dtype]: ...
+    def idxmax(self, axis: AxisType, skipna: _bool = ...) -> Series[Dtype]: ...
+    def idxmin(self, axis: AxisType, skipna: _bool = ...) -> Series[Dtype]: ...
     @overload
     def mode(
         self, axis: AxisType = ..., skipna: _bool = ..., numeric_only: _bool = ..., *, level: Level, **kwargs
@@ -2656,7 +2656,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def mode(
         self, axis: AxisType = ..., skipna: _bool = ..., level: None = ..., numeric_only: _bool = ..., **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def quantile(
         self,
@@ -2664,7 +2664,7 @@ ValueError: columns overlap but no suffix specified:
         axis: AxisType = ...,
         numeric_only: _bool = ...,
         interpolation: Union[_str, Literal["linear", "lower", "higher", "midpoint", "nearest"]] = ...,
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def quantile(
         self,
@@ -2773,7 +2773,7 @@ ValueError: columns overlap but no suffix specified:
     @columns.setter  # setter needs to be right next to getter; otherwise mypy complains
     def columns(self, cols: Union[List[_str], Index[_str]]) -> None: ...
     @property
-    def dtypes(self) -> Series: ...
+    def dtypes(self) -> Series[Dtype]: ...
     @property
     def empty(self) -> _bool: ...
     @property
@@ -2809,7 +2809,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def all(
         self, axis: AxisType = ..., bool_only: Optional[_bool] = ..., skipna: _bool = ..., level: None = ..., **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def all(
         self,
@@ -2823,7 +2823,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def any(
         self, axis: AxisType = ..., bool_only: Optional[_bool] = ..., skipna: _bool = ..., level: None = ..., **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def any(
         self, axis: AxisType = ..., bool_only: _bool = ..., skipna: _bool = ..., *, level: Level, **kwargs
@@ -2952,7 +2952,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def ffill(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         axis: Optional[AxisType] = ...,
         limit: int = ...,
         downcast: Optional[Dict] = ...,
@@ -2962,7 +2962,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def ffill(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         axis: Optional[AxisType] = ...,
         limit: int = ...,
         downcast: Optional[Dict] = ...,
@@ -2972,7 +2972,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def ffill(
         self,
-        value: Optional[Union[Scalar, Dict, Series, DataFrame]] = ...,
+        value: Optional[Union[Scalar, Dict, Series[Dtype], DataFrame]] = ...,
         axis: Optional[AxisType] = ...,
         limit: int = ...,
         downcast: Optional[Dict] = ...,
@@ -3084,7 +3084,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def kurtosis(
         self,
@@ -3103,7 +3103,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def last(self, offset) -> DataFrame: ...
     def last_valid_index(self) -> Scalar: ...
     def le(self, other, axis: AxisType = ..., level: Optional[Level] = ...) -> DataFrame: ...
@@ -3111,7 +3111,7 @@ ValueError: columns overlap but no suffix specified:
     @overload
     def mad(
         self, axis: Optional[AxisType] = ..., skipna: Optional[_bool] = ..., level: None = ...,
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def mad(
         self, axis: Optional[AxisType] = ..., skipna: Optional[_bool] = ..., *, level: Level, **kwargs
@@ -3144,7 +3144,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def mean(
         self,
@@ -3163,7 +3163,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def median(
         self,
@@ -3182,7 +3182,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def min(
         self,
@@ -3201,7 +3201,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def mod(
         self,
         other: Union[num, _ListLike, DataFrame],
@@ -3233,7 +3233,7 @@ ValueError: columns overlap but no suffix specified:
         **kwargs
     ) -> DataFrame: ...
     def pipe(self, func: Callable, *args, **kwargs) : ...
-    def pop(self, item: _str) -> Series: ...
+    def pop(self, item: _str) -> Series[Dtype]: ...
     def pow(
         self,
         other: Union[num, _ListLike, DataFrame],
@@ -3261,7 +3261,7 @@ ValueError: columns overlap but no suffix specified:
         numeric_only: Optional[_bool] = ...,
         min_count: int = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def product(
         self,
         axis: Optional[AxisType] = ...,
@@ -3413,7 +3413,7 @@ ValueError: columns overlap but no suffix specified:
         ddof: int = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     @overload
     def set_axis(self, labels: List, inplace: Literal[True], axis: AxisType = ...) -> None: ...
     @overload
@@ -3440,7 +3440,7 @@ ValueError: columns overlap but no suffix specified:
         level: None = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def slice_shift(self, periods: int = ..., axis: AxisType = ...) -> DataFrame: ...
     def squeeze(self, axis: Optional[AxisType] = ...) : ...
     @overload
@@ -3463,7 +3463,7 @@ ValueError: columns overlap but no suffix specified:
         ddof: int = ...,
         numeric_only: _bool = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def sub(
         self,
         other: Union[num, _ListLike, DataFrame],
@@ -3498,7 +3498,7 @@ ValueError: columns overlap but no suffix specified:
         numeric_only: Optional[_bool] = ...,
         min_count: int = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def swapaxes(self, axis1: AxisType, axis2: AxisType, copy: _bool = ...) -> DataFrame: ...
     def tail(self, n: int = ...) -> DataFrame: ...
     def take(self, indices: List, axis: AxisType = ..., is_copy: Optional[_bool] = ..., **kwargs) -> DataFrame: ...
@@ -3772,7 +3772,7 @@ ValueError: columns overlap but no suffix specified:
         ddof: int = ...,
         numeric_only: Optional[_bool] = ...,
         **kwargs
-    ) -> Series: ...
+    ) -> Series[Dtype]: ...
     def where(
         self,
         cond: Union[Series[Dtype], DataFrame, _np.ndarray],
