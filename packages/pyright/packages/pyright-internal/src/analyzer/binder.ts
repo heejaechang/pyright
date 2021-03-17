@@ -668,13 +668,17 @@ export class Binder extends ParseTreeWalker {
         this.walk(node.rightExpression);
 
         let isPossibleTypeAlias = true;
-        if (ParseTreeUtils.getEnclosingClass(node) || ParseTreeUtils.getEnclosingFunction(node)) {
-            // We will assume that type aliases are defined only at the module level.
+        if (ParseTreeUtils.getEnclosingFunction(node)) {
+            // We will assume that type aliases are defined only at the module level
+            // or as class variables, not as local variables within a function.
             isPossibleTypeAlias = false;
         } else if (node.rightExpression.nodeType === ParseNodeType.Call && this._fileInfo.isTypingStubFile) {
             // Some special built-in types defined in typing.pyi use
             // assignments of the form List = _Alias(). We don't want to
             // treat these as type aliases.
+            isPossibleTypeAlias = false;
+        } else if (ParseTreeUtils.isWithinLoop(node)) {
+            // Assume that it's not a type alias if it's within a loop.
             isPossibleTypeAlias = false;
         }
 
@@ -1606,10 +1610,14 @@ export class Binder extends ParseTreeWalker {
                             moduleName: this._fileInfo.moduleName,
                         };
 
-                        // Handle the case of "from . import X". In this case,
-                        // we want to always resolve to the submodule rather than
-                        // the resolved path.
-                        if (node.module.nameParts.length === 0) {
+                        // Handle the case of "from . import X" within an __init__ file.
+                        // In this case, we want to always resolve to the submodule rather
+                        // than the resolved path.
+                        if (
+                            fileName === '__init__' &&
+                            node.module.leadingDots === 1 &&
+                            node.module.nameParts.length === 0
+                        ) {
                             resolvedPath = '';
                         }
                     }

@@ -350,7 +350,7 @@ test('GenericTypes18', () => {
 test('GenericTypes19', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes19.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('GenericTypes20', () => {
@@ -504,7 +504,7 @@ test('GenericTypes42', () => {
 test('GenericTypes43', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes43.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('GenericTypes44', () => {
@@ -522,7 +522,7 @@ test('GenericTypes45', () => {
 test('GenericTypes46', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes46.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('GenericTypes47', () => {
@@ -539,6 +539,12 @@ test('GenericTypes48', () => {
 
 test('GenericTypes49', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes49.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes50', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes50.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -1348,7 +1354,7 @@ test('Annotated1', () => {
 test('Circular1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['circular1.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('TryExcept1', () => {
