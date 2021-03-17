@@ -161,7 +161,12 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        return createPylanceImportResolver(fs, options);
+        // This will let us send telemetry from BG
+        if (this._importResolver) {
+            this._importResolver.invalidateCache();
+        }
+
+        return createPylanceImportResolver(fs, options, this.getConsole(), this._telemetry);
     }
 
     protected processIndexing(port: MessagePort, token: CancellationToken) {

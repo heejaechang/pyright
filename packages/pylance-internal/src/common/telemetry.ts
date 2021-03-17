@@ -16,6 +16,7 @@ import { VERSION } from './constants';
 
 export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
+    IMPORT_HEURISTIC = 'import_heuristic',
     ANALYSIS_COMPLETE = 'analysis_complete',
     ANALYSIS_EXCEPTION = 'analysis_exception',
     INTELLICODE_ENABLED = 'intellicode_enabled',
