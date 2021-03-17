@@ -1,0 +1,52 @@
+
+import os
+from typing import Optional
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "scripts"))
+import scrape_module
+
+root_dir = '.'
+
+def scrape_lib_folder(lib_dir:str, search_path: Optional[str] = None, output_dir: Optional[str] = None):
+    for directory, subdirectories, files in os.walk(lib_dir):
+        path = directory.split(os.sep)
+        rel_output = os.path.relpath(directory, lib_dir)
+        rel_output_dir = os.path.join(output_dir or root_dir, rel_output)
+        for file in files:
+            if file.endswith(".pyd"):
+                out_dir = os.path.abspath(rel_output_dir)
+                os.makedirs(out_dir, exist_ok = True)
+                collect_module(file, search_path , rel_output_dir)
+
+            
+
+def collect_module(file_pyd:str, search_path = None, output_dir = None):
+
+    rel_dir = output_dir.split(os.sep)
+    first_part_pyd = file_pyd.split('.')[0]
+    module_name = '.'.join(rel_dir) + '.' + first_part_pyd
+
+    pyi_filename = output_dir + '\\' + first_part_pyd + '.pyi'
+    with open(pyi_filename, mode='w') as file_object:
+        state = scrape_module.ScrapeState(module_name, search_path, file_object)
+        state.collect_top_level_members()
+
+        state.members[:] = [m for m in state.members if m.name not in scrape_module.keyword.kwlist]
+
+        state.collect_second_level_members()
+
+        
+        
+        state.dump(file_object)
+
+
+def main():
+    lib_dir = sys.argv[1] if len(sys.argv) > 1 else u"."
+    search_path = sys.argv[2] if len(sys.argv) > 2 else None
+    output_dir = sys.argv[3] if len(sys.argv) > 2 else None
+  
+    scrape_lib_folder(lib_dir, search_path, output_dir)
+
+
+if __name__ == "__main__":
+    main()

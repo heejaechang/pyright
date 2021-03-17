@@ -8,6 +8,14 @@
             "program": "scrape_module.py",
             "console": "integratedTerminal",
             "args": ["numpy.core._multiarray_umath"]
+        },
+        {
+            "name": "Python: Scrape Scipy",
+            "type": "python",
+            "request": "launch",
+            "program": "scrape_lib.py",
+            "console": "integratedTerminal",
+            "args": [".\\scipy", ".", "scipy"]
         }
     ]
 }

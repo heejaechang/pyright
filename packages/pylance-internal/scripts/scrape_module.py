@@ -44,11 +44,16 @@ def get_module_version(module):
         return "unspecified"
 
 
-def print_module_version(module):
+def print_module_version(module, out):
     module_name = getattr(module, "__name__")
     module_version = get_module_version(module)
 
     library_name = module_name.split(".")[0]
+
+    if library_name == module_name:
+        package_name = getattr(module, "__package__")
+        library_name = package_name.split(".")[0]
+
     library = importlib.import_module(library_name)
     library_version = get_module_version(library)
 
@@ -62,7 +67,8 @@ def print_module_version(module):
         + "\n# Module: "
         + module_name
         + ", version: "
-        + module_version
+        + module_version,
+        file=out
     )
 
 
@@ -1031,12 +1037,12 @@ def mro_contains(mro, name, value):
 
 
 class ScrapeState(object):
-    def __init__(self, module_name, search_path=None):
+    def __init__(self, module_name, search_path, out):
         self.root_module = None
         self.module_name = module_name
         self.module = do_import(self.module_name, search_path)
         self.members = []
-        print_module_version(self.module)
+        print_module_version(self.module, out)
 
     def collect_top_level_members(self):
         self._collect_members(self.module, self.members, MODULE_MEMBER_SUBSTITUTE, None)
@@ -1206,7 +1212,7 @@ class ScrapeState(object):
         return True
 
     def dump(self, out):
-        print("import typing")
+        print("import typing", file=out)
 
         imports = set()
         for value in self.members:
@@ -1232,7 +1238,7 @@ def main():
     module_name = sys.argv[1] if len(sys.argv) > 1 else "builtins"
     search_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    state = ScrapeState(module_name, search_path)
+    state = ScrapeState(module_name, search_path, sys.stdout)
     state.collect_top_level_members()
 
     state.members[:] = [m for m in state.members if m.name not in keyword.kwlist]
