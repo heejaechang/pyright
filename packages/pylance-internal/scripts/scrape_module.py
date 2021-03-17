@@ -51,8 +51,9 @@ def print_module_version(module, out):
     library_name = module_name.split(".")[0]
 
     if library_name == module_name:
-        package_name = getattr(module, "__package__")
-        library_name = package_name.split(".")[0]
+        package_name = getattr(module, "__package__", None)
+        if package_name:
+            library_name = package_name.split(".")[0]
 
     library = importlib.import_module(library_name)
     library_version = get_module_version(library)
