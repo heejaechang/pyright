@@ -35,7 +35,11 @@ class InspectWarning(UserWarning):
 
 def get_module_version(module):
     try:
-        return getattr(module, "__version__")
+        version = getattr(module, "__version__")
+        if isinstance(version, bytes):
+            return version.decode()
+        else:
+            return version
     except AttributeError:
         return "unspecified"
 
