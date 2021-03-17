@@ -24,7 +24,7 @@ from matplotlib._typing import ArrayLike, Scalar, ndarray
 from matplotlib.artist import Artist
 from matplotlib.axes import Axes, SubplotBase
 from matplotlib.backend_bases import Event, FigureManagerBase
-from matplotlib.cm import Colormap, ScalarMappable
+from matplotlib.cm import Colormap, ScalarMappable, get_cmap as get_cmap
 from matplotlib.collections import (
     BrokenBarHCollection,
     Collection,

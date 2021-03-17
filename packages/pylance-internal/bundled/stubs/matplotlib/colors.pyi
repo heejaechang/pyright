@@ -1,6 +1,6 @@
 # COMPLETE
 
-from typing import Any, Callable, Dict, Literal, Mapping, NoReturn, Optional, Protocol, Sequence, Tuple, TypeVar, Union, overload
+from typing import Any, Callable, Dict, Literal, Mapping, NoReturn, Optional, Pattern, Protocol, Sequence, Tuple, TypeVar, Union, overload
 
 from numpy.ma import MaskedArray
 
@@ -170,3 +170,11 @@ def same_color(c1: Any, c2: Any) -> bool: ...
 
 def makeMappingArray(N: int, data: Union[ArrayLike, Callable[[ndarray], ndarray]], gamma: float = ...) -> ndarray: ...
 def get_named_colors_mapping() -> Dict[str, _ColorLike]: ...
+
+
+# For backwards compatibility; not documented in the docs but explicitly written in the code.
+
+cnames: Dict[str, str]
+hexColorPattern: Pattern
+def rgb2hex(c: Union[_ColorLike, MaskedArray], keep_alpha: bool = ...) -> str: ...
+def hex2color(c: Union[_ColorLike, MaskedArray]) -> Tuple[float, float, float]: ...
