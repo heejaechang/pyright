@@ -3210,20 +3210,24 @@ export function createTypeEvaluator(
             }
 
             case ParseNodeType.TypeAnnotation: {
-                const annotationType = getTypeOfAnnotation(
+                const annotationType: Type | undefined = getTypeOfAnnotation(
                     target.typeAnnotation,
                     ParseTreeUtils.isFinalAllowedForAssignmentTarget(target.valueExpression)
                 );
-                const isTypeAliasAnnotation =
-                    isObject(annotationType) && ClassType.isBuiltIn(annotationType.classType, 'TypeAlias');
 
-                if (!isTypeAliasAnnotation) {
-                    if (canAssignType(annotationType, type, new DiagnosticAddendum())) {
-                        // Don't attempt to narrow based on the annotated type if the type
-                        // is a enum because the annotated type in an enum doesn't reflect
-                        // the type of the symbol.
-                        if (!isObject(type) || !ClassType.isEnumClass(type.classType)) {
-                            type = narrowTypeBasedOnAssignment(annotationType, type);
+                // Handle a bare "Final" in a special manner.
+                if (!isObject(annotationType) || !ClassType.isBuiltIn(annotationType.classType, 'Final')) {
+                    const isTypeAliasAnnotation =
+                        isObject(annotationType) && ClassType.isBuiltIn(annotationType.classType, 'TypeAlias');
+
+                    if (!isTypeAliasAnnotation) {
+                        if (canAssignType(annotationType, type, new DiagnosticAddendum())) {
+                            // Don't attempt to narrow based on the annotated type if the type
+                            // is a enum because the annotated type in an enum doesn't reflect
+                            // the type of the symbol.
+                            if (!isObject(type) || !ClassType.isEnumClass(type.classType)) {
+                                type = narrowTypeBasedOnAssignment(annotationType, type);
+                            }
                         }
                     }
                 }
@@ -5207,16 +5211,22 @@ export function createTypeEvaluator(
         ) {
             const baseTypeClass = baseType.classType;
             const index0Expr = node.items[0].valueExpression;
+            const valueType = getTypeOfExpression(index0Expr).type;
 
-            if (index0Expr.nodeType === ParseNodeType.Number && index0Expr.isInteger && !index0Expr.isImaginary) {
+            if (isObject(valueType) && ClassType.isBuiltIn(valueType.classType, 'int') && isLiteralType(valueType)) {
+                const indexValue = valueType.classType.literalValue as number;
                 const tupleType = getSpecializedTupleType(baseTypeClass);
-                if (tupleType && tupleType.tupleTypeArguments && tupleType.tupleTypeArguments.length > 0) {
-                    if (index0Expr.isInteger && index0Expr.value >= 0) {
-                        if (isOpenEndedTupleClass(tupleType)) {
-                            return { node, type: tupleType.tupleTypeArguments[0] };
-                        } else if (index0Expr.value < tupleType.tupleTypeArguments.length) {
-                            return { node, type: tupleType.tupleTypeArguments[index0Expr.value] };
-                        }
+
+                if (tupleType && tupleType.tupleTypeArguments) {
+                    if (isOpenEndedTupleClass(tupleType)) {
+                        return { node, type: tupleType.tupleTypeArguments[0] };
+                    } else if (indexValue >= 0 && indexValue < tupleType.tupleTypeArguments.length) {
+                        return { node, type: tupleType.tupleTypeArguments[indexValue] };
+                    } else if (indexValue < 0 && tupleType.tupleTypeArguments.length + indexValue >= 0) {
+                        return {
+                            node,
+                            type: tupleType.tupleTypeArguments[tupleType.tupleTypeArguments.length + indexValue],
+                        };
                     }
                 }
             }
@@ -10606,14 +10616,19 @@ export function createTypeEvaluator(
     }
 
     // Creates a "Final" type.
-    function createFinalType(errorNode: ParseNode, typeArgs: TypeResult[] | undefined, flags: EvaluatorFlags): Type {
+    function createFinalType(
+        classType: ClassType,
+        errorNode: ParseNode,
+        typeArgs: TypeResult[] | undefined,
+        flags: EvaluatorFlags
+    ): Type {
         if (flags & EvaluatorFlags.FinalDisallowed) {
             addError(Localizer.Diagnostic.finalContext(), errorNode);
             return AnyType.create();
         }
 
         if (!typeArgs || typeArgs.length === 0) {
-            return AnyType.create();
+            return classType;
         }
 
         if (typeArgs.length > 1) {
@@ -16359,7 +16374,7 @@ export function createTypeEvaluator(
                 }
 
                 case 'Final': {
-                    return createFinalType(errorNode, typeArgs, flags);
+                    return createFinalType(classType, errorNode, typeArgs, flags);
                 }
 
                 case 'Annotated': {
@@ -16389,7 +16404,8 @@ export function createTypeEvaluator(
         if (
             fileInfo.isStubFile ||
             fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_9 ||
-            isAnnotationEvaluationPostponed(getFileInfo(errorNode))
+            isAnnotationEvaluationPostponed(getFileInfo(errorNode)) ||
+            (flags & EvaluatorFlags.AllowForwardReferences) !== 0
         ) {
             // Handle "type" specially, since it needs to act like "Type"
             // in Python 3.9 and newer.
@@ -18495,14 +18511,14 @@ export function createTypeEvaluator(
 
     // Assigns the source type to the dest type var in the type map. If an existing type is
     // already associated with that type var name, it attempts to either widen or narrow
-    // the type (depending on the value of the canNarrowType parameter). The goal is to
+    // the type (depending on the value of the isContravariant parameter). The goal is to
     // produce the narrowest type that meets all of the requirements. If the type var map
     // has been "locked", it simply validates that the srcType is compatible (with no attempt
     // to widen or narrow).
     function canAssignTypeToTypeVar(
         destType: TypeVarType,
         srcType: Type,
-        canNarrowType: boolean,
+        isContravariant: boolean,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap,
         flags = CanAssignFlags.Default,
@@ -18609,7 +18625,11 @@ export function createTypeEvaluator(
 
                     if (!constrainedSubtype) {
                         // We found a source subtype that is not compatible with the dest.
-                        isCompatible = false;
+                        // This is OK if we're handling the contravariant case because only
+                        // one subtype needs to be assignable in that case.
+                        if (!isContravariant) {
+                            isCompatible = false;
+                        }
                     }
 
                     return constrainedSubtype;
@@ -18625,7 +18645,7 @@ export function createTypeEvaluator(
             // it's an error.
             if (!constrainedType || (isUnion(constrainedType) && !constrainedType.constraints)) {
                 diag.addMessage(
-                    Localizer.DiagnosticAddendum.typeConstraint().format({
+                    Localizer.DiagnosticAddendum.typeConstrainedTypeVar().format({
                         type: printType(srcType),
                         name: destType.details.name,
                     })
@@ -18644,7 +18664,7 @@ export function createTypeEvaluator(
                         }
                     } else {
                         diag.addMessage(
-                            Localizer.DiagnosticAddendum.typeConstraint().format({
+                            Localizer.DiagnosticAddendum.typeConstrainedTypeVar().format({
                                 type: printType(constrainedType),
                                 name: printType(curNarrowTypeBound),
                             })
@@ -18674,7 +18694,7 @@ export function createTypeEvaluator(
         let newWideTypeBound = curWideTypeBound;
         const diagAddendum = new DiagnosticAddendum();
 
-        if (canNarrowType) {
+        if (isContravariant) {
             // Update the wide type bound.
             if (!curWideTypeBound) {
                 newWideTypeBound = adjSrcType;
