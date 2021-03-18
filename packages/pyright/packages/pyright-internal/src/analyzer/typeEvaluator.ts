@@ -247,6 +247,9 @@ interface TypeResult {
     type: Type;
     node: ParseNode;
 
+    // Type consistency errors detected when evaluating this type.
+    typeErrors?: boolean;
+
     // Variadic type arguments allow the shorthand "()" to
     // represent an empty tuple (i.e. Tuple[()]).
     isEmptyTupleShorthand?: boolean;
@@ -1157,9 +1160,13 @@ export function createTypeEvaluator(
                 break;
             }
 
-            case ParseNodeType.Yield:
-            case ParseNodeType.YieldFrom: {
+            case ParseNodeType.Yield: {
                 typeResult = getTypeFromYield(node);
+                break;
+            }
+
+            case ParseNodeType.YieldFrom: {
+                typeResult = getTypeFromYieldFrom(node);
                 break;
             }
 
@@ -4975,7 +4982,7 @@ export function createTypeEvaluator(
             typeParameters.forEach((param, index) => {
                 const typeArgType: Type =
                     index < typeArgs.length ? convertToInstance(typeArgs[index].type) : UnknownType.create();
-                canAssignTypeToTypeVar(param, typeArgType, /* canNarrowType */ false, diag, typeVarMap);
+                canAssignTypeToTypeVar(param, typeArgType, diag, typeVarMap);
             });
 
             if (!diag.isEmpty()) {
@@ -5805,15 +5812,18 @@ export function createTypeEvaluator(
                     addError(Localizer.Diagnostic.revealLocalsArgs(), node);
                 }
             } else {
-                returnResult.type =
-                    validateCallArguments(
-                        node,
-                        argList,
-                        baseTypeResult.type,
-                        /* typeVarMap */ undefined,
-                        /* skipUnknownArgCheck */ false,
-                        expectedType
-                    ).returnType || UnknownType.create();
+                const callResult = validateCallArguments(
+                    node,
+                    argList,
+                    baseTypeResult.type,
+                    /* typeVarMap */ undefined,
+                    /* skipUnknownArgCheck */ false,
+                    expectedType
+                );
+                returnResult.type = callResult.returnType || UnknownType.create();
+                if (callResult.argumentErrors) {
+                    returnResult.typeErrors = true;
+                }
             }
 
             if (baseTypeResult.isIncomplete) {
@@ -6379,7 +6389,8 @@ export function createTypeEvaluator(
                 typeVarMap.setTypeVarType(
                     entry.typeVar,
                     entry.typeVar.details.variance === Variance.Covariant ? undefined : typeVarType,
-                    entry.typeVar.details.variance === Variance.Contravariant ? undefined : typeVarType
+                    entry.typeVar.details.variance === Variance.Contravariant ? undefined : typeVarType,
+                    entry.retainLiteral
                 );
             });
             return true;
@@ -6953,14 +6964,15 @@ export function createTypeEvaluator(
             if (expectedType.category !== TypeCategory.Union) {
                 // Prepopulate the typeVarMap based on the specialized expected type if the
                 // callee has a declared return type. This will allow us to more closely match
-                // the expected type if possible. We set the AllowTypeVarNarrowing flag so a
-                // narrower type can be used for TypeVars if possible.
+                // the expected type if possible. We set the AllowTypeVarNarrowing and
+                // SkipStripLiteralForTypeVar flags so the type can be further narrowed
+                // and so literals are not stripped.
                 canAssignType(
                     getFunctionEffectiveReturnType(type),
                     expectedType,
                     new DiagnosticAddendum(),
                     typeVarMap,
-                    CanAssignFlags.AllowTypeVarNarrowing
+                    CanAssignFlags.AllowTypeVarNarrowing | CanAssignFlags.RetainLiteralsForTypeVar
                 );
             }
         }
@@ -7784,6 +7796,9 @@ export function createTypeEvaluator(
             argType = exprType.type;
             if (exprType.isIncomplete) {
                 isTypeIncomplete = true;
+            }
+            if (exprType.typeErrors) {
+                return { isCompatible: false };
             }
             expectedTypeDiag = exprType.expectedTypeDiagAddendum;
 
@@ -9972,7 +9987,12 @@ export function createTypeEvaluator(
         ) {
             // Allocate a fresh typeVarMap before we try again with literals not stripped.
             typeVarMap = new TypeVarMap(expectedTypeScopeId);
-            typeVarMap.setTypeVarType(targetTypeVar, isNarrowable ? undefined : expectedType, expectedType);
+            typeVarMap.setTypeVarType(
+                targetTypeVar,
+                isNarrowable ? undefined : expectedType,
+                expectedType,
+                /* retainLiteral */ true
+            );
             if (entryTypes.some((entryType) => !canAssignType(targetTypeVar!, entryType, diagDummy, typeVarMap))) {
                 return undefined;
             }
@@ -9991,7 +10011,25 @@ export function createTypeEvaluator(
         return { type, node };
     }
 
-    function getTypeFromYield(node: YieldNode | YieldFromNode): TypeResult {
+    function getTypeFromYield(node: YieldNode): TypeResult {
+        let sentType: Type | undefined;
+
+        const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
+        if (enclosingFunction) {
+            const functionTypeInfo = getTypeOfFunction(enclosingFunction);
+            if (functionTypeInfo) {
+                sentType = getDeclaredGeneratorSendType(functionTypeInfo.functionType);
+            }
+        }
+
+        if (node.expression) {
+            getTypeOfExpression(node.expression).type;
+        }
+
+        return { type: sentType || UnknownType.create(), node };
+    }
+
+    function getTypeFromYieldFrom(node: YieldFromNode): TypeResult {
         let sentType: Type | undefined;
 
         const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
@@ -10003,12 +10041,10 @@ export function createTypeEvaluator(
         }
 
         let returnedType: Type | undefined;
-        if (node.expression) {
-            const generatorType = getTypeOfExpression(node.expression, sentType).type;
-            const generatorTypeArgs = getGeneratorTypeArgs(generatorType);
-            if (generatorTypeArgs && generatorTypeArgs.length >= 2) {
-                returnedType = generatorTypeArgs[2];
-            }
+        const generatorType = getTypeOfExpression(node.expression, sentType).type;
+        const generatorTypeArgs = getGeneratorTypeArgs(generatorType);
+        if (generatorTypeArgs && generatorTypeArgs.length >= 2) {
+            returnedType = generatorTypeArgs[2];
         }
 
         return { type: returnedType || UnknownType.create(), node };
@@ -11328,30 +11364,20 @@ export function createTypeEvaluator(
         // all of the type parameters in the specified order.
         let genericTypeParameters: TypeVarType[] | undefined;
 
-        let sawMetaclass = false;
         const initSubclassArgs: FunctionArgument[] = [];
+        let metaclassNode: ExpressionNode | undefined;
+        let exprFlags =
+            EvaluatorFlags.ExpectingType |
+            EvaluatorFlags.GenericClassTypeAllowed |
+            EvaluatorFlags.DisallowTypeVarsWithScopeId |
+            EvaluatorFlags.AssociateTypeVarsWithCurrentScope;
+        if (fileInfo.isStubFile) {
+            exprFlags |= EvaluatorFlags.AllowForwardReferences;
+        }
 
         node.arguments.forEach((arg) => {
-            // Ignore keyword parameters other than metaclass.
-            if (!arg.name || arg.name.value === 'metaclass') {
-                let exprFlags =
-                    EvaluatorFlags.ExpectingType |
-                    EvaluatorFlags.GenericClassTypeAllowed |
-                    EvaluatorFlags.DisallowTypeVarsWithScopeId |
-                    EvaluatorFlags.AssociateTypeVarsWithCurrentScope;
-                if (fileInfo.isStubFile) {
-                    exprFlags |= EvaluatorFlags.AllowForwardReferences;
-                }
-
+            if (!arg.name) {
                 let argType = getTypeOfExpression(arg.valueExpression, undefined, exprFlags).type;
-                const isMetaclass = !!arg.name;
-
-                if (isMetaclass) {
-                    if (sawMetaclass) {
-                        addError(Localizer.Diagnostic.metaclassDuplicate(), arg);
-                    }
-                    sawMetaclass = true;
-                }
 
                 // In some stub files, classes are conditionally defined (e.g. based
                 // on platform type). We'll assume that the conditional logic is correct
@@ -11423,65 +11449,52 @@ export function createTypeEvaluator(
                     );
                 }
 
-                if (isMetaclass) {
-                    if (isClass(argType) || isUnknown(argType)) {
-                        classType.details.declaredMetaclass = argType;
-                        if (isClass(argType)) {
-                            if (ClassType.isBuiltIn(argType, 'EnumMeta')) {
-                                classType.details.flags |= ClassTypeFlags.EnumClass;
-                            } else if (ClassType.isBuiltIn(argType, 'ABCMeta')) {
-                                classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
-                            }
-                        }
-                    }
-                } else {
-                    // Check for a duplicate class.
-                    if (
-                        classType.details.baseClasses.some((prevBaseClass) => {
-                            return (
-                                isClass(prevBaseClass) &&
-                                isClass(argType) &&
-                                ClassType.isSameGenericClass(argType, prevBaseClass)
-                            );
-                        })
-                    ) {
-                        addDiagnostic(
-                            fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                            DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.duplicateBaseClass(),
-                            arg.name || arg
+                // Check for a duplicate class.
+                if (
+                    classType.details.baseClasses.some((prevBaseClass) => {
+                        return (
+                            isClass(prevBaseClass) &&
+                            isClass(argType) &&
+                            ClassType.isSameGenericClass(argType, prevBaseClass)
                         );
+                    })
+                ) {
+                    addDiagnostic(
+                        fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.duplicateBaseClass(),
+                        arg.name || arg
+                    );
+                }
+
+                classType.details.baseClasses.push(argType);
+                if (isClass(argType)) {
+                    if (ClassType.isEnumClass(argType)) {
+                        classType.details.flags |= ClassTypeFlags.EnumClass;
                     }
 
-                    classType.details.baseClasses.push(argType);
-                    if (isClass(argType)) {
-                        if (ClassType.isEnumClass(argType)) {
-                            classType.details.flags |= ClassTypeFlags.EnumClass;
-                        }
+                    // Determine if the class is abstract. Protocol classes support abstract methods
+                    // even though they don't derive from the ABCMeta class. We'll exclude built-in
+                    // protocol classes because these are known not to contain any abstract methods
+                    // and getAbstractMethods causes problems because of dependencies on some of these
+                    // built-in protocol classes.
+                    if (
+                        ClassType.supportsAbstractMethods(argType) ||
+                        (ClassType.isProtocolClass(argType) && !ClassType.isBuiltIn(argType))
+                    ) {
+                        classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
+                    }
 
-                        // Determine if the class is abstract. Protocol classes support abstract methods
-                        // even though they don't derive from the ABCMeta class. We'll exclude built-in
-                        // protocol classes because these are known not to contain any abstract methods
-                        // and getAbstractMethods causes problems because of dependencies on some of these
-                        // built-in protocol classes.
-                        if (
-                            ClassType.supportsAbstractMethods(argType) ||
-                            (ClassType.isProtocolClass(argType) && !ClassType.isBuiltIn(argType))
-                        ) {
-                            classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
-                        }
+                    if (ClassType.isPropertyClass(argType)) {
+                        classType.details.flags |= ClassTypeFlags.PropertyClass;
+                    }
 
-                        if (ClassType.isPropertyClass(argType)) {
-                            classType.details.flags |= ClassTypeFlags.PropertyClass;
-                        }
-
-                        if (ClassType.isFinal(argType)) {
-                            const className = printObjectTypeForClass(argType);
-                            addError(
-                                Localizer.Diagnostic.baseClassFinal().format({ type: className }),
-                                arg.valueExpression
-                            );
-                        }
+                    if (ClassType.isFinal(argType)) {
+                        const className = printObjectTypeForClass(argType);
+                        addError(
+                            Localizer.Diagnostic.baseClassFinal().format({ type: className }),
+                            arg.valueExpression
+                        );
                     }
                 }
 
@@ -11491,6 +11504,12 @@ export function createTypeEvaluator(
                         genericTypeParameters = [];
                         addTypeVarsToListIfUnique(genericTypeParameters, getTypeVarArgumentsRecursive(argType));
                     }
+                }
+            } else if (arg.name.value === 'metaclass') {
+                if (metaclassNode) {
+                    addError(Localizer.Diagnostic.metaclassDuplicate(), arg);
+                } else {
+                    metaclassNode = arg.valueExpression;
                 }
             } else if (arg.name.value === 'total' && ClassType.isTypedDictClass(classType)) {
                 // The "total" parameter name applies only for TypedDict classes.
@@ -11538,58 +11557,6 @@ export function createTypeEvaluator(
         if (!computeMroLinearization(classType)) {
             addError(Localizer.Diagnostic.methodOrdering(), node.name);
         }
-
-        // Determine the effective metaclass and detect metaclass conflicts.
-        let effectiveMetaclass = classType.details.declaredMetaclass;
-        let reportedMetaclassConflict = false;
-
-        if (!effectiveMetaclass || isClass(effectiveMetaclass)) {
-            for (const baseClass of classType.details.baseClasses) {
-                if (isClass(baseClass)) {
-                    const baseClassMeta = baseClass.details.effectiveMetaclass || typeClassType;
-                    if (baseClassMeta && isClass(baseClassMeta)) {
-                        // Make sure there is no metaclass conflict.
-                        if (!effectiveMetaclass) {
-                            effectiveMetaclass = baseClassMeta;
-                        } else if (
-                            derivesFromClassRecursive(baseClassMeta, effectiveMetaclass, /* ignoreUnknown */ false)
-                        ) {
-                            effectiveMetaclass = baseClassMeta;
-                        } else if (
-                            !derivesFromClassRecursive(effectiveMetaclass, baseClassMeta, /* ignoreUnknown */ false)
-                        ) {
-                            if (!reportedMetaclassConflict) {
-                                addDiagnostic(
-                                    fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                                    DiagnosticRule.reportGeneralTypeIssues,
-                                    Localizer.Diagnostic.metaclassConflict(),
-                                    node.name
-                                );
-                                // Don't report more than once.
-                                reportedMetaclassConflict = true;
-                            }
-                        }
-                    } else {
-                        effectiveMetaclass = baseClassMeta ? UnknownType.create() : undefined;
-                        break;
-                    }
-                } else {
-                    // If one of the base classes is unknown, then the effective
-                    // metaclass is also unknowable.
-                    effectiveMetaclass = UnknownType.create();
-                    break;
-                }
-            }
-        }
-
-        // If we haven't found an effective metaclass, assume "type", which
-        // is the metaclass for "object".
-        if (!effectiveMetaclass) {
-            const typeMetaclass = getBuiltInType(node, 'type');
-            effectiveMetaclass = typeMetaclass && isClass(typeMetaclass) ? typeMetaclass : UnknownType.create();
-        }
-
-        classType.details.effectiveMetaclass = effectiveMetaclass;
 
         // The scope for this class becomes the "fields" for the corresponding type.
         const innerScope = ScopeUtils.getScopeForNode(node.suite);
@@ -11651,6 +11618,72 @@ export function createTypeEvaluator(
             }
         }
 
+        // Determine the effective metaclass and detect metaclass conflicts.
+        if (metaclassNode) {
+            const metaclassType = getTypeOfExpression(metaclassNode, undefined, exprFlags).type;
+            if (isClass(metaclassType) || isUnknown(metaclassType)) {
+                classType.details.declaredMetaclass = metaclassType;
+                if (isClass(metaclassType)) {
+                    if (ClassType.isBuiltIn(metaclassType, 'EnumMeta')) {
+                        classType.details.flags |= ClassTypeFlags.EnumClass;
+                    } else if (ClassType.isBuiltIn(metaclassType, 'ABCMeta')) {
+                        classType.details.flags |= ClassTypeFlags.SupportsAbstractMethods;
+                    }
+                }
+            }
+        }
+
+        let effectiveMetaclass = classType.details.declaredMetaclass;
+        let reportedMetaclassConflict = false;
+
+        if (!effectiveMetaclass || isClass(effectiveMetaclass)) {
+            for (const baseClass of classType.details.baseClasses) {
+                if (isClass(baseClass)) {
+                    const baseClassMeta = baseClass.details.effectiveMetaclass || typeClassType;
+                    if (baseClassMeta && isClass(baseClassMeta)) {
+                        // Make sure there is no metaclass conflict.
+                        if (!effectiveMetaclass) {
+                            effectiveMetaclass = baseClassMeta;
+                        } else if (
+                            derivesFromClassRecursive(baseClassMeta, effectiveMetaclass, /* ignoreUnknown */ false)
+                        ) {
+                            effectiveMetaclass = baseClassMeta;
+                        } else if (
+                            !derivesFromClassRecursive(effectiveMetaclass, baseClassMeta, /* ignoreUnknown */ false)
+                        ) {
+                            if (!reportedMetaclassConflict) {
+                                addDiagnostic(
+                                    fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                                    DiagnosticRule.reportGeneralTypeIssues,
+                                    Localizer.Diagnostic.metaclassConflict(),
+                                    node.name
+                                );
+                                // Don't report more than once.
+                                reportedMetaclassConflict = true;
+                            }
+                        }
+                    } else {
+                        effectiveMetaclass = baseClassMeta ? UnknownType.create() : undefined;
+                        break;
+                    }
+                } else {
+                    // If one of the base classes is unknown, then the effective
+                    // metaclass is also unknowable.
+                    effectiveMetaclass = UnknownType.create();
+                    break;
+                }
+            }
+        }
+
+        // If we haven't found an effective metaclass, assume "type", which
+        // is the metaclass for "object".
+        if (!effectiveMetaclass) {
+            const typeMetaclass = getBuiltInType(node, 'type');
+            effectiveMetaclass = typeMetaclass && isClass(typeMetaclass) ? typeMetaclass : UnknownType.create();
+        }
+
+        classType.details.effectiveMetaclass = effectiveMetaclass;
+
         // Determine if the class is abstract.
         if (ClassType.supportsAbstractMethods(classType)) {
             if (getAbstractMethods(classType).length > 0) {
@@ -11684,6 +11717,7 @@ export function createTypeEvaluator(
             }
         }
 
+        // Synthesize dataclass methods.
         if (ClassType.isDataClass(classType)) {
             let skipSynthesizedInit = ClassType.isSkipSynthesizedDataClassInit(classType);
             if (!skipSynthesizedInit) {
@@ -16632,7 +16666,11 @@ export function createTypeEvaluator(
             // search for the symbol in outer scopes.
             if (decls.length === 0) {
                 if (symbolWithScope.scope.parent) {
-                    symbolWithScope = symbolWithScope.scope.parent.lookUpSymbolRecursive(name);
+                    symbolWithScope = symbolWithScope.scope.parent.lookUpSymbolRecursive(
+                        name,
+                        symbolWithScope.isOutsideCallerModule || symbolWithScope.scope.type === ScopeType.Module,
+                        symbolWithScope.isBeyondExecutionScope || symbolWithScope.scope.isIndependentlyExecutable()
+                    );
                 } else {
                     symbolWithScope = undefined;
                 }
@@ -16754,6 +16792,8 @@ export function createTypeEvaluator(
                 const memberName = node.parent.memberName.value;
                 doForEachSubtype(baseType, (subtype) => {
                     let symbol: Symbol | undefined;
+
+                    subtype = makeTopLevelTypeVarsConcrete(subtype);
 
                     if (isClass(subtype)) {
                         // Try to find a member that has a declared type. If so, that
@@ -18469,7 +18509,7 @@ export function createTypeEvaluator(
                             destTypeArg,
                             assignmentDiag,
                             typeVarMap,
-                            (flags ^ CanAssignFlags.ReverseTypeVarMatching) | CanAssignFlags.AllowTypeVarNarrowing,
+                            flags ^ CanAssignFlags.ReverseTypeVarMatching,
                             recursionCount + 1
                         )
                     ) {
@@ -18518,13 +18558,13 @@ export function createTypeEvaluator(
     function canAssignTypeToTypeVar(
         destType: TypeVarType,
         srcType: Type,
-        isContravariant: boolean,
         diag: DiagnosticAddendum,
         typeVarMap: TypeVarMap,
         flags = CanAssignFlags.Default,
         recursionCount = 0
     ): boolean {
         let isTypeVarInScope = true;
+        const isContravariant = (flags & CanAssignFlags.ReverseTypeVarMatching) !== 0;
 
         // If the TypeVar doesn't have a scope ID, then it's being used
         // outside of a valid TypeVar scope. This will be reported as a
@@ -18683,18 +18723,17 @@ export function createTypeEvaluator(
         }
 
         // Handle the unconstrained (but possibly bound) case.
-        let adjSrcType = srcType;
-        if (!curWideTypeBound || !containsLiteralType(curWideTypeBound)) {
-            // Strip literals if the existing value contains no literals. This allows
-            // for explicit (but no implicit) literal specialization of a generic class.
-            adjSrcType = stripLiteralValue(adjSrcType);
-        }
-
         let newNarrowTypeBound = curNarrowTypeBound;
         let newWideTypeBound = curWideTypeBound;
         const diagAddendum = new DiagnosticAddendum();
 
-        if (isContravariant) {
+        // Strip literals if the existing value contains no literals. This allows
+        // for explicit (but no implicit) literal specialization of a generic class.
+        const retainLiterals =
+            (flags & CanAssignFlags.RetainLiteralsForTypeVar) !== 0 || typeVarMap.getRetainLiterals(destType);
+        const adjSrcType = retainLiterals ? srcType : stripLiteralValue(srcType);
+
+        if (isContravariant || (flags & CanAssignFlags.AllowTypeVarNarrowing) !== 0) {
             // Update the wide type bound.
             if (!curWideTypeBound) {
                 newWideTypeBound = adjSrcType;
@@ -18740,7 +18779,7 @@ export function createTypeEvaluator(
                     newNarrowTypeBound = isUnknown(curNarrowTypeBound) ? adjSrcType : curNarrowTypeBound;
                 } else {
                     // We need to widen the type.
-                    if (typeVarMap.isLocked()) {
+                    if (typeVarMap.isLocked() || isTypeVar(adjSrcType)) {
                         diag.addMessage(
                             Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
                                 sourceType: printType(curNarrowTypeBound),
@@ -18837,7 +18876,7 @@ export function createTypeEvaluator(
         }
 
         if (!typeVarMap.isLocked() && isTypeVarInScope) {
-            typeVarMap.setTypeVarType(destType, newNarrowTypeBound, newWideTypeBound);
+            typeVarMap.setTypeVarType(destType, newNarrowTypeBound, newWideTypeBound, retainLiterals);
         }
 
         return true;
@@ -18883,12 +18922,9 @@ export function createTypeEvaluator(
             return true;
         }
 
-        // Strip the AllowTypeVarNarrowing from the incoming flags.
-        // We don't want to propagate this flag to any nested calls to
-        // canAssignType.
-        const canNarrowType = (flags & CanAssignFlags.AllowTypeVarNarrowing) !== 0;
-        const allowBoolTypeGuard = flags & CanAssignFlags.AllowBoolTypeGuard;
-        flags &= ~(CanAssignFlags.AllowTypeVarNarrowing | CanAssignFlags.AllowBoolTypeGuard);
+        // Strip a few of the flags we don't want to propagate to other calls.
+        const originalFlags = flags;
+        flags &= ~(CanAssignFlags.AllowBoolTypeGuard | CanAssignFlags.AllowTypeVarNarrowing);
 
         // Before performing any other checks, see if the dest type is a
         // TypeVar that we are attempting to match.
@@ -18958,10 +18994,9 @@ export function createTypeEvaluator(
                     return canAssignTypeToTypeVar(
                         destType,
                         srcType,
-                        canNarrowType,
                         diag,
                         typeVarMap || new TypeVarMap(),
-                        flags,
+                        originalFlags,
                         recursionCount + 1
                     );
                 }
@@ -19007,10 +19042,9 @@ export function createTypeEvaluator(
                     return canAssignTypeToTypeVar(
                         srcType,
                         destType,
-                        canNarrowType,
                         diag,
                         typeVarMap || new TypeVarMap(getTypeVarScopeId(srcType)),
-                        flags,
+                        originalFlags,
                         recursionCount + 1
                     );
                 }
@@ -19270,7 +19304,7 @@ export function createTypeEvaluator(
                 }
             } else if (ClassType.isBuiltIn(destClassType, 'TypeGuard')) {
                 // All the source to be a "bool".
-                if (allowBoolTypeGuard) {
+                if ((originalFlags & CanAssignFlags.AllowBoolTypeGuard) !== 0) {
                     if (isObject(srcType) && ClassType.isBuiltIn(srcType.classType, 'bool')) {
                         return true;
                     }
@@ -19609,7 +19643,7 @@ export function createTypeEvaluator(
             destType,
             new DiagnosticAddendum(),
             destTypeVarMap,
-            (flags ^ CanAssignFlags.ReverseTypeVarMatching) | CanAssignFlags.AllowTypeVarNarrowing,
+            flags ^ CanAssignFlags.ReverseTypeVarMatching,
             recursionCount + 1
         );
 
@@ -20156,7 +20190,7 @@ export function createTypeEvaluator(
                 if (entry.narrowBound) {
                     const specializedType = applySolvedTypeVars(entry.narrowBound, typeVarMap);
                     if (specializedType !== entry.narrowBound) {
-                        typeVarMap.setTypeVarType(entry.typeVar, specializedType, entry.wideBound);
+                        typeVarMap.setTypeVarType(entry.typeVar, specializedType, entry.wideBound, entry.retainLiteral);
                     }
                 }
             });
