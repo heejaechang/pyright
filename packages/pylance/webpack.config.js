@@ -35,17 +35,16 @@ module.exports = (_, { mode }) => {
                 { from: scripts, to: 'scripts' },
             ],
         }),
-        new webpack.SourceMapDevToolPlugin({
-            filename: '[name].bundle.js.map',
-            exclude: mode === 'production' ? ['pylance-langserver.bundle.js'] : undefined,
-            moduleFilenameTemplate:
-                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('vscode-pylance'),
-            noSources: mode === 'production',
-        }),
     ];
 
     if (mode === 'production') {
         plugins.push(
+            new webpack.SourceMapDevToolPlugin({
+                filename: '[name].bundle.js.map',
+                exclude: ['pylance-langserver.bundle.js'],
+                moduleFilenameTemplate: monorepoResourceNameMapper('vscode-pylance'),
+                noSources: true,
+            }),
             new WebpackObfuscator(
                 {
                     sourceMap: false,
@@ -78,7 +77,9 @@ module.exports = (_, { mode }) => {
             filename: '[name].bundle.js',
             path: outPath,
             libraryTarget: 'commonjs2',
+            devtoolModuleFilenameTemplate: mode === 'development' ? '../[resource-path]' : undefined,
         },
+        devtool: mode === 'development' ? 'source-map' : undefined,
         stats: {
             all: false,
             errors: true,
