@@ -744,6 +744,10 @@ class PylanceServer extends LanguageServerBase {
             },
         };
     }
+
+    protected getDocumentationUrlForDiagnosticRule(rule: string): string | undefined {
+        return 'https://github.com/microsoft/pylance-release/blob/main/DIAGNOSTIC_SEVERITY_RULES.md#diagnostic-severity-rules';
+    }
 }
 
 class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
