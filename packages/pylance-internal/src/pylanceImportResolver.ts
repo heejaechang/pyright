@@ -6,6 +6,7 @@
  */
 
 import * as child_process from 'child_process';
+import leven from 'leven';
 
 import { ImportedModuleDescriptor, ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { ImportResult, ImportType } from 'pyright-internal/analyzer/importResult';
@@ -418,6 +419,7 @@ class ImportFailure {
     private readonly _cache = new Map<string, Map<string, FailureData>>();
     private readonly _failureReasons = new Map<string, number>();
 
+    private _lastData: FailureData | undefined;
     private _libPathCache: string[] | undefined = undefined;
 
     has(path: string, importName: string): boolean {
@@ -469,7 +471,28 @@ class ImportFailure {
         const data = callback();
         data.durationInMS = this._duration.getDurationInMilliseconds() - start;
 
+        if (this._lastData && !this._lastData.success) {
+            const editDistance = this._editDistance(this._lastData.importName, data.importName);
+            if (editDistance < 2) {
+                // Remove old one.
+                const importName = this._lastData.importName;
+                const map = this._cache.get(importName);
+                if (map) {
+                    const path = this._lastData.path;
+                    const entry = map.get(path);
+                    if (entry) {
+                        map.delete(path);
+                    }
+
+                    if (map.size === 0) {
+                        this._cache.delete(importName);
+                    }
+                }
+            }
+        }
+
         getOrAdd(this._cache, data.importName, () => new Map<string, FailureData>()).set(data.path, data);
+        this._lastData = data;
     }
 
     report(telemetry: TelemetryInterface) {
@@ -523,6 +546,19 @@ class ImportFailure {
         this._cache.clear();
         this._failureReasons.clear();
         this._libPathCache = undefined;
+        this._lastData = undefined;
+    }
+
+    private _editDistance(word1: string, word2: string) {
+        if (word1.length > word2.length) {
+            [word1, word2] = [word2, word1];
+        }
+
+        if (word2.startsWith(word1)) {
+            return 1;
+        }
+
+        return leven(word2, word1);
     }
 
     private _setFailureReasons(reasons: string[], reason: string) {
