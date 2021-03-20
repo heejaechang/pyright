@@ -1380,9 +1380,10 @@ export class Program {
 
             this._bindFile(sourceFileInfo);
 
+            const execEnv = this._configOptions.findExecEnvironment(filePath);
             return sourceFileInfo.sourceFile.getSignatureHelpForPosition(
                 position,
-                this._lookUpImport,
+                this._createSourceMapper(execEnv, /* mapCompiled */ true),
                 this._evaluator!,
                 format,
                 token
