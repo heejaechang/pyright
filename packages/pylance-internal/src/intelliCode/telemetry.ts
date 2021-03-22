@@ -3,8 +3,9 @@
  *
  * IntelliCode telemetry.
  */
-import { v4 as uuidv4 } from 'uuid';
 import { CompletionItem } from 'vscode-languageserver';
+
+import { Duration } from 'pyright-internal/common/timing';
 
 import { Commands } from '../commands/commands';
 import { mergeCommands } from '../commands/multiCommand';
@@ -19,8 +20,10 @@ export function buildRecommendationsTelemetry(
     targetTypeName: string | undefined, // Type of editor invocation.
     modelVersion: string, // Version of the model.
     elapsedMs: number, // Time takes to gather recommendations.
-    memoryIncrease: number // Change in memory consumption.
+    memoryIncrease: number, // Change in memory consumption.
+    correlationId: string // Id to indicate which completion this intellicode belongs to
 ): void {
+    const duration = new Duration();
     const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_COMPLETION_ITEM_SELECTED);
 
     let failureReason = FailureReason.None;
@@ -59,10 +62,15 @@ export function buildRecommendationsTelemetry(
     }
 
     te.Properties['ModelVersion'] = `python_LSTM_${modelVersion}`;
-    te.Properties['Id'] = uuidv4();
+    te.Properties['Id'] = correlationId;
     te.Properties['Language'] = 'python';
 
+    const telemetryBuildTimeInMS = duration.getDurationInMilliseconds();
+    te.Measurements['selectedItemTelemetryBuildTimeInMs'] = telemetryBuildTimeInMS;
+
     buildCompletionItemsTelemetry(completionList, applied, te);
+    te.Measurements['completionItemTelemetryBuildTimeInMs'] =
+        duration.getDurationInMilliseconds() - telemetryBuildTimeInMS;
 }
 
 function buildCompletionItemsTelemetry(completionList: CompletionItem[], applied: string[], te: TelemetryEvent): void {

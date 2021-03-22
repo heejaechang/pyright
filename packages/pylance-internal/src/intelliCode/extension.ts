@@ -7,18 +7,24 @@ import 'pyright-internal/common/extensions';
 
 import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
 
-import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { LogLevel } from 'pyright-internal/common/console';
 import { assert } from 'pyright-internal/common/debug';
 import { CompletionListExtension, LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Duration } from 'pyright-internal/common/timing';
+import { CompletionResults } from 'pyright-internal/languageService/completionProvider';
 import { ModuleNode } from 'pyright-internal/parser/parseNodes';
 
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
-import { getExceptionMessage, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import {
+    createTelemetryCorrelationId,
+    getExceptionMessage,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService,
+} from '../common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
@@ -118,16 +124,22 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         }
     }
 
-    async updateCompletionList(
-        completionList: CompletionList,
+    async updateCompletionResults(
+        completionResults: CompletionResults,
         ast: ModuleNode,
         content: string,
         position: number,
-        options: ConfigOptions,
         token: CancellationToken
-    ): Promise<CompletionList> {
-        if (!this._enable || !this.model || !this._deepLearning || completionList.items.length === 0) {
-            return completionList;
+    ): Promise<void> {
+        const completionList = completionResults.completionList;
+        if (
+            !this._enable ||
+            !this.model ||
+            !this._deepLearning ||
+            !completionList ||
+            completionList.items.length === 0
+        ) {
+            return;
         }
 
         try {
@@ -153,7 +165,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             );
 
             if (token.isCancellationRequested) {
-                return completionList;
+                return;
             }
 
             let applied: string[] = [];
@@ -161,6 +173,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 applied = this.applyModel(completionItems, result.recommendations);
             }
 
+            const correlationId = createTelemetryCorrelationId();
             buildRecommendationsTelemetry(
                 completionItems,
                 result.recommendations,
@@ -168,12 +181,13 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 result.invocation?.type,
                 this.model.metaData.Version,
                 dt.getDurationInMilliseconds(),
-                memoryIncrease
+                memoryIncrease,
+                correlationId
             );
+            completionResults.extensionInfo = { correlationId, totalTimeInMS: dt.getDurationInMilliseconds() };
         } catch (e) {
             this._logger?.log(LogLevel.Error, `Exception in IntelliCode: ${e.stack}`);
         }
-        return completionList;
     }
 
     // Prefix to tell extension commands from others.

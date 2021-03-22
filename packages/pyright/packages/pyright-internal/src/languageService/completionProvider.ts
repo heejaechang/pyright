@@ -222,10 +222,16 @@ export interface AutoImportInfo {
     additionTimeInMS: number;
 }
 
+export interface ExtensionInfo {
+    correlationId: string;
+    totalTimeInMS: number;
+}
+
 export interface CompletionResults {
     completionList: CompletionList | undefined;
     memberAccessInfo?: MemberAccessInfo;
     autoImportInfo?: AutoImportInfo;
+    extensionInfo?: ExtensionInfo;
 }
 
 export interface CompletionOptions {

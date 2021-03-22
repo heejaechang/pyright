@@ -5,6 +5,7 @@
  */
 
 import { createHash } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { Connection } from 'vscode-languageserver/node';
 
 import { isString, isThenable } from 'pyright-internal/common/core';
@@ -36,6 +37,7 @@ export enum TelemetryEventName {
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
 
 const languageServerEventPrefix = 'language_server/';
+
 // Exported for tests.
 export function formatEventName(eventName: string): string {
     return `${languageServerEventPrefix}${eventName}`;
@@ -274,22 +276,27 @@ export namespace CompletionCoverage {
     }
 }
 
+export interface TrackPerfCustomMeasures {
+    setCorrelationId: (id: string) => void;
+    addCustomMeasure: (name: string, measure: number) => void;
+}
+
 export function trackPerf<T>(
     service: TelemetryInterface,
     eventName: TelemetryEventName,
-    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => Promise<T>,
+    callback: (customMeasures: TrackPerfCustomMeasures) => Promise<T>,
     thresholdInMS: number
 ): Promise<T>;
 export function trackPerf<T>(
     service: TelemetryInterface,
     eventName: TelemetryEventName,
-    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T,
+    callback: (customMeasures: TrackPerfCustomMeasures) => T,
     thresholdInMS: number
 ): T;
 export function trackPerf<T>(
     service: TelemetryInterface,
     eventName: TelemetryEventName,
-    callback: (customMeasures: { addCustomMeasure: (name: string, measure: number) => void }) => T | Promise<T>,
+    callback: (customMeasures: TrackPerfCustomMeasures) => T | Promise<T>,
     thresholdInMS: number
 ): T | Promise<T> {
     const duration = new Duration();
@@ -314,7 +321,11 @@ export function trackPerf<T>(
           }
         | undefined;
 
+    let correlationId: string | undefined;
     const customMeasures = {
+        setCorrelationId(id: string) {
+            correlationId = id;
+        },
         addCustomMeasure(name: string, measure: number) {
             if (!map) {
                 map = {};
@@ -362,7 +373,15 @@ export function trackPerf<T>(
 
             event.Measurements['totalTime'] = totalTime;
 
+            if (correlationId) {
+                event.Properties['correlationId'] = correlationId;
+            }
+
             service.sendTelemetry(event);
         }
     }
+}
+
+export function createTelemetryCorrelationId() {
+    return uuidv4();
 }

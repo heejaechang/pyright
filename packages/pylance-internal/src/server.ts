@@ -570,6 +570,11 @@ class PylanceServer extends LanguageServerBase {
                     );
                 }
 
+                if (completionResults?.extensionInfo) {
+                    cm.setCorrelationId(completionResults.extensionInfo.correlationId);
+                    cm.addCustomMeasure('extensionTotalTimeInMS', completionResults.extensionInfo.totalTimeInMS);
+                }
+
                 return completionResults;
             },
             IS_INSIDERS ? 0 : 1000

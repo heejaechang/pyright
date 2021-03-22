@@ -1448,12 +1448,11 @@ export class Program {
         if (pr?.parseTree && content !== undefined) {
             const offset = convertPositionToOffset(position, pr.tokenizerOutput.lines);
             if (offset !== undefined) {
-                completionResult.completionList = await this._extension.completionListExtension.updateCompletionList(
-                    completionResult.completionList,
+                await this._extension.completionListExtension.updateCompletionResults(
+                    completionResult,
                     pr.parseTree,
                     content,
                     offset,
-                    this._configOptions,
                     token
                 );
             }
