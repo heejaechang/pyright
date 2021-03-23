@@ -25,6 +25,7 @@ import {
     resolvePaths,
 } from 'pyright-internal/common/pathUtils';
 import { Duration } from 'pyright-internal/common/timing';
+import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
 import { TelemetryEvent, TelemetryEventName, TelemetryInterface } from './common/telemetry';
 
@@ -286,7 +287,21 @@ export class PylanceImportResolver extends ImportResolver {
             }
         }
 
-        return super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
+        const files = super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
+        if (files.length > 0) {
+            return files;
+        }
+
+        // If everything failed, See whether we have a partial stub file saved
+        // for compiled module doc string.
+        if (mapCompiled && this.fileSystem instanceof PyrightFileSystem) {
+            const partialStubWithComments = this.fileSystem.getConflictedFile(stubFilePath);
+            if (partialStubWithComments) {
+                files.push(partialStubWithComments);
+            }
+        }
+
+        return files;
     }
 
     protected addResultsToCache(
