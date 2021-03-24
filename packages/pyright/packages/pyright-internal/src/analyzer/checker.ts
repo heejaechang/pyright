@@ -67,6 +67,7 @@ import {
     YieldFromNode,
     YieldNode,
 } from '../parser/parseNodes';
+import { OperatorType } from '../parser/tokenizerTypes';
 import { AnalyzerFileInfo } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { Declaration, DeclarationType } from './declaration';
@@ -77,11 +78,13 @@ import * as ParseTreeUtils from './parseTreeUtils';
 import { ParseTreeWalker } from './parseTreeWalker';
 import { ScopeType } from './scope';
 import { getScopeForNode } from './scopeUtils';
+import { evaluateStaticBoolExpression } from './staticExpressions';
 import { Symbol } from './symbol';
 import * as SymbolNameUtils from './symbolNameUtils';
 import { getLastTypedDeclaredForSymbol, isFinalVariable } from './symbolUtils';
 import { TypeEvaluator } from './typeEvaluator';
 import {
+    AnyType,
     ClassType,
     combineTypes,
     FunctionType,
@@ -113,8 +116,9 @@ import {
     derivesFromClassRecursive,
     doForEachSubtype,
     getDeclaredGeneratorReturnType,
-    getDeclaredGeneratorYieldType,
+    getGeneratorTypeArgs,
     isEllipsisType,
+    isLiteralTypeOrUnion,
     isNoReturnType,
     isOpenEndedTupleClass,
     isPartlyUnknown,
@@ -229,6 +233,10 @@ export class Checker extends ParseTreeWalker {
                         }
                     }
                 });
+
+                // If this is a generic protocol class, verify that its type variables
+                // have the proper variance.
+                this._validateProtocolTypeParamVariance(node, classTypeResult.classType);
             }
 
             this._validateClassMethods(classTypeResult.classType);
@@ -511,7 +519,7 @@ export class Checker extends ParseTreeWalker {
                     this._fileInfo.diagnosticRuleSet.reportUnknownLambdaType,
                     DiagnosticRule.reportUnknownLambdaType,
                     Localizer.Diagnostic.lambdaReturnTypePartiallyUnknown().format({
-                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ false),
+                        returnType: this._evaluator.printType(returnType, /* expandTypeAlias */ true),
                     }),
                     node.expression
                 );
@@ -602,6 +610,44 @@ export class Checker extends ParseTreeWalker {
     }
 
     visitIf(node: IfNode): boolean {
+        // Check for expressions where a variable is being compared to
+        // a literal string or number. Look for a common bug where
+        // the comparison will always be False. Don't do this for
+        // expressions like 'sys.platform == "win32"' because those
+        // can change based on the execution environment and are therefore
+        // valid.
+        if (
+            node.testExpression.nodeType === ParseNodeType.BinaryOperation &&
+            node.testExpression.operator === OperatorType.Equals &&
+            evaluateStaticBoolExpression(node.testExpression, this._fileInfo.executionEnvironment) === undefined
+        ) {
+            const rightType = this._evaluator.getType(node.testExpression.rightExpression);
+            if (rightType && isLiteralTypeOrUnion(rightType)) {
+                const leftType = this._evaluator.getType(node.testExpression.leftExpression);
+                if (leftType && isLiteralTypeOrUnion(leftType)) {
+                    let isPossiblyTrue = false;
+
+                    doForEachSubtype(leftType, (leftSubtype) => {
+                        if (this._evaluator.canAssignType(rightType, leftSubtype, new DiagnosticAddendum())) {
+                            isPossiblyTrue = true;
+                        }
+                    });
+
+                    if (!isPossiblyTrue) {
+                        this._evaluator.addDiagnostic(
+                            this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            Localizer.Diagnostic.comparisonAlwaysFalse().format({
+                                leftType: this._evaluator.printType(leftType, /* expandTypeAlias */ true),
+                                rightType: this._evaluator.printType(rightType, /* expandTypeAlias */ true),
+                            }),
+                            node.testExpression
+                        );
+                    }
+                }
+            }
+        }
+
         this._evaluator.getType(node.testExpression);
         return true;
     }
@@ -692,28 +738,27 @@ export class Checker extends ParseTreeWalker {
 
     visitYield(node: YieldNode) {
         const yieldType = node.expression ? this._evaluator.getType(node.expression) : NoneType.createInstance();
-
-        // Wrap the yield type in an Iterator.
-        let adjYieldType = yieldType;
-        const iteratorType = this._evaluator.getBuiltInType(node, 'Iterator');
-        if (yieldType && isClass(iteratorType)) {
-            adjYieldType = ObjectType.create(
-                ClassType.cloneForSpecialization(iteratorType, [yieldType], /* isTypeArgumentExplicit */ true)
-            );
-        } else {
-            adjYieldType = UnknownType.create();
-        }
-
-        this._validateYieldType(node, adjYieldType);
-
+        this._validateYieldType(node, yieldType || UnknownType.create());
         return true;
     }
 
     visitYieldFrom(node: YieldFromNode) {
-        const yieldType = this._evaluator.getType(node.expression);
-        if (yieldType) {
-            this._validateYieldType(node, yieldType);
+        const yieldFromType = this._evaluator.getType(node.expression) || UnknownType.create();
+        let yieldType =
+            this._evaluator.getTypeFromIterable(yieldFromType, /* isAsync */ false, node) || UnknownType.create();
+
+        // Does the iterator return a Generator? If so, get the yield type from it.
+        // If the iterator doesn't return a Generator, use the iterator return type
+        // directly.
+        const generatorTypeArgs = getGeneratorTypeArgs(yieldType);
+        if (generatorTypeArgs) {
+            yieldType = generatorTypeArgs.length >= 1 ? generatorTypeArgs[0] : UnknownType.create();
+        } else {
+            yieldType =
+                this._evaluator.getTypeFromIterator(yieldFromType, /* isAsync */ false, node) || UnknownType.create();
         }
+
+        this._validateYieldType(node, yieldType);
 
         return true;
     }
@@ -1357,7 +1402,9 @@ export class Checker extends ParseTreeWalker {
                 }
                 resultingExceptionType = ObjectType.create(exceptionType);
             } else if (isObject(exceptionType)) {
-                const iterableType = this._evaluator.getTypeFromIterable(exceptionType, /* isAsync */ false, errorNode);
+                const iterableType =
+                    this._evaluator.getTypeFromIterator(exceptionType, /* isAsync */ false, errorNode) ||
+                    UnknownType.create();
 
                 resultingExceptionType = mapSubtypes(iterableType, (subtype) => {
                     if (isAnyOrUnknown(subtype)) {
@@ -2459,6 +2506,95 @@ export class Checker extends ParseTreeWalker {
         });
     }
 
+    // Validates that the type variables used in a generic protocol class have
+    // the proper variance (invariant, covariant, contravariant). See PEP 544
+    // for an explanation for why this is important to enforce.
+    private _validateProtocolTypeParamVariance(errorNode: ClassNode, classType: ClassType) {
+        const origTypeParams = classType.details.typeParameters;
+
+        // If this isn't a generic protocol, there's nothing to do here.
+        if (origTypeParams.length === 0) {
+            return;
+        }
+
+        const objectType = this._evaluator.getBuiltInType(errorNode, 'object');
+        if (!isClass(objectType)) {
+            return;
+        }
+
+        // Replace all of the type parameters with invariant TypeVars.
+        const updatedTypeParams = origTypeParams.map((typeParam) => TypeVarType.cloneAsInvariant(typeParam));
+        const updatedClassType = ClassType.cloneWithNewTypeParameters(classType, updatedTypeParams);
+
+        const objectObject = ObjectType.create(objectType);
+
+        updatedTypeParams.forEach((param, paramIndex) => {
+            // Replace all type arguments with Any except for the
+            // TypeVar of interest, which is replaced with an object instance.
+            const srcTypeArgs = updatedTypeParams.map((_, i) => {
+                return i === paramIndex ? objectObject : AnyType.create();
+            });
+
+            // Replace all type arguments with Any except for the
+            // TypeVar of interest, which is replaced with itself.
+            const destTypeArgs = updatedTypeParams.map((p, i) => {
+                return i === paramIndex ? p : AnyType.create();
+            });
+
+            const srcType = ClassType.cloneForSpecialization(
+                updatedClassType,
+                srcTypeArgs,
+                /* isTypeArgumentExplicit */ true
+            );
+            const destType = ClassType.cloneForSpecialization(
+                updatedClassType,
+                destTypeArgs,
+                /* isTypeArgumentExplicit */ true
+            );
+
+            const isDestSubtypeOfSrc = this._evaluator.canAssignProtocolClassToSelf(srcType, destType);
+
+            let expectedVariance: Variance;
+            if (isDestSubtypeOfSrc) {
+                expectedVariance = Variance.Covariant;
+            } else {
+                const isSrcSubtypeOfDest = this._evaluator.canAssignProtocolClassToSelf(destType, srcType);
+                if (isSrcSubtypeOfDest) {
+                    expectedVariance = Variance.Contravariant;
+                } else {
+                    expectedVariance = Variance.Invariant;
+                }
+            }
+
+            if (expectedVariance !== origTypeParams[paramIndex].details.variance) {
+                let message: string;
+                if (expectedVariance === Variance.Covariant) {
+                    message = Localizer.Diagnostic.protocolVarianceCovariant().format({
+                        variable: param.details.name,
+                        class: classType.details.name,
+                    });
+                } else if (expectedVariance === Variance.Contravariant) {
+                    message = Localizer.Diagnostic.protocolVarianceContravariant().format({
+                        variable: param.details.name,
+                        class: classType.details.name,
+                    });
+                } else {
+                    message = Localizer.Diagnostic.protocolVarianceInvariant().format({
+                        variable: param.details.name,
+                        class: classType.details.name,
+                    });
+                }
+
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportInvalidTypeVarUse,
+                    DiagnosticRule.reportInvalidTypeVarUse,
+                    message,
+                    errorNode.name
+                );
+            }
+        });
+    }
+
     // Validates that any overridden methods contain the same signatures
     // as the original method. Also marks the class as abstract if one or
     // more abstract methods are not overridden.
@@ -2859,43 +2995,57 @@ export class Checker extends ParseTreeWalker {
         }
     }
 
-    private _validateYieldType(node: YieldNode | YieldFromNode, adjustedYieldType: Type) {
+    private _validateYieldType(node: YieldNode | YieldFromNode, yieldType: Type) {
+        let declaredReturnType: Type | undefined;
         let declaredYieldType: Type | undefined;
-        let declaredGeneratorType: Type | undefined;
         const enclosingFunctionNode = ParseTreeUtils.getEnclosingFunction(node);
 
         if (enclosingFunctionNode) {
             const functionTypeResult = this._evaluator.getTypeOfFunction(enclosingFunctionNode);
             if (functionTypeResult) {
                 assert(isFunction(functionTypeResult.functionType));
-                const iterableType = this._evaluator.getBuiltInType(node, 'Iterable');
-                declaredYieldType = FunctionType.getSpecializedReturnType(functionTypeResult.functionType);
-                declaredGeneratorType = getDeclaredGeneratorYieldType(functionTypeResult.functionType, iterableType);
+                declaredReturnType = FunctionType.getSpecializedReturnType(functionTypeResult.functionType);
+                if (declaredReturnType) {
+                    declaredYieldType = this._evaluator.getTypeFromIterator(
+                        declaredReturnType,
+                        !!enclosingFunctionNode.isAsync,
+                        /* errorNode */ undefined
+                    );
+                }
+
+                if (declaredYieldType && !declaredYieldType && enclosingFunctionNode.returnTypeAnnotation) {
+                    this._evaluator.addDiagnostic(
+                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        enclosingFunctionNode.isAsync
+                            ? Localizer.Diagnostic.generatorAsyncReturnType()
+                            : Localizer.Diagnostic.generatorSyncReturnType(),
+                        enclosingFunctionNode.returnTypeAnnotation
+                    );
+                }
             }
         }
 
         if (this._evaluator.isNodeReachable(node)) {
-            if (declaredGeneratorType && declaredYieldType) {
-                if (isNoReturnType(declaredGeneratorType)) {
+            if (declaredReturnType && isNoReturnType(declaredReturnType)) {
+                this._evaluator.addDiagnostic(
+                    this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                    DiagnosticRule.reportGeneralTypeIssues,
+                    Localizer.Diagnostic.noReturnContainsYield(),
+                    node
+                );
+            } else if (declaredYieldType) {
+                const diagAddendum = new DiagnosticAddendum();
+                if (!this._evaluator.canAssignType(declaredYieldType, yieldType, diagAddendum)) {
                     this._evaluator.addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                         DiagnosticRule.reportGeneralTypeIssues,
-                        Localizer.Diagnostic.noReturnContainsYield(),
-                        node
+                        Localizer.Diagnostic.yieldTypeMismatch().format({
+                            exprType: this._evaluator.printType(yieldType, /* expandTypeAlias */ false),
+                            yieldType: this._evaluator.printType(declaredYieldType, /* expandTypeAlias */ false),
+                        }) + diagAddendum.getString(),
+                        node.expression || node
                     );
-                } else {
-                    const diagAddendum = new DiagnosticAddendum();
-                    if (!this._evaluator.canAssignType(declaredGeneratorType, adjustedYieldType, diagAddendum)) {
-                        this._evaluator.addDiagnostic(
-                            this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                            DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.yieldTypeMismatch().format({
-                                exprType: this._evaluator.printType(adjustedYieldType, /* expandTypeAlias */ false),
-                                yieldType: this._evaluator.printType(declaredYieldType, /* expandTypeAlias */ false),
-                            }) + diagAddendum.getString(),
-                            node.expression || node
-                        );
-                    }
                 }
             }
         }

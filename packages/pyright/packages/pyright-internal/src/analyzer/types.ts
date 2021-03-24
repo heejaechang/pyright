@@ -354,6 +354,12 @@ export interface ClassType extends TypeBase {
     // some or all of the type parameters.
     typeArguments?: Type[];
 
+    // If a generic container class (like a list or dict) is known
+    // to contain no elements, its type arguments may be "Unknown".
+    // This value allows us to elide the Unknown when it's safe to
+    // do so.
+    isEmptyContainer?: boolean;
+
     // For tuples, the class definition calls for a single type parameter but
     // the spec allows the programmer to provide variadic type arguments.
     // To make these compatible, we need to derive a single typeArgument value
@@ -425,7 +431,8 @@ export namespace ClassType {
         typeArguments: Type[] | undefined,
         isTypeArgumentExplicit: boolean,
         skipAbstractClassTest = false,
-        tupleTypeArguments?: Type[]
+        tupleTypeArguments?: Type[],
+        isEmptyContainer?: boolean
     ): ClassType {
         const newClassType = { ...classType };
 
@@ -439,6 +446,10 @@ export namespace ClassType {
         newClassType.tupleTypeArguments = tupleTypeArguments
             ? tupleTypeArguments.map((t) => (isNever(t) ? UnknownType.create() : t))
             : undefined;
+
+        if (isEmptyContainer !== undefined) {
+            newClassType.isEmptyContainer = isEmptyContainer;
+        }
 
         return newClassType;
     }
@@ -461,6 +472,13 @@ export namespace ClassType {
     ) {
         const newClassType = { ...classType };
         newClassType.typedDictNarrowedEntries = narrowedEntries;
+        return newClassType;
+    }
+
+    export function cloneWithNewTypeParameters(classType: ClassType, typeParams: TypeVarType[]): ClassType {
+        const newClassType = { ...classType };
+        newClassType.details = { ...newClassType.details };
+        newClassType.details.typeParameters = typeParams;
         return newClassType;
     }
 
@@ -1550,6 +1568,27 @@ export namespace TypeVarType {
         return newInstance;
     }
 
+    // Creates a "simplified" version of the TypeVar with invariance
+    // and no bound or constraints. ParamSpecs and variadics are left unmodified.
+    export function cloneAsInvariant(type: TypeVarType) {
+        if (type.details.isParamSpec || type.details.isVariadic) {
+            return type;
+        }
+
+        if (type.details.variance === Variance.Invariant) {
+            if (type.details.boundType === undefined && type.details.constraints.length === 0) {
+                return type;
+            }
+        }
+
+        const newInstance: TypeVarType = { ...type };
+        newInstance.details = { ...newInstance.details };
+        newInstance.details.variance = Variance.Invariant;
+        newInstance.details.boundType = undefined;
+        newInstance.details.constraints = [];
+        return newInstance;
+    }
+
     export function makeNameWithScope(name: string, scopeId: string) {
         return `${name}.${scopeId}`;
     }
@@ -2031,7 +2070,7 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
         }
     }
 
-    // Sort all of the literal types to the end.
+    // Sort all of the literal and empty types to the end.
     expandedTypes = expandedTypes.sort((constrainedType1, constrainedType2) => {
         const type1 = constrainedType1.type;
         const type2 = constrainedType2.type;
@@ -2046,6 +2085,13 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
         ) {
             return -1;
         }
+
+        if (isObject(type1) && type1.classType.isEmptyContainer) {
+            return 1;
+        } else if (isObject(type2) && type2.classType.isEmptyContainer) {
+            return -1;
+        }
+
         return 0;
     });
 
@@ -2169,6 +2215,14 @@ function _addTypeIfUnique(unionType: UnionType, typeToAdd: UnionableType, constr
                     unionType.subtypes[i] = ObjectType.create(ClassType.cloneWithLiteral(type.classType, undefined));
                     return;
                 }
+            }
+        }
+
+        // If the typeToAdd is an empty container and there's already
+        // non-empty container of the same type, don't add the empty container.
+        if (isObject(typeToAdd) && typeToAdd.classType.isEmptyContainer) {
+            if (isObject(type) && ClassType.isSameGenericClass(type.classType, typeToAdd.classType)) {
+                return;
             }
         }
     }

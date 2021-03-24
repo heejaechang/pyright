@@ -573,6 +573,12 @@ test('GenericTypes53', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('GenericTypes54', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes54.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -669,6 +675,14 @@ test('Protocol16', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Protocol17', () => {
+    const configOptions = new ConfigOptions('.');
+    configOptions.diagnosticRuleSet.reportInvalidTypeVarUse = 'error';
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol17.py']);
+
+    TestUtils.validateResults(analysisResults, 7);
+});
+
 test('TypedDict1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict1.py']);
 
@@ -739,6 +753,12 @@ test('TypedDict12', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict12.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('TypedDict13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typedDict13.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('Required1', () => {
