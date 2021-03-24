@@ -220,6 +220,10 @@ export namespace Localizer {
         export const classGetItemClsParam = () => getRawString('Diagnostic.classGetItemClsParam');
         export const classVarFirstArgMissing = () => getRawString('Diagnostic.classVarFirstArgMissing');
         export const classVarTooManyArgs = () => getRawString('Diagnostic.classVarTooManyArgs');
+        export const comparisonAlwaysFalse = () =>
+            new ParameterizedString<{ leftType: string; rightType: string }>(
+                getRawString('Diagnostic.comparisonAlwaysFalse')
+            );
         export const comprehensionInDict = () => getRawString('Diagnostic.comprehensionInDict');
         export const comprehensionInSet = () => getRawString('Diagnostic.comprehensionInSet');
         export const concatenateParamSpecMissing = () => getRawString('Diagnostic.concatenateParamSpecMissing');
@@ -338,6 +342,8 @@ export namespace Localizer {
         export const formatStringUnicode = () => getRawString('Diagnostic.formatStringUnicode');
         export const formatStringUnterminated = () => getRawString('Diagnostic.formatStringUnterminated');
         export const functionDecoratorTypeUnknown = () => getRawString('Diagnostic.functionDecoratorTypeUnknown');
+        export const generatorAsyncReturnType = () => getRawString('Diagnostic.generatorAsyncReturnType');
+        export const generatorSyncReturnType = () => getRawString('Diagnostic.generatorSyncReturnType');
         export const genericClassAssigned = () => getRawString('Diagnostic.genericClassAssigned');
         export const genericClassDeleted = () => getRawString('Diagnostic.genericClassDeleted');
         export const genericNotAllowed = () => getRawString('Diagnostic.genericNotAllowed');
@@ -424,6 +430,7 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.namedParamAfterParamSpecArgs'));
         export const namedTupleEmptyName = () => getRawString('Diagnostic.namedTupleEmptyName');
         export const namedTupleFirstArg = () => getRawString('Diagnostic.namedTupleFirstArg');
+        export const namedTupleMultipleInheritance = () => getRawString('Diagnostic.namedTupleMultipleInheritance');
         export const namedTupleNameString = () => getRawString('Diagnostic.namedTupleNameString');
         export const namedTupleNameType = () => getRawString('Diagnostic.namedTupleNameType');
         export const namedTupleNameUnique = () => getRawString('Diagnostic.namedTupleNameUnique');
@@ -541,6 +548,18 @@ export namespace Localizer {
         export const protocolIllegal = () => getRawString('Diagnostic.protocolIllegal');
         export const protocolUsedInCall = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.protocolUsedInCall'));
+        export const protocolVarianceContravariant = () =>
+            new ParameterizedString<{ variable: string; class: string }>(
+                getRawString('Diagnostic.protocolVarianceContravariant')
+            );
+        export const protocolVarianceCovariant = () =>
+            new ParameterizedString<{ variable: string; class: string }>(
+                getRawString('Diagnostic.protocolVarianceCovariant')
+            );
+        export const protocolVarianceInvariant = () =>
+            new ParameterizedString<{ variable: string; class: string }>(
+                getRawString('Diagnostic.protocolVarianceInvariant')
+            );
         export const raiseParams = () => getRawString('Diagnostic.raiseParams');
         export const recursiveDefinition = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.recursiveDefinition'));
@@ -636,6 +655,8 @@ export namespace Localizer {
         export const typedDictEntryName = () => getRawString('Diagnostic.typedDictEntryName');
         export const typedDictEntryUnique = () => getRawString('Diagnostic.typedDictEntryUnique');
         export const typedDictExtraArgs = () => getRawString('Diagnostic.typedDictExtraArgs');
+        export const typedDictFieldRedefinition = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typedDictFieldRedefinition'));
         export const typedDictFirstArg = () => getRawString('Diagnostic.typedDictFirstArg');
         export const typedDictSecondArgDict = () => getRawString('Diagnostic.typedDictSecondArgDict');
         export const typedDictSecondArgDictEntry = () => getRawString('Diagnostic.typedDictSecondArgDictEntry');
@@ -924,6 +945,10 @@ export namespace Localizer {
         export const typedDictFieldNotRequired = () =>
             new ParameterizedString<{ name: string; type: string }>(
                 getRawString('DiagnosticAddendum.typedDictFieldNotRequired')
+            );
+        export const typedDictFieldRedefinition = () =>
+            new ParameterizedString<{ parentType: string; childType: string }>(
+                getRawString('DiagnosticAddendum.typedDictFieldRedefinition')
             );
         export const typedDictFieldRequired = () =>
             new ParameterizedString<{ name: string; type: string }>(

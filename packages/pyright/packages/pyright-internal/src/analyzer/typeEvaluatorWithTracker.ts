@@ -80,6 +80,8 @@ export function createTypeEvaluatorWithTracker(
             run('resolveAliasDeclaration', () => typeEvaluator.resolveAliasDeclaration(d, l), d),
         getTypeFromIterable: (t, a, e) =>
             run('getTypeFromIterable', () => typeEvaluator.getTypeFromIterable(t, a, e), t),
+        getTypeFromIterator: (t, a, e) =>
+            run('getTypeFromIterator', () => typeEvaluator.getTypeFromIterator(t, a, e), t),
         getTypedDictMembersForClass: (c, a) =>
             run('getTypedDictMembersForClass', () => typeEvaluator.getTypedDictMembersForClass(c, a), c),
         getGetterTypeFromProperty: (p, i) =>
@@ -104,6 +106,8 @@ export function createTypeEvaluatorWithTracker(
             run('getTypeAnnotationForParameter', () => typeEvaluator.getTypeAnnotationForParameter(n, p), n),
         canAssignType: (d, s, a, m, f) => run('canAssignType', () => typeEvaluator.canAssignType(d, s, a, m, f), d),
         canOverrideMethod: (b, o, d) => run('canOverrideMethod', () => typeEvaluator.canOverrideMethod(b, o, d), o),
+        canAssignProtocolClassToSelf: (d, s) =>
+            run('canAssignProtocolClassToSelf', () => typeEvaluator.canAssignProtocolClassToSelf(d, s)),
         addError: (m, n) => run('addError', () => typeEvaluator.addError(m, n), n),
         addWarning: (m, n) => run('addWarning', () => typeEvaluator.addWarning(m, n), n),
         addInformation: (m, n) => run('addInformation', () => typeEvaluator.addInformation(m, n), n),

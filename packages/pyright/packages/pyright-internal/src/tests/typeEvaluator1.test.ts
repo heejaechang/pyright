@@ -864,6 +864,12 @@ test('NamedTuples2', () => {
     TestUtils.validateResults(analysisResults, 8);
 });
 
+test('NamedTuples3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples3.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
 test('Module1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['module1.py']);
 
@@ -944,6 +950,12 @@ test('Generators10', () => {
 
 test('Generators11', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators11.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
+test('Generators12', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators12.py']);
 
     TestUtils.validateResults(analysisResults, 1);
 });
@@ -1405,4 +1417,19 @@ test('Match6', () => {
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['match6.py'], configOptions);
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('List1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['list1.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Comparison1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['comparison1.py']);
+    TestUtils.validateResults(analysisResults, 3);
+});
+
+test('EmptyContainers1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['emptyContainers1.py']);
+    TestUtils.validateResults(analysisResults, 5);
 });
