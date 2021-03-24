@@ -24,6 +24,7 @@ export enum TelemetryEventName {
     INTELLICODE_COMPLETION_ITEM_SELECTED = 'intellicode_completion_item_selected',
     INTELLICODE_MODEL_LOAD_FAILED = 'intellicode_model_load_failed',
     INTELLICODE_ONNX_LOAD_FAILED = 'intellicode_onnx_load_failed',
+    COMPLETION_ACCEPTED = 'completion_accepted',
     COMPLETION_METRICS = 'completion_metrics',
     COMPLETION_COVERAGE = 'completion_coverage',
     COMPLETION_SLOW = 'completion_slow',

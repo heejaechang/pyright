@@ -55,6 +55,7 @@ import { CompletionItemData, CompletionResults } from 'pyright-internal/language
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
+import { autoImportAcceptedCommand, nonAutoImportAcceptedCommand } from './commands/completionAcceptedCommand';
 import { mergeCommands } from './commands/multiCommand';
 import { IS_DEV, IS_INSIDERS, IS_PR, PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
@@ -573,6 +574,14 @@ class PylanceServer extends LanguageServerBase {
                 if (completionResults?.extensionInfo) {
                     cm.setCorrelationId(completionResults.extensionInfo.correlationId);
                     cm.addCustomMeasure('extensionTotalTimeInMS', completionResults.extensionInfo.totalTimeInMS);
+                }
+
+                if (completionResults?.completionList) {
+                    for (const item of completionResults.completionList.items) {
+                        const command =
+                            item.detail === 'Auto-import' ? autoImportAcceptedCommand : nonAutoImportAcceptedCommand;
+                        item.command = mergeCommands(item.command, command);
+                    }
                 }
 
                 return completionResults;

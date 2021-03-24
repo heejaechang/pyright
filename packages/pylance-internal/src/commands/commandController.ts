@@ -14,6 +14,7 @@ import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { Commands } from './commands';
+import { CompletionAcceptedCommand } from './completionAcceptedCommand';
 import { DumpFileDebugInfoCommand } from './dumpFileDebugInfoCommand';
 import { ExtractMethodCommand } from './extractMethodCommand';
 import { ExtractVariableCommand } from './extractVariableCommand';
@@ -34,6 +35,7 @@ const _userInitiatedTelemetryCommands: Set<string> = new Set([
     Commands.addImport,
     Commands.extractMethod,
     Commands.extractVariable,
+    Commands.completionAccepted,
 ]);
 
 export class CommandController extends PyrightCommandController {
@@ -41,6 +43,7 @@ export class CommandController extends PyrightCommandController {
     private _extractMethod: ExtractMethodCommand;
     private _extractVariable: ExtractVariableCommand;
     private _dumpFileDebugInfo: DumpFileDebugInfoCommand;
+    private _completionAccepted: CompletionAcceptedCommand;
 
     private _pyrightCommandMap = new Map<string, string>([
         [Commands.createTypeStub, PyrightCommands.createTypeStub],
@@ -58,6 +61,7 @@ export class CommandController extends PyrightCommandController {
         this._extractMethod = new ExtractMethodCommand(_ls);
         this._extractVariable = new ExtractVariableCommand(_ls);
         this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(_ls);
+        this._completionAccepted = new CompletionAcceptedCommand(_telemetry);
     }
 
     static supportedCommands() {
@@ -75,6 +79,7 @@ export class CommandController extends PyrightCommandController {
             Commands.extractMethod,
             Commands.extractVariable,
             Commands.dumpFileDebugInfo,
+            Commands.completionAccepted,
         ];
     }
 
@@ -91,6 +96,8 @@ export class CommandController extends PyrightCommandController {
                 return await this._extractVariable.execute(cmdParams, token);
             case Commands.dumpFileDebugInfo:
                 return await this._dumpFileDebugInfo.execute(cmdParams, token);
+            case Commands.completionAccepted:
+                return await this._completionAccepted.execute(cmdParams, token);
         }
 
         const pyrightCommand = this._pyrightCommandMap.get(cmdParams.command);

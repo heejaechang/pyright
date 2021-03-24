@@ -21,4 +21,5 @@ export enum Commands {
     extractMethod = 'pylance.extractMethod',
     extractVariable = 'pylance.extractVariable',
     dumpFileDebugInfo = 'pylance.dumpFileDebugInfo',
+    completionAccepted = 'pylance.completionAccepted',
 }
