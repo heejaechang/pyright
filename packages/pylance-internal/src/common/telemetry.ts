@@ -159,7 +159,7 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
     for (const [key, value] of Object.entries(memberAccessInfo)) {
         if (isString(value)) {
             const strValue = value.toLowerCase();
-            if (strValue && strValue.length > 0) {
+            if (strValue) {
                 te.Properties[key + 'Hash'] = hashString(strValue);
                 // if (process.env.NODE_ENV === 'development') {
                 //     te.Properties[key] = strValue;
@@ -168,12 +168,14 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
         }
     }
 
-    if (memberAccessInfo && memberAccessInfo?.lastKnownModule) {
-        const packageName = memberAccessInfo?.lastKnownModule.split('.')[0].toLowerCase();
-        te.Properties['packageHash'] = hashString(packageName);
-        // if (process.env.NODE_ENV === 'development') {
-        //     te.Properties['package'] = packageName;
-        // }
+    if (memberAccessInfo.lastKnownModule) {
+        const packageName = memberAccessInfo.lastKnownModule.split('.')[0].toLowerCase();
+        if (packageName) {
+            te.Properties['packageHash'] = hashString(packageName);
+            // if (process.env.NODE_ENV === 'development') {
+            //     te.Properties['package'] = packageName;
+            // }
+        }
     }
 }
 
