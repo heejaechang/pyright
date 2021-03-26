@@ -6,10 +6,11 @@
 import { CompletionItem } from 'vscode-languageserver';
 
 import { Duration } from 'pyright-internal/common/timing';
+import { ExtensionInfo } from 'pyright-internal/languageService/completionProvider';
 
 import { Commands } from '../commands/commands';
 import { mergeCommands } from '../commands/multiCommand';
-import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
+import { createTelemetryCorrelationId, TelemetryEvent, TelemetryEventName } from '../common/telemetry';
 import { FailureReason, ModelType } from './types';
 
 // Builds overall IntelliCode temeletry
@@ -20,9 +21,10 @@ export function buildRecommendationsTelemetry(
     targetTypeName: string | undefined, // Type of editor invocation.
     modelVersion: string, // Version of the model.
     elapsedMs: number, // Time takes to gather recommendations.
-    memoryIncrease: number, // Change in memory consumption.
-    correlationId: string // Id to indicate which completion this intellicode belongs to
-): void {
+    memoryIncrease: number // Change in memory consumption.
+): ExtensionInfo {
+    const correlationId = createTelemetryCorrelationId();
+
     const duration = new Duration();
     const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_COMPLETION_ITEM_SELECTED);
 
@@ -66,11 +68,15 @@ export function buildRecommendationsTelemetry(
     te.Properties['Language'] = 'python';
 
     const telemetryBuildTimeInMS = duration.getDurationInMilliseconds();
-    te.Measurements['selectedItemTelemetryBuildTimeInMs'] = telemetryBuildTimeInMS;
-
     buildCompletionItemsTelemetry(completionList, applied, te);
-    te.Measurements['completionItemTelemetryBuildTimeInMs'] =
-        duration.getDurationInMilliseconds() - telemetryBuildTimeInMS;
+
+    const telemetryBuildTimeDoneInMS = duration.getDurationInMilliseconds();
+    return {
+        correlationId,
+        selectedItemTelemetryTimeInMS: telemetryBuildTimeInMS,
+        itemTelemetryTimeInMS: telemetryBuildTimeDoneInMS - telemetryBuildTimeInMS,
+        totalTimeInMS: elapsedMs + telemetryBuildTimeDoneInMS,
+    };
 }
 
 function buildCompletionItemsTelemetry(completionList: CompletionItem[], applied: string[], te: TelemetryEvent): void {

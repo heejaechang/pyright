@@ -542,6 +542,7 @@ class PylanceServer extends LanguageServerBase {
                 cm.addCustomMeasure('completionItems', completionResults?.completionList?.items.length ?? -1);
 
                 if (completionResults?.autoImportInfo) {
+                    const min = 1;
                     cm.addCustomMeasure(
                         'autoImportAdditionTimeInMS',
                         completionResults.autoImportInfo.additionTimeInMS
@@ -549,13 +550,13 @@ class PylanceServer extends LanguageServerBase {
                     cm.addCustomMeasure('autoImportIndexUsed', completionResults.autoImportInfo.indexUsed ? 1 : 0);
                     cm.addCustomMeasure('autoImportTotalTimeInMS', completionResults.autoImportInfo.totalTimeInMS);
 
-                    cm.addCustomMeasure('autoImportItemCount', completionResults.autoImportInfo.itemCount);
-                    cm.addCustomMeasure('autoImportSymbolCount', completionResults.autoImportInfo.symbolCount);
-                    cm.addCustomMeasure('autoImportUserIndexCount', completionResults.autoImportInfo.userIndexCount);
-                    cm.addCustomMeasure('autoImportIndexCount', completionResults.autoImportInfo.indexCount);
+                    cm.addCustomMeasure('autoImportItemCount', completionResults.autoImportInfo.itemCount, min);
+                    cm.addCustomMeasure('autoImportSymbolCount', completionResults.autoImportInfo.symbolCount, min);
+                    cm.addCustomMeasure('autoImportIndexCount', completionResults.autoImportInfo.indexCount, min);
                     cm.addCustomMeasure(
                         'autoImportImportAliasCount',
-                        completionResults.autoImportInfo.importAliasCount
+                        completionResults.autoImportInfo.importAliasCount,
+                        min
                     );
 
                     cm.addCustomMeasure('autoImportModuleTimeInMS', completionResults.autoImportInfo.moduleTimeInMS);
@@ -564,16 +565,18 @@ class PylanceServer extends LanguageServerBase {
                         'autoImportImportAliasTimeInMS',
                         completionResults.autoImportInfo.importAliasTimeInMS
                     );
-
-                    cm.addCustomMeasure('autoImportEditTimeInMS', completionResults.autoImportInfo.editTimeInMS);
-                    cm.addCustomMeasure(
-                        'autoImportModuleResolveTimeInMS',
-                        completionResults.autoImportInfo.moduleResolveTimeInMS
-                    );
                 }
 
                 if (completionResults?.extensionInfo) {
                     cm.setCorrelationId(completionResults.extensionInfo.correlationId);
+                    cm.addCustomMeasure(
+                        'selectedItemTelemetryBuildTimeInMs',
+                        completionResults.extensionInfo.selectedItemTelemetryTimeInMS
+                    );
+                    cm.addCustomMeasure(
+                        'completionItemTelemetryBuildTimeInMs',
+                        completionResults.extensionInfo.itemTelemetryTimeInMS
+                    );
                     cm.addCustomMeasure('extensionTotalTimeInMS', completionResults.extensionInfo.totalTimeInMS);
                 }
 

@@ -18,13 +18,7 @@ import { ModuleNode } from 'pyright-internal/parser/parseNodes';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
-import {
-    createTelemetryCorrelationId,
-    getExceptionMessage,
-    TelemetryEvent,
-    TelemetryEventName,
-    TelemetryService,
-} from '../common/telemetry';
+import { getExceptionMessage, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
@@ -173,18 +167,15 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 applied = this.applyModel(completionItems, result.recommendations);
             }
 
-            const correlationId = createTelemetryCorrelationId();
-            buildRecommendationsTelemetry(
+            completionResults.extensionInfo = buildRecommendationsTelemetry(
                 completionItems,
                 result.recommendations,
                 applied,
                 result.invocation?.type,
                 this.model.metaData.Version,
                 dt.getDurationInMilliseconds(),
-                memoryIncrease,
-                correlationId
+                memoryIncrease
             );
-            completionResults.extensionInfo = { correlationId, totalTimeInMS: dt.getDurationInMilliseconds() };
         } catch (e) {
             this._logger?.log(LogLevel.Error, `Exception in IntelliCode: ${e.stack}`);
         }

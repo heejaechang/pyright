@@ -281,7 +281,7 @@ export namespace CompletionCoverage {
 
 export interface TrackPerfCustomMeasures {
     setCorrelationId: (id: string) => void;
-    addCustomMeasure: (name: string, measure: number) => void;
+    addCustomMeasure: (name: string, measure: number, minimum?: number) => void;
 }
 
 export function trackPerf<T>(
@@ -329,12 +329,14 @@ export function trackPerf<T>(
         setCorrelationId(id: string) {
             correlationId = id;
         },
-        addCustomMeasure(name: string, measure: number) {
+        addCustomMeasure(name: string, measure: number, minimum: number | undefined) {
             if (!map) {
                 map = {};
             }
 
-            map[`custom_${name}`] = measure;
+            if (minimum === undefined || measure >= minimum) {
+                map[`custom_${name}`] = measure;
+            }
         },
     };
 

@@ -213,17 +213,16 @@ export interface AutoImportInfo {
 
     itemCount: number;
     symbolCount: number;
-    userIndexCount: number;
     indexCount: number;
     importAliasCount: number;
 
-    editTimeInMS: number;
-    moduleResolveTimeInMS: number;
     additionTimeInMS: number;
 }
 
 export interface ExtensionInfo {
     correlationId: string;
+    selectedItemTelemetryTimeInMS: number;
+    itemTelemetryTimeInMS: number;
     totalTimeInMS: number;
 }
 
@@ -1504,12 +1503,9 @@ export class CompletionProvider {
 
             itemCount: results.length,
             symbolCount: perfInfo.symbolCount,
-            userIndexCount: perfInfo.userIndexCount,
             indexCount: perfInfo.indexCount,
-            importAliasCount: perfInfo.userIndexCount,
+            importAliasCount: perfInfo.importAliasCount,
 
-            editTimeInMS: perfInfo.editTimeInMS,
-            moduleResolveTimeInMS: perfInfo.moduleResolveTimeInMS,
             additionTimeInMS: additionDuration.getDurationInMilliseconds(),
         };
     }
