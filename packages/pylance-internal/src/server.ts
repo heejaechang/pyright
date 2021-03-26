@@ -313,6 +313,7 @@ class PylanceServer extends LanguageServerBase {
         te.Properties['indexing'] = `${serverSettings.indexing}`;
         te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
         te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
+        te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
         this._telemetry.sendTelemetry(te);
 
         return serverSettings;
