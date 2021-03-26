@@ -237,8 +237,14 @@ export class PyrightFileSystem implements FileSystem {
                                     !this.existsSync(mappedPyFile) &&
                                     !this.existsSync(tmpPyFile)
                                 ) {
-                                    this._recordVirtualFile(tmpPyFile, originalPyiFile);
+                                    // We let people to go from tmpPyFile to originalPyiFile but
+                                    // not the other way around. what that means is that even if a user opens
+                                    // the file explicitly from real file system (ex, vscode open file), it won't
+                                    // go to the fake tmp py file. but open as it is.
+                                    this._recordVirtualFile(tmpPyFile, originalPyiFile, /* reversible */ false);
 
+                                    // This should be the only way to get to the tmp py file. and used internally
+                                    // to get some info like doc string of compiled module.
                                     this._conflictMap.set(mappedPyiFile, tmpPyFile);
                                 }
                                 continue;
@@ -285,9 +291,12 @@ export class PyrightFileSystem implements FileSystem {
         return this._conflictMap.get(filepath);
     }
 
-    private _recordVirtualFile(mappedFile: string, originalFile: string) {
+    private _recordVirtualFile(mappedFile: string, originalFile: string, reversible = true) {
         this._fileMap.set(mappedFile, originalFile);
-        this._reverseFileMap.set(originalFile, mappedFile);
+
+        if (reversible) {
+            this._reverseFileMap.set(originalFile, mappedFile);
+        }
 
         const directory = ensureTrailingDirectorySeparator(getDirectoryPath(mappedFile));
         let folderInfo = this._folderMap.get(directory);
