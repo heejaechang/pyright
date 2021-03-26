@@ -55,7 +55,7 @@ export class PyrightFileSystem implements FileSystem {
     constructor(private _realFS: FileSystem) {}
 
     existsSync(path: string): boolean {
-        if (this._partialStubPackagePaths.has(path) || this._reverseFileMap.has(path)) {
+        if (this._isVirtualEntry(path)) {
             // Pretend partial stub folder and its files not exist
             return false;
         }
@@ -74,8 +74,7 @@ export class PyrightFileSystem implements FileSystem {
     readdirEntriesSync(path: string): fs.Dirent[] {
         const entries = this._realFS.readdirEntriesSync(path).filter((item) => {
             // Filter out the stub package directory.
-            const dirPath = combinePaths(path, item.name);
-            return !this._partialStubPackagePaths.has(dirPath);
+            return !this._isVirtualEntry(combinePaths(path, item.name));
         });
 
         const partialStubs = this._folderMap.get(ensureTrailingDirectorySeparator(path));
@@ -89,8 +88,7 @@ export class PyrightFileSystem implements FileSystem {
     readdirSync(path: string): string[] {
         const entries = this._realFS.readdirSync(path).filter((item) => {
             // Filter out the stub package directory.
-            const dirPath = combinePaths(path, item);
-            return !this._partialStubPackagePaths.has(dirPath);
+            return !this._isVirtualEntry(combinePaths(path, item));
         });
 
         const partialStubs = this._folderMap.get(ensureTrailingDirectorySeparator(path));
@@ -344,6 +342,10 @@ export class PyrightFileSystem implements FileSystem {
 
         searchAllStubs(path);
         return paths;
+    }
+
+    private _isVirtualEntry(path: string) {
+        return this._partialStubPackagePaths.has(path) || this._reverseFileMap.has(path);
     }
 }
 

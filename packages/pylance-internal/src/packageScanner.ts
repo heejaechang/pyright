@@ -22,8 +22,6 @@ import {
 } from 'pyright-internal/common/pathUtils';
 import { equateStringsCaseInsensitive, equateStringsCaseSensitive } from 'pyright-internal/common/stringUtils';
 
-import { getExecutionEnvironments } from './common/collectionUtils';
-
 export interface PackageInfo {
     stdLib: boolean;
     isStub: boolean;
@@ -53,7 +51,7 @@ export class PackageScanner<T> {
             ? equateStringsCaseSensitive
             : equateStringsCaseInsensitive;
 
-        this._executionEnvironments = getExecutionEnvironments(configOptions);
+        this._executionEnvironments = configOptions.getExecutionEnvironments();
 
         this._stdLibPaths = new Map<string, string>();
         for (const execEnv of this._executionEnvironments) {

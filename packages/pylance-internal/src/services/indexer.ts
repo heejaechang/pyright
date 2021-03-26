@@ -36,7 +36,7 @@ import {
 import * as StringUtils from 'pyright-internal/common/stringUtils';
 import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/documentSymbolProvider';
 
-import { deleteElement, getExecutionEnvironments } from '../common/collectionUtils';
+import { deleteElement } from '../common/collectionUtils';
 import { mainFilename } from '../common/mainModuleFileName';
 import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from '../common/telemetry';
 import { PackageScanner } from '../packageScanner';
@@ -158,7 +158,7 @@ export class Indexer {
             const program = new Program(importResolver, configOptions, console, undefined, logTracker);
             for (const [execEnvRoot, packageInfo] of moduleFilesMap) {
                 logTracker.log(`index execution environment ${execEnvRoot}`, (ls) => {
-                    const execEnv = getExecutionEnvironments(configOptions).find((e) => e.root === execEnvRoot)!;
+                    const execEnv = configOptions.getExecutionEnvironments().find((e) => e.root === execEnvRoot)!;
 
                     const filteredInfo =
                         excludes.length <= 0
@@ -254,7 +254,7 @@ export class Indexer {
         const mapByEnv = new Map<string, Map<string, IndexResults>>();
 
         let stdLibIndices: Map<string, IndexResults> | undefined;
-        for (const execEnv of getExecutionEnvironments(configOptions)) {
+        for (const execEnv of configOptions.getExecutionEnvironments()) {
             const stdLibPath = importResolver.getTypeshedStdLibPath(execEnv);
             if (stdLibPath !== stdLibFallback) {
                 // Use persisted stdlib indices only if it is coming from typeshed fallbacks.
@@ -304,7 +304,7 @@ export class Indexer {
 
             const stdLibIndices = new Map<string, IndexResults>();
             Indexer._IndexProgram(program, stdLibFiles, stdLibIndices, CancellationToken.None);
-            removeDuplicates(importResolver, getExecutionEnvironments(configOptions)[0], stdLibIndices);
+            removeDuplicates(importResolver, configOptions.getExecutionEnvironments()[0], stdLibIndices);
 
             ll.add(`found ${[...stdLibIndices.values()].reduce((p, e) => p + e.symbols.length, 0)}`);
 
@@ -319,7 +319,7 @@ export class Indexer {
 
         // Verify indices written.
         logTracker.log('verify stdlib indices', (_) => {
-            const stdLibPath = importResolver.getTypeshedStdLibPath(getExecutionEnvironments(configOptions)[0]);
+            const stdLibPath = importResolver.getTypeshedStdLibPath(configOptions.getExecutionEnvironments()[0]);
             const stdLibMap = readStdLibIndices(importResolver, stdLibPath!, console, jsonFile);
             debug.assert(indices.size === stdLibMap!.size);
 
@@ -554,7 +554,7 @@ function writeStdLibIndices(
     jsonFile: string,
     map: Map<string, IndexResults>
 ) {
-    const stdLibPath = importResolver.getTypeshedStdLibPath(getExecutionEnvironments(configOptions)[0])?.toLowerCase();
+    const stdLibPath = importResolver.getTypeshedStdLibPath(configOptions.getExecutionEnvironments()[0])?.toLowerCase();
     if (!stdLibPath) {
         console.error(`No stdlib path for ${configOptions.projectRoot}`);
         return false;
