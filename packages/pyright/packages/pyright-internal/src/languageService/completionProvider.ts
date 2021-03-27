@@ -32,7 +32,7 @@ import { convertDocStringToMarkdown, convertDocStringToPlainText } from '../anal
 import { ImportedModuleDescriptor, ImportResolver } from '../analyzer/importResolver';
 import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
 import { getCallNodeAndActiveParameterIndex } from '../analyzer/parseTreeUtils';
-import { SourceMapper } from '../analyzer/sourceMapper';
+import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
 import { Symbol, SymbolTable } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
@@ -864,18 +864,22 @@ export class CompletionProvider {
                         return;
                     }
 
-                    const methodSignature = this._printMethodSignature(decl.node) + ':';
-                    const methodBody = this._printOverriddenMethodBody(
-                        classResults.classType,
-                        isDeclaredStaticMethod,
-                        isProperty,
-                        decl
-                    );
-                    const textEdit = this._createReplaceEdits(
-                        priorWord,
-                        partialName,
-                        `${methodSignature}\n${methodBody}`
-                    );
+                    const methodSignature = this._printMethodSignature(decl.node);
+
+                    let text: string;
+                    if (isStubFile(this._filePath)) {
+                        text = `${methodSignature}: ...`;
+                    } else {
+                        const methodBody = this._printOverriddenMethodBody(
+                            classResults.classType,
+                            isDeclaredStaticMethod,
+                            isProperty,
+                            decl
+                        );
+                        text = `${methodSignature}:\n${methodBody}`;
+                    }
+
+                    const textEdit = this._createReplaceEdits(priorWord, partialName, text);
 
                     this._addSymbol(name, symbol, partialName.value, completionList, {
                         // method signature already contains ()
