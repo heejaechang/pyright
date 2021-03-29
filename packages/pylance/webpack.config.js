@@ -18,8 +18,7 @@ const bundled = path.resolve(packages, 'pylance-internal', 'bundled');
 const scripts = path.resolve(packages, 'pylance-internal', 'scripts');
 const onnxLoader = path.resolve(packages, 'vscode-pylance', 'build', 'onnxLoader.js');
 
-const onnxRoot = require(path.resolve(packages, 'pylance-internal', 'build', 'findonnx'));
-const onnxBin = path.join(onnxRoot, 'bin');
+const { binDir: onnxBin } = require('../pylance-internal/build/findonnx');
 
 /**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
 module.exports = (_, { mode }) => {

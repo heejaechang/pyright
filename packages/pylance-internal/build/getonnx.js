@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-var-requires */
+// @ts-check
 
 // Allow skipping of this script; useful when needing to run npm install
 // without package-lock existing (which this script depends on).
@@ -12,101 +13,91 @@ if (process.env.SKIP_GET_ONNX) {
 // We need all platforms packages into the bundle.
 
 const fs = require('fs');
-const https = require('https');
 const path = require('path');
 const tar = require('tar');
-const tmp = require('tmp');
+const { default: got } = require('got');
+const hasha = require('hasha');
 
-// https://onnxruntimetestdata.blob.core.windows.net/onnxruntime-node-prebuild/onnxruntime-v0.0.1-dev.20200506.1-napi-v3-darwin-x64.tar.gz
-// https://onnxruntimetestdata.blob.core.windows.net/onnxruntime-node-prebuild/onnxruntime-v0.0.1-dev.20200506.1-napi-v3-linux-x64.tar.gz
-// https://onnxruntimetestdata.blob.core.windows.net/onnxruntime-node-prebuild/onnxruntime-v0.0.1-dev.20200506.1-napi-v3-win32-x64.tar.gz
+const stream = require('stream');
+const { promisify } = require('util');
+const pipeline = promisify(stream.pipeline);
 
-const baseUrl = 'https://onnxruntimetestdata.blob.core.windows.net/onnxruntime-node-prebuild';
-const basePackageName = 'onnxruntime';
-const platforms = ['win32', 'darwin', 'linux'];
-const tmpFolderName = 'onnxruntime';
+const { version, rootDir: outputDir, downloadCacheDir } = require('./findonnx');
 
-const packageJsonPath = path.resolve(path.join(__dirname, '..', 'package-lock.json'));
-const packageJsonString = fs.readFileSync(packageJsonPath, { encoding: 'utf8' });
-const packageJson = JSON.parse(packageJsonString);
-let version = packageJson.dependencies[basePackageName].version;
-console.log(`ONNX runtime version: ${version}`);
-version = `v${version}`;
+/** @type {[platform: string, arch: string][]} */
+const platforms = [
+    ['win32', 'x64'],
+    ['darwin', 'x64'],
+    ['linux', 'x64'],
+];
 
-class Deferred {
-    constructor() {
-        this._promise = new Promise((resolve, reject) => {
-            this._resolve = resolve;
-            this._reject = reject;
+/** @type {(platform: string, arch: string) => Promise<void>} */
+async function downloadOne(platform, arch) {
+    const url = `https://onnxruntimetestdata.blob.core.windows.net/onnxruntime-node-prebuild/onnxruntime-v${version}-napi-v3-${platform}-${arch}.tar.gz`;
+    const tarName = path.basename(url);
+    const tarPath = path.resolve(downloadCacheDir, tarName);
+
+    /** @type {import('got').Response} */
+    let response;
+
+    if (!fs.existsSync(tarPath)) {
+        console.log(`Downloading ${url}`);
+        const stream = got.get(url, { isStream: true });
+        stream.on('response', (r) => {
+            response = r;
         });
+        await pipeline(stream, fs.createWriteStream(tarPath));
+    } else {
+        console.log(`Already downloaded ${tarName}; skipping`);
+        response = await got.head(url);
     }
-    resolve(value) {
-        this._resolve(value);
+
+    const expectedHashBase64 = response.headers['content-md5'];
+    if (typeof expectedHashBase64 !== 'string') {
+        throw new Error('unexpected Content-MD5 header value');
     }
-    reject(reason) {
-        this._reject(reason);
+    const expectedHash = Buffer.from(expectedHashBase64, 'base64').toString('hex');
+
+    console.log(`Checking hash of ${tarName}`);
+    const hash = await hasha.fromFile(tarPath, { algorithm: 'md5' });
+    if (hash !== expectedHash) {
+        fs.unlinkSync(tarPath);
+        throw new Error('hash mismatch');
     }
-    get promise() {
-        return this._promise;
-    }
+
+    console.log(`Extracting ${tarName}`);
+    await tar.x({
+        file: tarPath,
+        cwd: outputDir,
+    });
 }
 
-async function downloadOnnxZip(url, zipFileName) {
-    const userTmpFolder = path.dirname(tmp.dirSync().name);
-    const downloadFolder = path.join(userTmpFolder, tmpFolderName);
-
-    if (!fs.existsSync(downloadFolder)) {
-        fs.mkdirSync(downloadFolder);
+async function main() {
+    if (!fs.existsSync(downloadCacheDir)) {
+        fs.mkdirSync(downloadCacheDir, { recursive: true });
     }
 
-    const filePath = path.join(downloadFolder, zipFileName);
-    if (fs.existsSync(filePath)) {
-        return filePath;
+    if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const d = new Deferred();
-    const ws = fs.createWriteStream(filePath);
-    https
-        .get(url, (response) => {
-            response.pipe(ws);
-            ws.on('finish', () => {
-                ws.close();
-            }).on('close', () => {
-                d.resolve(filePath);
-            });
-        })
-        .on('error', (e) => {
-            d.reject(e);
-        });
-
-    return d.promise;
-}
-
-platforms.forEach(async (platform) => {
-    const zipFileName = `${basePackageName}-${version}-napi-v3-${platform}-x64.tar.gz`;
-    const url = `${baseUrl}/${zipFileName}`;
-    let archiveFilePath;
-    try {
-        archiveFilePath = await downloadOnnxZip(url, zipFileName);
-    } catch (e) {
-        console.error(`Exception downloading ONNX module ${zipFileName}: ${e.stack}`);
-        process.exit(1);
-    }
-
-    let upackPath;
-    try {
-        const upackPath = require('./findonnx');
-        if (!fs.existsSync(upackPath)) {
-            fs.mkdirSync(upackPath);
+    for (const [platform, arch] of platforms) {
+        let success = false;
+        for (let i = 0; !success && i < 3; i++) {
+            try {
+                await downloadOne(platform, arch);
+                success = true;
+                break;
+            } catch (e) {
+                console.error(`Exception occurred, retrying: ${e}`);
+            }
         }
 
-        tar.x({
-            file: archiveFilePath,
-            cwd: upackPath,
-            sync: true,
-        });
-    } catch (e) {
-        console.error(`Exception unpacking ONNX module ${archiveFilePath} to ${upackPath}: ${e.stack}`);
-        process.exit(1);
+        if (!success) {
+            console.error('Failed too many times; quitting.');
+            process.exit(1);
+        }
     }
-});
+}
+
+main();
