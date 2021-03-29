@@ -130,6 +130,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      - name: Get current VS Code version
+        if: ${{ contains(matrix.package.path, 'vscode') }}
+        id: vscode-cache
+        shell: bash
+        run: |
+          echo "::set-output name=version::$(curl -s 'https://update.code.visualstudio.com/api/releases/stable' | jq -r '.[0]')"
+      - name: Cache vscode-test
+        if: ${{ contains(matrix.package.path, 'vscode') }}
+        uses: actions/cache@v2
+        with:
+          path: packages/vscode-pylance/.vscode-test
+          key: ${{ runner.os }}-vscode-test-v2-${{ steps.vscode-cache.outputs.version }}
+
       - run: npm install
 
       - uses: GabrielBB/xvfb-action@v1.4

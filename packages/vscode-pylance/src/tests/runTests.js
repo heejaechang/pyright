@@ -11,7 +11,6 @@ function start() {
     const jestRunnerFolder = path.join(extRoot, 'out', 'vscode-pylance', 'src', 'tests', 'jest');
 
     vsct.runTests({
-        version: '1.52.1', // 1.53 appears to have some troubles with hanging and process output. Pin to 1.52.1 until we can figure out what's wrong.
         extensionDevelopmentPath: extRoot,
         extensionTestsPath: path.join(jestRunnerFolder, 'jest-test-runner'),
         launchArgs: ['--disable-extensions'],
