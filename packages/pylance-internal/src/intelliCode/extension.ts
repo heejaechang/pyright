@@ -5,14 +5,14 @@
  */
 import 'pyright-internal/common/extensions';
 
-import { CancellationToken, CompletionItem, CompletionList } from 'vscode-languageserver';
+import { CancellationToken, CompletionItem } from 'vscode-languageserver';
 
 import { LogLevel } from 'pyright-internal/common/console';
 import { assert } from 'pyright-internal/common/debug';
 import { CompletionListExtension, LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Duration } from 'pyright-internal/common/timing';
-import { CompletionResults } from 'pyright-internal/languageService/completionProvider';
+import { autoImportDetail, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 import { ModuleNode } from 'pyright-internal/parser/parseNodes';
 
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
@@ -226,7 +226,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
     private applyModel(completions: CompletionItem[], recommendations: string[]): string[] {
         const applied: string[] = [];
         const set = new Map<string, CompletionItem>(
-            completions.filter((x) => x.label).map((v) => [v.label, v] as [string, CompletionItem])
+            completions
+                .filter((x) => x.label && x.detail !== autoImportDetail)
+                .map((v) => [v.label, v] as [string, CompletionItem])
         );
 
         let count = 0;

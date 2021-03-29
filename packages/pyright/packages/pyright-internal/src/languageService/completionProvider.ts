@@ -274,6 +274,8 @@ interface CompletionDetail {
     edits?: Edits;
 }
 
+export const autoImportDetail = 'Auto-import';
+
 // We'll use a somewhat-arbitrary cutoff value here to determine
 // whether it's sufficiently similar.
 const similarityLimit = 0.25;
@@ -1970,7 +1972,7 @@ export class CompletionProvider {
             // Force auto-import entries to the end.
             completionItem.sortText = this._makeSortText(SortCategory.AutoImport, name, detail.autoImportText);
             completionItemData.autoImportText = detail.autoImportText;
-            completionItem.detail = 'Auto-import';
+            completionItem.detail = autoImportDetail;
         } else if (SymbolNameUtils.isDunderName(name)) {
             // Force dunder-named symbols to appear after all other symbols.
             completionItem.sortText = this._makeSortText(SortCategory.DunderSymbol, name);

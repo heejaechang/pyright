@@ -50,7 +50,11 @@ import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import { Range } from 'pyright-internal/common/textRange';
 import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
-import { CompletionItemData, CompletionResults } from 'pyright-internal/languageService/completionProvider';
+import {
+    autoImportDetail,
+    CompletionItemData,
+    CompletionResults,
+} from 'pyright-internal/languageService/completionProvider';
 
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
@@ -583,7 +587,7 @@ class PylanceServer extends LanguageServerBase {
                 if (completionResults?.completionList) {
                     for (const item of completionResults.completionList.items) {
                         const command =
-                            item.detail === 'Auto-import' ? autoImportAcceptedCommand : nonAutoImportAcceptedCommand;
+                            item.detail === autoImportDetail ? autoImportAcceptedCommand : nonAutoImportAcceptedCommand;
                         item.command = mergeCommands(item.command, command);
                     }
                 }
