@@ -9,7 +9,7 @@ import 'jest-extended';
 import * as path from 'path';
 import { DirResult, dirSync } from 'tmp';
 import { instance, mock } from 'ts-mockito';
-import { CancellationToken, WorkDoneProgress } from 'vscode-languageserver';
+import { CancellationToken } from 'vscode-languageserver';
 
 import { createFromRealFileSystem } from 'pyright-internal/common/fileSystem';
 
@@ -85,13 +85,7 @@ s. `;
         const ew = new ExpressionWalker(aw.scopes);
         ew.walk(pr.parseTree);
 
-        const r = await deepLearning.getRecommendations(
-            code,
-            pr.parseTree,
-            ew,
-            code.length - 1,
-            CancellationToken.None
-        );
+        const r = await deepLearning.getRecommendations(pr, ew, code.length - 1, CancellationToken.None);
         expect(r).toContain(['join', 'replace', 'length']);
     }
 });

@@ -5,7 +5,7 @@
  */
 
 import { assert } from 'pyright-internal/common/debug';
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { ParseResults } from 'pyright-internal/parser/parser';
 import { Token, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { ExpressionWalker } from '../expressionWalker';
@@ -16,13 +16,12 @@ import { TokenSet, TokenValuePair } from './tokenSet';
 export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
     // Used by online (editor) parser to generate context for deep LSTM model inferencing.
     generateLookbackTokens(
-        ast: ModuleNode,
-        content: string,
+        parseResults: ParseResults,
         ew: ExpressionWalker,
         position: number,
         lookback?: number
     ): EditorInvocation | undefined {
-        const ts = this.extractTokens(ast, content);
+        const ts = this.extractTokens(parseResults);
         let method: string | undefined;
         let type: string | undefined;
         let spanStart = -1;

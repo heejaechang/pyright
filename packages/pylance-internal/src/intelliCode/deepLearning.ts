@@ -8,7 +8,7 @@ import type { InferenceSession } from 'onnxruntime';
 import { CancellationToken } from 'vscode-languageserver';
 
 import { LogLevel } from 'pyright-internal/common/console';
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { ParseResults } from 'pyright-internal/parser/parser';
 
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
@@ -66,8 +66,7 @@ export class DeepLearning {
     }
 
     async getRecommendations(
-        content: string,
-        ast: ModuleNode,
+        parseResults: ParseResults,
         expressionWalker: ExpressionWalker,
         position: number,
         token: CancellationToken
@@ -77,7 +76,7 @@ export class DeepLearning {
         }
 
         const tg = new EditorLookBackTokenGenerator();
-        const invocation = tg.generateLookbackTokens(ast, content, expressionWalker, position);
+        const invocation = tg.generateLookbackTokens(parseResults, expressionWalker, position);
         if (!invocation) {
             this._logger?.log(LogLevel.Log, 'IntelliCode: current invocation did not produce any meaningful tokens.');
             return EmptyResult;

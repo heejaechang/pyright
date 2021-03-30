@@ -7,7 +7,12 @@
 import 'jest-extended';
 
 import { StandardVariableType } from '../../intelliCode/types';
-import { walkExpressions } from './testUtils';
+import { getParseResultsAndWalkExpressions } from './testUtils';
+
+function walkExpressions(code: string) {
+    const [_, ew] = getParseResultsAndWalkExpressions(code);
+    return ew;
+}
 
 function verifySingle(code: string, key: string, value: string | undefined, spanStart: number) {
     const ew = walkExpressions(code);

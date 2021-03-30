@@ -8,7 +8,6 @@ import 'jest-extended';
 import * as path from 'path';
 
 import { DiagnosticSink } from 'pyright-internal/common/diagnosticSink';
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
 import { ParseOptions, Parser, ParseResults } from 'pyright-internal/parser/parser';
 
 import { AssignmentWalker } from '../../intelliCode/assignmentWalker';
@@ -28,19 +27,19 @@ export function walkAssignments(code: string): AssignmentWalker {
     return aw;
 }
 
-export function walkExpressions(code: string): ExpressionWalker {
-    const pr = parseCode(code);
+export function getParseResultsAndWalkExpressions(code: string): [ParseResults, ExpressionWalker] {
+    const parseResults = parseCode(code);
     const aw = walkAssignments(code);
-    aw.walk(pr.parseTree);
+    aw.walk(parseResults.parseTree);
     const ew = new ExpressionWalker(aw.scopes);
-    ew.walk(pr.parseTree);
-    return ew;
+    ew.walk(parseResults.parseTree);
+    return [parseResults, ew];
 }
 
 export function getInference(code: string, position: number): EditorInvocation | undefined {
-    const ew = walkExpressions(code);
+    const [parseResults, ew] = getParseResultsAndWalkExpressions(code);
     const tg = new EditorLookBackTokenGenerator();
-    return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, position, 100);
+    return tg.generateLookbackTokens(parseResults, ew, position, 100);
 }
 
 export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]): void {

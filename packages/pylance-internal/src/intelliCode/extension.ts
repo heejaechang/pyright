@@ -13,7 +13,7 @@ import { CompletionListExtension, LanguageServiceExtension } from 'pyright-inter
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Duration } from 'pyright-internal/common/timing';
 import { autoImportDetail, CompletionResults } from 'pyright-internal/languageService/completionProvider';
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { ParseResults } from 'pyright-internal/parser/parser';
 
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
 import { LogService } from '../common/logger';
@@ -120,8 +120,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
     async updateCompletionResults(
         completionResults: CompletionResults,
-        ast: ModuleNode,
-        content: string,
+        parseResults: ParseResults,
         position: number,
         token: CancellationToken
     ): Promise<void> {
@@ -140,13 +139,14 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const dt = new Duration();
             const memoryBefore = process.memoryUsage().heapUsed / 1024;
 
+            const ast = parseResults.parseTree;
             const aw = new AssignmentWalker(ast);
             aw.walk(ast);
             const ew = new ExpressionWalker(aw.scopes);
             ew.walk(ast);
 
             const completionItems = completionList.items.filter((x) => x.detail !== autoImportDetail);
-            const result = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
+            const result = await this._deepLearning.getRecommendations(parseResults, ew, position, token);
             if (result.recommendations.length > 0) {
                 this._logger?.log(LogLevel.Log, `Recommendations: ${result.recommendations.join(', ')}`);
             }

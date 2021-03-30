@@ -6,16 +6,14 @@
 
 import 'jest-extended';
 
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
-
 import { TrainingInvocations } from '../../intelliCode/models';
 import { TrainingLookBackTokenGenerator } from '../../intelliCode/tokens/trainingTokenGenerator';
-import { verifyKeys, walkExpressions } from './testUtils';
+import { getParseResultsAndWalkExpressions, verifyKeys } from './testUtils';
 
 function getInference(code: string): Map<string, Map<string, TrainingInvocations>> | undefined {
-    const ew = walkExpressions(code);
+    const [parseResults, ew] = getParseResultsAndWalkExpressions(code);
     const tg = new TrainingLookBackTokenGenerator();
-    return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, 100);
+    return tg.generateLookbackTokens(parseResults, ew, 100);
 }
 
 describe('IntelliCode token generator', () => {

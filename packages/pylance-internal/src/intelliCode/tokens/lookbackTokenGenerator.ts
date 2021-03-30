@@ -4,29 +4,24 @@
  * Base class for lookback token production for IntelliCode.
  */
 
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
-import { Tokenizer } from 'pyright-internal/parser/tokenizer';
+import { ParseResults } from 'pyright-internal/parser/parser';
 import { IdentifierToken, Token, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { IntelliCodeConstants, LiteralTokenValue } from '../types';
 import { TokenSet, TokenValuePair } from './tokenSet';
 
 export abstract class LookBackTokenGenerator {
-    extractTokens(ast: ModuleNode, content: string): TokenSet {
+    extractTokens(parseResults: ParseResults): TokenSet {
         const braceTracker: number[] = []; // Tracks  ()
         const fnTracker: (Token | undefined)[] = []; // Tracks nested function calls like a(b(c()))
 
         const ts = new TokenSet();
-        const tokens: Token[] = [];
-        const tokenCollection = new Tokenizer().tokenize(content).tokens;
-        for (let i = 0; i < tokenCollection.count; i++) {
-            tokens.push(tokenCollection.getItemAt(i));
-        }
+        const tokens = parseResults.tokenizerOutput.tokens;
 
         let isPreviousTokenNewLine = false;
 
-        for (let i = 0; i < tokens.length; i++) {
-            const t = tokens[i];
+        for (let i = 0; i < tokens.count; i++) {
+            const t = tokens.getItemAt(i);
 
             switch (t.type) {
                 case TokenType.Indent:
@@ -44,12 +39,12 @@ export abstract class LookBackTokenGenerator {
                 continue;
             }
 
-            ts.addToken(t, this.getTokenValue(t, content));
+            ts.addToken(t, this.getTokenValue(t, parseResults.text));
             isPreviousTokenNewLine = false;
 
             if (t.type === TokenType.OpenParenthesis) {
                 braceTracker.push(i);
-                fnTracker.push(i > 0 ? tokens[i - 1] : undefined);
+                fnTracker.push(i > 0 ? tokens.getItemAt(i - 1) : undefined);
                 continue;
             }
 
@@ -58,7 +53,7 @@ export abstract class LookBackTokenGenerator {
                 const fnToken = fnTracker.pop();
                 // If it is simple function call, store function name.
                 if (fnToken?.type === TokenType.Identifier) {
-                    ts.leftParenthesisSpanStarts.push(tokens[openBraceIndex!].start);
+                    ts.leftParenthesisSpanStarts.push(tokens.getItemAt(openBraceIndex!).start);
                     ts.relevantNames.push((fnToken as IdentifierToken).value);
                     ts.rightParenthesisSpanStarts.push(t.start);
                 }

@@ -225,19 +225,19 @@ function processPython(filePath: string, lookback: number): ExecutionResult {
     try {
         const content = fs.readFileSync(filePath, { encoding: 'utf8' });
         const parser = new Parser();
-        const pr = parser.parseSourceFile(content, new ParseOptions(), new DiagnosticSink());
+        const parseResults = parser.parseSourceFile(content, new ParseOptions(), new DiagnosticSink());
 
-        const assignmentWalker = new AssignmentWalker(pr.parseTree);
-        assignmentWalker.walk(pr.parseTree);
+        const assignmentWalker = new AssignmentWalker(parseResults.parseTree);
+        assignmentWalker.walk(parseResults.parseTree);
 
         const expressionWalker = new ExpressionWalker(assignmentWalker.scopes);
-        expressionWalker.walk(pr.parseTree);
+        expressionWalker.walk(parseResults.parseTree);
 
         methodCount += expressionWalker.methodCount;
         invocationCount += expressionWalker.methodInvokations.length;
 
         const tg = new TrainingLookBackTokenGenerator();
-        references = tg.generateLookbackTokens(pr.parseTree, content, expressionWalker, lookback);
+        references = tg.generateLookbackTokens(parseResults, expressionWalker, lookback);
     } catch (e) {
         console.log(`Exception when parsing file ${filePath}: ${e.message} in ${e.stack}`);
     }

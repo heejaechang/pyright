@@ -6,17 +6,15 @@
 
 import 'jest-extended';
 
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
-
 import { EditorInvocation } from '../../intelliCode/models';
 import { EditorLookBackTokenGenerator } from '../../intelliCode/tokens/editorTokenGenerator';
 import { StandardVariableType } from '../../intelliCode/types';
-import { walkExpressions } from './testUtils';
+import { getParseResultsAndWalkExpressions } from './testUtils';
 
 function getInference(code: string, position: number): EditorInvocation | undefined {
-    const ew = walkExpressions(code);
+    const [parseRestuls, ew] = getParseResultsAndWalkExpressions(code);
     const tg = new EditorLookBackTokenGenerator();
-    return tg.generateLookbackTokens(ew.scopes[0].node as ModuleNode, code, ew, position, 100);
+    return tg.generateLookbackTokens(parseRestuls, ew, position, 100);
 }
 
 function verifySingle(code: string, type: string, spanStart: number, position?: number): EditorInvocation {

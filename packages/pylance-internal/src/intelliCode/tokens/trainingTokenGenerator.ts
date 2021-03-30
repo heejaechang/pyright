@@ -4,7 +4,7 @@
  * Lookback token generator for IntelliCode in training mode.
  */
 
-import { ModuleNode } from 'pyright-internal/parser/parseNodes';
+import { ParseResults } from 'pyright-internal/parser/parser';
 import { TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { ExpressionWalker } from '../expressionWalker';
@@ -15,13 +15,12 @@ import { integerBinarySearch, positionBinarySearch, TokenSet } from './tokenSet'
 export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
     // Used by offline parser to generate usage data for deep LSTM model training..
     generateLookbackTokens(
-        ast: ModuleNode,
-        content: string,
+        parseResults: ParseResults,
         ew: ExpressionWalker,
         lookback?: number
     ): Map<string, Map<string, TrainingInvocations>> | undefined {
         const references = new Map<string, Map<string, TrainingInvocations>>();
-        const ts = this.extractTokens(ast, content);
+        const ts = this.extractTokens(parseResults);
 
         lookback = lookback || LookbackTokenLength;
         for (const mi of ew.methodInvokations) {
