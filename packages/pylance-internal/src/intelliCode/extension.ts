@@ -145,7 +145,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const ew = new ExpressionWalker(aw.scopes);
             ew.walk(ast);
 
-            const completionItems = completionList.items;
+            const completionItems = completionList.items.filter((x) => x.detail !== autoImportDetail);
             const result = await this._deepLearning.getRecommendations(content, ast, ew, position, token);
             if (result.recommendations.length > 0) {
                 this._logger?.log(LogLevel.Log, `Recommendations: ${result.recommendations.join(', ')}`);
@@ -226,9 +226,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
     private applyModel(completions: CompletionItem[], recommendations: string[]): string[] {
         const applied: string[] = [];
         const set = new Map<string, CompletionItem>(
-            completions
-                .filter((x) => x.label && x.detail !== autoImportDetail)
-                .map((v) => [v.label, v] as [string, CompletionItem])
+            completions.filter((x) => x.label).map((v) => [v.label, v] as [string, CompletionItem])
         );
 
         let count = 0;
