@@ -544,7 +544,8 @@ export interface AnalysisRequest {
         | 'restart'
         | 'getDiagnosticsForRange'
         | 'writeTypeStub'
-        | 'getSemanticTokens';
+        | 'getSemanticTokens'
+        | 'setExperimentOptions';
 
     data: any;
     port?: MessagePort;

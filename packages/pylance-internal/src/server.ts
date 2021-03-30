@@ -56,7 +56,7 @@ import {
     CompletionResults,
 } from 'pyright-internal/languageService/completionProvider';
 
-import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
+import { BackgroundAnalysis, ExperimentOptions, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
 import { autoImportAcceptedCommand, nonAutoImportAcceptedCommand } from './commands/completionAcceptedCommand';
@@ -89,7 +89,9 @@ const pythonAnalysisSectionName = 'python.analysis';
 export interface PylanceServerSettings extends ServerSettings {
     completeFunctionParens?: boolean;
     enableExtractCodeAction?: boolean;
+    useImportHeuristic?: boolean;
 }
+
 export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstance {
     completeFunctionParens?: boolean;
     enableExtractCodeAction?: boolean;
@@ -167,6 +169,7 @@ class PylanceServer extends LanguageServerBase {
             indexing: false,
             completeFunctionParens: false,
             enableExtractCodeAction: true,
+            useImportHeuristic: false,
         };
 
         if (IS_INSIDERS) {
@@ -296,6 +299,10 @@ class PylanceServer extends LanguageServerBase {
                     serverSettings.enableExtractCodeAction = pythonAnalysisSection.enableExtractCodeAction;
                 }
 
+                if (isBoolean(pythonAnalysisSection.useImportHeuristic)) {
+                    serverSettings.useImportHeuristic = pythonAnalysisSection.useImportHeuristic;
+                }
+
                 forceProgressBar = !!pythonAnalysisSection._forceProgressBar;
             }
         } catch (error) {
@@ -317,6 +324,7 @@ class PylanceServer extends LanguageServerBase {
         te.Properties['indexing'] = `${serverSettings.indexing}`;
         te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
         te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
+        te.Properties['useImportHeuristic'] = `${serverSettings.useImportHeuristic}`;
         te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
         this._telemetry.sendTelemetry(te);
 
@@ -660,14 +668,21 @@ class PylanceServer extends LanguageServerBase {
     ): Promise<void> {
         serverSettings = serverSettings ?? (await this.getSettings(workspace));
         await super.updateSettingsForWorkspace(workspace, serverSettings);
-        (workspace as PylanceWorkspaceServiceInstance).completeFunctionParens = !!(serverSettings as PylanceServerSettings)
-            .completeFunctionParens;
-        (workspace as PylanceWorkspaceServiceInstance).enableExtractCodeAction = !!(serverSettings as PylanceServerSettings)
-            .enableExtractCodeAction;
+
+        const pylanceSettings = serverSettings as PylanceServerSettings;
+        const pylanceWorkspace = workspace as PylanceWorkspaceServiceInstance;
+
+        pylanceWorkspace.completeFunctionParens = !!pylanceSettings.completeFunctionParens;
+        pylanceWorkspace.enableExtractCodeAction = !!pylanceSettings.enableExtractCodeAction;
+
+        this._getBackgroundAnalysisProgram(workspace).setExperimentOptions({
+            useImportHeuristic: !!pylanceSettings.useImportHeuristic,
+        });
 
         if (workspace.disableLanguageServices) {
             return;
         }
+
         workspace.serviceInstance.startIndexing();
     }
 
@@ -800,6 +815,14 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
         }
 
         return getSemanticTokens(this.program, filePath, range, previousResultId, token);
+    }
+
+    async setExperimentOptions(options: ExperimentOptions) {
+        if (this.backgroundAnalysis) {
+            (this.backgroundAnalysis as BackgroundAnalysis).setExperimentOptions(options);
+        }
+
+        (this.importResolver as PylanceImportResolver).useImportHeuristic(options.useImportHeuristic);
     }
 }
 

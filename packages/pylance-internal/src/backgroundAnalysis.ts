@@ -35,8 +35,12 @@ import { Range } from 'pyright-internal/common/textRange';
 import { mainFilename } from './common/mainModuleFileName';
 import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from './common/telemetry';
 import { getSemanticTokens } from './languageService/semanticTokenProvider';
-import { createPylanceImportResolver } from './pylanceImportResolver';
+import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
 import { BackgroundIndexRunner, Indexer } from './services/indexer';
+
+export interface ExperimentOptions {
+    useImportHeuristic: boolean;
+}
 
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
     constructor(private _telemetry: TelemetryInterface, console: ConsoleInterface) {
@@ -107,6 +111,24 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
 
         return result;
     }
+
+    async setExperimentOptions(flags: ExperimentOptions) {
+        const { port1, port2 } = new MessageChannel();
+        const waiter = getBackgroundWaiter<void>(port1);
+
+        this.enqueueRequest({
+            requestType: 'setExperimentOptions',
+            data: flags,
+            port: port2,
+        });
+
+        const result = await waiter;
+
+        port2.close();
+        port1.close();
+
+        return result;
+    }
 }
 
 const SEMANTICTOKENS_THRESHOLD_MS = 2000;
@@ -151,6 +173,12 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
                         SEMANTICTOKENS_THRESHOLD_MS
                     );
                 }, msg.port!);
+                break;
+            }
+
+            case 'setExperimentOptions': {
+                const flags = msg.data;
+                (this._importResolver as PylanceImportResolver).useImportHeuristic(flags.useImportHeuristic);
                 break;
             }
 

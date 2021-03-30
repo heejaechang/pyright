@@ -178,9 +178,9 @@ export class ImportResolver {
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
         similarityLimit: number
-    ): string[] {
+    ): Set<string> {
         const importFailureInfo: string[] = [];
-        const suggestions: string[] = [];
+        const suggestions = new Set<string>();
 
         // Is it a relative import?
         if (moduleDescriptor.leadingDots > 0) {
@@ -198,15 +198,15 @@ export class ImportResolver {
             }
 
             // Look for it in the root directory of the execution environment.
-            this._getCompletionSuggestionsAbsolute(execEnv.root, moduleDescriptor, suggestions, similarityLimit);
+            this.getCompletionSuggestionsAbsolute(execEnv.root, moduleDescriptor, suggestions, similarityLimit);
 
             for (const extraPath of execEnv.extraPaths) {
-                this._getCompletionSuggestionsAbsolute(extraPath, moduleDescriptor, suggestions, similarityLimit);
+                this.getCompletionSuggestionsAbsolute(extraPath, moduleDescriptor, suggestions, similarityLimit);
             }
 
             // Check for a typings file.
             if (this._configOptions.stubPath) {
-                this._getCompletionSuggestionsAbsolute(
+                this.getCompletionSuggestionsAbsolute(
                     this._configOptions.stubPath,
                     moduleDescriptor,
                     suggestions,
@@ -220,7 +220,7 @@ export class ImportResolver {
             // Look for the import in the list of third-party packages.
             const pythonSearchPaths = this._getPythonSearchPaths(execEnv, importFailureInfo);
             for (const searchPath of pythonSearchPaths) {
-                this._getCompletionSuggestionsAbsolute(searchPath, moduleDescriptor, suggestions, similarityLimit);
+                this.getCompletionSuggestionsAbsolute(searchPath, moduleDescriptor, suggestions, similarityLimit);
             }
         }
 
@@ -584,7 +584,7 @@ export class ImportResolver {
             importResult
         );
 
-        return this._filterImplicitImports(importResult, importedSymbols);
+        return this.filterImplicitImports(importResult, importedSymbols);
     }
 
     // Follows import resolution algorithm defined in PEP-420:
@@ -899,7 +899,7 @@ export class ImportResolver {
             return undefined;
         }
 
-        return this._filterImplicitImports(cachedEntry, importedSymbols);
+        return this.filterImplicitImports(cachedEntry, importedSymbols);
     }
 
     // Determines whether a namespace package resolves all of the symbols
@@ -1263,7 +1263,7 @@ export class ImportResolver {
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
         isStdLib: boolean,
-        suggestions: string[],
+        suggestions: Set<string>,
         similarityLimit: number
     ) {
         const importFailureInfo: string[] = [];
@@ -1277,7 +1277,7 @@ export class ImportResolver {
         }
 
         if (this.dirExistsCached(typeshedPath)) {
-            this._getCompletionSuggestionsAbsolute(typeshedPath, moduleDescriptor, suggestions, similarityLimit);
+            this.getCompletionSuggestionsAbsolute(typeshedPath, moduleDescriptor, suggestions, similarityLimit);
         }
     }
 
@@ -1396,13 +1396,13 @@ export class ImportResolver {
             /* allowPartial */ false,
             /* allowNativeLib */ true
         );
-        return this._filterImplicitImports(absImport, moduleDescriptor.importedSymbols);
+        return this.filterImplicitImports(absImport, moduleDescriptor.importedSymbols);
     }
 
     private _getCompletionSuggestionsRelative(
         sourceFilePath: string,
         moduleDescriptor: ImportedModuleDescriptor,
-        suggestions: string[],
+        suggestions: Set<string>,
         similarityLimit: number
     ) {
         // Determine which search path this file is part of.
@@ -1415,7 +1415,7 @@ export class ImportResolver {
         }
 
         // Now try to match the module parts from the current directory location.
-        this._getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, similarityLimit);
+        this.getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, similarityLimit);
     }
 
     private _getFilesInDirectory(dirPath: string): string[] {
@@ -1433,10 +1433,10 @@ export class ImportResolver {
         return filesInDir;
     }
 
-    private _getCompletionSuggestionsAbsolute(
+    protected getCompletionSuggestionsAbsolute(
         rootPath: string,
         moduleDescriptor: ImportedModuleDescriptor,
-        suggestions: string[],
+        suggestions: Set<string>,
         similarityLimit: number
     ) {
         // Starting at the specified path, walk the file system to find the
@@ -1470,7 +1470,12 @@ export class ImportResolver {
         }
     }
 
-    private _addFilteredSuggestions(dirPath: string, filter: string, suggestions: string[], similarityLimit: number) {
+    private _addFilteredSuggestions(
+        dirPath: string,
+        filter: string,
+        suggestions: Set<string>,
+        similarityLimit: number
+    ) {
         // Enumerate all of the files and directories in the path, expanding links.
         const entries = getFileSystemEntriesFromDirEntries(
             this.readdirEntriesCached(dirPath),
@@ -1500,8 +1505,8 @@ export class ImportResolver {
         });
     }
 
-    private _addUniqueSuggestion(suggestionToAdd: string, suggestions: string[]) {
-        if (suggestions.some((s) => s === suggestionToAdd)) {
+    private _addUniqueSuggestion(suggestionToAdd: string, suggestions: Set<string>) {
+        if (suggestions.has(suggestionToAdd)) {
             return;
         }
 
@@ -1515,12 +1520,12 @@ export class ImportResolver {
             return;
         }
 
-        suggestions.push(suggestionToAdd);
+        suggestions.add(suggestionToAdd);
     }
 
     // Potentially modifies the ImportResult by removing some or all of the
     // implicit import entries. Only the imported symbols should be included.
-    private _filterImplicitImports(importResult: ImportResult, importedSymbols: string[] | undefined): ImportResult {
+    protected filterImplicitImports(importResult: ImportResult, importedSymbols: string[] | undefined): ImportResult {
         if (importedSymbols === undefined) {
             const newImportResult = Object.assign({}, importResult);
             newImportResult.filteredImplicitImports = [];
