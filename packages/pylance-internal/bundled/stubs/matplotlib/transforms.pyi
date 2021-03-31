@@ -17,6 +17,9 @@ class Bbox(BboxBase):
 
     def __getattr__(self, name: str) -> Any: ...  # incomplete
 
+class Transform(TransformNode):
+    def __getattr__(self, name: str) -> Any: ...  # incomplete
+
 class Affine2D:
     def __getattr__(self, name: str) -> Any: ...  # incomplete
 

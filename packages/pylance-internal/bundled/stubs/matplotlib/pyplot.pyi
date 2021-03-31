@@ -1,22 +1,9 @@
 # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.html#module-matplotlib.pyplot
 
 from datetime import tzinfo
-from typing import (
-    Any,
-    BinaryIO,
-    Callable,
-    ContextManager,
-    Dict,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-    overload,
-)
+from typing import (Any, BinaryIO, Callable, ContextManager, Dict, List,
+                    Literal, Mapping, Optional, Sequence, Tuple, Type, Union,
+                    overload)
 
 from PIL.Image import Image
 
@@ -24,16 +11,11 @@ from matplotlib._typing import ArrayLike, Scalar, ndarray
 from matplotlib.artist import Artist
 from matplotlib.axes import Axes, SubplotBase
 from matplotlib.backend_bases import Event, FigureManagerBase
-from matplotlib.cm import Colormap, ScalarMappable, get_cmap as get_cmap
-from matplotlib.collections import (
-    BrokenBarHCollection,
-    Collection,
-    EventCollection,
-    LineCollection,
-    PathCollection,
-    PolyCollection,
-    QuadMesh,
-)
+from matplotlib.cm import Colormap, ScalarMappable
+from matplotlib.cm import get_cmap as get_cmap
+from matplotlib.collections import (BrokenBarHCollection, Collection,
+                                    EventCollection, LineCollection,
+                                    PathCollection, PolyCollection, QuadMesh)
 from matplotlib.colorbar import Colorbar
 from matplotlib.colors import Normalize, _ColorLike
 from matplotlib.container import BarContainer, ErrorbarContainer, StemContainer
@@ -52,6 +34,7 @@ from matplotlib.transforms import Bbox
 from matplotlib.widgets import SubplotTool
 
 # Not documented, but commonly used and in matplotlib's tests.
+from . import cm as cm
 from . import style as style
 
 _DetrendCallable = Callable[[ArrayLike], ArrayLike]
