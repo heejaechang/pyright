@@ -10,23 +10,90 @@ import { ExtensionInfo } from 'pyright-internal/languageService/completionProvid
 
 import { Commands } from '../commands/commands';
 import { mergeCommands } from '../commands/multiCommand';
-import { createTelemetryCorrelationId, TelemetryEvent, TelemetryEventName } from '../common/telemetry';
+import {
+    createTelemetryCorrelationId,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService,
+} from '../common/telemetry';
 import { FailureReason, ModelType } from './types';
 
-// Builds overall IntelliCode temeletry
+type IntelliCodeStatData = {
+    failureReason: FailureReason;
+    modelType: ModelType;
+    class: string;
+    elapsedTime: number;
+    memoryIncreaseKB: number;
+    count: number;
+    methods: string;
+    modelVersion: string;
+    id: string;
+    language: string;
+};
+
+// This depends on the fact that there can be only 1 completion session going at a time.
+let _lastStateData: IntelliCodeStatData | undefined;
+
+function createTelemetry(correlationId: string) {
+    if (_lastStateData?.id !== correlationId) {
+        return;
+    }
+
+    const event = new TelemetryEvent(TelemetryEventName.INTELLICODE_COMPLETION_ITEM_SELECTED);
+
+    event.Properties['Id'] = _lastStateData.id;
+    event.Properties['Language'] = _lastStateData.language;
+
+    event.Properties['ModelType'] = _lastStateData.modelType;
+    event.Properties['ModelVersion'] = _lastStateData.modelVersion;
+    event.Properties['FailureReason'] = _lastStateData.failureReason;
+
+    event.Properties['Class'] = _lastStateData.class;
+    event.Measurements['ElapsedTime'] = _lastStateData.elapsedTime;
+    event.Measurements['MemoryIncreaseKB'] = _lastStateData.memoryIncreaseKB;
+
+    event.Measurements['Count'] = _lastStateData.count;
+    event.Properties['Methods'] = _lastStateData.methods;
+
+    return event;
+}
+
+export function sendRecommendationsTelemetry(
+    service: TelemetryService,
+    id: string,
+    args?: { index: string; method: string }
+) {
+    const event = createTelemetry(id);
+    if (!event) {
+        return;
+    }
+
+    if (args) {
+        event.Properties['Index'] = args.index;
+        event.Properties['Method'] = args.method;
+        event.Properties['IsIntelliCodeCommit'] = 'True';
+    } else {
+        // Index has no meaning when IsIntelliCodeCommit is False
+        event.Properties['Index'] = '-1';
+        event.Properties['Method'] = '';
+        event.Properties['IsIntelliCodeCommit'] = 'False';
+    }
+
+    service.sendTelemetry(event);
+}
+
+// Builds overall IntelliCode telemetry
 export function buildRecommendationsTelemetry(
     completionList: CompletionItem[], // Full completion list.
-    recommendations: string[], // Recommentations from the IC model.
+    recommendations: string[], // Recommendations from the IC model.
     applied: string[], // Recommendations applied to the completion list.
     targetTypeName: string | undefined, // Type of editor invocation.
     modelVersion: string, // Version of the model.
     elapsedMs: number, // Time takes to gather recommendations.
     memoryIncrease: number // Change in memory consumption.
 ): ExtensionInfo {
-    const correlationId = createTelemetryCorrelationId();
-
+    const id = createTelemetryCorrelationId();
     const duration = new Duration();
-    const te = new TelemetryEvent(TelemetryEventName.INTELLICODE_COMPLETION_ITEM_SELECTED);
 
     let failureReason = FailureReason.None;
     if (recommendations.length > 0) {
@@ -40,46 +107,48 @@ export function buildRecommendationsTelemetry(
         failureReason = FailureReason.NotInModel;
     }
 
-    te.Properties['ModelType'] = ModelType.LSTM; // Deep learning with ONNX.
-    te.Properties['FailureReason'] = failureReason;
-
-    if (failureReason === FailureReason.NotInModel) {
-        // Not logging class names that are not in the Pythia model for GDPR concerns.
-        te.Properties['Class'] = '';
-    } else {
-        te.Properties['Class'] = targetTypeName || 'undefined';
+    // Not logging class names that are not in the Pythia model for GDPR concerns.
+    let className = '';
+    if (failureReason !== FailureReason.NotInModel) {
+        className = targetTypeName || 'undefined';
     }
 
-    te.Measurements['ElapsedTime'] = elapsedMs;
-    te.Measurements['MemoryIncreaseKB'] = memoryIncrease;
-
-    // WARNING: method names from user code are PII/User private data.
-    // Make sure we ONLY send methods that are in the model, i.e. those
-    // that are from public libraries!
+    let count = -1;
+    let methods = '';
     if (recommendations.length > 0) {
-        te.Measurements['Count'] = applied.length;
-        te.Properties['Methods'] = recommendations.join(',');
-    } else {
-        te.Measurements['Count'] = -1; // Private.
+        count = applied.length;
+        methods = recommendations.join(',');
     }
 
-    te.Properties['ModelVersion'] = `python_LSTM_${modelVersion}`;
-    te.Properties['Id'] = correlationId;
-    te.Properties['Language'] = 'python';
+    // Save the last intellicode statistic data in memory
+    // so that we can send this along with other data when
+    // completion is commited.
+    _lastStateData = {
+        id: id,
+        language: 'python',
+        modelType: ModelType.LSTM, // Deep learning with ONNX.
+        modelVersion: `python_LSTM_${modelVersion}`,
+        failureReason,
+        class: className,
+        elapsedTime: elapsedMs,
+        memoryIncreaseKB: memoryIncrease,
+        count,
+        methods,
+    };
 
     const telemetryBuildTimeInMS = duration.getDurationInMilliseconds();
-    buildCompletionItemsTelemetry(completionList, applied, te);
+    buildCompletionItemsTelemetry(id, completionList, applied);
 
     const telemetryBuildTimeDoneInMS = duration.getDurationInMilliseconds();
     return {
-        correlationId,
+        correlationId: id,
         selectedItemTelemetryTimeInMS: telemetryBuildTimeInMS,
         itemTelemetryTimeInMS: telemetryBuildTimeDoneInMS - telemetryBuildTimeInMS,
         totalTimeInMS: elapsedMs + telemetryBuildTimeDoneInMS,
     };
 }
 
-function buildCompletionItemsTelemetry(completionList: CompletionItem[], applied: string[], te: TelemetryEvent): void {
+function buildCompletionItemsTelemetry(id: string, completionList: CompletionItem[], applied: string[]): void {
     const sorted = completionList.sort((a, b) => {
         if (a.sortText === b.sortText || !a.sortText || !b.sortText) {
             return 0;
@@ -90,28 +159,28 @@ function buildCompletionItemsTelemetry(completionList: CompletionItem[], applied
         return 1;
     });
 
+    const noRecommendCommand = {
+        title: '',
+        command: Commands.intelliCodeCompletionItemCommand,
+        arguments: [id],
+    };
+
     for (let i = 0; i < sorted.length; i++) {
-        const teCopy = te.clone();
         const item = sorted[i];
-        teCopy.Properties['Index'] = i.toString();
 
         // Method names from user code are PII/User private data.
         // We can only send methods that are in the model (applied).
+        // Each command has telemetry and data on this specific item attached.
+        // Telemetry is submitted when command is executed (i.e. item commited).
         const icItem = i < applied.length;
         if (icItem) {
-            teCopy.Properties['Method'] = item.insertText ?? '';
-            teCopy.Properties['IsIntelliCodeCommit'] = 'True';
+            item.command = mergeCommands(item.command, {
+                title: '',
+                command: Commands.intelliCodeCompletionItemCommand,
+                arguments: [id, i, item.insertText ?? ''],
+            });
         } else {
-            teCopy.Properties['Method'] = '';
-            teCopy.Properties['IsIntelliCodeCommit'] = 'False';
+            item.command = mergeCommands(item.command, noRecommendCommand);
         }
-
-        item.command = mergeCommands(item.command, {
-            title: '',
-            command: Commands.intelliCodeCompletionItemCommand,
-            // Each command has telemetry and data on this specific item attached.
-            // Telemetry is submitted when command is executed (i.e. item commited).
-            arguments: [teCopy],
-        });
     }
 }

@@ -24,7 +24,7 @@ import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
 import { ModelLoader } from './modelLoader';
 import { PythiaModel } from './models';
-import { buildRecommendationsTelemetry } from './telemetry';
+import { buildRecommendationsTelemetry, sendRecommendationsTelemetry } from './telemetry';
 import { IntelliCodeConstants } from './types';
 import { getZip } from './zip';
 
@@ -145,7 +145,6 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const ew = new ExpressionWalker(aw.scopes);
             ew.walk(ast);
 
-            const completionItems = completionList.items.filter((x) => x.detail !== autoImportDetail);
             const result = await this._deepLearning.getRecommendations(parseResults, ew, position, token);
             if (result.recommendations.length > 0) {
                 this._logger?.log(LogLevel.Log, `Recommendations: ${result.recommendations.join(', ')}`);
@@ -162,11 +161,8 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 return;
             }
 
-            let applied: string[] = [];
-            if (result.recommendations.length > 0) {
-                applied = this.applyModel(completionItems, result.recommendations);
-            }
-
+            const completionItems = completionList.items.filter((c) => c.detail !== autoImportDetail);
+            const applied = this._applyModel(completionItems, result.recommendations);
             completionResults.extensionInfo = buildRecommendationsTelemetry(
                 completionItems,
                 result.recommendations,
@@ -193,11 +189,10 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
     async executeCommand(command: string, args: any[] | undefined, token: CancellationToken): Promise<void> {
         switch (command) {
             case Commands.intelliCodeCompletionItemCommand:
-                assert(args?.length === 1);
                 if (args?.length === 1) {
-                    const te = args[0] as TelemetryEvent;
-                    this._telemetry.sendTelemetry(te);
-                    return Promise.resolve();
+                    sendRecommendationsTelemetry(this._telemetry, args[0]);
+                } else if (args?.length === 3) {
+                    sendRecommendationsTelemetry(this._telemetry, args[0], { index: args[1], method: args[2] });
                 }
                 break;
             case Commands.intelliCodeLoadExtension:
@@ -219,12 +214,17 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         }
     }
 
-    // Takes source list of completions and supplied recommentations, then modifies
+    // Takes source list of completions and supplied recommendations, then modifies
     // completion list in place, adding '*' to recommended items from the source list
     // and specifying sorting order in such a way so recommended items appear on top.
-    // Returns number of items applied from recommentations.
-    private applyModel(completions: CompletionItem[], recommendations: string[]): string[] {
+    // Returns number of items applied from recommendations.
+    private _applyModel(completions: CompletionItem[], recommendations: string[]): string[] {
         const applied: string[] = [];
+
+        if (recommendations.length === 0) {
+            return applied;
+        }
+
         const set = new Map<string, CompletionItem>(
             completions.filter((x) => x.label).map((v) => [v.label, v] as [string, CompletionItem])
         );
