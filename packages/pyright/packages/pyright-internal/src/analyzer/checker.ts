@@ -20,6 +20,7 @@ import { DiagnosticRule } from '../common/diagnosticRules';
 import { TextRange } from '../common/textRange';
 import { Localizer } from '../localization/localize';
 import {
+    ArgumentCategory,
     AssertNode,
     AssignmentExpressionNode,
     AssignmentNode,
@@ -112,12 +113,14 @@ import {
 import {
     CanAssignFlags,
     ClassMemberLookupFlags,
+    convertToInstance,
     derivesFromAnyOrUnknown,
     derivesFromClassRecursive,
     doForEachSubtype,
     getDeclaredGeneratorReturnType,
     getGeneratorTypeArgs,
     isEllipsisType,
+    isLiteralType,
     isLiteralTypeOrUnion,
     isNoReturnType,
     isOpenEndedTupleClass,
@@ -879,27 +882,44 @@ export class Checker extends ParseTreeWalker {
 
         // If the index is a literal integer, see if this is a tuple with
         // a known length and the integer value exceeds the length.
-        const subscriptValue = ParseTreeUtils.getIntegerSubscriptValue(node);
-        if (subscriptValue !== undefined) {
-            const baseType = this._evaluator.getType(node.baseExpression);
-            if (
-                baseType &&
-                isObject(baseType) &&
-                baseType.classType.tupleTypeArguments &&
-                !isOpenEndedTupleClass(baseType.classType)
-            ) {
-                const tupleLength = baseType.classType.tupleTypeArguments.length;
+        const baseType = this._evaluator.getType(node.baseExpression);
+        if (
+            baseType &&
+            isObject(baseType) &&
+            baseType.classType.tupleTypeArguments &&
+            !isOpenEndedTupleClass(baseType.classType)
+        ) {
+            const tupleLength = baseType.classType.tupleTypeArguments.length;
 
-                if (subscriptValue >= tupleLength) {
-                    this._evaluator.addDiagnostic(
-                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                        DiagnosticRule.reportGeneralTypeIssues,
-                        Localizer.Diagnostic.tupleIndexOutOfRange().format({
-                            length: tupleLength,
-                            index: subscriptValue,
-                        }),
-                        node
-                    );
+            if (
+                node.items.length === 1 &&
+                !node.trailingComma &&
+                node.items[0].argumentCategory === ArgumentCategory.Simple &&
+                !node.items[0].name
+            ) {
+                const subscriptType = this._evaluator.getType(node.items[0].valueExpression);
+                if (
+                    subscriptType &&
+                    isObject(subscriptType) &&
+                    ClassType.isBuiltIn(subscriptType.classType, 'int') &&
+                    isLiteralType(subscriptType)
+                ) {
+                    const subscriptValue = subscriptType.classType.literalValue as number;
+
+                    if (
+                        (subscriptValue >= 0 && subscriptValue >= tupleLength) ||
+                        (subscriptValue < 0 && subscriptValue + tupleLength < 0)
+                    ) {
+                        this._evaluator.addDiagnostic(
+                            this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            Localizer.Diagnostic.tupleIndexOutOfRange().format({
+                                length: tupleLength,
+                                index: subscriptValue,
+                            }),
+                            node
+                        );
+                    }
                 }
             }
         }
@@ -2881,6 +2901,9 @@ export class Checker extends ParseTreeWalker {
     // Performs checks on a function that is located within a class
     // and has been determined not to be a property accessor.
     private _validateMethod(node: FunctionNode, functionType: FunctionType, classNode: ClassNode) {
+        const classTypeInfo = this._evaluator.getTypeOfClass(classNode);
+        const classType = classTypeInfo?.classType;
+
         if (node.name && node.name.value === '__new__') {
             // __new__ overrides should have a "cls" parameter.
             if (
@@ -2895,6 +2918,10 @@ export class Checker extends ParseTreeWalker {
                     node.parameters.length > 0 ? node.parameters[0] : node.name
                 );
             }
+
+            if (classType) {
+                this._validateClsSelfParameterType(functionType, classType, /* isCls */ true);
+            }
         } else if (node.name && node.name.value === '__init_subclass__') {
             // __init_subclass__ overrides should have a "cls" parameter.
             if (node.parameters.length === 0 || !node.parameters[0].name || node.parameters[0].name.value !== 'cls') {
@@ -2905,6 +2932,10 @@ export class Checker extends ParseTreeWalker {
                     node.parameters.length > 0 ? node.parameters[0] : node.name
                 );
             }
+
+            if (classType) {
+                this._validateClsSelfParameterType(functionType, classType, /* isCls */ true);
+            }
         } else if (node.name && node.name.value === '__class_getitem__') {
             // __class_getitem__ overrides should have a "cls" parameter.
             if (node.parameters.length === 0 || !node.parameters[0].name || node.parameters[0].name.value !== 'cls') {
@@ -2914,6 +2945,10 @@ export class Checker extends ParseTreeWalker {
                     Localizer.Diagnostic.classGetItemClsParam(),
                     node.parameters.length > 0 ? node.parameters[0] : node.name
                 );
+            }
+
+            if (classType) {
+                this._validateClsSelfParameterType(functionType, classType, /* isCls */ true);
             }
         } else if (FunctionType.isStaticMethod(functionType)) {
             // Static methods should not have "self" or "cls" parameters.
@@ -2945,6 +2980,10 @@ export class Checker extends ParseTreeWalker {
                         node.parameters.length > 0 ? node.parameters[0] : node.name
                     );
                 }
+            }
+
+            if (classType) {
+                this._validateClsSelfParameterType(functionType, classType, /* isCls */ true);
             }
         } else {
             // The presence of a decorator can change the behavior, so we need
@@ -2992,6 +3031,56 @@ export class Checker extends ParseTreeWalker {
                     }
                 }
             }
+
+            if (classType) {
+                this._validateClsSelfParameterType(functionType, classType, /* isCls */ false);
+            }
+        }
+    }
+
+    // Validates that the annotated type of a "self" or "cls" parameter is
+    // compatible with the type of the class that contains it.
+    private _validateClsSelfParameterType(functionType: FunctionType, classType: ClassType, isCls: boolean) {
+        if (functionType.details.parameters.length < 1) {
+            return;
+        }
+
+        // If there is no type annotation, there's nothing to check because
+        // the type will be inferred.
+        const paramInfo = functionType.details.parameters[0];
+        if (!paramInfo.typeAnnotation || !paramInfo.name) {
+            return;
+        }
+
+        // If this is a protocol class, the self and cls parameters can be bound
+        // to something other than the class.
+        if (ClassType.isProtocolClass(classType)) {
+            return;
+        }
+
+        const paramType = this._evaluator.makeTopLevelTypeVarsConcrete(transformTypeObjectToClass(paramInfo.type));
+        const expectedType = isCls ? classType : convertToInstance(classType);
+        const diag = new DiagnosticAddendum();
+
+        // If the declared type is a protocol class or instance, skip
+        // the check. This has legitimate uses for mix-in classes.
+        if (isClass(paramType) && ClassType.isProtocolClass(paramType)) {
+            return;
+        }
+        if (isObject(paramType) && ClassType.isProtocolClass(paramType.classType)) {
+            return;
+        }
+
+        if (!this._evaluator.canAssignType(paramType, expectedType, diag)) {
+            this._evaluator.addDiagnostic(
+                this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                DiagnosticRule.reportGeneralTypeIssues,
+                Localizer.Diagnostic.clsSelfParamTypeMismatch().format({
+                    name: paramInfo.name,
+                    classType: this._evaluator.printType(expectedType, /* expandTypeAlias */ false),
+                }),
+                paramInfo.typeAnnotation
+            );
         }
     }
 

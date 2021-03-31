@@ -147,8 +147,17 @@ def func13(a: Tuple[int, str], b: Tuple[()], c: Tuple[int, ...]):
     v7 = a[-1]
     t_v7: Literal["str"] = reveal_type(v7)
 
+    # This should generate an error.
     v8 = a[-3]
     t_v8: Literal["int | str"] = reveal_type(v8)
 
     v9 = c[-100]
     t_v9: Literal["int"] = reveal_type(v9)
+
+
+# Test for construction using the tuple constructor
+def func14():
+    list1 = [1, 2, 3]
+    v1 = tuple(list1)
+    t_v1: Literal["tuple[int, ...]"] = reveal_type(v1)
+

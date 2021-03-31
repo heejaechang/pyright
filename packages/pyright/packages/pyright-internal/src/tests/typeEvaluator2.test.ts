@@ -579,6 +579,12 @@ test('GenericTypes54', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('GenericTypes55', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes55.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
@@ -1317,6 +1323,14 @@ test('ParamSpec12', () => {
     TestUtils.validateResults(results, 11);
 });
 
+test('ParamSpec13', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec13.py'], configOptions);
+    TestUtils.validateResults(results, 5);
+});
+
 test('ClassVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar1.py']);
 
@@ -1532,6 +1546,12 @@ test('InitSubclass1', () => {
     TestUtils.validateResults(analysisResults, 2);
 });
 
+test('InitSubclass2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['initsubclass2.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('None1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['none1.py']);
 
@@ -1570,6 +1590,12 @@ test('Constructor5', () => {
 
 test('Constructor6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Constructor7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor7.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
