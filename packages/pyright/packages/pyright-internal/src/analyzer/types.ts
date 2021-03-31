@@ -197,16 +197,19 @@ export interface ModuleType extends TypeBase {
 
     // The period-delimited import name of this module.
     moduleName: string;
+
+    filePath: string;
 }
 
 export namespace ModuleType {
-    export function create(moduleName: string, symbolTable?: SymbolTable) {
+    export function create(moduleName: string, filePath: string, symbolTable?: SymbolTable) {
         const newModuleType: ModuleType = {
             category: TypeCategory.Module,
             fields: symbolTable || new Map<string, Symbol>(),
             loaderFields: new Map<string, Symbol>(),
             flags: TypeFlags.Instantiable | TypeFlags.Instantiable,
             moduleName,
+            filePath,
         };
         return newModuleType;
     }
@@ -330,6 +333,7 @@ interface ClassDetails {
     name: string;
     fullName: string;
     moduleName: string;
+    filePath: string;
     flags: ClassTypeFlags;
     typeSourceId: TypeSourceId;
     baseClasses: Type[];
@@ -397,6 +401,7 @@ export namespace ClassType {
         name: string,
         fullName: string,
         moduleName: string,
+        filePath: string,
         flags: ClassTypeFlags,
         typeSourceId: TypeSourceId,
         declaredMetaclass: ClassType | UnknownType | undefined,
@@ -409,6 +414,7 @@ export namespace ClassType {
                 name,
                 fullName,
                 moduleName,
+                filePath,
                 flags,
                 typeSourceId,
                 baseClasses: [],
@@ -881,7 +887,14 @@ export interface ParamSpecEntry {
     type: Type;
 }
 
-export type ParamSpecValue = ParamSpecEntry[];
+export interface ParamSpecValue {
+    parameters?: ParamSpecEntry[];
+
+    // If the param spec is assigned to another param spec,
+    // this will contain that type, and the params array will
+    // be empty.
+    paramSpec?: TypeVarType;
+}
 
 export namespace FunctionType {
     export function createInstance(
@@ -1043,6 +1056,8 @@ export namespace FunctionType {
             type.details.docString
         );
 
+        newFunction.specializedTypes = type.specializedTypes;
+
         // Make a shallow clone of the details.
         newFunction.details = { ...type.details };
 
@@ -1051,19 +1066,30 @@ export namespace FunctionType {
         delete newFunction.details.paramSpec;
 
         if (paramTypes) {
-            newFunction.details.parameters = [
-                ...type.details.parameters,
-                ...paramTypes.map((specEntry) => {
-                    return {
-                        category: specEntry.category,
-                        name: specEntry.name,
-                        hasDefault: specEntry.hasDefault,
-                        isNameSynthesized: false,
-                        hasDeclaredType: true,
-                        type: specEntry.type,
-                    };
-                }),
-            ];
+            if (paramTypes.parameters) {
+                newFunction.details.parameters = [
+                    ...type.details.parameters,
+                    ...paramTypes.parameters.map((specEntry) => {
+                        return {
+                            category: specEntry.category,
+                            name: specEntry.name,
+                            hasDefault: specEntry.hasDefault,
+                            isNameSynthesized: false,
+                            hasDeclaredType: true,
+                            type: specEntry.type,
+                        };
+                    }),
+                ];
+
+                // Update the specialized parameter types as well.
+                if (newFunction.specializedTypes) {
+                    paramTypes.parameters.forEach((paramInfo) => {
+                        newFunction.specializedTypes!.parameterTypes.push(paramInfo.type);
+                    });
+                }
+            } else if (paramTypes.paramSpec) {
+                newFunction.details.paramSpec = paramTypes.paramSpec;
+            }
         }
 
         return newFunction;
@@ -1082,22 +1108,26 @@ export namespace FunctionType {
         // Make a shallow clone of the details.
         newFunction.details = { ...type.details };
 
-        // Remove the last two parameters, which are the *args and **kwargs.
-        newFunction.details.parameters = newFunction.details.parameters.slice(
-            0,
-            newFunction.details.parameters.length - 2
-        );
+        if (paramTypes.parameters) {
+            // Remove the last two parameters, which are the *args and **kwargs.
+            newFunction.details.parameters = newFunction.details.parameters.slice(
+                0,
+                newFunction.details.parameters.length - 2
+            );
 
-        paramTypes.forEach((specEntry) => {
-            newFunction.details.parameters.push({
-                category: specEntry.category,
-                name: specEntry.name,
-                hasDefault: specEntry.hasDefault,
-                isNameSynthesized: false,
-                hasDeclaredType: true,
-                type: specEntry.type,
+            paramTypes.parameters.forEach((specEntry) => {
+                newFunction.details.parameters.push({
+                    category: specEntry.category,
+                    name: specEntry.name,
+                    hasDefault: specEntry.hasDefault,
+                    isNameSynthesized: false,
+                    hasDeclaredType: true,
+                    type: specEntry.type,
+                });
             });
-        });
+        } else if (paramTypes.paramSpec) {
+            newFunction.details.paramSpec = paramTypes.paramSpec;
+        }
 
         return newFunction;
     }
@@ -1750,28 +1780,31 @@ export function isTypeSame(type1: Type, type2: Type, recursionCount = 0): boolea
             }
 
             // Make sure the type args match.
-            const type1TypeArgs = type1.typeArguments || [];
-            const type2TypeArgs = classType2.typeArguments || [];
-            const typeArgCount = Math.max(type1TypeArgs.length, type2TypeArgs.length);
-
-            for (let i = 0; i < typeArgCount; i++) {
-                // Assume that missing type args are "Any".
-                const typeArg1 = i < type1TypeArgs.length ? type1TypeArgs[i] : AnyType.create();
-                const typeArg2 = i < type2TypeArgs.length ? type2TypeArgs[i] : AnyType.create();
-
-                if (!isTypeSame(typeArg1, typeArg2, recursionCount + 1)) {
+            if (type1.tupleTypeArguments && classType2.tupleTypeArguments) {
+                const type1TupleTypeArgs = type1.tupleTypeArguments || [];
+                const type2TupleTypeArgs = classType2.tupleTypeArguments || [];
+                if (type1TupleTypeArgs.length !== type2TupleTypeArgs.length) {
                     return false;
                 }
-            }
 
-            const type1TupleTypeArgs = type1.tupleTypeArguments || [];
-            const type2TupleTypeArgs = classType2.tupleTypeArguments || [];
-            if (type1TupleTypeArgs.length !== type2TupleTypeArgs.length) {
-                return false;
-            }
-            for (let i = 0; i < type1TupleTypeArgs.length; i++) {
-                if (!isTypeSame(type1TupleTypeArgs[i], type2TupleTypeArgs[i], recursionCount + 1)) {
-                    return false;
+                for (let i = 0; i < type1TupleTypeArgs.length; i++) {
+                    if (!isTypeSame(type1TupleTypeArgs[i], type2TupleTypeArgs[i], recursionCount + 1)) {
+                        return false;
+                    }
+                }
+            } else {
+                const type1TypeArgs = type1.typeArguments || [];
+                const type2TypeArgs = classType2.typeArguments || [];
+                const typeArgCount = Math.max(type1TypeArgs.length, type2TypeArgs.length);
+
+                for (let i = 0; i < typeArgCount; i++) {
+                    // Assume that missing type args are "Any".
+                    const typeArg1 = i < type1TypeArgs.length ? type1TypeArgs[i] : AnyType.create();
+                    const typeArg2 = i < type2TypeArgs.length ? type2TypeArgs[i] : AnyType.create();
+
+                    if (!isTypeSame(typeArg1, typeArg2, recursionCount + 1)) {
+                        return false;
+                    }
                 }
             }
 

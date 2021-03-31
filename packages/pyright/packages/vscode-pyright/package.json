@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.125",
+    "version": "1.1.127",
     "private": true,
     "license": "MIT",
     "author": {
@@ -316,6 +316,17 @@
                             "type": "string",
                             "description": "Diagnostics for an attempt to use an Optional type as an operand to a binary or unary operator (like '+', '==', 'or', 'not').",
                             "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportTypedDictNotRequiredAccess": {
+                            "type": "string",
+                            "description": "Diagnostics for an attempt to access a non-required key within a TypedDict without a check for its presence.",
+                            "default": "error",
                             "enum": [
                                 "none",
                                 "information",
