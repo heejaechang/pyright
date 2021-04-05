@@ -63,7 +63,7 @@
                 {
                     label: 'method1',
                     kind: Consts.CompletionItemKind.Function,
-                    documentation: '```python\nmethod1: () -> None\n```\n',
+                    documentation: '```python\nmethod1: () -> None\n```',
                     insertionText: 'method1($0)',
                 },
             ],
@@ -73,7 +73,7 @@
                 {
                     label: 'method2',
                     kind: Consts.CompletionItemKind.Function,
-                    documentation: '```python\nmethod2: () -> None\n```\n',
+                    documentation: '```python\nmethod2: () -> None\n```',
                     insertionText: 'method2($0)',
                 },
             ],

@@ -90,7 +90,7 @@
                     {
                         label: 'method1',
                         kind: Consts.CompletionItemKind.Function,
-                        documentation: '```python\nmethod1: () -> Unknown\n```\n',
+                        documentation: '```python\nmethod1: () -> Unknown\n```',
                         insertionText: 'method1($0)',
                     },
                 ],
@@ -100,7 +100,7 @@
                     {
                         label: 'method2',
                         kind: Consts.CompletionItemKind.Function,
-                        documentation: '```python\nmethod2: () -> Unknown\n```\n',
+                        documentation: '```python\nmethod2: () -> Unknown\n```',
                         insertionText: 'method2($0)',
                     },
                 ],
