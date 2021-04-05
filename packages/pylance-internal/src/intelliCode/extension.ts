@@ -10,7 +10,6 @@ import { CancellationToken, CompletionItem } from 'vscode-languageserver';
 import { LogLevel } from 'pyright-internal/common/console';
 import { assert } from 'pyright-internal/common/debug';
 import { CompletionListExtension, LanguageServiceExtension } from 'pyright-internal/common/extensibility';
-import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Duration } from 'pyright-internal/common/timing';
 import { autoImportDetail, CompletionResults } from 'pyright-internal/languageService/completionProvider';
 import { ParseResults } from 'pyright-internal/parser/parser';
@@ -26,7 +25,7 @@ import { ModelLoader } from './modelLoader';
 import { PythiaModel } from './models';
 import { buildRecommendationsTelemetry, sendRecommendationsTelemetry } from './telemetry';
 import { IntelliCodeConstants } from './types';
-import { getZip } from './zip';
+import { realZipOpener, ZipOpener } from './zip';
 
 export class IntelliCodeExtension implements LanguageServiceExtension {
     private _icCompletionExtension!: IntelliCodeCompletionListExtension;
@@ -37,20 +36,13 @@ export class IntelliCodeExtension implements LanguageServiceExtension {
         return this._icCompletionExtension;
     }
 
-    initialize(
-        logger: LogService,
-        telemetry: TelemetryService,
-        fs: FileSystem,
-        platform: Platform,
-        modelUnpackFolder: string
-    ): void {
+    initialize(logger: LogService, telemetry: TelemetryService, platform: Platform): void {
         this._telemetry = telemetry;
         this._icCompletionExtension = new IntelliCodeCompletionListExtension(
             logger,
-            fs,
+            realZipOpener(),
             platform,
-            telemetry,
-            modelUnpackFolder
+            telemetry
         );
     }
 
@@ -78,10 +70,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
 
     constructor(
         private readonly _logger: LogService,
-        private readonly _fs: FileSystem,
+        private readonly _zipOpener: ZipOpener,
         private readonly _platform: Platform,
-        private readonly _telemetry: TelemetryService,
-        private readonly _modelUnpackFolder: string
+        private readonly _telemetry: TelemetryService
     ) {}
 
     // Public for test access
@@ -264,8 +255,8 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             return;
         }
         try {
-            const loader = new ModelLoader(this._fs, getZip(this._fs), this._logger, this._telemetry);
-            this.model = await loader.loadModel(this._modelZipPath, this._modelUnpackFolder);
+            const loader = new ModelLoader(this._zipOpener, this._logger, this._telemetry);
+            this.model = await loader.loadModel(this._modelZipPath);
 
             if (this.model) {
                 if (!this._deepLearning) {

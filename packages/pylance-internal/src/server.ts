@@ -77,7 +77,6 @@ import {
 } from './common/telemetry';
 import { CustomLSP } from './customLSP';
 import { IntelliCodeExtension } from './intelliCode/extension';
-import { ModelSubFolder } from './intelliCode/models';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
 import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
@@ -147,8 +146,7 @@ class PylanceServer extends LanguageServerBase {
         this._intelliCode = intelliCode;
         // Initialize IntelliCode. This does not start it since it needs path
         // to the model which will come later from the IntelliCode extension.
-        const icModelSubfolder = path.join(this.fs.getModulePath(), ModelSubFolder);
-        this._intelliCode.initialize(this._logger, this._telemetry, this.fs, this._platform, icModelSubfolder);
+        this._intelliCode.initialize(this._logger, this._telemetry, this._platform);
 
         this._inExperimentCache = new Map();
         this._getExperimentValueCache = new Map();

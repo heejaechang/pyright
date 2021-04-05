@@ -6,86 +6,63 @@
 
 import 'jest-extended';
 
-import * as path from 'path';
-import { DirResult, dirSync } from 'tmp';
-import { instance, mock } from 'ts-mockito';
+import * as fs from 'fs';
 import { CancellationToken } from 'vscode-languageserver';
 
-import { createFromRealFileSystem } from 'pyright-internal/common/fileSystem';
-
 import { Platform } from '../../common/platform';
+import { AssignmentWalker } from '../../intelliCode/assignmentWalker';
 import { DeepLearning } from '../../intelliCode/deepLearning';
 import { ExpressionWalker } from '../../intelliCode/expressionWalker';
 import { ModelLoader } from '../../intelliCode/modelLoader';
-import { ModelFileName, ModelMetaDataFileName, ModelTokensFileName, ModelZipFileName } from '../../intelliCode/models';
-import { Zip } from '../../intelliCode/zip';
-import { parseCode, walkAssignments } from './testUtils';
+import { realZipOpener } from '../../intelliCode/zip';
+import { getRealModel, parseCode } from './testUtils';
 
 const platform = new Platform();
 
-let deepLearning: DeepLearning;
-let modelZipFolderPath: string | undefined;
-let modelUnpackFolderTmp: DirResult;
-let modelUnpackFolder: string;
+const modelZipPath = getRealModel();
 
 describe('IntelliCode deep learning', () => {
-    // TODO: These tests don't run.
+    if (!platform.isOnnxSupported()) {
+        return;
+    }
+
+    let deepLearning: DeepLearning;
 
     beforeAll(async () => {
-        const fs = createFromRealFileSystem();
-        const mockedZip = mock<Zip>();
-        const loader = new ModelLoader(fs, instance(mockedZip));
-        modelZipFolderPath = path.resolve(__dirname, 'data');
+        const loader = new ModelLoader(realZipOpener());
 
-        const modelZipPath = path.join(modelZipFolderPath, ModelZipFileName);
-        if (!fs.existsSync(modelZipPath)) {
-            modelZipFolderPath = undefined;
-            return;
-        }
-        // TODO: remove when ONNX is available on other platforms.
-        if (!platform.isOnnxSupported()) {
-            modelZipFolderPath = undefined;
-            return;
-        }
-
-        modelUnpackFolderTmp = dirSync({
-            unsafeCleanup: true,
-        });
-        modelUnpackFolder = modelUnpackFolderTmp.name;
-
-        const model = await loader.loadModel(modelZipPath, modelUnpackFolder);
+        const model = await loader.loadModel(modelZipPath);
         expect(model).toBeDefined();
-
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelFileName)));
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelMetaDataFileName)));
-        expect(fs.existsSync(path.join(modelUnpackFolder, ModelTokensFileName)));
+        expect(model!.model).toBeDefined();
+        expect(model!.model.length).toBe(35756058);
 
         deepLearning = new DeepLearning(model!, platform);
         await deepLearning.initialize();
     });
 
-    afterAll(() => {
-        modelUnpackFolderTmp.removeCallback();
-    });
+    let testFn = test;
 
-    if (!modelZipFolderPath) {
-        test.skip('simple string', async () => await test_simpleString());
-    } else {
-        // Long timeout since model has to be downloaded.
-        test('simple string', async () => await test_simpleString(), 60000);
+    // To run the tests, download the IC model zip manually and place it at data/realModel.zip.
+    // Otherwise, this test is skipped.
+    if (!fs.existsSync(modelZipPath)) {
+        testFn = test.skip;
     }
 
-    async function test_simpleString(): Promise<void> {
-        const code = `
+    testFn(
+        'simple string',
+        async () => {
+            const code = `
 s = 'str'
 s. `;
-        const pr = parseCode(code);
-        const aw = walkAssignments(code);
-        aw.walk(pr.parseTree);
-        const ew = new ExpressionWalker(aw.scopes);
-        ew.walk(pr.parseTree);
+            const pr = parseCode(code);
+            const aw = new AssignmentWalker(pr.parseTree);
+            aw.walk(pr.parseTree);
+            const ew = new ExpressionWalker(aw.scopes);
+            ew.walk(pr.parseTree);
 
-        const r = await deepLearning.getRecommendations(pr, ew, code.length - 1, CancellationToken.None);
-        expect(r).toContain(['join', 'replace', 'length']);
-    }
+            const r = await deepLearning.getRecommendations(pr, ew, code.length - 1, CancellationToken.None);
+            expect(r.recommendations).toContain(['format', 'join', 'replace']);
+        },
+        60000
+    );
 });

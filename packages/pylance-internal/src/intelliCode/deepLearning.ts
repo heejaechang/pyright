@@ -55,7 +55,7 @@ export class DeepLearning {
 
         if (this._onnx) {
             try {
-                this._session = await this._onnx.InferenceSession.create(this._model.onnxModelPath, {
+                this._session = await this._onnx.InferenceSession.create(this._model.model, {
                     logSeverityLevel: this.getOnnxLogLevel(),
                 });
                 this._logger?.log(LogLevel.Log, 'Created IntelliCode session.');

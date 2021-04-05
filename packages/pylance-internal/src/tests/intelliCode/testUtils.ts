@@ -12,7 +12,7 @@ import { ParseOptions, Parser, ParseResults } from 'pyright-internal/parser/pars
 
 import { AssignmentWalker } from '../../intelliCode/assignmentWalker';
 import { ExpressionWalker } from '../../intelliCode/expressionWalker';
-import { EditorInvocation, ModelZipFileName } from '../../intelliCode/models';
+import { EditorInvocation } from '../../intelliCode/models';
 import { EditorLookBackTokenGenerator } from '../../intelliCode/tokens/editorTokenGenerator';
 
 export function parseCode(code: string): ParseResults {
@@ -52,5 +52,11 @@ export function verifyKeys<K, V>(map: Map<K, V>, expected: K[]): void {
 
 export function getTestModel(): string {
     const srcFolder = process.cwd();
-    return path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', ModelZipFileName);
+    return path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', 'model.zip');
+}
+
+// For manual testing only with the real model in the data directory.
+export function getRealModel(): string {
+    const srcFolder = process.cwd();
+    return path.join(srcFolder, 'src', 'tests', 'intelliCode', 'data', 'realModel.zip');
 }

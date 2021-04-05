@@ -4,16 +4,10 @@
  * IntelliCode data models.
  */
 
-import * as path from 'path';
-
 // How far back IC looks from the point of invocation.
 export const LookbackTokenLength = 100;
 
-// IC folder under current bundle
-export const IntelliCodeFolderName = 'intelliCode';
-// IC folder for the model
-export const ModelSubFolder = path.join(IntelliCodeFolderName, 'model');
-export const ModelZipFileName = 'model.zip';
+// Contents of the IC zip file.
 export const ModelFileName = 'model.onnx';
 export const ModelMetaDataFileName = 'metadata.json';
 export const ModelTokensFileName = 'tokens.json';
@@ -48,7 +42,7 @@ export interface PythiaModelMetaData {
 }
 
 export interface PythiaModel {
-    onnxModelPath: string;
+    model: Uint8Array;
     metaData: PythiaModelMetaData;
     tokenIdMap: Map<string, number>;
     tokens: string[];
