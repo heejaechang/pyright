@@ -171,7 +171,7 @@ class PylanceServer extends LanguageServerBase {
         };
 
         if (IS_INSIDERS) {
-            serverSettings.indexing = true;
+            serverSettings.indexing = false;
         } else if (IS_DEV || IS_PR) {
             serverSettings.indexing = true;
         } else {
