@@ -25,6 +25,7 @@ import {
     convertOffsetsToRange,
     convertOffsetToPosition,
     convertRangeToTextRange,
+    convertTextRangeToRange,
 } from 'pyright-internal/common/positionUtils';
 import { comparePositions, Position, Range, TextRange } from 'pyright-internal/common/textRange';
 import { TextRangeCollection } from 'pyright-internal/common/textRangeCollection';
@@ -35,14 +36,12 @@ import {
     ContinueNode,
     FunctionNode,
     isExpressionNode,
-    ModuleNode,
     ParseNode,
     ParseNodeArray,
     ParseNodeType,
-    SuiteNode,
 } from 'pyright-internal/parser/parseNodes';
 import { ParseResults } from 'pyright-internal/parser/parser';
-import { KeywordType } from 'pyright-internal/parser/tokenizerTypes';
+import { KeywordType, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { formatCode } from '../common/formatter';
 
@@ -847,10 +846,10 @@ export class ExtractMethodProvider {
         indentionOffset: number
     ): string[] {
         const bodyLines: string[] = [];
-        let curOffset = TextRange.getEnd(range);
-        let preOffset = curOffset;
-        let curPos = convertOffsetToPosition(curOffset, parseResults.tokenizerOutput.lines);
-        let prePos = curPos;
+        let curTextRange = range;
+        let preTextRange = TextRange.getEnd(curTextRange);
+        let curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines)!;
+        let prePosition = curRange.end;
 
         const firstLineIndent = convertOffsetToPosition(range.start, parseResults.tokenizerOutput.lines).character;
 
@@ -861,22 +860,23 @@ export class ExtractMethodProvider {
                 return;
             }
 
-            curOffset = node.start;
+            curTextRange = node;
             if (!TextRange.contains(range, node.start)) {
-                curOffset = range.start;
+                curTextRange = range;
             }
 
             // Make sure nodes like Suites, which include multiple statements don't duplicate previous
             // written strings
-            curPos = convertOffsetToPosition(curOffset, parseResults.tokenizerOutput.lines);
-            const curLength = curOffset + node.length > preOffset ? preOffset - curOffset : node.length;
-            const nodeStr = parseResults.text.substr(curOffset, curLength);
+            curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines)!;
+            const curLength =
+                curTextRange.start + node.length > preTextRange ? preTextRange - curTextRange.start : node.length;
+            const nodeStr = parseResults.text.substr(curTextRange.start, curLength);
             const nodeAsCodeLines = formatCode(nodeStr, node);
 
             // Capture any strings after the current node back to the previous node
             // in order to grab comments
             const postNodeStartOffset = TextRange.getEnd(node);
-            const postNodeLength = preOffset - postNodeStartOffset;
+            const postNodeLength = preTextRange - postNodeStartOffset;
             if (postNodeLength > 0) {
                 const postNodeStr = parseResults.text.substr(postNodeStartOffset, postNodeLength);
                 const postNodeStrings = formatCode(postNodeStr, undefined);
@@ -887,17 +887,25 @@ export class ExtractMethodProvider {
                 }
             }
 
-            if (curPos.line !== prePos.line) {
-                // Format previous line
-                const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prePos.line);
-                const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
-                const indent = rawLine.indexOf(rawLine.trimStart());
+            if (curRange.start.line !== prePosition.line) {
+                const index = parseResults.tokenizerOutput.tokens.getItemAtPosition(preTextRange);
+                const token = parseResults.tokenizerOutput.tokens.getItemAt(index);
+                if (token.type === TokenType.Colon && curRange.end.line === prePosition.line) {
+                    const lastLine = bodyLines.pop();
+                    nodeAsCodeLines[nodeAsCodeLines.length - 1] =
+                        nodeAsCodeLines[nodeAsCodeLines.length - 1] + lastLine;
+                } else {
+                    // Format previous line
+                    const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prePosition.line);
+                    const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
+                    const indent = rawLine.indexOf(rawLine.trimStart());
 
-                if (indent >= firstLineIndent && bodyLines.length > 0) {
-                    const newIndent = indent - firstLineIndent + 4 + indentionOffset;
-                    let line = bodyLines[bodyLines.length - 1];
-                    line = !line ? line : line.trimStart();
-                    bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
+                    if (indent >= firstLineIndent && bodyLines.length > 0) {
+                        const newIndent = indent - firstLineIndent + 4 + indentionOffset;
+                        let line = bodyLines[bodyLines.length - 1];
+                        line = !line ? line : line.trimStart();
+                        bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
+                    }
                 }
 
                 bodyLines.push(...nodeAsCodeLines.reverse());
@@ -909,12 +917,12 @@ export class ExtractMethodProvider {
                 }
             }
 
-            preOffset = curOffset;
-            prePos = curPos;
+            preTextRange = curTextRange.start;
+            prePosition = curRange.start;
         });
 
         // Format last line
-        const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(curPos.line);
+        const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(curRange!.start.line);
         const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
         const indent = rawLine.indexOf(rawLine.trimStart());
 
