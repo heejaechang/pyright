@@ -7,7 +7,7 @@ from typing import (Any, BinaryIO, Callable, ContextManager, Dict, List,
 
 from PIL.Image import Image
 
-from matplotlib._typing import ArrayLike, Scalar, ndarray
+from matplotlib._typing import ArrayLike, Scalar, ndarray, _DetrendCallable
 from matplotlib.artist import Artist
 from matplotlib.axes import Axes, SubplotBase
 from matplotlib.backend_bases import Event, FigureManagerBase
@@ -36,8 +36,6 @@ from matplotlib.widgets import SubplotTool
 # Not documented, but commonly used and in matplotlib's tests.
 from . import cm as cm
 from . import style as style
-
-_DetrendCallable = Callable[[ArrayLike], ArrayLike]
 
 # TODO: data params need to be Dicts/mappings?
 # TODO: Are some of these more reasonable in tooltips when split out as overloads?
