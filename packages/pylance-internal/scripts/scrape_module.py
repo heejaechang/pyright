@@ -347,6 +347,9 @@ class DocstringSigParser(object):
         while tokens:
             tt, s = tokens.pop(0)
             if tt == tokenize.NAME:
+                if s == override_name:
+                    name = s
+
                 if name is None:
                     name = s
                 elif seen_open_paren:
@@ -638,10 +641,10 @@ class Signature(object):
         self.fullsig = (
             self.fullsig
             # Disable fromsignature() because it doesn't work as well as argspec
-            # or self._init_argspec_fromsignature()
+            #or self._init_argspec_fromsignature()
             or self._init_argspec_fromargspec()
             or self._init_argspec_fromknown(scope_alias)
-            or ds_parser.argspec()
+            or ds_parser.argspec(override_name=self.name)
             or (self.name + "(" + ", ".join(self._defaults) + ")")
         )
 

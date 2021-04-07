@@ -26,18 +26,18 @@ def collect_module(file_pyd:str, search_path = None, output_dir = None):
     first_part_pyd = file_pyd.split('.')[0]
     module_name = '.'.join(rel_dir) + '.' + first_part_pyd
 
-    pyi_filename = output_dir + '\\' + first_part_pyd + '.pyi'
-    with open(pyi_filename, mode='w') as file_object:
-        state = scrape_module.ScrapeState(module_name, search_path, file_object)
-        state.collect_top_level_members()
+    pyi_filename: str = output_dir + '\\' + first_part_pyd + '.pyi'
 
-        state.members[:] = [m for m in state.members if m.name not in scrape_module.keyword.kwlist]
+    if(not pyi_filename.endswith('tests.pyi')):
+        with open(pyi_filename, mode='w', encoding="utf-8") as file_object:
+            state = scrape_module.ScrapeState(module_name, search_path, file_object)
+            state.collect_top_level_members()
 
-        state.collect_second_level_members()
+            state.members[:] = [m for m in state.members if m.name not in scrape_module.keyword.kwlist]
 
-        
-        
-        state.dump(file_object)
+            state.collect_second_level_members()
+
+            state.dump(file_object)
 
 
 def main():
@@ -45,8 +45,12 @@ def main():
     search_path = sys.argv[2] if len(sys.argv) > 2 else None
     output_dir = sys.argv[3] if len(sys.argv) > 2 else None
   
-    scrape_lib_folder(lib_dir, search_path, output_dir)
+    abs_lib_dir = os.path.abspath(lib_dir)
 
+    if os.path.exists(abs_lib_dir):
+        scrape_lib_folder(abs_lib_dir, search_path, output_dir)
+    else:
+        print("directory doesn't exists " + abs_lib_dir)
 
 if __name__ == "__main__":
     main()

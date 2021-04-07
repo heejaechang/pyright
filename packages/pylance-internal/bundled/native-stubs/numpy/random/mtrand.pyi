@@ -1,8 +1,9 @@
-# Python: 3.8.0 (tags/v3.8.0:fa919fd, Oct 14 2019, 19:37:50) [MSC v.1916 64 bit (AMD64)]
-# Library: numpy, version: 1.19.3
+# Python: 3.9.2 (tags/v3.9.2:1a79785, Feb 19 2021, 13:44:55) [MSC v.1928 64 bit (AMD64)]
+# Library: numpy, version: 1.20.2
 # Module: numpy.random.mtrand, version: unspecified
 import typing
 import builtins as _mod_builtins
+import collections.abc as _mod_collections_abc
 import numpy.random._mt19937 as _mod_numpy_random__mt19937
 
 class RandomState(_mod_builtins.object):
@@ -189,7 +190,7 @@ class RandomState(_mod_builtins.object):
         ...
     
     def shuffle(self, x) -> typing.Any:
-        '\n        shuffle(x)\n\n        Modify a sequence in-place by shuffling its contents.\n\n        This function only shuffles the array along the first axis of a\n        multi-dimensional array. The order of sub-arrays is changed but\n        their contents remains the same.\n\n        .. note::\n            New code should use the ``shuffle`` method of a ``default_rng()``\n            instance instead; please see the :ref:`random-quick-start`.\n\n        Parameters\n        ----------\n        x : array_like\n            The array or list to be shuffled.\n\n        Returns\n        -------\n        None\n\n        See Also\n        --------\n        Generator.shuffle: which should be used for new code.\n\n        Examples\n        --------\n        >>> arr = np.arange(10)\n        >>> np.random.shuffle(arr)\n        >>> arr\n        [1 7 5 2 9 4 3 6 0 8] # random\n\n        Multi-dimensional arrays are only shuffled along the first axis:\n\n        >>> arr = np.arange(9).reshape((3, 3))\n        >>> np.random.shuffle(arr)\n        >>> arr\n        array([[3, 4, 5], # random\n               [6, 7, 8],\n               [0, 1, 2]])\n\n        '
+        '\n        shuffle(x)\n\n        Modify a sequence in-place by shuffling its contents.\n\n        This function only shuffles the array along the first axis of a\n        multi-dimensional array. The order of sub-arrays is changed but\n        their contents remains the same.\n\n        .. note::\n            New code should use the ``shuffle`` method of a ``default_rng()``\n            instance instead; please see the :ref:`random-quick-start`.\n\n        Parameters\n        ----------\n        x : ndarray or MutableSequence\n            The array, list or mutable sequence to be shuffled.\n\n        Returns\n        -------\n        None\n\n        See Also\n        --------\n        Generator.shuffle: which should be used for new code.\n\n        Examples\n        --------\n        >>> arr = np.arange(10)\n        >>> np.random.shuffle(arr)\n        >>> arr\n        [1 7 5 2 9 4 3 6 0 8] # random\n\n        Multi-dimensional arrays are only shuffled along the first axis:\n\n        >>> arr = np.arange(9).reshape((3, 3))\n        >>> np.random.shuffle(arr)\n        >>> arr\n        array([[3, 4, 5], # random\n               [6, 7, 8],\n               [0, 1, 2]])\n\n        '
         ...
     
     def standard_cauchy(self, size=...) -> typing.Any:
@@ -244,6 +245,7 @@ class RandomState(_mod_builtins.object):
         ...
     
 
+Sequence = _mod_collections_abc.Sequence
 _MT19937 = _mod_numpy_random__mt19937.MT19937
 __all__: list
 __doc__: typing.Any
@@ -405,7 +407,7 @@ def set_state(state) -> typing.Any:
     ...
 
 def shuffle(x) -> typing.Any:
-    '\n        shuffle(x)\n\n        Modify a sequence in-place by shuffling its contents.\n\n        This function only shuffles the array along the first axis of a\n        multi-dimensional array. The order of sub-arrays is changed but\n        their contents remains the same.\n\n        .. note::\n            New code should use the ``shuffle`` method of a ``default_rng()``\n            instance instead; please see the :ref:`random-quick-start`.\n\n        Parameters\n        ----------\n        x : array_like\n            The array or list to be shuffled.\n\n        Returns\n        -------\n        None\n\n        See Also\n        --------\n        Generator.shuffle: which should be used for new code.\n\n        Examples\n        --------\n        >>> arr = np.arange(10)\n        >>> np.random.shuffle(arr)\n        >>> arr\n        [1 7 5 2 9 4 3 6 0 8] # random\n\n        Multi-dimensional arrays are only shuffled along the first axis:\n\n        >>> arr = np.arange(9).reshape((3, 3))\n        >>> np.random.shuffle(arr)\n        >>> arr\n        array([[3, 4, 5], # random\n               [6, 7, 8],\n               [0, 1, 2]])\n\n        '
+    '\n        shuffle(x)\n\n        Modify a sequence in-place by shuffling its contents.\n\n        This function only shuffles the array along the first axis of a\n        multi-dimensional array. The order of sub-arrays is changed but\n        their contents remains the same.\n\n        .. note::\n            New code should use the ``shuffle`` method of a ``default_rng()``\n            instance instead; please see the :ref:`random-quick-start`.\n\n        Parameters\n        ----------\n        x : ndarray or MutableSequence\n            The array, list or mutable sequence to be shuffled.\n\n        Returns\n        -------\n        None\n\n        See Also\n        --------\n        Generator.shuffle: which should be used for new code.\n\n        Examples\n        --------\n        >>> arr = np.arange(10)\n        >>> np.random.shuffle(arr)\n        >>> arr\n        [1 7 5 2 9 4 3 6 0 8] # random\n\n        Multi-dimensional arrays are only shuffled along the first axis:\n\n        >>> arr = np.arange(9).reshape((3, 3))\n        >>> np.random.shuffle(arr)\n        >>> arr\n        array([[3, 4, 5], # random\n               [6, 7, 8],\n               [0, 1, 2]])\n\n        '
     ...
 
 def standard_cauchy(size=...) -> typing.Any:
