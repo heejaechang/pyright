@@ -1,6 +1,6 @@
 # This sample exercises the type analyzer's isinstance type narrowing logic.
 
-from typing import Type, Union, Any
+from typing import List, Literal, Optional, Sized, Type, TypeVar, Union, Any
 
 class UnrelatedClass:
     class_var1: int
@@ -66,7 +66,7 @@ class TestClass1:
 class TestClass2(TestClass1):
     pass
 
-def function(instance: TestClass2) -> None:
+def func1(instance: TestClass2) -> None:
     # Although it's redundant for code to check for either
     # TestClass1 or TestClass2, the analyzer should be fine with it.
     if isinstance(instance, TestClass2):
@@ -74,4 +74,35 @@ def function(instance: TestClass2) -> None:
 
     if isinstance(instance, TestClass1):
         print(instance.property)
+
+
+def func2(val: Union[int, None, str]) -> Optional[int]:
+    return None if isinstance((z := val), str) else z
+
+# Test the special-case handling of isinstance with a
+# "type" class.
+def func3(ty: Type[int]) -> Type[int]:
+    assert isinstance(ty, (type, str))
+    return ty
+
+def func4(ty: Type[int]) -> Type[int]:
+    assert not isinstance(ty, str)
+    return ty
+
+T = TypeVar("T")
+
+def func5(ty: Type[T]) -> Type[T]:
+    assert isinstance(ty, (type, str))
+    return ty
+
+def func6(ty: Type[T]) -> Type[T]:
+    assert not isinstance(ty, str)
+    return ty
+
+# Test the handling of protocol classes that support runtime checking.
+def func7(a: Union[List[int], int]):
+    if isinstance(a, Sized):
+        t1: Literal['List[int]'] = reveal_type(a)
+    else:
+        t2: Literal['int'] = reveal_type(a)
 
