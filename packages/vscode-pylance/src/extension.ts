@@ -13,22 +13,27 @@ import { ApplicationShellImpl } from './common/appShell';
 import { licenseErrorText } from './common/license';
 import { loadLocalizedStrings } from './common/localize';
 import { PersistentStateFactoryImpl } from './common/persistentState';
-import { setExtensionRoot } from './common/utils';
+import { PylanceName, setExtensionRoot } from './common/utils';
 import { InsidersImpl } from './insiders';
 import { BlobStorageImpl } from './insiders/blobStorage';
 import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
+import { ApplicationShell } from './types/appShell';
 import { BrowserService, BrowserServiceImpl } from './types/browser';
 import { Command, CommandManagerImpl } from './types/commandManager';
 
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
-    checkHostApp();
+    const appShell = new ApplicationShellImpl();
+    if (!checkHostApp()) {
+        const outputChannel = appShell.createOutputChannel(PylanceName);
+        outputChannel.appendLine(licenseErrorText);
+        return {};
+    }
     setExtensionRoot(context.extensionPath);
     loadLocalizedStrings();
 
     const version = getExtensionVersion(context);
     const config = new AppConfigurationImpl();
-    const appShell = new ApplicationShellImpl();
     const persistentState = new PersistentStateFactoryImpl(context.globalState, context.workspaceState);
     const blobStorage = new BlobStorageImpl();
     const commandManager = new CommandManagerImpl();
@@ -89,13 +94,11 @@ function getExtensionVersion(context: vscode.ExtensionContext): string {
     return JSON.parse(packageJson).version;
 }
 
-function checkHostApp() {
+function checkHostApp(): boolean {
     const appName = 'Visual Studio Code';
     const insiderAppName = 'Visual Studio Code - Insiders';
 
-    if (vscode.env.appName !== appName && vscode.env.appName !== insiderAppName) {
-        throw Error(licenseErrorText);
-    }
+    return vscode.env.appName === appName || vscode.env.appName === insiderAppName;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
