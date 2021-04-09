@@ -179,6 +179,11 @@ class PylanceServer extends LanguageServerBase {
             serverSettings.indexing = indexingExperiment ?? false;
         }
 
+        if (!IS_DEV && !IS_PR) {
+            const useImportHeuristicExperiment = await this._inExperiment('useImportHeuristic');
+            serverSettings.useImportHeuristic = useImportHeuristicExperiment ?? false;
+        }
+
         let forceProgressBar = false;
 
         try {
