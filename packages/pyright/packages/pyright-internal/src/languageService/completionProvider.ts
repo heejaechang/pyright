@@ -139,7 +139,6 @@ const _keywords: string[] = [
     'return',
     'try',
     'while',
-    'yield',
 ];
 
 enum SortCategory {
