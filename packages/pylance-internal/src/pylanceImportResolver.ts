@@ -336,6 +336,13 @@ export class PylanceImportResolver extends ImportResolver {
                     return [builtinsPath];
                 }
             }
+
+            // Native stubs in the native stub folder has "pyi" extension but acts like the source file.
+            // If the stub is in the native stub folder, return itself.
+            const nativeStubsPath = getBundledNativeStubsPath(this.fileSystem.getModulePath());
+            if (stubFilePath.startsWith(nativeStubsPath)) {
+                return [stubFilePath];
+            }
         }
 
         const files = super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
