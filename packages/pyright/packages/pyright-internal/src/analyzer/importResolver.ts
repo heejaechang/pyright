@@ -167,11 +167,17 @@ export class ImportResolver {
                         this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, false) ||
                         notFoundResult;
                 }
-                return this.addResultsToCache(execEnv, importName, bestImport, moduleDescriptor.importedSymbols);
+                return this.addResultsToCache(
+                    sourceFilePath,
+                    execEnv,
+                    importName,
+                    bestImport,
+                    moduleDescriptor.importedSymbols
+                );
             }
         }
 
-        return this.addResultsToCache(execEnv, importName, notFoundResult, undefined);
+        return this.addResultsToCache(sourceFilePath, execEnv, importName, notFoundResult, undefined);
     }
 
     getCompletionSuggestions(
@@ -575,6 +581,7 @@ export class ImportResolver {
     }
 
     protected addResultsToCache(
+        sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         importName: string,
         importResult: ImportResult,

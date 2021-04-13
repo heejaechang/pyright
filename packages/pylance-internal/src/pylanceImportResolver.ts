@@ -56,6 +56,8 @@ export class ImportMetrics {
     localImportStubs = 0;
     builtinImportTotal = 0;
     builtinImportStubs = 0;
+    userUnresolved = 0;
+    unresolvedTotal = 0;
 
     isEmpty(): boolean {
         return (
@@ -64,7 +66,9 @@ export class ImportMetrics {
             this.localImportTotal === 0 &&
             this.localImportStubs === 0 &&
             this.builtinImportTotal === 0 &&
-            this.builtinImportStubs === 0
+            this.builtinImportStubs === 0 &&
+            this.userUnresolved === 0 &&
+            this.unresolvedTotal === 0
         );
     }
 
@@ -75,6 +79,8 @@ export class ImportMetrics {
         this.localImportStubs = 0;
         this.builtinImportTotal = 0;
         this.builtinImportStubs = 0;
+        this.userUnresolved = 0;
+        this.unresolvedTotal = 0;
     }
 
     public addNativeModule(moduleName: string): void {
@@ -97,6 +103,7 @@ export class PylanceImportResolver extends ImportResolver {
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
     private _scrapedBuiltinsTempfile: string | undefined;
     private _scrapedBuiltinsFailed = false;
+    private _lastUnresolvedImportName: string | undefined;
 
     private readonly _cachedHeuristicResults: ImportHeuristicCache;
     readonly importMetrics = new ImportMetrics();
@@ -140,6 +147,7 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         // Check whether the give file is something we care for the heuristic.
+        // Keep in sync with _addResultToImportMetrics.
         if (
             !this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root, () =>
                 this.getImportRoots(execEnv)
@@ -320,6 +328,8 @@ export class PylanceImportResolver extends ImportResolver {
             this._scrapedBuiltinsFailed = false;
         }
 
+        this._lastUnresolvedImportName = undefined;
+
         super.invalidateCache();
     }
 
@@ -363,17 +373,56 @@ export class PylanceImportResolver extends ImportResolver {
     }
 
     protected addResultsToCache(
+        sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         importName: string,
         importResult: ImportResult,
         importedSymbols: string[] | undefined
     ) {
-        this._addResultToImportMetrics(importResult);
-        return super.addResultsToCache(execEnv, importName, importResult, importedSymbols);
+        this._addResultToImportMetrics(sourceFilePath, execEnv, importResult);
+        return super.addResultsToCache(sourceFilePath, execEnv, importName, importResult, importedSymbols);
     }
 
-    private _addResultToImportMetrics(importResult: ImportResult) {
-        if (importResult === undefined || !importResult.isImportFound) {
+    private _addResultToImportMetrics(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        importResult: ImportResult
+    ) {
+        if (!importResult.isImportFound) {
+            let newUnresolved = true;
+
+            if (this._lastUnresolvedImportName) {
+                const editDistance = importNameEditDistance(
+                    this._lastUnresolvedImportName,
+                    importResult.importName,
+                    /* checkDottedPrefix */ true
+                );
+                if (editDistance < 2) {
+                    newUnresolved = false;
+                }
+            }
+
+            let userUnresolved = newUnresolved;
+
+            if (newUnresolved) {
+                // Match resolveImport's algorithm to check if is user code.
+                sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
+
+                const root = ensureTrailingDirectorySeparator(
+                    normalizePathCase(this.fileSystem, normalizePath(execEnv.root))
+                );
+
+                userUnresolved = this._cachedHeuristicResults.checkValidPath(
+                    this.fileSystem,
+                    sourceFilePath,
+                    root,
+                    () => this.getImportRoots(execEnv)
+                );
+            }
+
+            this._lastUnresolvedImportName = importResult.importName;
+            this.importMetrics.userUnresolved += userUnresolved ? 1 : 0;
+            this.importMetrics.unresolvedTotal += newUnresolved ? 1 : 0;
             return;
         }
 
@@ -576,7 +625,7 @@ class ImportHeuristicCache {
 
         scanResult.durationInMS = this._duration.getDurationInMilliseconds() - start;
         if (this._lastData && !this._lastData.success) {
-            const editDistance = this._editDistance(this._lastData.importName, scanResult.importName);
+            const editDistance = importNameEditDistance(this._lastData.importName, scanResult.importName);
             if (editDistance < 2) {
                 // Remove old one.
                 const importName = this._lastData.importName;
@@ -664,21 +713,21 @@ class ImportHeuristicCache {
         this._lastData = undefined;
     }
 
-    private _editDistance(word1: string, word2: string) {
-        if (word1.length > word2.length) {
-            [word1, word2] = [word2, word1];
-        }
-
-        if (word2.startsWith(word1)) {
-            return 1;
-        }
-
-        return leven(word2, word1);
-    }
-
     private _setFailureReasons(reasons: string[], reason: string) {
         if (reasons.some((r) => r.indexOf(reason) >= 0)) {
             this._failureReasons.set(reason, (this._failureReasons.get(reason) ?? 0) + 1);
         }
     }
+}
+
+function importNameEditDistance(word1: string, word2: string, checkDottedPrefix = false) {
+    if (word1.length > word2.length) {
+        [word1, word2] = [word2, word1];
+    }
+
+    if (word2.startsWith(word1) && (!checkDottedPrefix || !word2.startsWith(word1 + '.'))) {
+        return 1;
+    }
+
+    return leven(word2, word1);
 }
