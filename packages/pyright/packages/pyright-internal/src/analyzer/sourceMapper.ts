@@ -310,6 +310,8 @@ export class SourceMapper {
 
         const moduleNode = sourceFile.getParseResults()?.parseTree;
         if (!moduleNode) {
+            // Don't bother deleting from the cache; we'll never get any info from this
+            // file if it has no tree.
             return result;
         }
 
@@ -342,6 +344,8 @@ export class SourceMapper {
 
         const moduleNode = sourceFile.getParseResults()?.parseTree;
         if (!moduleNode) {
+            // Don't bother deleting from the cache; we'll never get any info from this
+            // file if it has no tree.
             return result;
         }
 
@@ -552,6 +556,14 @@ export class SourceMapper {
                     continue;
                 }
 
+                // While traversing these tables, we may encounter the same decl
+                // more than once (via different files' wildcard imports). To avoid this,
+                // add an ID unique to this function to the recursiveDeclCache to deduplicate
+                // them.
+                //
+                // The ID is not deleted to avoid needing a second Set to track all decls
+                // seen in this function. This is safe beacuse the ID here is unique to this
+                // function.
                 recursiveDeclCache.add(uniqueId);
 
                 const sourceFiles = this._getSourceFiles(decl.path);
