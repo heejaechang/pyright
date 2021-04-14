@@ -13,6 +13,7 @@ import { ImportResult, ImportType } from 'pyright-internal/analyzer/importResult
 import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface } from 'pyright-internal/common/console';
+import { assertNever } from 'pyright-internal/common/debug';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import {
     combinePaths,
@@ -50,37 +51,72 @@ export class ImportMetrics {
     private readonly _currentModules: Set<string> = new Set();
     private readonly _reportedModules: Set<string> = new Set();
 
-    thirdPartyImportTotal = 0;
-    thirdPartyImportStubs = 0;
-    localImportTotal = 0;
-    localImportStubs = 0;
-    builtinImportTotal = 0;
-    builtinImportStubs = 0;
-    userUnresolved = 0;
-    unresolvedTotal = 0;
+    // Below, "unique" means "a unique way to import a module". For example,
+    // the same file imported absolutely, imported absolutely with a different name,
+    // imported relatively, or "absolutely" via the import heuristic are all
+    // treated as distinct "unique" cases.
+
+    // Overall
+    total = 0; // Unique imports.
+    stubs = 0; // Unique imports that led to stubs.
+    unresolvedTotal = 0; // Unique unresolved imports.
+
+    // Absolute
+    absoluteTotal = 0; // Unique absolute imports.
+    absoluteStubs = 0; // Unique absolute imports that led to stubs.
+    absoluteUnresolved = 0; // Unique absolute imports that didn't resolve.
+    absoluteUserUnresolved = 0; // Unique absolute user imports that didn't resolve.
+
+    thirdPartyImportTotal = 0; // Unique absolute imports that resolved to third-party code.
+    thirdPartyImportStubs = 0; // Unique absolute imports that resolved to third-party stubs.
+    localImportTotal = 0; // Unique absolute imports that resolved to local code.
+    localImportStubs = 0; // Unique absolute imports that resolved to local stubs.
+    builtinImportTotal = 0; // Unique absolute imports that resolved to builtin code.
+    builtinImportStubs = 0; // Unique absolute imports that resolved to builtin stubs.
+
+    // Relative
+    relativeTotal = 0; // Unique relative imports.
+    relativeStubs = 0; // Unique relative imports that led to stubs.
+    relativeUnresolved = 0; // Unique relative imports that didn't resolve.
 
     isEmpty(): boolean {
         return (
+            this.total === 0 &&
+            this.stubs === 0 &&
+            this.unresolvedTotal === 0 &&
+            this.absoluteTotal === 0 &&
+            this.absoluteStubs === 0 &&
+            this.absoluteUnresolved === 0 &&
+            this.absoluteUserUnresolved === 0 &&
             this.thirdPartyImportTotal === 0 &&
             this.thirdPartyImportStubs === 0 &&
             this.localImportTotal === 0 &&
             this.localImportStubs === 0 &&
             this.builtinImportTotal === 0 &&
             this.builtinImportStubs === 0 &&
-            this.userUnresolved === 0 &&
-            this.unresolvedTotal === 0
+            this.relativeTotal === 0 &&
+            this.relativeStubs === 0 &&
+            this.relativeUnresolved === 0
         );
     }
 
     public reset() {
+        this.total = 0;
+        this.stubs = 0;
+        this.unresolvedTotal = 0;
+        this.absoluteTotal = 0;
+        this.absoluteStubs = 0;
+        this.absoluteUnresolved = 0;
+        this.absoluteUserUnresolved = 0;
         this.thirdPartyImportTotal = 0;
         this.thirdPartyImportStubs = 0;
         this.localImportTotal = 0;
         this.localImportStubs = 0;
         this.builtinImportTotal = 0;
         this.builtinImportStubs = 0;
-        this.userUnresolved = 0;
-        this.unresolvedTotal = 0;
+        this.relativeTotal = 0;
+        this.relativeStubs = 0;
+        this.relativeUnresolved = 0;
     }
 
     public addNativeModule(moduleName: string): void {
@@ -103,7 +139,11 @@ export class PylanceImportResolver extends ImportResolver {
     private _onImportMetricsCallback: ImportMetricsCallback | undefined;
     private _scrapedBuiltinsTempfile: string | undefined;
     private _scrapedBuiltinsFailed = false;
+
     private _lastUnresolvedImportName: string | undefined;
+    // resolvedPath -> importName
+    private _countedAbsolute = new Map<string, Set<string>>();
+    private _countedRelative = new Map<string, Set<string>>();
 
     private readonly _cachedHeuristicResults: ImportHeuristicCache;
     readonly importMetrics = new ImportMetrics();
@@ -129,6 +169,16 @@ export class PylanceImportResolver extends ImportResolver {
     }
 
     resolveImport(sourceFilePath: string, execEnv: ExecutionEnvironment, moduleDescriptor: ImportedModuleDescriptor) {
+        const importResult = this._resolveImport(sourceFilePath, execEnv, moduleDescriptor);
+        this._addResultToImportMetrics(sourceFilePath, execEnv, moduleDescriptor, importResult);
+        return importResult;
+    }
+
+    private _resolveImport(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor
+    ) {
         let importResult = super.resolveImport(sourceFilePath, execEnv, moduleDescriptor);
         if (importResult.isImportFound || moduleDescriptor.leadingDots > 0) {
             return importResult;
@@ -330,6 +380,9 @@ export class PylanceImportResolver extends ImportResolver {
 
         this._lastUnresolvedImportName = undefined;
 
+        this._countedAbsolute.clear();
+        this._countedRelative.clear();
+
         super.invalidateCache();
     }
 
@@ -372,29 +425,54 @@ export class PylanceImportResolver extends ImportResolver {
         return files;
     }
 
-    protected addResultsToCache(
-        sourceFilePath: string,
-        execEnv: ExecutionEnvironment,
-        importName: string,
-        importResult: ImportResult,
-        importedSymbols: string[] | undefined
-    ) {
-        this._addResultToImportMetrics(sourceFilePath, execEnv, importResult);
-        return super.addResultsToCache(sourceFilePath, execEnv, importName, importResult, importedSymbols);
-    }
-
     private _addResultToImportMetrics(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor,
         importResult: ImportResult
     ) {
+        const importName = this.formatImportName(moduleDescriptor);
+        const isRelative = moduleDescriptor.leadingDots > 0;
+        const resolvedPath =
+            importResult.resolvedPaths.length > 0
+                ? importResult.resolvedPaths[importResult.resolvedPaths.length - 1]
+                : '';
+
+        // Deduplicate by (resolvedPath, importName) pair; we want to count
+        // each individual way to import a module, including cases where the
+        // same module may have different absolute names (either via search
+        // paths or the import heuristic).
+        const nameSet = getOrAdd(
+            isRelative ? this._countedRelative : this._countedAbsolute,
+            resolvedPath,
+            () => new Set()
+        );
+        const countedImport = nameSet.has(importName);
+        if (countedImport) {
+            return;
+        }
+
+        nameSet.add(importName);
+
+        this.importMetrics.total += 1;
+        this.importMetrics.stubs += importResult.isStubFile ? 1 : 0;
+        if (isRelative) {
+            this.importMetrics.relativeTotal += 1;
+            this.importMetrics.relativeStubs += importResult.isStubFile ? 1 : 0;
+        } else {
+            this.importMetrics.absoluteTotal += 1;
+            this.importMetrics.absoluteStubs += importResult.isStubFile ? 1 : 0;
+        }
+
         if (!importResult.isImportFound) {
+            // Import was unresolved.
+
             let newUnresolved = true;
 
             if (this._lastUnresolvedImportName) {
                 const editDistance = importNameEditDistance(
                     this._lastUnresolvedImportName,
-                    importResult.importName,
+                    importName,
                     /* checkDottedPrefix */ true
                 );
                 if (editDistance < 2) {
@@ -402,9 +480,10 @@ export class PylanceImportResolver extends ImportResolver {
                 }
             }
 
-            let userUnresolved = newUnresolved;
-
-            if (newUnresolved) {
+            // The below algorithm only works for absolute imports;
+            // don't run it on relative imports.
+            let userUnresolved = newUnresolved && !isRelative;
+            if (userUnresolved) {
                 // Match resolveImport's algorithm to check if is user code.
                 sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
 
@@ -420,9 +499,23 @@ export class PylanceImportResolver extends ImportResolver {
                 );
             }
 
-            this._lastUnresolvedImportName = importResult.importName;
-            this.importMetrics.userUnresolved += userUnresolved ? 1 : 0;
+            this._lastUnresolvedImportName = importName;
+            this.importMetrics.absoluteUserUnresolved += userUnresolved ? 1 : 0;
+
             this.importMetrics.unresolvedTotal += newUnresolved ? 1 : 0;
+            if (isRelative) {
+                this.importMetrics.relativeUnresolved += newUnresolved ? 1 : 0;
+            } else {
+                this.importMetrics.absoluteUnresolved += newUnresolved ? 1 : 0;
+            }
+
+            return;
+        }
+
+        // Import was resolved.
+
+        if (isRelative) {
+            // Relative imports do not have their importType set properly; skip the below.
             return;
         }
 
@@ -442,9 +535,8 @@ export class PylanceImportResolver extends ImportResolver {
                 this.importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
-            default: {
-                break;
-            }
+            default:
+                assertNever(importResult.importType);
         }
     }
 

@@ -167,17 +167,11 @@ export class ImportResolver {
                         this._resolveBestAbsoluteImport(sourceFilePath, execEnv, moduleDescriptor, false) ||
                         notFoundResult;
                 }
-                return this.addResultsToCache(
-                    sourceFilePath,
-                    execEnv,
-                    importName,
-                    bestImport,
-                    moduleDescriptor.importedSymbols
-                );
+                return this.addResultsToCache(execEnv, importName, bestImport, moduleDescriptor.importedSymbols);
             }
         }
 
-        return this.addResultsToCache(sourceFilePath, execEnv, importName, notFoundResult, undefined);
+        return this.addResultsToCache(execEnv, importName, notFoundResult, undefined);
     }
 
     getCompletionSuggestions(
@@ -581,7 +575,6 @@ export class ImportResolver {
     }
 
     protected addResultsToCache(
-        sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         importName: string,
         importResult: ImportResult,
@@ -1671,12 +1664,7 @@ export class ImportResolver {
     }
 
     protected formatImportName(moduleDescriptor: ImportedModuleDescriptor) {
-        let name = '';
-        for (let i = 0; i < moduleDescriptor.leadingDots; i++) {
-            name += '.';
-        }
-
-        return name + moduleDescriptor.nameParts.map((part) => part).join('.');
+        return '.'.repeat(moduleDescriptor.leadingDots) + moduleDescriptor.nameParts.join('.');
     }
 
     private _resolveNativeModuleStub(
