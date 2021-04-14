@@ -1015,6 +1015,48 @@ export function isWithinLoop(node: ParseNode): boolean {
     return false;
 }
 
+export function isWithinTryBlock(node: ParseNode): boolean {
+    let curNode: ParseNode | undefined = node;
+    let prevNode: ParseNode | undefined;
+
+    while (curNode) {
+        switch (curNode.nodeType) {
+            case ParseNodeType.Try: {
+                return curNode.trySuite === prevNode;
+            }
+
+            case ParseNodeType.Function:
+            case ParseNodeType.Module:
+            case ParseNodeType.Class: {
+                break;
+            }
+        }
+
+        prevNode = curNode;
+        curNode = curNode.parent;
+    }
+
+    return false;
+}
+
+export function isWithinAssertExpression(node: ParseNode): boolean {
+    let curNode: ParseNode | undefined = node;
+    let prevNode: ParseNode | undefined;
+
+    while (curNode) {
+        switch (curNode.nodeType) {
+            case ParseNodeType.Assert: {
+                return curNode.testExpression === prevNode;
+            }
+        }
+
+        prevNode = curNode;
+        curNode = curNode.parent;
+    }
+
+    return false;
+}
+
 export function getDocString(statements: StatementNode[]): string | undefined {
     // See if the first statement in the suite is a triple-quote string.
     if (statements.length === 0) {

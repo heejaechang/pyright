@@ -960,6 +960,12 @@ test('Generators12', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Generators13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generators13.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Coroutines1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines1.py']);
 
@@ -1425,8 +1431,14 @@ test('List1', () => {
 });
 
 test('Comparison1', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['comparison1.py']);
-    TestUtils.validateResults(analysisResults, 3);
+    const configOptions = new ConfigOptions('.');
+
+    const analysisResults1 = TestUtils.typeAnalyzeSampleFiles(['comparison1.py'], configOptions);
+    TestUtils.validateResults(analysisResults1, 0);
+
+    configOptions.diagnosticRuleSet.reportUnnecessaryComparison = 'error';
+    const analysisResults2 = TestUtils.typeAnalyzeSampleFiles(['comparison1.py'], configOptions);
+    TestUtils.validateResults(analysisResults2, 6);
 });
 
 test('EmptyContainers1', () => {
