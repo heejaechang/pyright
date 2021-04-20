@@ -465,7 +465,7 @@ test('Function1', () => {
 test('Function2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function2.py']);
 
-    TestUtils.validateResults(analysisResults, 8);
+    TestUtils.validateResults(analysisResults, 9);
 });
 
 test('Function3', () => {
@@ -1573,12 +1573,12 @@ test('Subscript3', () => {
     // Analyze with Python 3.9 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_9;
     const analysisResults39 = TestUtils.typeAnalyzeSampleFiles(['subscript3.py'], configOptions);
-    TestUtils.validateResults(analysisResults39, 31);
+    TestUtils.validateResults(analysisResults39, 30);
 
     // Analyze with Python 3.10 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults310 = TestUtils.typeAnalyzeSampleFiles(['subscript3.py'], configOptions);
-    TestUtils.validateResults(analysisResults310, 12);
+    TestUtils.validateResults(analysisResults310, 11);
 });
 
 test('Decorator1', () => {
