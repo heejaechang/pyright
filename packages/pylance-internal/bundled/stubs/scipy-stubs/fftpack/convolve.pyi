@@ -1,5 +1,5 @@
-# Python: 3.7.7 (tags/v3.7.7:d7c567b08f, Mar 10 2020, 10:41:24) [MSC v.1900 64 bit (AMD64)]
-# Library: scipy, version: 1.6.1
+# Python: 3.8.2 (tags/v3.8.2:7b3ab59, Feb 25 2020, 23:03:10) [MSC v.1916 64 bit (AMD64)]
+# Library: scipy, version: 1.6.2
 # Module: scipy.fftpack.convolve, version: unspecified
 import typing
 import builtins as _mod_builtins
@@ -13,18 +13,18 @@ def __pyx_unpickle_Enum() -> typing.Any:
     ...
 
 __test__: dict
-def convolve() -> typing.Any:
+def convolve(x, omega, swap_real_imag=..., overwrite_x=...) -> typing.Any:
     "y = convolve(x,omega,[swap_real_imag,overwrite_x])\n\n    Wrapper for ``convolve``.\n\n    Parameters\n    ----------\n    x : input rank-1 array('d') with bounds (n)\n    omega : input rank-1 array('d') with bounds (n)\n\n    Other Parameters\n    ----------------\n    overwrite_x : input int, optional\n        Default: 0\n    swap_real_imag : input int, optional\n         Default: 0\n\n    Returns\n    -------\n    y : rank-1 array('d') with bounds (n) and x storage\n    "
     ...
 
-def convolve_z() -> typing.Any:
+def convolve_z(x, omega_real, omega_imag, overwrite_x=...) -> typing.Any:
     "y = convolve_z(x,omega_real,omega_imag,[overwrite_x])\n\n    Wrapper for ``convolve_z``.\n\n    Parameters\n    ----------\n    x : input rank-1 array('d') with bounds (n)\n    omega_real : input rank-1 array('d') with bounds (n)\n    omega_imag : input rank-1 array('d') with bounds (n)\n\n    Other Parameters\n    ----------------\n    overwrite_x : input int, optional\n        Default: 0\n\n    Returns\n    -------\n    y : rank-1 array('d') with bounds (n) and x storage\n    "
     ...
 
 def destroy_convolve_cache() -> typing.Any:
     ...
 
-def init_convolution_kernel() -> typing.Any:
+def init_convolution_kernel(n, kernel_func, d=..., zero_nyquist=..., kernel_func_extra_args=...) -> typing.Any:
     "omega = init_convolution_kernel(n,kernel_func,[d,zero_nyquist,kernel_func_extra_args])\n\n    Wrapper for ``init_convolution_kernel``.\n\n    Parameters\n    ----------\n    n : input int\n    kernel_func : call-back function\n\n    Other Parameters\n    ----------------\n    d : input int, optional\n        Default: 0\n    kernel_func_extra_args : input tuple, optional\n        Default: ()\n    zero_nyquist : input int, optional\n        Default: d%2\n\n    Returns\n    -------\n    omega : rank-1 array('d') with bounds (n)\n\n    Notes\n    -----\n    Call-back functions::\n\n      def kernel_func(k): return kernel_func\n      Required arguments:\n        k : input int\n      Return objects:\n        kernel_func : float\n    "
     ...
 

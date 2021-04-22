@@ -234,7 +234,7 @@ class DocstringSigParser(object):
         doc = doc.lstrip()
 
         # TODO: Support overloads by reading multiple lines?
-        doc = self._get_first_function_call(doc)
+        doc = self._get_first_function_call(doc, override_name)
         if not doc:
             return None
 
@@ -361,6 +361,9 @@ class DocstringSigParser(object):
                 e = self._parse_take_expr(tokens, tokenize.EQUAL, tokenize.COMMA)
                 args[-1][1].append("".join(i[1] for i in e))
             elif tt == tokenize.EQUAL:
+                if not seen_open_paren:
+                    name = None
+                    continue
                 e = self._parse_take_expr(tokens, tokenize.COMMA)
                 args[-1][2].append("".join(i[1] for i in e))
             elif tt == tokenize.COMMA:
@@ -381,24 +384,44 @@ class DocstringSigParser(object):
         if name and (allow_name_mismatch or name == self.name):
             return self._parse_format_arg(override_name or name, args, defaults)
 
-    def _get_first_function_call(self, expr):
+    def _get_first_function_call(self, expr: str, name: str):
         """Scans the string for the first closing parenthesis,
         handling nesting, which is the best heuristic we have for
         an example call at the start of the docstring."""
         # Note: line may or may not contain complete (...) and closing ')' may be on another line.
         # We also prevent going too far into the expression so it does not pick random x() in comments.
+        if "\n\n" not in expr and name not in expr:
+            return None
+            
         expr = expr.split("\n\n")[0]
         if not expr or ")" not in expr:
             return None
 
         found = []
         n = 0
-        expr = (
-            expr.replace("\r", " ")
-            .replace("\n", " ")
-            .replace("\t", " ")
-            .replace(" ", "")
-        )
+        expr = expr.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+
+        # See whether string before open paren is valid.
+        openParenIndex = expr.find("(")
+        if openParenIndex < 0:
+            return None
+
+        header = expr[:openParenIndex].strip()
+        tokens = header.split(" ")
+        tokenLength = len(tokens)
+        if tokenLength == 0:
+            # Nothing before "("
+            return None
+
+        if not tokens[tokenLength - 1].isidentifier():
+            # Token before "(" is not valid identifier.
+            return None
+
+        if tokenLength > 1 and tokens[tokenLength - 2].isidentifier():
+            # 2 consecutive words separated by a space. probably not a function call.
+            return None
+
+        expr = expr.replace(" ", "")
 
         for i, c in enumerate(expr):
             if c == ")":
@@ -641,7 +664,7 @@ class Signature(object):
         self.fullsig = (
             self.fullsig
             # Disable fromsignature() because it doesn't work as well as argspec
-            #or self._init_argspec_fromsignature()
+            # or self._init_argspec_fromsignature()
             or self._init_argspec_fromargspec()
             or self._init_argspec_fromknown(scope_alias)
             or ds_parser.argspec(override_name=self.name)

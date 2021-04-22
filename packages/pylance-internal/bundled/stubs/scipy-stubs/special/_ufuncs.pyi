@@ -1,5 +1,5 @@
-# Python: 3.7.7 (tags/v3.7.7:d7c567b08f, Mar 10 2020, 10:41:24) [MSC v.1900 64 bit (AMD64)]
-# Library: scipy, version: 1.6.1
+# Python: 3.8.2 (tags/v3.8.2:7b3ab59, Feb 25 2020, 23:03:10) [MSC v.1916 64 bit (AMD64)]
+# Library: scipy, version: 1.6.2
 # Module: scipy.special._ufuncs, version: unspecified
 import typing
 import builtins as _mod_builtins
@@ -633,7 +633,7 @@ def j1(x, out=..., *, where=..., casting=..., order=..., dtype=..., subok=..., s
     "j1(x, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True[, signature, extobj])\n\nj1(x)\n\nBessel function of the first kind of order 1.\n\nParameters\n----------\nx : array_like\n    Argument (float).\n\nReturns\n-------\nJ : ndarray\n    Value of the Bessel function of the first kind of order 1 at `x`.\n\nNotes\n-----\nThe domain is divided into the intervals [0, 8] and (8, infinity). In the\nfirst interval a 24 term Chebyshev expansion is used. In the second, the\nasymptotic trigonometric representation is employed using two rational\nfunctions of degree 5/5.\n\nThis function is a wrapper for the Cephes [1]_ routine `j1`.\nIt should not be confused with the spherical Bessel functions (see\n`spherical_jn`).\n\nSee also\n--------\njv\nspherical_jn : spherical Bessel functions.\n\nReferences\n----------\n.. [1] Cephes Mathematical Functions Library,\n       http://www.netlib.org/cephes/"
     ...
 
-def jn() -> typing.Any:
+def jn(x1, x2, out=..., *, where=..., casting=..., order=..., dtype=..., subok=..., signature=..., extobj=...) -> typing.Any:
     'jv(x1, x2, /, out=None, *, where=True, casting=\'same_kind\', order=\'K\', dtype=None, subok=True[, signature, extobj])\n\njv(v, z)\n\nBessel function of the first kind of real order and complex argument.\n\nParameters\n----------\nv : array_like\n    Order (float).\nz : array_like\n    Argument (float or complex).\n\nReturns\n-------\nJ : ndarray\n    Value of the Bessel function, :math:`J_v(z)`.\n\nNotes\n-----\nFor positive `v` values, the computation is carried out using the AMOS\n[1]_ `zbesj` routine, which exploits the connection to the modified\nBessel function :math:`I_v`,\n\n.. math::\n    J_v(z) = \\exp(v\\pi\\imath/2) I_v(-\\imath z)\\qquad (\\Im z > 0)\n\n    J_v(z) = \\exp(-v\\pi\\imath/2) I_v(\\imath z)\\qquad (\\Im z < 0)\n\nFor negative `v` values the formula,\n\n.. math:: J_{-v}(z) = J_v(z) \\cos(\\pi v) - Y_v(z) \\sin(\\pi v)\n\nis used, where :math:`Y_v(z)` is the Bessel function of the second\nkind, computed using the AMOS routine `zbesy`.  Note that the second\nterm is exactly zero for integer `v`; to improve accuracy the second\nterm is explicitly omitted for `v` values such that `v = floor(v)`.\n\nNot to be confused with the spherical Bessel functions (see `spherical_jn`).\n\nSee also\n--------\njve : :math:`J_v` with leading exponential behavior stripped off.\nspherical_jn : spherical Bessel functions.\n\nReferences\n----------\n.. [1] Donald E. Amos, "AMOS, A Portable Package for Bessel Functions\n       of a Complex Argument and Nonnegative Order",\n       http://netlib.org/amos/'
     ...
 
