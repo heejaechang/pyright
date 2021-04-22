@@ -14,10 +14,16 @@ import { ConfigOptions } from '../common/configOptions';
 import { PythonVersion } from '../common/pythonVersion';
 import * as TestUtils from './testUtils';
 
-test('CallbackPrototype1', () => {
-    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackPrototype1.py']);
+test('CallbackProtocol1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol1.py']);
 
     TestUtils.validateResults(analysisResults, 6);
+});
+
+test('CallbackProtocol2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol2.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('Assignment1', () => {
@@ -224,7 +230,7 @@ test('RevealedType1', () => {
 test('NameBindings1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['nameBindings1.py']);
 
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('NameBindings2', () => {
