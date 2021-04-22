@@ -1,41 +1,69 @@
 # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.html#module-matplotlib.pyplot
 
 from datetime import tzinfo
-from typing import (Any, BinaryIO, Callable, ContextManager, Dict, List,
-                    Literal, Mapping, Optional, Sequence, Tuple, Type, Union,
-                    overload)
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    ContextManager,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    overload,
+)
 
-from PIL.Image import Image
-
-from matplotlib._typing import ArrayLike, Scalar, ndarray, _DetrendCallable
+import cycler as cycler  # undocumented
+from matplotlib import interactive as interactive, set_loglevel as set_loglevel  # undocumented
+from matplotlib._typing import ArrayLike, Scalar, _DetrendCallable, ndarray
 from matplotlib.artist import Artist
-from matplotlib.axes import Axes, SubplotBase
+from matplotlib.axes import Axes as Axes, SubplotBase  # undocumented
 from matplotlib.backend_bases import Event, FigureManagerBase
-from matplotlib.cm import Colormap, ScalarMappable
-from matplotlib.cm import get_cmap as get_cmap
-from matplotlib.collections import (BrokenBarHCollection, Collection,
-                                    EventCollection, LineCollection,
-                                    PathCollection, PolyCollection, QuadMesh)
+from matplotlib.cm import Colormap, ScalarMappable, get_cmap as get_cmap, register_cmap as register_cmap  # undocumented
+from matplotlib.collections import (
+    BrokenBarHCollection,
+    Collection,
+    EventCollection,
+    LineCollection,
+    PathCollection,
+    PolyCollection,
+    QuadMesh,
+)
 from matplotlib.colorbar import Colorbar
-from matplotlib.colors import Normalize, _ColorLike
+from matplotlib.colors import Normalize as Normalize, _ColorLike  # undocumented
 from matplotlib.container import BarContainer, ErrorbarContainer, StemContainer
 from matplotlib.contour import ContourSet, QuadContourSet
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage, FigureImage
 from matplotlib.legend import Legend
-from matplotlib.lines import Line2D
+from matplotlib.lines import Line2D as Line2D  # undocumented
 from matplotlib.markers import MarkerStyle
-from matplotlib.patches import FancyArrow, Polygon, Wedge
+from matplotlib.patches import Circle as Circle, FancyArrow, Polygon, Rectangle as Rectangle, Wedge  # undocumented
 from matplotlib.quiver import Barbs, Quiver, QuiverKey
+from matplotlib.scale import get_scale_names as get_scale_names  # undocumented
 from matplotlib.streamploy import StreamplotSet
 from matplotlib.table import Table
-from matplotlib.text import Annotation, Text
+from matplotlib.text import Annotation, Text as Text  # undocumented
+from matplotlib.ticker import (  # undocumented
+    FixedFormatter as FixedFormatter,
+    FormatStrFormatter as FormatStrFormatter,
+    FuncFormatter as FuncFormatter,
+    LinearLocator as LinearLocator,
+    LogLocator as LogLocator,
+    MaxNLocator as MaxNLocator,
+    MultipleLocator as MultipleLocator,
+    NullLocator as NullLocator,
+)
 from matplotlib.transforms import Bbox
-from matplotlib.widgets import SubplotTool
+from matplotlib.widgets import Slider as Slider, SubplotTool  # undocumented
+from PIL.Image import Image
 
-# Not documented, but commonly used and in matplotlib's tests.
-from . import cm as cm
-from . import style as style
+from . import cbook as cbook, cm as cm, style as style  # undocumented
 
 # TODO: data params need to be Dicts/mappings?
 # TODO: Are some of these more reasonable in tooltips when split out as overloads?
@@ -71,6 +99,8 @@ def axhspan(ymin: float, ymax: float, xmin: Optional[int] = ..., xmax: Optional[
 # TODO: write overloads for various forms
 def axis(*args: Any, **kwargs: Any) -> Tuple[float, float, float, float]: ...
 
+def axline(xy1: Optional[Tuple[float, float]], xy2: Optional[Tuple[float, float]] = ..., *, slope: Optional[float] = ..., **kwargs: Any) -> Line2D: ...
+
 def axvline(x: Optional[Scalar] = ..., ymin: Optional[Scalar] = ..., ymax: Optional[Scalar] = ..., **kwargs: Any) -> Line2D: ...
 
 def axvspan(xmin: Scalar, xmax: Scalar, ymin: Optional[Scalar] = ..., ymax: Optional[Scalar] = ..., **kwargs: Any) -> Polygon: ...
@@ -86,6 +116,16 @@ def bar(
     data: Optional[Any] = ...,
     **kwargs: Any
 ) -> BarContainer: ...
+
+def bar_label(
+    container: BarContainer,
+    labels: Optional[ArrayLike] = ...,
+    *,
+    fmt: str = ...,
+    label_type: Literal['edge', 'center'] = ...,
+    padding: float = ...,
+    **kwargs: Any
+) -> List[Text]: ...
 
 # TODO: write overloads for various forms
 def barbs(*args: Any, data: Optional[Any] = ..., **kwargs: Any) -> Barbs: ...
@@ -166,6 +206,9 @@ def cohere(
 
 def colorbar(mappable: Optional[ScalarMappable] = ..., cax: Optional[Axes] = ..., ax: Optional[Union[Axes, Sequence[Axes]]] = ..., **kwargs: Any) -> Colorbar: ...
 
+# Should be colormap?
+def colormaps() -> Dict[str, Colormap]: ...
+
 def connect(s: str, func: Callable[[Event], None]) -> int: ...
 
 # TODO: write overloads for various forms
@@ -198,6 +241,8 @@ def delaxes(ax: Optional[Axes]) -> None: ...
 def disconnect(cid: int) -> None: ...
 
 def draw() -> None: ...
+
+def draw_if_interactive() -> None: ...
 
 def errorbar(
     x: ArrayLike, y: ArrayLike,
@@ -296,6 +341,8 @@ def gcf() -> Figure: ...
 
 def gci() -> Optional[ScalarMappable]: ...
 
+def get(obj: Artist, *args: Any, **kwargs: Any) -> Any: ...
+
 def get_current_fig_manager() -> FigureManagerBase: ...
 
 def get_figlabels() -> List[Any]: ...
@@ -304,12 +351,14 @@ def get_fignums() -> List[Any]: ...
 
 def get_plot_commands() -> List[str]: ...
 
+def getp(obj: Artist, *args: Any, **kwargs: Any) -> Any: ...
+
 # TODO: write overloads for various forms
 def ginput(*args: Any, **kwargs: Any) -> List[Tuple[float, float]]: ...
 
-def grat() -> None: ...
+def gray() -> None: ...
 
-def grid(b: Optional[bool] = ..., which: Literal["major", "minor", "both"] = ..., axis: Literal["both", "x", "y"] = ..., **kwargs: Any): ...
+def grid(b: Optional[bool] = ..., which: Literal["major", "minor", "both"] = ..., axis: Literal["both", "x", "y"] = ..., **kwargs: Any) -> None: ...
 
 def hexbin(
     x: ArrayLike, y: ArrayLike,
@@ -436,6 +485,8 @@ def locator_params(axis: Optional[Literal["both", "x", "y"]] = ..., tight: Optio
 # TODO: write overloads for various forms
 def loglog(*args: Any, **kwargs: Any) -> List[Line2D]: ...
 
+def magma() -> None: ...
+
 def magnitude_spectrum(
     x: ArrayLike,
     Fs: Optional[Scalar] = ...,
@@ -456,6 +507,8 @@ def matshow(A: ArrayLike, fignum: Optional[Union[int, Literal[False]]] = None, *
 def minorticks_off() -> None: ...
 
 def minorticks_on() -> None: ...
+
+def new_figure_manager(num: Union[int, str], *args: Any, **kwargs: Any) -> FigureManagerBase: ...
 
 def nipy_spectral() -> None: ...
 
@@ -538,20 +591,6 @@ def plot_date(
     data: Optional[Any] = ...,
     **kwargs: Any
 ) -> List[Line2D]: ...
-
-def plotfile(
-    fname: str,
-    cols: Sequence[Union[int, str]] = ...,
-    plotfuncs: Mapping[Union[int, str], str] = ...,
-    comments: Optional[str] = ...,
-    skiprows: int = ...,
-    checkrows: int = ...,
-    delimiter: str = ...,
-    names: Optional[Sequence[str]] = ...,
-    subplots: bool = ...,
-    newfig: bool = ...,
-    **kwargs: Any
-) -> None: ...
 
 # TODO: write overloads for various forms
 def polar(*args: Any, **kwargs: Any) -> None: ...
@@ -731,6 +770,8 @@ def subplot(*args: Any, **kwargs: Any) -> SubplotBase: ...
 
 def subplot2grid(shape: Sequence[int], loc: Sequence[int], rowspan: int = ..., colspan: int = ..., fig: Optional[Figure] = ..., **kwargs: Any) -> None: ...
 
+def subplot_mosaic(layout: Union[ArrayLike, str], *, subplot_kw: Optional[Dict[str, Any]] = ..., gridspec_kw: Optional[Dict[str, Any]] = ..., empty_sentinel: Any = ..., **fig_kw: Any) -> Tuple[Figure, Dict[str, Axes]]: ...
+
 def subplot_tool(targetfig: Optional[Figure]) -> SubplotTool: ...
 
 def subplots(
@@ -881,6 +922,3 @@ def ylim(*args: Any, **kwargs: Any) -> Tuple[float, float]: ...
 def yscale(value: str, **kwargs: Any) -> None: ...
 
 def yticks(ticks: Optional[ArrayLike] = ..., labels: Optional[ArrayLike] = ..., **kwargs: Any) -> Tuple[ArrayLike, List[Text]]: ... # TODO: What is "an array of label locations?
-
-# Should be colormap?
-def colormaps() -> Dict[str, Colormap]: ...

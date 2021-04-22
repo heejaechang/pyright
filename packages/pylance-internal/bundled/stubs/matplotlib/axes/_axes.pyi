@@ -38,6 +38,9 @@ class Axes(_AxesBase):
     
     # TODO: Many of these methods are actually defined on _AxesBase.
 
+    transData: Any  # TODO
+    transAxis: Any  # TODO
+
     def __init__(
         self,
         fig: Figure,
@@ -80,13 +83,13 @@ class Axes(_AxesBase):
 
     def annotate(self, s: str, xy: Tuple[float, float], *args: Any, **kwargs: Any) -> Annotation: ...
 
-    apply_aspect: Any  # TODO
+    def apply_aspect(self, position: Optional[ArrayLike] = ...) -> None: ...
 
     def arrow(self, x: float, y: float, dx: float, dy: float, **kwargs: Any) -> FancyArrow: ...
 
     def autoscale(self, enable: Optional[bool] = ..., axis: Optional[Literal["both", "x", "y"]] = ..., tight: Optional[bool] = ...) -> None: ...
 
-    autoscale_view: Any  # TODO
+    def autoscale_view(self, tight: Optional[bool] = ..., scalex: bool = ..., scaley: bool = ...) -> None: ...
 
     def axes(self, arg: Optional[Tuple[float, float, float, float]] = ..., **kwargs: Any) -> Axes: ...
 
@@ -117,7 +120,16 @@ class Axes(_AxesBase):
     # TODO: write overloads for various forms
     def barbs(self, *args: Any, data: Optional[Any] = ..., **kwargs: Any) -> Barbs: ...
 
-    bar_label: Any  # TODO
+    def bar_label(
+        self,
+        container: BarContainer,
+        labels: Optional[ArrayLike] = ...,
+        *,
+        fmt: str = ...,
+        label_type: Literal['edge', 'center'] = ...,
+        padding: float = ...,
+        **kwargs: Any
+    ) -> List[Text]: ...
 
     # barh is just bar, but x=left and bottom=y
     def barh(
