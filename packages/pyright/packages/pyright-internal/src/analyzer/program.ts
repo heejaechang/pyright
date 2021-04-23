@@ -55,6 +55,7 @@ import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../language
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { ParseResults } from '../parser/parser';
 import { ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
@@ -127,6 +128,8 @@ interface UpdateImportInfo {
     isPyTypedPresent: boolean;
 }
 
+export type PreCheckCallback = (parseResults: ParseResults, evaluator: TypeEvaluator) => void;
+
 // Container for all of the files that are being analyzed. Files
 // can fall into one or more of the following categories:
 //  Tracked - specified by the config options
@@ -143,6 +146,7 @@ export class Program {
     private _importResolver: ImportResolver;
     private _logTracker: LogTracker;
     private _parsedFileCount = 0;
+    private _preCheckCallback: PreCheckCallback | undefined;
 
     constructor(
         initialImportResolver: ImportResolver,
@@ -202,6 +206,12 @@ export class Program {
         this.addTrackedFiles(filePaths);
 
         return this._removeUnneededFiles();
+    }
+
+    // Allows a caller to set a callback that is called right before
+    // a source file is type checked. It is intended for testing only.
+    setPreCheckCallback(preCheckCallback: PreCheckCallback) {
+        this._preCheckCallback = preCheckCallback;
     }
 
     // By default, no third-party imports are allowed. This enables
@@ -822,6 +832,13 @@ export class Program {
             }
 
             this._bindFile(fileToCheck);
+
+            if (this._preCheckCallback) {
+                const parseResults = fileToCheck.sourceFile.getParseResults();
+                if (parseResults) {
+                    this._preCheckCallback(parseResults, this._evaluator!);
+                }
+            }
 
             fileToCheck.sourceFile.check(this._evaluator!);
 
