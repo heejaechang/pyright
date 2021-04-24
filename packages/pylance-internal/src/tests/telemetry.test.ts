@@ -8,7 +8,14 @@ import assert from 'assert';
 import { capture, instance, mock, verify, when } from 'ts-mockito';
 import { Connection, Telemetry } from 'vscode-languageserver/node';
 
-import { formatEventName, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import {
+    formatEventName,
+    sendExceptionTelemetry,
+    sendMeasurementsTelemetry,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService,
+} from '../common/telemetry';
 
 let ts: TelemetryService;
 let mockedTelemetry: Telemetry;
@@ -32,7 +39,7 @@ describe('Telemetry', () => {
 
         m['m1'] = 1;
         m['m2'] = 2;
-        ts.sendMeasurementsTelemetry(TelemetryEventName.ANALYSIS_COMPLETE, m);
+        sendMeasurementsTelemetry(ts, TelemetryEventName.ANALYSIS_COMPLETE, m);
 
         const [arg] = capture(mockedTelemetry.logEvent).first();
         const te = arg as TelemetryEvent;
@@ -52,7 +59,7 @@ describe('Telemetry', () => {
                 stack,
             };
 
-            ts.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
+            sendExceptionTelemetry(ts, TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
             const [arg] = capture(mockedTelemetry.logEvent).first();
             const te = arg as TelemetryEvent;
 

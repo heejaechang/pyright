@@ -12,7 +12,7 @@ import { ParseResults } from 'pyright-internal/parser/parser';
 
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
-import { getExceptionMessage, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import { getExceptionMessage, sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
 import { EditorInvocation, PythiaModel } from './models';
 import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';
@@ -176,7 +176,7 @@ export class DeepLearning {
     private logError(reason: string, e?: Error): void {
         if (e) {
             this._logger?.log(LogLevel.Error, `${reason}. Exception ${getExceptionMessage(e)}`);
-            this._telemetry?.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED, e);
+            sendExceptionTelemetry(this._telemetry, TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED, e);
         } else {
             this._logger?.log(LogLevel.Error, reason);
         }

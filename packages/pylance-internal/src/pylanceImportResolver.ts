@@ -28,7 +28,13 @@ import {
 import { Duration } from 'pyright-internal/common/timing';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
-import { TelemetryEvent, TelemetryEventName, TelemetryInterface } from './common/telemetry';
+import {
+    addMeasurementsToEvent,
+    addNativeModuleInfoToEvent,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryInterface,
+} from './common/telemetry';
 
 // Limit native module stub resolution to 'site-packages'
 // for both performance and possible PII reasons.
@@ -50,6 +56,8 @@ function getStubsPath(moduleDirectory: string, stubType: string) {
 export class ImportMetrics {
     private readonly _currentModules: Set<string> = new Set();
     private readonly _reportedModules: Set<string> = new Set();
+
+    private _changed = false;
 
     // Below, "unique" means "a unique way to import a module". For example,
     // the same file imported absolutely, imported absolutely with a different name,
@@ -79,28 +87,15 @@ export class ImportMetrics {
     relativeStubs = 0; // Unique relative imports that led to stubs.
     relativeUnresolved = 0; // Unique relative imports that didn't resolve.
 
-    isEmpty(): boolean {
-        return (
-            this.total === 0 &&
-            this.stubs === 0 &&
-            this.unresolvedTotal === 0 &&
-            this.absoluteTotal === 0 &&
-            this.absoluteStubs === 0 &&
-            this.absoluteUnresolved === 0 &&
-            this.absoluteUserUnresolved === 0 &&
-            this.thirdPartyImportTotal === 0 &&
-            this.thirdPartyImportStubs === 0 &&
-            this.localImportTotal === 0 &&
-            this.localImportStubs === 0 &&
-            this.builtinImportTotal === 0 &&
-            this.builtinImportStubs === 0 &&
-            this.relativeTotal === 0 &&
-            this.relativeStubs === 0 &&
-            this.relativeUnresolved === 0
-        );
+    constructor(private _resolverId: string) {
+        // empty
     }
 
-    public reset() {
+    setChanged() {
+        this._changed = true;
+    }
+
+    reset() {
         this.total = 0;
         this.stubs = 0;
         this.unresolvedTotal = 0;
@@ -119,24 +114,48 @@ export class ImportMetrics {
         this.relativeUnresolved = 0;
     }
 
-    public addNativeModule(moduleName: string): void {
+    addNativeModule(moduleName: string): void {
         if (!this._reportedModules.has(moduleName)) {
+            this.setChanged();
             this._currentModules.add(moduleName);
         }
     }
 
-    public getAndResetNativeModuleNames(): string[] {
+    private _getAndResetNativeModuleNames(): string[] {
         this._currentModules.forEach((m) => this._reportedModules.add(m));
         const moduleNames = [...this._currentModules];
         this._currentModules.clear();
         return moduleNames;
     }
+
+    report(telemetry: TelemetryInterface) {
+        if (!this._changed) {
+            return;
+        }
+
+        this._changed = false;
+
+        //send import metrics
+        const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
+        const nativeModules: Set<string> = new Set();
+
+        addMeasurementsToEvent(importEvent, this);
+
+        const nativeModuleNames = this._getAndResetNativeModuleNames();
+        if (nativeModuleNames.length > 0) {
+            nativeModuleNames.forEach((m) => nativeModules.add(m));
+
+            if (nativeModules.size > 0) {
+                addNativeModuleInfoToEvent(importEvent, [...nativeModules]);
+            }
+        }
+
+        importEvent.Properties['resolverId'] = this._resolverId;
+        telemetry.sendTelemetry(importEvent);
+    }
 }
 
-export type ImportMetricsCallback = (results: ImportMetrics) => void;
-
 export class PylanceImportResolver extends ImportResolver {
-    private _onImportMetricsCallback: ImportMetricsCallback | undefined;
     private _scrapedBuiltinsTempfile: string | undefined;
     private _scrapedBuiltinsFailed = false;
 
@@ -146,21 +165,19 @@ export class PylanceImportResolver extends ImportResolver {
     private _countedRelative = new Map<string, Set<string>>();
 
     private readonly _cachedHeuristicResults: ImportHeuristicCache;
-    readonly importMetrics = new ImportMetrics();
+    private readonly _importMetrics: ImportMetrics;
 
     constructor(
         fs: FileSystem,
         configOptions: ConfigOptions,
+        resolverId?: number,
         private _console?: ConsoleInterface,
         private _telemetry?: TelemetryInterface
     ) {
         super(fs, configOptions);
 
-        this._cachedHeuristicResults = new ImportHeuristicCache(this._console);
-    }
-
-    setStubUsageCallback(callback: ImportMetricsCallback | undefined): void {
-        this._onImportMetricsCallback = callback;
+        this._cachedHeuristicResults = new ImportHeuristicCache(resolverId?.toString() ?? 'N/A', this._console);
+        this._importMetrics = new ImportMetrics(resolverId?.toString() ?? 'N/A');
     }
 
     useImportHeuristic(useImportHeuristic: boolean) {
@@ -346,7 +363,7 @@ export class PylanceImportResolver extends ImportResolver {
             return;
         }
 
-        this.importMetrics.addNativeModule(importName);
+        this._importMetrics.addNativeModule(importName);
         const nativeStubsPath = getBundledNativeStubsPath(this.fileSystem.getModulePath());
         const stub = this.findNativeStub(libraryFilePath, nativeStubsPath);
         if (stub) {
@@ -358,14 +375,8 @@ export class PylanceImportResolver extends ImportResolver {
     }
 
     invalidateCache() {
-        if (this._onImportMetricsCallback) {
-            this._onImportMetricsCallback(this.importMetrics);
-        }
-        this.importMetrics.reset();
-
-        if (this._telemetry) {
-            this._cachedHeuristicResults.report(this._telemetry);
-        }
+        this.sendTelemetry();
+        this._importMetrics.reset();
         this._cachedHeuristicResults.reset();
 
         if (this._scrapedBuiltinsTempfile) {
@@ -384,6 +395,15 @@ export class PylanceImportResolver extends ImportResolver {
         this._countedRelative.clear();
 
         super.invalidateCache();
+    }
+
+    sendTelemetry() {
+        if (!this._telemetry) {
+            return;
+        }
+
+        this._importMetrics.report(this._telemetry);
+        this._cachedHeuristicResults.report(this._telemetry);
     }
 
     getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment, mapCompiled: boolean): string[] {
@@ -454,14 +474,16 @@ export class PylanceImportResolver extends ImportResolver {
 
         nameSet.add(importName);
 
-        this.importMetrics.total += 1;
-        this.importMetrics.stubs += importResult.isStubFile ? 1 : 0;
+        this._importMetrics.setChanged();
+
+        this._importMetrics.total += 1;
+        this._importMetrics.stubs += importResult.isStubFile ? 1 : 0;
         if (isRelative) {
-            this.importMetrics.relativeTotal += 1;
-            this.importMetrics.relativeStubs += importResult.isStubFile ? 1 : 0;
+            this._importMetrics.relativeTotal += 1;
+            this._importMetrics.relativeStubs += importResult.isStubFile ? 1 : 0;
         } else {
-            this.importMetrics.absoluteTotal += 1;
-            this.importMetrics.absoluteStubs += importResult.isStubFile ? 1 : 0;
+            this._importMetrics.absoluteTotal += 1;
+            this._importMetrics.absoluteStubs += importResult.isStubFile ? 1 : 0;
         }
 
         if (!importResult.isImportFound) {
@@ -500,13 +522,13 @@ export class PylanceImportResolver extends ImportResolver {
             }
 
             this._lastUnresolvedImportName = importName;
-            this.importMetrics.absoluteUserUnresolved += userUnresolved ? 1 : 0;
+            this._importMetrics.absoluteUserUnresolved += userUnresolved ? 1 : 0;
 
-            this.importMetrics.unresolvedTotal += newUnresolved ? 1 : 0;
+            this._importMetrics.unresolvedTotal += newUnresolved ? 1 : 0;
             if (isRelative) {
-                this.importMetrics.relativeUnresolved += newUnresolved ? 1 : 0;
+                this._importMetrics.relativeUnresolved += newUnresolved ? 1 : 0;
             } else {
-                this.importMetrics.absoluteUnresolved += newUnresolved ? 1 : 0;
+                this._importMetrics.absoluteUnresolved += newUnresolved ? 1 : 0;
             }
 
             return;
@@ -521,18 +543,18 @@ export class PylanceImportResolver extends ImportResolver {
 
         switch (importResult.importType) {
             case ImportType.ThirdParty: {
-                this.importMetrics.thirdPartyImportTotal += 1;
-                this.importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
+                this._importMetrics.thirdPartyImportTotal += 1;
+                this._importMetrics.thirdPartyImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.Local: {
-                this.importMetrics.localImportTotal += 1;
-                this.importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
+                this._importMetrics.localImportTotal += 1;
+                this._importMetrics.localImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             case ImportType.BuiltIn: {
-                this.importMetrics.builtinImportTotal += 1;
-                this.importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
+                this._importMetrics.builtinImportTotal += 1;
+                this._importMetrics.builtinImportStubs += importResult.isStubFile ? 1 : 0;
                 break;
             }
             default:
@@ -612,10 +634,11 @@ export class PylanceImportResolver extends ImportResolver {
 export function createPylanceImportResolver(
     fs: FileSystem,
     options: ConfigOptions,
+    resolverId?: number,
     console?: ConsoleInterface,
     telemetry?: TelemetryInterface
 ): PylanceImportResolver {
-    return new PylanceImportResolver(fs, options, console, telemetry);
+    return new PylanceImportResolver(fs, options, resolverId, console, telemetry);
 }
 
 interface ScanResult {
@@ -639,9 +662,11 @@ class ImportHeuristicCache {
     private _lastData: ScanResult | undefined;
     private _libPathCache: string[] | undefined = undefined;
 
+    private _changed = false;
+
     useImportHeuristic = false;
 
-    constructor(private _console?: ConsoleInterface) {
+    constructor(private _resolverId: string, private _console?: ConsoleInterface) {
         // empty
     }
 
@@ -741,6 +766,7 @@ class ImportHeuristicCache {
             result
         );
 
+        this._changed = true;
         this._lastData = scanResult;
 
         if (scanResult.success && !this.useImportHeuristic) {
@@ -751,9 +777,11 @@ class ImportHeuristicCache {
     }
 
     report(telemetry: TelemetryInterface) {
-        if (this._cachedHeuristicResults.size === 0 && this._failureReasons.size === 0) {
+        if (!this._changed || (this._cachedHeuristicResults.size === 0 && this._failureReasons.size === 0)) {
             return;
         }
+
+        this._changed = false;
 
         let succeeded = 0;
         let failed = 0;
@@ -785,14 +813,15 @@ class ImportHeuristicCache {
         event.Measurements['total'] = total;
         event.Measurements['success'] = succeeded;
         event.Measurements['conflicts'] = conflicts;
-        event.Measurements['avgCost'] = totalDuration / total;
-        event.Measurements['avgLevel'] = totalLevel / succeeded;
+        event.Measurements['avgCost'] = total === 0 ? 0 : totalDuration / total;
+        event.Measurements['avgLevel'] = succeeded === 0 ? 0 : totalLevel / succeeded;
 
         for (const [key, value] of this._failureReasons) {
             const measureKey = 'reason_' + key.replace(/ /gi, '_');
             event.Measurements[measureKey] = value;
         }
 
+        event.Properties['resolverId'] = this._resolverId;
         telemetry.sendTelemetry(event);
     }
 

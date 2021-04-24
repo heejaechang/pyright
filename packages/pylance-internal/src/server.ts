@@ -66,9 +66,8 @@ import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
 import {
-    addMeasurementsToEvent,
-    addNativeModuleInfoToEvent,
     CompletionCoverage,
+    sendExceptionTelemetry,
     StubTelemetry,
     TelemetryEvent,
     TelemetryEventName,
@@ -483,15 +482,7 @@ class PylanceServer extends LanguageServerBase {
     }
 
     protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        const resolver = createPylanceImportResolver(fs, options);
-
-        resolver.setStubUsageCallback((importMetrics) => {
-            if (!importMetrics.isEmpty()) {
-                this._telemetry?.sendMeasurementsTelemetry(TelemetryEventName.IMPORT_METRICS, importMetrics);
-            }
-        });
-
-        return resolver;
+        return createPylanceImportResolver(fs, options);
     }
 
     protected async executeCodeAction(
@@ -618,7 +609,7 @@ class PylanceServer extends LanguageServerBase {
         super.onAnalysisCompletedHandler(results);
 
         if (results.error) {
-            this._telemetry.sendExceptionTelemetry(TelemetryEventName.ANALYSIS_EXCEPTION, results.error);
+            sendExceptionTelemetry(this._telemetry, TelemetryEventName.ANALYSIS_EXCEPTION, results.error);
         }
 
         if (results.diagnostics.length === 0 && results.filesRequiringAnalysis > 0 && results.elapsedTime === 0) {
@@ -704,34 +695,6 @@ class PylanceServer extends LanguageServerBase {
             return;
         }
         this._telemetry.sendTelemetry(te);
-
-        //send import metrics
-        let shouldSend = false;
-        const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
-        const nativeModules: Set<string> = new Set();
-
-        this._workspaceMap.forEach((workspace) => {
-            const resolver = workspace.serviceInstance.getImportResolver();
-            if (resolver instanceof PylanceImportResolver) {
-                if (!resolver.importMetrics.isEmpty()) {
-                    addMeasurementsToEvent(importEvent, resolver.importMetrics);
-                    shouldSend = true;
-                }
-
-                const nativeModuleNames = resolver.importMetrics.getAndResetNativeModuleNames();
-                if (nativeModuleNames.length > 0) {
-                    nativeModuleNames.forEach((m) => nativeModules.add(m));
-                    shouldSend = true;
-                }
-            }
-        });
-
-        if (shouldSend) {
-            if (nativeModules.size > 0) {
-                addNativeModuleInfoToEvent(importEvent, [...nativeModules]);
-            }
-            this._telemetry.sendTelemetry(importEvent);
-        }
     }
 
     private async _inExperiment(experimentName: string): Promise<boolean | undefined> {

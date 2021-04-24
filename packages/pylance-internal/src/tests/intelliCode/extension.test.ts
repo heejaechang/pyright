@@ -36,7 +36,6 @@ describe('IntelliCode extension', () => {
         await ic.updateSettings(false);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
-        verify(mockedTelemetry.sendExceptionTelemetry(anything(), anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
     });
 
@@ -45,7 +44,6 @@ describe('IntelliCode extension', () => {
         await ic.updateSettings(true);
 
         verify(mockedTelemetry.sendTelemetry(anything())).never();
-        verify(mockedTelemetry.sendExceptionTelemetry(anything(), anything())).never();
         verify(mockedLog.log(anything(), anyString())).never();
     });
 
@@ -55,8 +53,8 @@ describe('IntelliCode extension', () => {
         await ic.updateSettings(true);
 
         // Test model is not loadable into ONNX, so exception is expected.
-        const [eventName, e] = capture(mockedTelemetry.sendExceptionTelemetry).first();
-        expect(eventName).toEqual(TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED);
+        const [event] = capture(mockedTelemetry.sendTelemetry).first();
+        expect(event.EventName).toEqual(`language_server/${TelemetryEventName.INTELLICODE_ONNX_LOAD_FAILED}`);
     });
 
     test('command prefix', async () => {

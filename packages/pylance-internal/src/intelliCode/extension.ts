@@ -17,7 +17,13 @@ import { ParseResults } from 'pyright-internal/parser/parser';
 import { Commands, IntelliCodeCompletionCommandPrefix } from '../commands/commands';
 import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
-import { getExceptionMessage, TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
+import {
+    getExceptionMessage,
+    sendExceptionTelemetry,
+    TelemetryEvent,
+    TelemetryEventName,
+    TelemetryService,
+} from '../common/telemetry';
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
@@ -267,7 +273,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         } catch (e) {
             const reason = 'Failed to load IntelliCode model';
             this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
-            this._telemetry.sendExceptionTelemetry(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
+            sendExceptionTelemetry(this._telemetry, TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
         }
     }
 }

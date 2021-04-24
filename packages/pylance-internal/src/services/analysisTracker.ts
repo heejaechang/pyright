@@ -7,9 +7,7 @@
 import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
 import { Duration } from 'pyright-internal/common/timing';
 
-import { TelemetryEvent, TelemetryEventName } from '../common/telemetry';
-
-const TelemetryWaitTimeSeconds = 60;
+import { TelemetryEvent, TelemetryEventName, TelemetryWaitTimeSeconds } from '../common/telemetry';
 
 export class AnalysisTracker {
     private _elapsedSum = 0; // In seconds.

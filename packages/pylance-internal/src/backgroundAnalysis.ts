@@ -31,9 +31,16 @@ import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
 import { isString } from 'pyright-internal/common/core';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Range } from 'pyright-internal/common/textRange';
+import { Duration } from 'pyright-internal/common/timing';
 
 import { mainFilename } from './common/mainModuleFileName';
-import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from './common/telemetry';
+import {
+    TelemetryEventInterface,
+    TelemetryEventName,
+    TelemetryInterface,
+    TelemetryWaitTimeSeconds,
+    trackPerf,
+} from './common/telemetry';
 import { getSemanticTokens } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
 import { BackgroundIndexRunner, Indexer } from './services/indexer';
@@ -136,6 +143,10 @@ const WORKSPACEINDEX_THRESHOLD_MS = 10000;
 
 class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     private readonly _telemetry: TelemetryInterface;
+    private readonly _telemetryDuration = new Duration();
+
+    private _lastTelemetryReported = -Infinity;
+    private _resolverId = 0;
 
     constructor() {
         super();
@@ -188,13 +199,18 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
         }
     }
 
-    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        // This will let us send telemetry from BG
-        if (this._importResolver) {
-            this._importResolver.invalidateCache();
-        }
+    protected analysisDone(port: MessagePort, cancellationId: string) {
+        super.analysisDone(port, cancellationId);
 
-        return createPylanceImportResolver(fs, options, this.getConsole(), this._telemetry);
+        const current = this._telemetryDuration.getDurationInSeconds();
+        if (current - this._lastTelemetryReported > TelemetryWaitTimeSeconds) {
+            (this._importResolver as PylanceImportResolver).sendTelemetry();
+            this._lastTelemetryReported = current;
+        }
+    }
+
+    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
+        return createPylanceImportResolver(fs, options, this._resolverId++, this.getConsole(), this._telemetry);
     }
 
     protected processIndexing(port: MessagePort, token: CancellationToken) {

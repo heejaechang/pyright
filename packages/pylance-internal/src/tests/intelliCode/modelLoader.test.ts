@@ -127,11 +127,11 @@ describe('IntelliCode model loader', () => {
         expect(callArgs[1]).toStartWith(message);
 
         if (!skipException) {
-            const [eventName, e] = capture(mockedTelemetry.sendExceptionTelemetry).first();
-            expect(eventName).toEqual(TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED);
-            expect(e).toBeDefined();
+            const [event] = capture(mockedTelemetry.sendTelemetry).first();
+            expect(event.EventName).toEqual(`language_server/${TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED}`);
+            expect(event.Exception).toBeDefined();
             expectedErrorName = expectedErrorName ?? defaultErrorName;
-            expect(e.name).toEqual(expectedErrorName);
+            expect(event.Exception?.name).toEqual(expectedErrorName);
         }
     }
 });

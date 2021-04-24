@@ -39,6 +39,8 @@ const statsDelayMs = 5 * 1000 * 60; // 5 minutes
 
 const languageServerEventPrefix = 'language_server/';
 
+export const TelemetryWaitTimeSeconds = 60;
+
 // Exported for tests.
 export function formatEventName(eventName: string): string {
     return `${languageServerEventPrefix}${eventName}`;
@@ -103,16 +105,29 @@ export class TelemetryService implements TelemetryInterface {
     sendTelemetry(event: TelemetryEvent): void {
         this._connection?.telemetry.logEvent(event);
     }
+}
 
-    sendExceptionTelemetry(eventName: TelemetryEventName, e: Error): void {
-        this.sendTelemetry(new TelemetryEvent(eventName, e));
+export function sendExceptionTelemetry(
+    service: TelemetryInterface | undefined,
+    eventName: TelemetryEventName,
+    e: Error
+): void {
+    service?.sendTelemetry(new TelemetryEvent(eventName, e));
+}
+
+export function sendMeasurementsTelemetry(
+    service: TelemetryInterface | undefined,
+    eventName: TelemetryEventName,
+    metrics: Object
+) {
+    if (!service) {
+        return;
     }
 
-    sendMeasurementsTelemetry(telemetryEventName: TelemetryEventName, metrics: Object) {
-        const te = new TelemetryEvent(telemetryEventName);
-        addMeasurementsToEvent(te, metrics);
-        this.sendTelemetry(te);
-    }
+    const te = new TelemetryEvent(eventName);
+    addMeasurementsToEvent(te, metrics);
+
+    service.sendTelemetry(te);
 }
 
 export function addMeasurementsToEvent(te: TelemetryEvent, metrics: Object) {
