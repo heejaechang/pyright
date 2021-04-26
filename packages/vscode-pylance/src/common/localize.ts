@@ -17,10 +17,6 @@ export namespace LanguageServer {
     );
     export const turnItOn = localize('LanguageServer.turnItOn', 'Yes, and reload');
     export const noThanks = localize('LanguageServer.noThanks', 'No thanks');
-    export const surveyMessage = localize(
-        'LanguageServer.surveyMessage',
-        'Can you please take 2 minutes to tell us how Pylance language server is working for you?'
-    );
     export const settingsMigratedMessage = localize(
         'LanguageServer.settingsMigratedMessage',
         'Settings applicable to Microsoft Language Server were copied to Pylance settings. Please check settings.json file(s) for details.'
