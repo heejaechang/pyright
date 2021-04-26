@@ -347,7 +347,7 @@ class DocstringSigParser(object):
         while tokens:
             tt, s = tokens.pop(0)
             if tt == tokenize.NAME:
-                if s == override_name:
+                if override_name is not None and s == override_name:
                     name = s
 
                 if name is None:
@@ -392,7 +392,7 @@ class DocstringSigParser(object):
         # We also prevent going too far into the expression so it does not pick random x() in comments.
         if "\n\n" not in expr and name not in expr:
             return None
-            
+
         expr = expr.split("\n\n")[0]
         if not expr or ")" not in expr:
             return None
@@ -413,7 +413,7 @@ class DocstringSigParser(object):
             # Nothing before "("
             return None
 
-        if not tokens[tokenLength - 1].isidentifier():
+        if not tokens[tokenLength - 1].isidentifier() and name not in tokens[tokenLength - 1]:
             # Token before "(" is not valid identifier.
             return None
 
