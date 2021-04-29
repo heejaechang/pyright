@@ -34,6 +34,7 @@ import {
     normalizeSlashes,
 } from 'pyright-internal/common/pathUtils';
 import * as StringUtils from 'pyright-internal/common/stringUtils';
+import { convertSymbolKindToCompletionItemKind } from 'pyright-internal/languageService/autoImporter';
 import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/documentSymbolProvider';
 
 import { deleteElement } from '../common/collectionUtils';
@@ -533,11 +534,13 @@ function readStdLibIndices(
             name: data[0],
             externallyVisible: data[1],
             kind: data[2],
+            itemKind: convertSymbolKindToCompletionItemKind(data[2]),
             alias: alias
                 ? {
                       originalName: alias[0],
                       modulePath: normalizeSlashes(combinePaths(stdLibPath!, alias[1])),
                       kind: alias[2],
+                      itemKind: convertSymbolKindToCompletionItemKind(alias[2]),
                   }
                 : undefined,
             range: undefined,
