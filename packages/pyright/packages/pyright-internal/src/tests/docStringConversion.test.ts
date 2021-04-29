@@ -718,42 +718,6 @@ test('EscapeHtmlTagsOutsideCodeBlocks', () => {
     _testConvertToMarkdown(docstring, markdown);
 });
 
-test('ReSTTablesSimple', () => {
-    const docstring = `
-=============== =========================================================
-Generator
---------------- ---------------------------------------------------------
-Generator       Class implementing all of the random number distributions
-default_rng     Default constructor for \`\`Generator\`\`
-=============== =========================================================`;
-
-    const markdown = `
-|Generator | |
-|--------------- |---------------------------------------------------------|
-|Generator       |Class implementing all of the random number distributions|
-|default_rng     |Default constructor for \`\`Generator\`\`|`;
-
-    _testConvertToMarkdown(docstring, markdown);
-});
-
-test('ReSTTablesMultilineHeader', () => {
-    const docstring = `
-==================== =========================================================
-Compatibility
-functions - removed
-in the new API
--------------------- ---------------------------------------------------------
-rand                 Uniformly distributed values.
-==================== =========================================================`;
-
-    const markdown = `
-|Compatibility <br>functions - removed <br>in the new API | <br> <br> |
-|-------------------- |---------------------------------------------------------|
-|rand                 |Uniformly distributed values.|`;
-
-    _testConvertToMarkdown(docstring, markdown);
-});
-
 function _testConvertToMarkdown(docstring: string, expectedMarkdown: string) {
     const actualMarkdown = convertDocStringToMarkdown(docstring);
 
