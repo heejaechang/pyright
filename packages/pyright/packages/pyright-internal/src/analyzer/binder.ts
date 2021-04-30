@@ -135,10 +135,6 @@ interface FinalInfo {
     finalTypeNode?: ExpressionNode;
 }
 
-export interface BinderResults {
-    moduleDocString?: string;
-}
-
 export class Binder extends ParseTreeWalker {
     private readonly _fileInfo: AnalyzerFileInfo;
 
@@ -212,7 +208,7 @@ export class Binder extends ParseTreeWalker {
         this._fileInfo = fileInfo;
     }
 
-    bindModule(node: ModuleNode): BinderResults {
+    bindModule(node: ModuleNode): void {
         // We'll assume that if there is no builtins scope provided, we must be
         // binding the builtins module itself.
         const isBuiltInModule = this._fileInfo.builtinsScope === undefined;
@@ -271,10 +267,6 @@ export class Binder extends ParseTreeWalker {
                 scope.symbolTable.get(name)?.setIsInDunderAll();
             }
         }
-
-        return {
-            moduleDocString: ParseTreeUtils.getDocString(node.statements),
-        };
     }
 
     visitModule(node: ModuleNode): boolean {
