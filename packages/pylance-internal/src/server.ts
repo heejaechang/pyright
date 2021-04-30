@@ -159,6 +159,7 @@ class PylanceServer extends LanguageServerBase {
             useLibraryCodeForTypes: true,
             watchForSourceChanges: true,
             watchForLibraryChanges: true,
+            watchForConfigChanges: true,
             typeCheckingMode: 'off',
             diagnosticSeverityOverrides: {},
             logLevel: LogLevel.Info,
