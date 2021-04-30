@@ -67,7 +67,7 @@ export class PackageScanner<T> {
         const packageInfoPerExecEnv = new Map<string, PackageInfo[]>();
         const packgeInfoPerFilePath = new Map<string, PackageInfo>();
         for (const [execEnvRoot, moduleMap] of this._indicesPerExecEnv) {
-            for (const [_, packageInfo] of moduleMap) {
+            for (const [, packageInfo] of moduleMap) {
                 if (!packageInfo.stdLib && packageInfo.isStub && !packageInfo.shadowed) {
                     // filter out any third party library stubs that doesn't have corresponding
                     // library installed in current execution environment.

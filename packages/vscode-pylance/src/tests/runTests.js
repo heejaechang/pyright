@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-const fs = require('fs');
 const path = require('path');
 const vsct = require('vscode-test');
 const extRoot = path.resolve(__dirname, '..', '..');

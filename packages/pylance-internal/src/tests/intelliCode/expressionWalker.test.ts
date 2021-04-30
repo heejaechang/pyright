@@ -10,7 +10,7 @@ import { StandardVariableType } from '../../intelliCode/types';
 import { getParseResultsAndWalkExpressions } from './testUtils';
 
 function walkExpressions(code: string) {
-    const [_, ew] = getParseResultsAndWalkExpressions(code);
+    const [, ew] = getParseResultsAndWalkExpressions(code);
     return ew;
 }
 

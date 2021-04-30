@@ -31,7 +31,7 @@ describe('Settings migration', () => {
         expect(json.contributes.configuration.properties).toBeDefined();
         const props = json.contributes.configuration.properties;
 
-        for (const [_, to] of Array.from(settingsMigrationMap.entries())) {
+        for (const [, to] of Array.from(settingsMigrationMap.entries())) {
             const propName = `python.${to}`;
             if (!props[propName]) {
                 fail(`'${propName}' is not in package.json`);

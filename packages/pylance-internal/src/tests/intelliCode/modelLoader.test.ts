@@ -6,7 +6,7 @@
 
 import 'jest-extended';
 
-import { anyString, anything, capture, instance, mock, spy, verify, when } from 'ts-mockito';
+import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
 
 import { LogLevel } from 'pyright-internal/common/console';
 

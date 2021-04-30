@@ -4,15 +4,9 @@
 import { ConfigurationTarget, Memento } from 'vscode';
 
 import * as localize from './common/localize';
-import {
-    getRandomBetween,
-    isPylanceDefaultLanguageServer,
-    LanguageServerSettingName,
-    PylanceName,
-} from './common/utils';
+import { isPylanceDefaultLanguageServer, LanguageServerSettingName, PylanceName } from './common/utils';
 import { AppConfiguration } from './types/appConfig';
 import { ApplicationShell } from './types/appShell';
-import { BrowserService } from './types/browser';
 import { Command, CommandManager } from './types/commandManager';
 
 abstract class BannerBase {
