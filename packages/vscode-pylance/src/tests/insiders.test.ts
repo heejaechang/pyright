@@ -5,7 +5,13 @@ import { ConfigurationChangeEvent, Progress, Uri } from 'vscode';
 
 import * as localize from '../common/localize';
 import { PersistentState, PersistentStateFactory, StateKey } from '../common/persistentState';
-import { DownloadChannel, fullInsidersChannelSetting, insidersChannelSetting, InsidersImpl } from '../insiders';
+import {
+    DownloadChannel,
+    fullInsidersChannelSetting,
+    fullPythonInsidersChannelSetting,
+    insidersChannelSetting,
+    InsidersImpl,
+} from '../insiders';
 import { BlobStorage, DownloadProgress, VersionedBlob } from '../insiders/blobStorage';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
@@ -106,7 +112,42 @@ describe('Insiders', () => {
         }
     }
 
+    function mockConfig(pylance: string | undefined, python: string | undefined) {
+        when(appConfig.inspect<string>('pylance', insidersChannelSetting)).thenReturn({
+            key: fullInsidersChannelSetting,
+            defaultValue: 'off',
+            globalValue: pylance,
+        });
+
+        when(appConfig.inspect<string>('python', insidersChannelSetting)).thenReturn({
+            key: fullPythonInsidersChannelSetting,
+            defaultValue: 'off',
+            globalValue: python,
+        });
+    }
+
     describe('onStartup', () => {
+        test('default', async () => {
+            const insiders = new InsidersImpl(
+                '2020.10.1',
+                downloadDir,
+                instance(appConfig),
+                instance(appShell),
+                instance(persistentState),
+                instance(blobStorage),
+                instance(commandManager)
+            );
+
+            mockConfig(undefined, undefined);
+            when(currentChannelState.value).thenReturn(undefined);
+
+            await insiders.onStartup();
+
+            verify(currentChannelState.updateValue('off')).once();
+            verify(lastUpdateState.updateValue(undefined)).once();
+            verifyNoCommands();
+        });
+
         test('off', async () => {
             const insiders = new InsidersImpl(
                 '2020.10.1',
@@ -118,7 +159,28 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig('off', undefined);
+            when(currentChannelState.value).thenReturn(undefined);
+
+            await insiders.onStartup();
+
+            verify(currentChannelState.updateValue('off')).once();
+            verify(lastUpdateState.updateValue(undefined)).once();
+            verifyNoCommands();
+        });
+
+        test('off with python insiders', async () => {
+            const insiders = new InsidersImpl(
+                '2020.10.1',
+                downloadDir,
+                instance(appConfig),
+                instance(appShell),
+                instance(persistentState),
+                instance(blobStorage),
+                instance(commandManager)
+            );
+
+            mockConfig('off', 'daily');
             when(currentChannelState.value).thenReturn(undefined);
 
             await insiders.onStartup();
@@ -139,7 +201,7 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn(undefined);
             when(
                 appShell.showInformationMessage(
@@ -167,7 +229,7 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('daily');
+            mockConfig('daily', undefined);
             when(currentChannelState.value).thenReturn('daily');
             when(lastUpdateState.value).thenReturn(Date.now());
 
@@ -189,7 +251,7 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn('daily');
             when(lastUpdateState.value).thenReturn(undefined);
 
@@ -213,7 +275,7 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn('off');
 
             when(
@@ -244,7 +306,7 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn('off');
 
             await insiders.onStartup();
@@ -269,7 +331,71 @@ describe('Insiders', () => {
                 instance(commandManager)
             );
 
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('daily');
+            mockConfig('daily', undefined);
+            when(currentChannelState.value).thenReturn('daily');
+            when(lastUpdateState.value).thenReturn(0);
+
+            when(
+                appShell.showInformationMessage(
+                    localize.Insiders.downgradeInsiders(),
+                    localize.LanguageServer.turnItOn(),
+                    localize.Common.no()
+                )
+            ).thenReturn(Promise.resolve(localize.LanguageServer.turnItOn()));
+
+            const blob: VersionedBlob = {
+                name: 'vscode-pylance-2020.10.2-pre.1.vsix',
+                version: new SemVer('2020.10.2-pre.1'),
+                contentLength: 128,
+            };
+
+            await verifyUpdate(async () => await insiders.onStartup(), blob, false, false);
+        });
+
+        test('daily python, and ready to check', async () => {
+            const insiders = new InsidersImpl(
+                '2020.10.1',
+                downloadDir,
+                instance(appConfig),
+                instance(appShell),
+                instance(persistentState),
+                instance(blobStorage),
+                instance(commandManager)
+            );
+
+            mockConfig(undefined, 'daily');
+            when(currentChannelState.value).thenReturn('daily');
+            when(lastUpdateState.value).thenReturn(0);
+
+            when(
+                appShell.showInformationMessage(
+                    localize.Insiders.downgradeInsiders(),
+                    localize.LanguageServer.turnItOn(),
+                    localize.Common.no()
+                )
+            ).thenReturn(Promise.resolve(localize.LanguageServer.turnItOn()));
+
+            const blob: VersionedBlob = {
+                name: 'vscode-pylance-2020.10.2-pre.1.vsix',
+                version: new SemVer('2020.10.2-pre.1'),
+                contentLength: 128,
+            };
+
+            await verifyUpdate(async () => await insiders.onStartup(), blob, false, false);
+        });
+
+        test('weekly python, and ready to check', async () => {
+            const insiders = new InsidersImpl(
+                '2020.10.1',
+                downloadDir,
+                instance(appConfig),
+                instance(appShell),
+                instance(persistentState),
+                instance(blobStorage),
+                instance(commandManager)
+            );
+
+            mockConfig(undefined, 'weekly');
             when(currentChannelState.value).thenReturn('daily');
             when(lastUpdateState.value).thenReturn(0);
 
@@ -329,7 +455,7 @@ describe('Insiders', () => {
             );
 
             when(event.affectsConfiguration(fullInsidersChannelSetting)).thenReturn(true);
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('daily');
+            mockConfig('daily', undefined);
             when(currentChannelState.value).thenReturn('daily');
 
             await insiders.onChange(instance(event));
@@ -351,7 +477,7 @@ describe('Insiders', () => {
             );
 
             when(event.affectsConfiguration(fullInsidersChannelSetting)).thenReturn(true);
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn('daily');
 
             when(
@@ -383,7 +509,7 @@ describe('Insiders', () => {
             );
 
             when(event.affectsConfiguration(fullInsidersChannelSetting)).thenReturn(true);
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('off');
+            mockConfig(undefined, undefined);
             when(currentChannelState.value).thenReturn('daily');
 
             when(
@@ -417,7 +543,7 @@ describe('Insiders', () => {
             );
 
             when(event.affectsConfiguration(fullInsidersChannelSetting)).thenReturn(true);
-            when(appConfig.getSetting<DownloadChannel>('pylance', insidersChannelSetting)).thenReturn('daily');
+            mockConfig('daily', undefined);
             when(currentChannelState.value).thenReturn('off');
             when(lastUpdateState.value).thenReturn(0);
 

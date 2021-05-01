@@ -14,6 +14,7 @@ export type DownloadChannel = 'off' | 'daily';
 
 export const insidersChannelSetting = 'insidersChannel';
 export const fullInsidersChannelSetting = 'pylance.' + insidersChannelSetting;
+export const fullPythonInsidersChannelSetting = 'python.' + insidersChannelSetting;
 
 const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -44,10 +45,7 @@ export class InsidersImpl {
     }
 
     async onStartup(): Promise<void> {
-        const prerelease = this._version.prerelease;
-        if (prerelease.length !== 0 && prerelease[0] !== 'pre') {
-            // If the version has a prerelease section and it's not "pre",
-            // then it's a dev/PR build. Do nothing.
+        if (this._isDevBuild()) {
             return;
         }
 
@@ -64,7 +62,14 @@ export class InsidersImpl {
     }
 
     async onChange(e: ConfigurationChangeEvent): Promise<void> {
-        if (!e.affectsConfiguration(fullInsidersChannelSetting)) {
+        if (this._isDevBuild()) {
+            return;
+        }
+
+        if (
+            !e.affectsConfiguration(fullInsidersChannelSetting) &&
+            !e.affectsConfiguration(fullPythonInsidersChannelSetting)
+        ) {
             return;
         }
 
@@ -82,8 +87,15 @@ export class InsidersImpl {
         await this._update(false);
     }
 
+    private _isDevBuild(): boolean {
+        // If the version has a prerelease section and it's not "pre",
+        // then it's a dev/PR build.
+        const prerelease = this._version.prerelease;
+        return prerelease.length !== 0 && prerelease[0] !== 'pre';
+    }
+
     private _updateChannel(): [current: DownloadChannel, changed: boolean] {
-        const current = this.config.getSetting<DownloadChannel>('pylance', insidersChannelSetting) ?? 'off';
+        const current = this._effectiveChannel();
         const last = this._currentChannel.value;
 
         if (current === last) {
@@ -92,6 +104,18 @@ export class InsidersImpl {
 
         this._currentChannel.updateValue(current);
         return [current, true];
+    }
+
+    private _effectiveChannel(): DownloadChannel {
+        const pylance = this.config.inspect<string>('pylance', insidersChannelSetting);
+        const python = this.config.inspect<string>('python', insidersChannelSetting);
+        const setting = pylance?.globalValue ?? python?.globalValue ?? pylance?.defaultValue;
+
+        if (setting) {
+            return setting === 'off' ? 'off' : 'daily';
+        }
+
+        return 'off';
     }
 
     private _readyToCheck(): boolean {
