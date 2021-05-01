@@ -1064,12 +1064,11 @@ def mro_contains(mro, name, value):
 
 
 class ScrapeState(object):
-    def __init__(self, module_name, search_path, out):
+    def __init__(self, module_name, search_path):
         self.root_module = None
         self.module_name = module_name
         self.module = do_import(self.module_name, search_path)
         self.members = []
-        print_module_version(self.module, out)
 
     def collect_top_level_members(self):
         self._collect_members(self.module, self.members, MODULE_MEMBER_SUBSTITUTE, None)
@@ -1239,6 +1238,14 @@ class ScrapeState(object):
         return True
 
     def dump(self, out):
+        print_module_version(self.module, out)
+
+        documentation = getattr(self.module, "__doc__", None)
+        if isinstance(documentation, str):
+            print("", file=out)
+            print(repr(documentation), file=out)
+            print("", file=out)
+
         print("import typing", file=out)
 
         imports = set()
@@ -1265,7 +1272,7 @@ def main():
     module_name = sys.argv[1] if len(sys.argv) > 1 else "builtins"
     search_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    state = ScrapeState(module_name, search_path, sys.stdout)
+    state = ScrapeState(module_name, search_path)
     state.collect_top_level_members()
 
     state.members[:] = [m for m in state.members if m.name not in keyword.kwlist]
