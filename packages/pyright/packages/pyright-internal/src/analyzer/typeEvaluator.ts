@@ -1336,7 +1336,7 @@ export function createTypeEvaluator(
     function isAnnotationEvaluationPostponed(fileInfo: AnalyzerFileInfo) {
         return (
             fileInfo.futureImports.get('annotations') !== undefined ||
-            fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_10 ||
+            fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_11 ||
             fileInfo.isStubFile
         );
     }
@@ -2821,7 +2821,9 @@ export function createTypeEvaluator(
         }
 
         const diagnostic = fileInfo.diagnosticSink.addDiagnosticWithTextRange(diagLevel, message, range);
-        diagnostic.setRule(rule);
+        if (rule) {
+            diagnostic.setRule(rule);
+        }
 
         return diagnostic;
     }
@@ -6346,6 +6348,7 @@ export function createTypeEvaluator(
 
                 useSpeculativeMode(errorNode, () => {
                     typeVarMap.addSolveForScope(getTypeVarScopeId(overload));
+                    typeVarMap.unlock();
                     return validateFunctionArgumentTypes(
                         errorNode,
                         matchResults,
@@ -7061,7 +7064,7 @@ export function createTypeEvaluator(
                             const castToType = getTypeForArgumentExpectingType(argList[0]);
                             const castFromType = getTypeForArgument(argList[1]);
                             if (isClass(castToType) && isObject(castFromType)) {
-                                if (isTypeSame(castToType, castFromType.classType)) {
+                                if (isTypeSame(castToType, castFromType.classType, /* ignorePseudoGeneric */ true)) {
                                     addDiagnostic(
                                         getFileInfo(errorNode).diagnosticRuleSet.reportUnnecessaryCast,
                                         DiagnosticRule.reportUnnecessaryCast,
@@ -8008,7 +8011,7 @@ export function createTypeEvaluator(
                 const typeParams = type.strippedFirstParamType!.classType.details.typeParameters;
                 type.strippedFirstParamType.classType.typeArguments.forEach((typeArg, index) => {
                     const typeParam = typeParams[index];
-                    if (!isTypeSame(typeParam, typeArg)) {
+                    if (!isTypeSame(typeParam, typeArg, /* ignorePseudoGeneric */ true)) {
                         typeVarMap.setTypeVarType(typeParams[index], typeArg);
                     }
                 });
@@ -10264,7 +10267,7 @@ export function createTypeEvaluator(
             if (getFileInfo(node).diagnosticRuleSet.strictDictionaryInference || !!expectedType) {
                 valueType = combineTypes(valueTypes);
             } else {
-                valueType = areTypesSame(valueTypes)
+                valueType = areTypesSame(valueTypes, /* ignorePseudoGeneric */ true)
                     ? valueTypes[0]
                     : expectedType
                     ? AnyType.create()
@@ -10550,7 +10553,9 @@ export function createTypeEvaluator(
                 inferredEntryType = combineTypes(entryTypes, maxSubtypesForInferredType);
             } else {
                 // Is the list or set homogeneous? If so, use stricter rules. Otherwise relax the rules.
-                inferredEntryType = areTypesSame(entryTypes) ? entryTypes[0] : inferredEntryType;
+                inferredEntryType = areTypesSame(entryTypes, /* ignorePseudoGeneric */ true)
+                    ? entryTypes[0]
+                    : inferredEntryType;
             }
         } else {
             isEmptyContainer = true;
@@ -18934,7 +18939,7 @@ export function createTypeEvaluator(
         // Some protocol definitions include recursive references to themselves.
         // We need to protect against infinite recursion, so we'll check for that here.
         if (ClassType.isSameGenericClass(srcType, destType)) {
-            if (isTypeSame(srcType, destType)) {
+            if (isTypeSame(srcType, destType, /* ignorePseudoGeneric */ true)) {
                 return true;
             }
 
@@ -19426,7 +19431,14 @@ export function createTypeEvaluator(
                     typesAreConsistent = false;
                 }
 
-                if (!isTypeSame(destEntry.valueType, srcEntry.valueType, recursionCount + 1)) {
+                if (
+                    !isTypeSame(
+                        destEntry.valueType,
+                        srcEntry.valueType,
+                        /* ignorePseudoGeneric */ true,
+                        recursionCount + 1
+                    )
+                ) {
                     diag.addMessage(Localizer.DiagnosticAddendum.memberTypeMismatch().format({ name }));
                     typesAreConsistent = false;
                 }
@@ -20303,7 +20315,7 @@ export function createTypeEvaluator(
             if (destTypeVar.details.constraints.length > 0) {
                 if (
                     findSubtype(srcType, (srcSubtype, constraints) => {
-                        if (isTypeSame(destTypeVar, srcSubtype)) {
+                        if (isTypeSame(destTypeVar, srcSubtype, /* ignorePseudoGeneric */ true)) {
                             return false;
                         }
 
@@ -20560,6 +20572,16 @@ export function createTypeEvaluator(
                 let bestTypeVarMap: TypeVarMap | undefined;
                 let bestTypeVarMapScore: number | undefined;
 
+                // If the srcType is a literal, try to use the fast-path lookup
+                // in case the destType is a union with hundreds of literals.
+                if (
+                    isObject(srcType) &&
+                    isLiteralType(srcType) &&
+                    UnionType.containsType(destType, srcType, /* constraints */ undefined)
+                ) {
+                    return true;
+                }
+
                 doForEachSubtype(destType, (subtype) => {
                     // Make a temporary clone of the typeVarMap. We don't want to modify
                     // the original typeVarMap until we find the "optimal" typeVar mapping.
@@ -20623,8 +20645,13 @@ export function createTypeEvaluator(
             const srcTypeArgs = srcType.classType.typeArguments;
             if (srcTypeArgs && srcTypeArgs.length >= 1) {
                 if (isAnyOrUnknown(srcTypeArgs[0])) {
+                    if (isObject(destType) && ClassType.isBuiltIn(srcType.classType, 'type')) {
+                        return true;
+                    }
                     return TypeBase.isInstantiable(transformTypeObjectToClass(destType));
-                } else if (isObject(srcTypeArgs[0]) || isTypeVar(srcTypeArgs[0])) {
+                }
+
+                if (isObject(srcTypeArgs[0]) || isTypeVar(srcTypeArgs[0])) {
                     if (
                         canAssignType(
                             transformTypeObjectToClass(destType),
