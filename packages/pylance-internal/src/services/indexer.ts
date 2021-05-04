@@ -122,6 +122,9 @@ export class Indexer {
     ) {
         const logTracker = new LogTracker(console, logPrefix);
 
+        // Enable index generation mode on configOptions.
+        configOptions.indexGenerationMode = true;
+
         return logTracker.log(`index libraries ${configOptions.projectRoot}`, (ll) => {
             // Perf optimization. check if we can use bundled pre-built stdlib indices.
             const stdLibIndices = logTracker.log(`read stdlib indices`, (_) => {
