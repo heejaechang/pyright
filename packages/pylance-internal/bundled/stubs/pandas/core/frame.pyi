@@ -1,10 +1,10 @@
 from __future__ import  annotations
 import datetime
 import numpy as np
-
-from core.indexing import _iLocIndexer, _LocIndexer
-from matplotlib.axes import Axes as PlotAxes
 import sys
+
+from pandas.core.indexing import _iLocIndexer, _LocIndexer
+from matplotlib.axes import Axes as PlotAxes
 from pandas._typing import Axes as Axes, Axis as Axis, FilePathOrBuffer as FilePathOrBuffer, Level as Level, Renamer as Renamer
 from pandas._typing import num, SeriesAxisType, AxisType, Dtype, DtypeNp, Label, StrLike, Scalar, IndexType, MaskType
 from pandas.core.generic import NDFrame as NDFrame
@@ -2032,8 +2032,8 @@ ValueError: Index contains duplicate entries, cannot reshape
     def pivot_table(
         self,
         values: Optional[_str] = ...,
-        index: Optional[_str, Grouper, Sequence] = ...,
-        columns: Optional[_str, Grouper, Sequence] = ...,
+        index: Optional[Union[_str, Grouper, Sequence]] = ...,
+        columns: Optional[Union[_str, Grouper, Sequence]] = ...,
         aggfunc = ...,
         fill_value: Optional[Scalar] = ...,
         margins: _bool = ...,
@@ -2168,14 +2168,14 @@ foo large  2.000000  5.0  4.500000  4.0
 """
         pass
     def stack(self, level: Level = ..., dropna: _bool = ...) -> Union[DataFrame, Series[Dtype]]: ...
-    def explode(self, column: Union[str, Tuple]) -> DataFrame: ...
+    def explode(self, column: Union[_str, Tuple]) -> DataFrame: ...
     def unstack(
         self, level: Level = ..., fill_value: Optional[Union[int, _str, Dict]] = ...,
     ) -> Union[DataFrame, Series[Dtype]]: ...
     def melt(
         self,
-        id_vars: Optional[Tuple, Sequence, np.ndarray] = ...,
-        value_vars: Optional[Tuple, Sequence, np.ndarray] = ...,
+        id_vars: Optional[Union[Tuple, Sequence, np.ndarray]] = ...,
+        value_vars: Optional[Union[Tuple, Sequence, np.ndarray]] = ...,
         var_name: Optional[Scalar] = ...,
         value_name: Scalar = ...,
         col_level: Optional[Union[int, _str]] = ...,
@@ -2771,7 +2771,7 @@ ValueError: columns overlap but no suffix specified:
     @property
     def columns(self) -> Index[_str]: ...
     @columns.setter  # setter needs to be right next to getter; otherwise mypy complains
-    def columns(self, cols: Union[List[_str], Index[_str]]) -> None: ...
+    def columns(self, cols: Union[List[_str], Index[_str]]) -> None: ...  # type:ignore
     @property
     def dtypes(self) -> Series[Dtype]: ...
     @property
@@ -3318,7 +3318,7 @@ ValueError: columns overlap but no suffix specified:
         *,
         inplace: Literal[True],
         index: Optional[Union[_str, Sequence[_str], Dict[Union[_str, int], _str], Callable]] = ...,
-        columns: Oprional[Union[_str, Sequence[_str], Dict[Union[_str, int], _str], Callable]] = ...,
+        columns: Optional[Union[_str, Sequence[_str], Dict[Union[_str, int], _str], Callable]] = ...,
         copy: _bool = ...
     ) -> None: ...
     @overload

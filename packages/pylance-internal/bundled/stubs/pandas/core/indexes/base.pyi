@@ -180,7 +180,6 @@ False
     # Extra methods from old stubs    
 
     def __eq__(self, other: object) -> Series: ...  # type: ignore
-    @overload
     def __iter__(self) -> Iterator: ...
     def __ne__(self, other: _str) -> Index[T1]: ...  # type: ignore
     @overload

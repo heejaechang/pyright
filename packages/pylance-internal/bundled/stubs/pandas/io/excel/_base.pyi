@@ -1,5 +1,5 @@
 import abc
-from pandas._typing import DType, Scalar
+from pandas._typing import Dtype, Scalar
 from pandas.core.frame import DataFrame as DataFrame
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Union, overload
 
@@ -12,7 +12,7 @@ def read_excel(
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any], DType] = ...,
+    dtype: Union[str, Dict[str, Any], Dtype] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
@@ -277,7 +277,7 @@ def read_excel(
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any], DType] = ...,
+    dtype: Union[str, Dict[str, Any], Dtype] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
@@ -305,7 +305,7 @@ def read_excel(
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any], DType] = ...,
+    dtype: Union[str, Dict[str, Any], Dtype] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
@@ -333,7 +333,7 @@ def read_excel(
     index_col: Optional[Union[int, Sequence[int]]] = ...,
     usecols: Optional[Union[int, str, Sequence[Union[int, str, Callable]]]] = ...,
     squeeze: bool = ...,
-    dtype: Union[str, Dict[str, Any], DType] = ...,
+    dtype: Union[str, Dict[str, Any], Dtype] = ...,
     engine: Optional[str] = ...,
     converters: Optional[Dict[Union[int, str], Callable]] = ...,
     true_values: Optional[Sequence[Scalar]] = ...,
