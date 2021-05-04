@@ -45,8 +45,7 @@
         "menus": {
             "commandPalette": [
                 {
-                    "command": "pylance.reportIssue",
-                    "when": "editorLangId == python"
+                    "command": "pylance.reportIssue"
                 }
             ]
         },
