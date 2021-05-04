@@ -8,7 +8,6 @@
 
 const path = require('path');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 const outPath = path.resolve(__dirname, 'dist');
 
@@ -23,6 +22,7 @@ module.exports = {
         filename: '[name].js',
         path: outPath,
         devtoolModuleFilenameTemplate: '../[resource-path]',
+        clean: true,
     },
     devtool: 'source-map',
     stats: {
@@ -53,5 +53,4 @@ module.exports = {
             },
         ],
     },
-    plugins: [new CleanWebpackPlugin()],
 };

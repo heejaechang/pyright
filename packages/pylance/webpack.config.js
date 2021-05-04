@@ -5,7 +5,6 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const WebpackObfuscator = require('webpack-obfuscator');
 const { monorepoResourceNameMapper } = require('../pyright/build/lib/webpack');
 const webpack = require('webpack');
@@ -25,7 +24,6 @@ module.exports = (_, { mode }) => {
     // CopyPlugin is typed based on the wrong webpack version, so use any[] to ignore it.
     /** @type {any} */
     const plugins = [
-        new CleanWebpackPlugin(),
         new CopyPlugin({
             patterns: [
                 { from: onnxBin, to: 'native/onnxruntime' },
@@ -77,6 +75,7 @@ module.exports = (_, { mode }) => {
             path: outPath,
             libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate: mode === 'development' ? '../[resource-path]' : undefined,
+            clean: true,
         },
         devtool: mode === 'development' ? 'source-map' : undefined,
         stats: {

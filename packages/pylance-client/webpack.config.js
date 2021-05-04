@@ -4,7 +4,6 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 const outPath = path.resolve(__dirname, 'dist');
 const packages = path.resolve(__dirname, '..');
@@ -30,6 +29,7 @@ module.exports = {
         path: outPath,
         libraryTarget: 'commonjs2',
         devtoolModuleFilenameTemplate: '../[resource-path]',
+        clean: true,
     },
     devtool: 'source-map',
     stats: {
@@ -66,7 +66,6 @@ module.exports = {
         ],
     },
     plugins: [
-        new CleanWebpackPlugin(),
         new CopyPlugin({
             patterns: [
                 { from: onnxBin, to: 'native/onnxruntime' },
