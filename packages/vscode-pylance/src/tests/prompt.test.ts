@@ -2,7 +2,7 @@ import { anyString, anything, capture, instance, mock, verify, when } from 'ts-m
 import { ConfigurationTarget, Memento } from 'vscode';
 
 import { ActivatePylanceBanner } from '../banners';
-import { PylanceName } from '../common/utils';
+import { DefaultName, PylanceName } from '../common/utils';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
 import { Command, CommandManager } from '../types/commandManager';
@@ -123,6 +123,16 @@ describe('Prompt to use Pylance', () => {
 
     test('Banner not shown when python.languageServer setting is Pylance', async () => {
         const banner = makeBanner(PylanceName);
+        when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
+            Promise.resolve(banner.LabelLater)
+        );
+
+        await banner.show();
+        verify(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).never();
+    });
+
+    test('Banner not shown when python.languageServer setting is Default', async () => {
+        const banner = makeBanner(DefaultName);
         when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
             Promise.resolve(banner.LabelLater)
         );

@@ -95,7 +95,7 @@ export class InsidersImpl {
     }
 
     private _updateChannel(): [current: DownloadChannel, changed: boolean] {
-        const current = this._effectiveChannel();
+        const current = effectiveChannel(this.config);
         const last = this._currentChannel.value;
 
         if (current === last) {
@@ -104,18 +104,6 @@ export class InsidersImpl {
 
         this._currentChannel.updateValue(current);
         return [current, true];
-    }
-
-    private _effectiveChannel(): DownloadChannel {
-        const pylance = this.config.inspect<string>('pylance', insidersChannelSetting);
-        const python = this.config.inspect<string>('python', insidersChannelSetting);
-        const setting = pylance?.globalValue ?? python?.globalValue ?? pylance?.defaultValue;
-
-        if (setting) {
-            return setting === 'off' ? 'off' : 'daily';
-        }
-
-        return 'off';
     }
 
     private _readyToCheck(): boolean {
@@ -187,4 +175,16 @@ export class InsidersImpl {
             await this.cmdManager.executeCommand(Command.ReloadWindow);
         }
     }
+}
+
+export function effectiveChannel(config: AppConfiguration): DownloadChannel {
+    const pylance = config.inspect<string>('pylance', insidersChannelSetting);
+    const python = config.inspect<string>('python', insidersChannelSetting);
+    const setting = pylance?.globalValue ?? python?.globalValue ?? pylance?.defaultValue;
+
+    if (setting) {
+        return setting === 'off' ? 'off' : 'daily';
+    }
+
+    return 'off';
 }

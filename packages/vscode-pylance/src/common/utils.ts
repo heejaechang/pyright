@@ -41,10 +41,11 @@ export function getRandomBetween(min = 0, max = 10): number {
 }
 
 export const PylanceName = 'Pylance';
+export const DefaultName = 'Default';
 export const LanguageServerSettingName = 'languageServer';
 
 export function isPylanceDefaultLanguageServer(appConfig: AppConfiguration): boolean {
     // This check effective setting, we don't know where it is specified yet.
     const ls = appConfig.getSetting<string>('python', LanguageServerSettingName);
-    return ls === PylanceName;
+    return ls === PylanceName || ls === DefaultName;
 }
