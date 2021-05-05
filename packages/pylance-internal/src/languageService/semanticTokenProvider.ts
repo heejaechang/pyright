@@ -19,10 +19,13 @@ import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
 import { ClassType, FunctionTypeFlags, TypeCategory } from 'pyright-internal/analyzer/types';
 import { isProperty } from 'pyright-internal/analyzer/typeUtils';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { assertDefined } from 'pyright-internal/common/debug';
 import { convertOffsetsToRange, convertOffsetToPosition } from 'pyright-internal/common/positionUtils';
 import { doRangesOverlap, Range } from 'pyright-internal/common/textRange';
 import {
+    CaseNode,
     DecoratorNode,
+    MatchNode,
     ModuleNameNode,
     NameNode,
     ParseNode,
@@ -80,6 +83,11 @@ interface TokenInfo {
     type: TokenTypes;
     modifiers: TokenModifiers;
 }
+
+const keywordLengths: { [key in ParseNodeType]?: number } = {
+    [ParseNodeType.Match]: 'match'.length,
+    [ParseNodeType.Case]: 'case'.length,
+};
 
 // The normal pattern would be to have this method on Program and SourceFile,
 // but since we don't have a pylance specific class for those, it's exposed
@@ -213,6 +221,17 @@ class TokenWalker extends ParseTreeWalker {
         // type: comment, modifier: documentation
         // If we don't differentiate, there is no benefit in creating a token
         // here, so do nothing for now.
+        return true;
+    }
+
+    // Emit keywords for match/case; VS Code doesn't have these in its TextMate grammar yet.
+    visitMatch(node: MatchNode) {
+        this._pushKeyword(node);
+        return true;
+    }
+
+    visitCase(node: CaseNode) {
+        this._pushKeyword(node);
         return true;
     }
 
@@ -456,5 +475,12 @@ class TokenWalker extends ParseTreeWalker {
     private _pushToken(node: ParseNode, tokenType: TokenTypes, tokenModifiers: TokenModifiers) {
         const pos = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
         this._builder.push(pos.line, pos.character, node.length, tokenType, tokenModifiers);
+    }
+
+    private _pushKeyword(node: ParseNode) {
+        const keywordLength = keywordLengths[node.nodeType];
+        assertDefined(keywordLength, 'unknown keyword');
+        const pos = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
+        this._builder.push(pos.line, pos.character, keywordLength, TokenTypes.keyword, TokenModifiers.none);
     }
 }
