@@ -4,7 +4,12 @@
 import { ConfigurationTarget, Memento } from 'vscode';
 
 import * as localize from './common/localize';
-import { isPylanceDefaultLanguageServer, LanguageServerSettingName, PylanceName } from './common/utils';
+import {
+    hasDefaultLanguageServer,
+    isPylanceDefaultLanguageServer,
+    LanguageServerSettingName,
+    PylanceName,
+} from './common/utils';
 import { AppConfiguration } from './types/appConfig';
 import { ApplicationShell } from './types/appShell';
 import { Command, CommandManager } from './types/commandManager';
@@ -76,6 +81,12 @@ export class ActivatePylanceBanner extends BannerBase {
         if (!this.enabled) {
             return false;
         }
+
+        if (hasDefaultLanguageServer(this.appConfig)) {
+            // "Default" is available; don't bug the user.
+            return false;
+        }
+
         return !isPylanceDefaultLanguageServer(this.appConfig);
     }
 

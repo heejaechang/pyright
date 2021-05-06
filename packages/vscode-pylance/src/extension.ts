@@ -14,7 +14,7 @@ import { licenseErrorText } from './common/license';
 import { loadLocalizedStrings } from './common/localize';
 import { PersistentStateFactoryImpl } from './common/persistentState';
 import { PylanceName, setExtensionRoot } from './common/utils';
-import { effectiveChannel, InsidersImpl } from './insiders';
+import { InsidersImpl } from './insiders';
 import { BlobStorageImpl } from './insiders/blobStorage';
 import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
@@ -47,9 +47,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     );
     const browser = new BrowserServiceImpl();
 
-    if (effectiveChannel(config) === 'off') {
-        showActivatePylanceBanner(context, version).ignoreErrors();
-    }
+    showActivatePylanceBanner(context, version).ignoreErrors();
 
     migrateV1Settings(config, appShell).ignoreErrors();
 

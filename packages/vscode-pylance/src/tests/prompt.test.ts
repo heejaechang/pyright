@@ -107,6 +107,7 @@ describe('Prompt to use Pylance', () => {
 
             when(appConfigMock.inspect<string | undefined>('python', 'languageServer')).thenReturn({
                 key: 'languageServer',
+                defaultValue: 'Jedi',
                 globalValue: s.globalValue,
                 workspaceValue: s.workspaceValue,
             });
@@ -141,9 +142,25 @@ describe('Prompt to use Pylance', () => {
         verify(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).never();
     });
 
-    function makeBanner(lsType?: string): ActivatePylanceBanner {
+    test('Banner not shown when python.languageServer default is Default but Jedi is set', async () => {
+        const banner = makeBanner('Jedi', 'Default');
+        when(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).thenReturn(
+            Promise.resolve(banner.LabelLater)
+        );
+
+        await banner.show();
+        verify(appShellMock.showInformationMessage(anyString(), anyString(), anyString(), anyString())).never();
+    });
+
+    function makeBanner(lsType?: string, defaultLS?: string): ActivatePylanceBanner {
         when(appConfigMock.getSetting<string>('python', 'languageServer')).thenReturn(lsType ?? 'Jedi');
         when(appConfigMock.updateSetting('python', anyString(), anything())).thenReturn(Promise.resolve());
+        when(appConfigMock.inspect<string>('python', 'languageServer')).thenReturn({
+            key: 'python.languageServer',
+            defaultValue: defaultLS ?? 'Jedi',
+            globalValue: lsType ?? 'Jedi',
+        });
+
         return new ActivatePylanceBanner(
             instance(appShellMock),
             instance(appConfigMock),
