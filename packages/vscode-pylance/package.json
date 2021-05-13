@@ -8,7 +8,6 @@
         "name": "Microsoft Corporation"
     },
     "publisher": "ms-python",
-    "preview": true,
     "private": true,
     "bugs": {
         "url": "https://github.com/microsoft/pylance-release/issues"

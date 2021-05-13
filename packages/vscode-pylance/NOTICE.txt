@@ -7140,6 +7140,8 @@ THE SOFTWARE.
 picomatch 2.2.3 - MIT
 https://github.com/micromatch/picomatch
 
+Copyright (c) 2017-present, Jon Schlinkert.
+Copyright (c) 2017-present, Jon Schlinkert (https://github.com/jonschlinkert).
 
 The MIT License (MIT)
 
@@ -7316,7 +7318,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.136 - MIT
+pyright 1.1.137 - MIT
 https://github.com/Microsoft/pyright#readme
 
 Copyright (c) Microsoft Corporation.
