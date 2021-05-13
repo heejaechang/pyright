@@ -16,29 +16,29 @@ def scrape_lib_folder(lib_dir:str, search_path: Optional[str] = None, output_dir
             if file.endswith(".pyd"):
                 out_dir = os.path.abspath(rel_output_dir)
                 os.makedirs(out_dir, exist_ok = True)
-                collect_module(file, search_path , rel_output_dir)
+
+                first_part_pyd = file.split('.')[0]
+                module_name = '.'.join(rel_output_dir.split(os.sep)) + '.' + first_part_pyd if lib_dir != search_path else first_part_pyd
+
+                collect_module(module_name, file, search_path , rel_output_dir)
 
             
 
-def collect_module(file_pyd:str, search_path = None, output_dir = None):
-
-    rel_dir = output_dir.split(os.sep)
+def collect_module(module_name: str, file_pyd:str, search_path = None, output_dir = None):
     first_part_pyd = file_pyd.split('.')[0]
-    module_name = '.'.join(rel_dir) + '.' + first_part_pyd
-
     pyi_filename: str = output_dir + '\\' + first_part_pyd + '.pyi'
 
     if(not pyi_filename.endswith('tests.pyi')):
-        with open(pyi_filename, mode='w', encoding="utf-8") as file_object:
-            state = scrape_module.ScrapeState(module_name, search_path, file_object)
-            state.collect_top_level_members()
+        try:
+            state = scrape_module.ScrapeState(module_name, search_path)
 
-            state.members[:] = [m for m in state.members if m.name not in scrape_module.keyword.kwlist]
-
-            state.collect_second_level_members()
-
-            state.dump(file_object)
-
+            with open(pyi_filename, mode='w', encoding="utf-8") as file_object:
+                state.collect_top_level_members()
+                state.members[:] = [m for m in state.members if m.name not in scrape_module.keyword.kwlist]
+                state.collect_second_level_members()
+                state.dump(file_object)
+        except Exception as e:
+            print(f"scrap failed for {module_name} with {e}")
 
 def main():
     lib_dir = sys.argv[1] if len(sys.argv) > 1 else u"."
