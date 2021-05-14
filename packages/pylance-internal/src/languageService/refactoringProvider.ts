@@ -62,6 +62,7 @@ export enum CannotExtractReason {
     ContainsMultipleReturns = 'Cannot extract multiple returns',
     ReturnShouldBeLastStatement = 'Return should be last statement',
     ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
+    PartialCommentSelected = 'Cannot extract partial comment',
 }
 
 interface SelectionInfo {
@@ -366,6 +367,10 @@ export class ExtractMethodProvider {
                 return { failedReason: CannotExtractReason.InvalidTargetSelected };
             }
 
+            if (this._selectionInsideComment(parseResults, selectionRange)) {
+                return { failedReason: CannotExtractReason.PartialCommentSelected };
+            }
+
             const parentNode = _findParentForRange(parseResults.parseTree, adjRange);
             if (!parentNode) {
                 return { failedReason: CannotExtractReason.InvalidTargetSelected };
@@ -514,9 +519,7 @@ export class ExtractMethodProvider {
         const outputLines = parseResults.tokenizerOutput.lines;
         let indentionOffset = 0;
         // default new function insertion point for non-function enclosed extractions
-        let funcDefInsertionPos = convertOffsetToPosition(TextRange.getEnd(selectionInfo.parentNode), outputLines);
-        funcDefInsertionPos.character += 1;
-
+        let funcDefInsertionPos = convertOffsetToPosition(selectionInfo.range.start, outputLines);
         const funcInfo = this._getEnclosingFunctionInfo(selectionInfo, evaluator, outputLines);
         if (funcInfo && funcInfo.functionTypeResult) {
             const parameters = funcInfo.functionTypeResult.functionType.details.parameters;
@@ -558,7 +561,7 @@ export class ExtractMethodProvider {
             }
         }
 
-        const baseNewName = funcInfo && funcInfo.className ? 'new_method' : 'new_func';
+        const baseNewName = funcInfo?.className ? 'new_method' : 'new_func';
         const newFuncName = generateUniqueNameInClassOrModule(baseNewName, selectionInfo.parentNode);
 
         const methodBodyStr = ExtractMethodProvider._buildMethodBody(
@@ -581,7 +584,7 @@ export class ExtractMethodProvider {
         );
 
         let appendNewline = insertFuncDefAheadOfSelection ? '' : '\n\n';
-        const newFuncAppendEdit = {
+        const funcDefinitionEdit = {
             filePath: filepath,
             range: { start: funcDefInsertionPos, end: funcDefInsertionPos },
             replacementText: appendNewline + functionDef,
@@ -609,12 +612,12 @@ export class ExtractMethodProvider {
         // replacement of the selection doesn't interfere with our calculated offsets
         const editActions: FileEditAction[] = [];
         if (insertFuncDefAheadOfSelection) {
-            newFuncAppendEdit.replacementText += '\n\n';
-            editActions.push(newFuncAppendEdit);
+            funcDefinitionEdit.replacementText += '\n\n';
+            editActions.push(funcDefinitionEdit);
             editActions.push(callReplacementEdit);
         } else {
             editActions.push(callReplacementEdit);
-            editActions.push(newFuncAppendEdit);
+            editActions.push(funcDefinitionEdit);
         }
         return editActions;
     }
@@ -669,7 +672,11 @@ export class ExtractMethodProvider {
         outputSymbols: string[],
         indentionOffset: number
     ) {
-        if (selectionInfo.bodyNodes === undefined || selectionInfo.range === undefined) {
+        if (
+            selectionInfo.bodyNodes === undefined ||
+            selectionInfo.range === undefined ||
+            selectionInfo.bodyNodes.length === 0
+        ) {
             return [];
         }
 
@@ -681,6 +688,17 @@ export class ExtractMethodProvider {
         );
 
         const indention = ' '.repeat(indentionOffset + 4);
+
+        // Capture any comments between selection start and the first node
+        // comments aren't available in the parseNodeArray, so we copy from the raw text
+        const firstNode = selectionInfo.bodyNodes.slice(-1)[0];
+        if (firstNode !== undefined && selectionInfo.range.start < firstNode.start) {
+            const length = firstNode.start - selectionInfo.range.start;
+            const textBeforeFirstNode = parseResults.text.substr(selectionInfo.range.start, length);
+
+            methodBodyStr[0] = indention + textBeforeFirstNode.trimStart() + methodBodyStr[0];
+        }
+
         // add return statement to new function definition
         if (selectionInfo.isExpression) {
             const isCall =
@@ -1198,6 +1216,37 @@ export class ExtractMethodProvider {
         return adjRange;
     }
 
+    private static _selectionInsideComment(parseResults: ParseResults, selectionRange: TextRange): boolean {
+        let insideComment = false;
+
+        // tokens only valid for positive positions
+        if (selectionRange.start <= 0) {
+            return insideComment;
+        }
+
+        let tokenIndex = parseResults.tokenizerOutput.tokens.getItemAtPosition(selectionRange.start);
+        let token = parseResults.tokenizerOutput.tokens.getItemAt(tokenIndex);
+
+        // Ignore partial selection of multiline strings that start left of the selection
+        if (token.type === TokenType.String && token.start < selectionRange.start) {
+            insideComment = true;
+        }
+
+        // there is no tokens for non-multiline comments (ie. # comment), but they are member of an actual token.
+        // in our case of leading comments they are on the next token
+        if (token.start < selectionRange.start && tokenIndex < parseResults.tokenizerOutput.tokens.length - 1) {
+            tokenIndex += 1;
+            token = parseResults.tokenizerOutput.tokens.getItemAt(tokenIndex);
+
+            // Ingnore parital selction of comments that start left of the selection
+            if (token.comments && token.comments.length > 0 && token.comments[0].start < selectionRange.start) {
+                insideComment = true;
+            }
+        }
+
+        return insideComment;
+    }
+
     // See if we can get to a "better" node by backing up a few columns.
     // A "better" node is defined as one that is a valid extraction node on the same line
     private static _findNextClosestNode(
@@ -1462,7 +1511,7 @@ class AwaitFinder extends ParseTreeWalker {
         return this._containsAwait;
     }
 
-    visitAwait(node: AwaitNode): boolean {
+    visitAwait(_: AwaitNode): boolean {
         this._containsAwait = true;
         return false;
     }

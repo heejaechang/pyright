@@ -12,6 +12,7 @@ enum CannotExtractReason {
     ContainsMultipleReturns = 'Cannot extract multiple returns',
     ReturnShouldBeLastStatement = 'Return should be last statement',
     ContainsPartialIfElseStatement = 'Cannot extract partial if/else statement',
+    PartialCommentSelected = 'Cannot extract partial comment',
 }
 
 // @filename: TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py
@@ -990,5 +991,82 @@ await helper.verifyExtractMethod('marker69', {
         `\n
 async def new_func():
     return await print("")`,
+    ],
+});
+
+// @filename: TestCommentAbove.py
+//// [|/*marker70*/# Comment
+//// z = 1
+//// print(z)|]
+////
+// @ts-ignore
+await helper.verifyExtractMethod('marker70', {
+    ['file:///TestCommentAbove.py']: [
+        `def new_func():
+    # Comment
+    z = 1
+    print(z)\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestPartialCommentAboveShouldThrow.py
+//// # Com[|/*marker71*/ment
+//// z = 1
+//// print(z)|]
+////
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker71', {
+        ['file:///TestPartialCommentAbove.py']: [``, ``],
+    })
+).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+
+// @filename: TestMulitlineCommentAbove.py
+//// [|/*marker72*/"""
+//// multiline comment
+//// """
+//// z = 1
+//// print(z)|]
+////
+// @ts-ignore
+await helper.verifyExtractMethod('marker72', {
+    ['file:///TestMulitlineCommentAbove.py']: [
+        `def new_func():
+    """
+multiline comment
+"""
+    z = 1
+    print(z)\n\n`,
+        `new_func()`,
+    ],
+});
+
+// @filename: TestPartialMulitlineCommentAboveShouldThrow.py
+//// """
+//// multiline [|/*marker73*/comment
+//// """
+//// z = 1
+//// print(z)|]
+////
+// @ts-ignore
+await expect(
+    helper.verifyExtractMethod('marker73', {
+        ['file:///TestPartialMulitlineCommentAboveShouldThrow.py']: [``, ``],
+    })
+).rejects.toThrowError(CannotExtractReason.PartialCommentSelected);
+
+// @filename: TestCommentBelow.py
+//// [|/*marker74*/z = 1
+//// print(z)
+//// # Comment|]
+// @ts-ignore
+await helper.verifyExtractMethod('marker74', {
+    ['file:///TestCommentBelow.py']: [
+        `def new_func():
+    z = 1
+    print(z)
+    # Comment\n\n`,
+        `new_func()`,
     ],
 });
