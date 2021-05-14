@@ -15,8 +15,7 @@
         marker1: {
             signatures: [
                 {
-                    label:
-                        '(*values: object, sep: str | None = ..., end: str | None = ..., file: SupportsWrite[str] | None = ..., flush: bool = ...) -> None',
+                    label: '(*values: object, sep: str | None = ..., end: str | None = ..., file: SupportsWrite[str] | None = ..., flush: bool = ...) -> None',
                     parameters: [
                         '*values: object',
                         'sep: str | None = ...',
@@ -35,8 +34,7 @@
         marker1: {
             signatures: [
                 {
-                    label:
-                        '(*values: object, sep: str | None = ..., end: str | None = ..., file: SupportsWrite[str] | None = ..., flush: bool = ...) -> None',
+                    label: '(*values: object, sep: str | None = ..., end: str | None = ..., file: SupportsWrite[str] | None = ..., flush: bool = ...) -> None',
                     parameters: [
                         '*values: object',
                         'sep: str | None = ...',

@@ -3991,9 +3991,8 @@ export function createTypeEvaluator(
                             ) {
                                 const memberName = node.parent.memberName.value;
                                 if (memberName === 'args' || memberName === 'kwargs') {
-                                    const outerFunctionScope = ParseTreeUtils.getEnclosingClassOrFunction(
-                                        enclosingScope
-                                    );
+                                    const outerFunctionScope =
+                                        ParseTreeUtils.getEnclosingClassOrFunction(enclosingScope);
 
                                     if (outerFunctionScope?.nodeType === ParseNodeType.Function) {
                                         enclosingScope = outerFunctionScope;
@@ -4406,8 +4405,11 @@ export function createTypeEvaluator(
                         setSymbolAccessed(getFileInfo(node), symbol, node.memberName);
                     }
 
-                    type = getEffectiveTypeOfSymbolForUsage(symbol, /* usageNode */ undefined, /* useLastDecl */ true)
-                        .type;
+                    type = getEffectiveTypeOfSymbolForUsage(
+                        symbol,
+                        /* usageNode */ undefined,
+                        /* useLastDecl */ true
+                    ).type;
 
                     // If the type resolved to "unbound", treat it as "unknown" in
                     // the case of a module reference because if it's truly unbound,
@@ -6923,9 +6925,8 @@ export function createTypeEvaluator(
                     synthTypeVar.details.isSynthesized &&
                     synthTypeVar.details.synthesizedIndex !== undefined
                 ) {
-                    const targetTypeVar = ClassType.getTypeParameters(specializedType)[
-                        synthTypeVar.details.synthesizedIndex
-                    ];
+                    const targetTypeVar =
+                        ClassType.getTypeParameters(specializedType)[synthTypeVar.details.synthesizedIndex];
                     if (index < expectedTypeArgs.length) {
                         const expectedTypeArgValue = transformExpectedTypeForConstructor(
                             expectedTypeArgs[index],
