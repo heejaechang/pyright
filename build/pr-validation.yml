@@ -5,7 +5,7 @@ pr: none
 # pr:
 #   autoCancel: true
 #   branches:
-#     include: ['master', 'main']
+#     include: ['main']
 
 variables:
   - template: templates/globals.yml

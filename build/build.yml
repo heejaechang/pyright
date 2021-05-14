@@ -1,7 +1,6 @@
 trigger:
   branches:
     include:
-      - master
       - main
       - refs/tags/*
 
@@ -10,7 +9,7 @@ pr: none
 # pr:
 #   autoCancel: true
 #   branches:
-#     include: ['master', 'main']
+#     include: ['main']
 
 variables:
   - template: templates/globals.yml

@@ -175,7 +175,7 @@ Pylance leverages Microsoft's open-source static type checking tool, Pyright, to
 
 Code contributions are welcomed via the [Pyright](https://github.com/microsoft/pyright) repo.
 
-For information on getting started, refer to the [CONTRIBUTING instructions](https://github.com/microsoft/pyright/blob/master/CONTRIBUTING.md).
+For information on getting started, refer to the [CONTRIBUTING instructions](https://github.com/microsoft/pyright/blob/main/CONTRIBUTING.md).
 
 
 Feedback

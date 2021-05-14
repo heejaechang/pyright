@@ -2273,7 +2273,14 @@ export function createTypeEvaluator(
                         // Don't include class vars. PEP 557 indicates that they shouldn't
                         // be considered data class entries.
                         const variableSymbol = classType.details.fields.get(variableName);
-                        if (!variableSymbol?.isClassVar()) {
+                        if (variableSymbol?.isClassVar()) {
+                            // If an ancestor class declared an instance variable but this dataclass
+                            // declares a ClassVar, delete the older one from the full data class entries.
+                            const index = fullDataClassEntries.findIndex((p) => p.name === variableName);
+                            if (index >= 0) {
+                                fullDataClassEntries.splice(index, 1);
+                            }
+                        } else {
                             // Create a new data class entry, but defer evaluation of the type until
                             // we've compiled the full list of data class entries for this class. This
                             // allows us to handle circular references in types.
@@ -12805,6 +12812,13 @@ export function createTypeEvaluator(
                 );
             }
         }
+
+        // Evaluate all of the expressions so they are checked and marked referenced.
+        argList.forEach((arg) => {
+            if (arg.valueExpression) {
+                getTypeOfExpression(arg.valueExpression);
+            }
+        });
     }
 
     function getTypeOfFunction(node: FunctionNode): FunctionTypeResult | undefined {
@@ -17159,6 +17173,15 @@ export function createTypeEvaluator(
                             // If the variable type is a superclass of the isinstance
                             // filter, we can narrow the type to the subclass.
                             filteredTypes.push(filterType);
+                        } else if (
+                            ClassType.isProtocolClass(concreteFilterType) &&
+                            ClassType.isProtocolClass(varType)
+                        ) {
+                            // If both the filter type and the variable type are protocol classes,
+                            // the correct answer is an intersection of the two types, but we don't
+                            // support intersections in the type system, so the best we can do
+                            // is to choose one.
+                            filteredTypes.push(filterType);
                         }
                     }
                 } else if (isTypeVar(filterType) && TypeBase.isInstantiable(filterType)) {
@@ -20786,15 +20809,15 @@ export function createTypeEvaluator(
                 }
 
                 return true;
-            } else if (isFunction(concreteSrcType)) {
+            } else if (isFunction(concreteSrcType) || isOverloadedFunction(concreteSrcType)) {
                 // Is the destination a callback protocol (defined in PEP 544)?
-                const callbackType = getCallbackProtocolType(destType);
-                if (callbackType) {
-                    return canAssignFunction(
-                        callbackType,
+                const destCallbackType = getCallbackProtocolType(destType);
+                if (destCallbackType) {
+                    return canAssignType(
+                        destCallbackType,
                         concreteSrcType,
                         diag,
-                        typeVarMap || new TypeVarMap(),
+                        typeVarMap,
                         flags,
                         recursionCount + 1
                     );
@@ -21036,7 +21059,7 @@ export function createTypeEvaluator(
         return false;
     }
 
-    function getCallbackProtocolType(objType: ObjectType): FunctionType | undefined {
+    function getCallbackProtocolType(objType: ObjectType): FunctionType | OverloadedFunctionType | undefined {
         if (!ClassType.isProtocolClass(objType.classType)) {
             return undefined;
         }
@@ -21047,11 +21070,11 @@ export function createTypeEvaluator(
         }
 
         const memberType = getTypeOfMember(callMember);
-        if (isFunction(memberType)) {
+        if (isFunction(memberType) || isOverloadedFunction(memberType)) {
             const boundMethod = bindFunctionToClassOrObject(objType, memberType);
 
             if (boundMethod) {
-                return boundMethod as FunctionType;
+                return boundMethod;
             }
         }
 

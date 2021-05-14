@@ -53,7 +53,7 @@ export interface TelemetryEventInterface {
 }
 
 // Note: These names must match the expected values in the VSCode Python Extension
-// https://github.com/microsoft/vscode-python/blob/master/src/client/activation/languageServer/languageServerProxy.ts
+// https://github.com/microsoft/vscode-python/blob/main/src/client/activation/languageServer/languageServerProxy.ts
 export class TelemetryEvent implements TelemetryEventInterface {
     readonly EventName: string;
 
