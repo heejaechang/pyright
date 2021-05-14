@@ -50,7 +50,7 @@ switch ($subcommand) {
         break
     }
     "pull" {
-        $githubCommits = Invoke-RestMethod -Uri https://api.github.com/repos/microsoft/pyright/commits/master
+        $githubCommits = Invoke-RestMethod -Uri https://api.github.com/repos/microsoft/pyright/commits/main
         $newCommit = $githubCommits[0].sha
 
         if ($currentCommit -eq $newCommit) {
