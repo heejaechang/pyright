@@ -894,6 +894,7 @@ export class ImportResolver {
         if (this._isNativeModuleFileExtension(fileExtension)) {
             return stripFileExtension(stripFileExtension(fileName));
         }
+        return undefined;
     }
 
     private _lookUpResultsInCache(

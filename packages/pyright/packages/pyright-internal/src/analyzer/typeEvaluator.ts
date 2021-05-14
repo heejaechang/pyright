@@ -2065,6 +2065,7 @@ export function createTypeEvaluator(
             }
 
             isValidIterator = false;
+            return undefined;
         });
 
         return isValidIterator ? iterableType : undefined;
@@ -2129,6 +2130,7 @@ export function createTypeEvaluator(
             }
 
             isValidIterable = false;
+            return undefined;
         });
 
         return isValidIterable ? iterableType : undefined;
@@ -4898,6 +4900,8 @@ export function createTypeEvaluator(
                                     ? callResult.returnType || UnknownType.create()
                                     : AnyType.create();
                             }
+
+                            return undefined;
                         });
 
                         if (returnType) {
@@ -7340,6 +7344,8 @@ export function createTypeEvaluator(
                         return undefined;
                     }
                 }
+
+                return undefined;
             }
         );
 
@@ -11543,6 +11549,8 @@ export function createTypeEvaluator(
                 }
             }
         }
+
+        return undefined;
     }
 
     function transformTypeForTypeAlias(type: Type, name: NameNode, errorNode: ParseNode): Type {

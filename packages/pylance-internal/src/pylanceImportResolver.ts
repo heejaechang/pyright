@@ -371,6 +371,7 @@ export class PylanceImportResolver extends ImportResolver {
 
         const importFailed = `Unable to find stub for native module ${importName}, file ${libraryFilePath} in ${nativeStubsPath}`;
         importFailureInfo.push(importFailed);
+        return undefined;
     }
 
     invalidateCache() {

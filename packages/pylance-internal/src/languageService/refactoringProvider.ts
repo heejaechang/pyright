@@ -465,6 +465,7 @@ export class ExtractMethodProvider {
                     }
                     return false;
                 }
+                return false;
             });
 
             const hasArgument = extractedNodes.some((node) => node && node.nodeType === ParseNodeType.Argument);

@@ -904,6 +904,8 @@ export class AnalyzerService {
                 return undefined;
             }
         }
+
+        return undefined;
     }
 
     private _getFileNamesFromFileSpecs(): string[] {
