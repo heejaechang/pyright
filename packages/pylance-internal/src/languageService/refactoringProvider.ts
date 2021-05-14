@@ -144,11 +144,7 @@ export class ExtractMethodProvider {
         editActions.push({
             replacementText: generatedName,
             filePath: filePath,
-            range: convertOffsetsToRange(
-                selectionInfo.range.start,
-                TextRange.getEnd(selectionInfo.range),
-                parseResults.tokenizerOutput.lines
-            ),
+            range: convertTextRangeToRange(selectionInfo.range, parseResults.tokenizerOutput.lines),
         });
 
         // Find the statement containing the extract variable selection so that we can insert ahead of it.
@@ -514,12 +510,12 @@ export class ExtractMethodProvider {
             return [];
         }
 
-        let insertFuncAheadOfSelection = false;
+        let insertFuncDefAheadOfSelection = false;
         const outputLines = parseResults.tokenizerOutput.lines;
         let indentionOffset = 0;
         // default new function insertion point for non-function enclosed extractions
-        let newFuncInsertionPosition = convertOffsetToPosition(TextRange.getEnd(selectionInfo.parentNode), outputLines);
-        newFuncInsertionPosition.character += 1;
+        let funcDefInsertionPos = convertOffsetToPosition(TextRange.getEnd(selectionInfo.parentNode), outputLines);
+        funcDefInsertionPos.character += 1;
 
         const funcInfo = this._getEnclosingFunctionInfo(selectionInfo, evaluator, outputLines);
         if (funcInfo && funcInfo.functionTypeResult) {
@@ -537,12 +533,12 @@ export class ExtractMethodProvider {
             }
 
             indentionOffset = funcInfo.indentionOffset;
-            newFuncInsertionPosition = funcInfo.insertPosition;
+            funcDefInsertionPos = funcInfo.insertPosition;
         } else {
             // No enclosed function found, therefore extracting at module scope, so new extracted function needs to go ahead of calling code,
             // but to also handle nested scopes like multiple for statements we need to find the moduleNode and
             // not just the parentNode
-            insertFuncAheadOfSelection = true;
+            insertFuncDefAheadOfSelection = true;
             const moduleNode =
                 selectionInfo.parentNode.nodeType === ParseNodeType.Module
                     ? selectionInfo.parentNode
@@ -557,7 +553,7 @@ export class ExtractMethodProvider {
                 if (enclosingStatement) {
                     // 1 character ahead of the statement that contains our extraction selection
                     // ie. 'a = |1 + 3|'  position at x here -> 'xa = |1 + 3|'
-                    newFuncInsertionPosition = convertOffsetToPosition(enclosingStatement.start, outputLines);
+                    funcDefInsertionPos = convertOffsetToPosition(enclosingStatement.start, outputLines);
                 }
             }
         }
@@ -573,7 +569,7 @@ export class ExtractMethodProvider {
         );
 
         const awaitFinder = new AwaitFinder();
-        const isCoroutine = selectionInfo.bodyNodes.some((node) => node && awaitFinder.checkContainsAwait(node));
+        const isCoroutine = awaitFinder.containsAwait(selectionInfo.bodyNodes);
 
         const functionDef = this._buildFunctionDefinition(
             newFuncName,
@@ -584,10 +580,10 @@ export class ExtractMethodProvider {
             isCoroutine
         );
 
-        let appendNewline = insertFuncAheadOfSelection ? '' : '\n\n';
+        let appendNewline = insertFuncDefAheadOfSelection ? '' : '\n\n';
         const newFuncAppendEdit = {
             filePath: filepath,
-            range: { start: newFuncInsertionPosition, end: newFuncInsertionPosition },
+            range: { start: funcDefInsertionPos, end: funcDefInsertionPos },
             replacementText: appendNewline + functionDef,
         };
 
@@ -605,14 +601,14 @@ export class ExtractMethodProvider {
         appendNewline = parseResults.text.substr(TextRange.getEnd(selectionInfo.range) - 1, 1) === '\n' ? '\n' : '';
         const callReplacementEdit = {
             filePath: filepath,
-            range: convertOffsetsToRange(selectionInfo.range.start, TextRange.getEnd(selectionInfo.range), outputLines),
+            range: convertTextRangeToRange(selectionInfo.range, outputLines),
             replacementText: callFunctionString + appendNewline,
         };
 
         // Edits are applied in reverse order, so we append first so that the
         // replacement of the selection doesn't interfere with our calculated offsets
         const editActions: FileEditAction[] = [];
-        if (insertFuncAheadOfSelection) {
+        if (insertFuncDefAheadOfSelection) {
             newFuncAppendEdit.replacementText += '\n\n';
             editActions.push(newFuncAppendEdit);
             editActions.push(callReplacementEdit);
@@ -849,8 +845,8 @@ export class ExtractMethodProvider {
         const bodyLines: string[] = [];
         let curTextRange = range;
         let preTextRange = TextRange.getEnd(curTextRange);
-        let curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines)!;
-        let prePosition = curRange.end;
+        let curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines);
+        let prevPos = curRange.end;
 
         const firstLineIndent = convertOffsetToPosition(range.start, parseResults.tokenizerOutput.lines).character;
 
@@ -868,7 +864,7 @@ export class ExtractMethodProvider {
 
             // Make sure nodes like Suites, which include multiple statements don't duplicate previous
             // written strings
-            curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines)!;
+            curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines);
             const curLength =
                 curTextRange.start + node.length > preTextRange ? preTextRange - curTextRange.start : node.length;
             const nodeStr = parseResults.text.substr(curTextRange.start, curLength);
@@ -888,16 +884,16 @@ export class ExtractMethodProvider {
                 }
             }
 
-            if (curRange.start.line !== prePosition.line) {
+            if (curRange.start.line !== prevPos.line) {
                 const index = parseResults.tokenizerOutput.tokens.getItemAtPosition(preTextRange);
                 const token = parseResults.tokenizerOutput.tokens.getItemAt(index);
-                if (token.type === TokenType.Colon && curRange.end.line === prePosition.line) {
+                if (token.type === TokenType.Colon && curRange.end.line === prevPos.line) {
                     const lastLine = bodyLines.pop();
                     nodeAsCodeLines[nodeAsCodeLines.length - 1] =
                         nodeAsCodeLines[nodeAsCodeLines.length - 1] + lastLine;
                 } else {
                     // Format previous line
-                    const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prePosition.line);
+                    const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prevPos.line);
                     const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
                     const indent = rawLine.indexOf(rawLine.trimStart());
 
@@ -919,7 +915,7 @@ export class ExtractMethodProvider {
             }
 
             preTextRange = curTextRange.start;
-            prePosition = curRange.start;
+            prevPos = curRange.start;
         });
 
         // Format last line
@@ -1457,7 +1453,11 @@ function getParentOfType(node: ParseNode, typesToMatch: ParseNodeType[]) {
 class AwaitFinder extends ParseTreeWalker {
     private _containsAwait = false;
 
-    checkContainsAwait(node: ParseNode) {
+    containsAwait(nodeArray: ParseNodeArray) {
+        return nodeArray.some((node) => node && this._nodeContainsAwait(node));
+    }
+
+    private _nodeContainsAwait(node: ParseNode) {
         this.walk(node);
         return this._containsAwait;
     }
