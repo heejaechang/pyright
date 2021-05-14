@@ -10032,7 +10032,7 @@ export function createTypeEvaluator(
                     magicMethodName,
                     /* usage */ undefined,
                     /* diag */ undefined,
-                    /* memberAccessFlags */ undefined,
+                    MemberAccessFlags.SkipAttributeAccessOverride,
                     subtype
                 )?.type;
             } else if (isClass(concreteSubtype)) {
@@ -10042,7 +10042,7 @@ export function createTypeEvaluator(
                     magicMethodName,
                     /* usage */ undefined,
                     /* diag */ undefined,
-                    MemberAccessFlags.ConsiderMetaclassOnly
+                    MemberAccessFlags.SkipAttributeAccessOverride | MemberAccessFlags.ConsiderMetaclassOnly
                 )?.type;
             }
 
@@ -16783,20 +16783,24 @@ export function createTypeEvaluator(
                             const expandedType = mapSubtypes(type, (subtype) => {
                                 return transformPossibleRecursiveTypeAlias(subtype);
                             });
-                            return mapSubtypes(expandedType, (subtype) => {
-                                if (isAnyOrUnknown(subtype)) {
-                                    // We need to assume that "Any" is always both None and not None,
-                                    // so it matches regardless of whether the test is positive or negative.
-                                    return subtype;
-                                }
+                            return mapSubtypesExpandTypeVars(
+                                expandedType,
+                                /* constraintFilter */ undefined,
+                                (subtype, unexpandedSubtype) => {
+                                    if (isAnyOrUnknown(subtype)) {
+                                        // We need to assume that "Any" is always both None and not None,
+                                        // so it matches regardless of whether the test is positive or negative.
+                                        return subtype;
+                                    }
 
-                                // See if it's a match for None.
-                                if (isNone(subtype) === adjIsPositiveTest) {
-                                    return subtype;
-                                }
+                                    // See if it's a match for None.
+                                    if (isNone(subtype) === adjIsPositiveTest) {
+                                        return unexpandedSubtype;
+                                    }
 
-                                return undefined;
-                            });
+                                    return undefined;
+                                }
+                            );
                         };
                     }
                 }
@@ -21289,6 +21293,12 @@ export function createTypeEvaluator(
                     FunctionType.isOverloaded(destType) &&
                     destPositionals[paramIndex].hasDeclaredType
                 ) {
+                    continue;
+                }
+
+                // Handle the special case where the source parameter is a synthesized
+                // TypeVar for "self" or "cls".
+                if (isTypeVar(srcParamType) && srcParamType.details.isSynthesized) {
                     continue;
                 }
 
