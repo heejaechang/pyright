@@ -24,31 +24,27 @@ enum CannotExtractReason {
 ////    XYX = 100
 ////    return ABC
 //@ts-ignore
-await helper.verifyExtractMethod('marker', {
-    ['file:///TestVarsFromParamsAndUseAfterSelectionAndBeforeComment.py']: [
-        `ABC = new_func(c, a)`,
-        `\n
+await helper.verifyExtractMethod('marker', [
+    `ABC = new_func(c, a)`,
+    `\n
 def new_func(c, a):
     b = 2
     a[0]= 3
     ABC = a[0] + b + c + a + 1 + 42 #comment
     return ABC`,
-    ],
-});
+]);
 
 // @filename: TestSimpleVarUsedBeforeSelection.py
 ////def f():
 ////    a = 1
 ////    [|/*marker5*/return a + 3|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker5', {
-    ['file:///TestSimpleVarUsedBeforeSelection.py']: [
-        `return new_func(a)`,
-        `\n
+await helper.verifyExtractMethod('marker5', [
+    `return new_func(a)`,
+    `\n
 def new_func(a):
     return a + 3`,
-    ],
-});
+]);
 
 // @filename: TestClassMethodDecorator.py
 ////class MyClass:
@@ -58,15 +54,13 @@ def new_func(a):
 ////        b = [|/*marker2*/1 + 2|]
 ////        pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker2', {
-    ['file:///TestClassMethodDecorator.py']: [
-        `cls.new_method()`,
-        `\n
+await helper.verifyExtractMethod('marker2', [
+    `cls.new_method()`,
+    `\n
     @classmethod
     def new_method(cls):
         return 1 + 2`,
-    ],
-});
+]);
 
 // @filename: TestClassWithNormalFunc.py
 ////class MyClass:
@@ -74,14 +68,12 @@ await helper.verifyExtractMethod('marker2', {
 ////        a = [|/*marker3*/1 + 2|]
 ////        pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker3', {
-    ['file:///TestClassWithNormalFunc.py']: [
-        `self.new_method()`,
-        `\n
+await helper.verifyExtractMethod('marker3', [
+    `self.new_method()`,
+    `\n
     def new_method(self):
         return 1 + 2`,
-    ],
-});
+]);
 
 // @filename: TestStaticMethodDecorator.py
 ////class MyClass:
@@ -90,15 +82,13 @@ await helper.verifyExtractMethod('marker3', {
 ////        c = [|/*marker4*/1 + 2|]
 ////        return 'static method called'
 // @ts-ignore
-await helper.verifyExtractMethod('marker4', {
-    ['file:///TestStaticMethodDecorator.py']: [
-        `MyClass.new_method()`,
-        `\n
+await helper.verifyExtractMethod('marker4', [
+    `MyClass.new_method()`,
+    `\n
     @staticmethod
     def new_method():
         return 1 + 2`,
-    ],
-});
+]);
 
 // @filename: TestExtractStatementAndReturn.py
 ////def f(c:int):
@@ -109,15 +99,13 @@ await helper.verifyExtractMethod('marker4', {
 ////    [|/*marker6*/XYX = 100
 ////    return ABC|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker6', {
-    ['file:///TestExtractStatementAndReturn.py']: [
-        `return new_func(ABC)`,
-        `\n
+await helper.verifyExtractMethod('marker6', [
+    `return new_func(ABC)`,
+    `\n
 def new_func(ABC):
     XYX = 100
     return ABC`,
-    ],
-});
+]);
 
 // @filename: TestContinueThrows.py
 ////def f():
@@ -128,11 +116,9 @@ def new_func(ABC):
 ////            [|/*marker7*/continue i|]
 ////        i = i +1
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker7', {
-        ['file:///TestContinueThrows.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.ContainsContinueWithoutLoop);
+await expect(helper.verifyExtractMethod('marker7', [])).rejects.toThrowError(
+    CannotExtractReason.ContainsContinueWithoutLoop
+);
 
 // @filename: PartialIfStatementShouldThrow.py
 ////def f():
@@ -143,11 +129,7 @@ await expect(
 ////            i = i +1
 ////        j = 2
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker8', {
-        ['file:///PartialIfStatementShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker8', [])).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
 
 // @filename: PartialWhileStatementShouldThrow.py
 ////def g():
@@ -158,11 +140,7 @@ await expect(
 ////            i = i +1
 ////        j = 2
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker9', {
-        ['file:///PartialWhileStatementShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker9', [])).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
 
 // @filename: PartialWhileAndIFShouldFail.py
 ////def h():
@@ -173,11 +151,9 @@ await expect(
 ////            i = i +1
 ////        j = 2
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker10', {
-        ['file:///PartialWhileAndIFShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker10', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: WhileStatementShouldPass.py
 ////def i():
@@ -189,17 +165,15 @@ await expect(
 ////        j = 2|]
 ////k = 1
 // @ts-ignore
-await helper.verifyExtractMethod('marker11', {
-    ['file:///WhileStatementShouldPass.py']: [
-        `new_func(n, i)`,
-        `\n
+await helper.verifyExtractMethod('marker11', [
+    `new_func(n, i)`,
+    `\n
 def new_func(n, i):
     while i < n:
         if ( i == 0):
             i = i +1
         j = 2`,
-    ],
-});
+]);
 
 // @filename: TestDefinitions.py
 ////def f():
@@ -211,27 +185,23 @@ def new_func(n, i):
 ////    [|/*marker12*/x = g()
 ////    z = h()|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker12', {
-    ['file:///TestDefinitions.py']: [
-        `new_func(g, h)`,
-        `\n
+await helper.verifyExtractMethod('marker12', [
+    `new_func(g, h)`,
+    `\n
 def new_func(g, h):
     x = g()
     z = h()`,
-    ],
-});
+]);
 
 // @filename: TestLeadingCommentGlobal.py
 ////# foo
 ////[|/*marker13*/x = 41|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker13', {
-    ['file:///TestLeadingCommentGlobal.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker13', [
+    `def new_func():
     x = 41\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: AssignInIfStatementReadAfter.py
 ////class C:
@@ -241,14 +211,12 @@ await helper.verifyExtractMethod('marker13', {
 ////        else:
 ////            player.update()
 // @ts-ignore
-await helper.verifyExtractMethod('marker14', {
-    ['file:///AssignInIfStatementReadAfter.py']: [
-        `self.new_method()`,
-        `\n
+await helper.verifyExtractMethod('marker14', [
+    `self.new_method()`,
+    `\n
     def new_method(self):
         oar = player = Player()`,
-    ],
-});
+]);
 
 // @filename: TestExtractWithLambdaPresent.py
 ////def f():
@@ -257,27 +225,23 @@ await helper.verifyExtractMethod('marker14', {
 ////def x():
 ////    abc = lambda x: 42
 // @ts-ignore
-await helper.verifyExtractMethod('marker15', {
-    ['file:///TestExtractWithLambdaPresent.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker15', [
+    `new_func()`,
+    `\n
 def new_func():
     pass`,
-    ],
-});
+]);
 
 // @filename: TestExtractLambda.py
 ////def f():
 ////    abc = [|/*marker16*/lambda x: 42|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker16', {
-    ['file:///TestExtractLambda.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker16', [
+    `new_func()`,
+    `\n
 def new_func():
     return lambda x: 42`,
-    ],
-});
+]);
 
 // @filename: TestStatementThenPartialIfShouldThrow.py
 ////def f():
@@ -285,11 +249,9 @@ def new_func():
 ////    if( a == 1):|]
 ////        a = 3
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker17', {
-        ['file:///TestStatementThenPartialIfShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker17', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestReAssignmentAfterSelection.py
 ////def f():
@@ -297,14 +259,12 @@ await expect(
 ////    for x, y in []:
 ////        print x, y
 // @ts-ignore
-await helper.verifyExtractMethod('marker19', {
-    ['file:///TestReAssignmentAfterSelection.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker19', [
+    `new_func()`,
+    `\n
 def new_func():
     x = 42`,
-    ],
-});
+]);
 
 // @filename: TestEnclosedWithContinue.py
 ////def f():
@@ -315,17 +275,15 @@ def new_func():
 ////            continue
 ////        i = i +1|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker20', {
-    ['file:///TestEnclosedWithContinue.py']: [
-        `new_func(n, i)`,
-        `\n
+await helper.verifyExtractMethod('marker20', [
+    `new_func(n, i)`,
+    `\n
 def new_func(n, i):
     while i < n:
         if ( i == 0):
             continue
         i = i +1`,
-    ],
-});
+]);
 
 // @filename: TestReadBeforeReAssignment.py
 ////def f():
@@ -334,15 +292,13 @@ def new_func(n, i):
 ////    for x, y in []:
 ////        print x, y
 // @ts-ignore
-await helper.verifyExtractMethod('marker27', {
-    ['file:///TestReadBeforeReAssignment.py']: [
-        `x = new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker27', [
+    `x = new_func()`,
+    `\n
 def new_func():
     x = 42
     return x`,
-    ],
-});
+]);
 
 // @filename: TestUniqueFuncName.py
 ////def f():
@@ -351,14 +307,12 @@ def new_func():
 ////def new_func()
 ////    pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker21', {
-    ['file:///TestUniqueFuncName.py']: [
-        `new_func1()`,
-        `\n
+await helper.verifyExtractMethod('marker21', [
+    `new_func1()`,
+    `\n
 def new_func1():
     x = 41`,
-    ],
-});
+]);
 
 // @filename: MultipleReturnsShouldThrow.py
 ////def f():
@@ -368,11 +322,9 @@ def new_func1():
 ////        return 2
 ////    return 3|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker23', {
-        ['file:///MultipleReturnsShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.ContainsMultipleReturns);
+await expect(helper.verifyExtractMethod('marker23', [])).rejects.toThrowError(
+    CannotExtractReason.ContainsMultipleReturns
+);
 
 // @filename: ReturnNotLastStatementShouldThrow.py
 ////def f():
@@ -382,96 +334,80 @@ await expect(
 ////        return 2|]
 ////    return 3
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker24', {
-        ['file:///ReturnNotLastStatementShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.ReturnShouldBeLastStatement);
+await expect(helper.verifyExtractMethod('marker24', [])).rejects.toThrowError(
+    CannotExtractReason.ReturnShouldBeLastStatement
+);
 
 // @filename: TestGlobalFuncInsertsAheadOfSelection.py
 ////[|/*marker25*/x = 41|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker25', {
-    ['file:///TestGlobalFuncInsertsAheadOfSelection.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker25', [
+    `def new_func():
     x = 41\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestLeafNameNodeShouldThrow.py
 ////[|/*marker26*/print|]("hello")
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker26', {
-        ['file:///TestOnlyFuncNameShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker26', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestDoNotExpandSelectionToCommentAtEOF.py
 //// def f():
 ////     ABC = [|/*marker28*/1 + 42|] #comment
 // @ts-ignore
-await helper.verifyExtractMethod('marker28', {
-    ['file:///TestDoNotExpandSelectionToCommentAtEOF.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker28', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 42`,
-    ],
-});
+]);
 
 // @filename: TestMiddleExpression.py
 //// def f():
 ////     ABC = [|/*marker29*/1 + 42|] + 3 #comment
 // @ts-ignore
-await helper.verifyExtractMethod('marker29', {
-    ['file:///TestMiddleExpression.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker29', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 42`,
-    ],
-});
+]);
 
 // @filename: TestShrinkOperatorLeadingExpression.py
 //// def f():
 ////     ABC = 5 [|/*marker30*/+ 1 + 42|] + 3 #comment
 // @ts-ignore
-await helper.verifyExtractMethod('marker30', {
-    ['file:///TestShrinkOperatorLeadingExpression.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker30', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 42`,
-    ],
-});
+]);
 
 // @filename: TestShrinkOperatorEndingExpression.py
 //// def f():
 ////     ABC = 5 + [|/*marker31*/1 + 42 +|] 3 #comment
 // @ts-ignore
-await helper.verifyExtractMethod('marker31', {
-    ['file:///TestShrinkOperatorEndingExpression.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker31', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 42 + 3`,
-    ],
-});
+]);
 
 // @filename: TestWhiteSpaceAroundExpression.py
 //// def f():
 ////     ABC = [|/*marker32*/ 1 + 42 |] #comment
 // @ts-ignore
-await helper.verifyExtractMethod('marker32', {
-    ['file:///TestWhiteSpaceAroundExpression.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker32', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 42`,
-    ],
-});
+]);
 
 // @filename: TestExtractEndOfFunction.py
 //// def f():
@@ -480,40 +416,34 @@ def new_func():
 //// def g():
 ////     return 1
 // @ts-ignore
-await helper.verifyExtractMethod('marker33', {
-    ['file:///TestExtractEndOfFunction.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker33', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 3`,
-    ],
-});
+]);
 
 // @filename: TestExtractEndOfFunctionWithTailSpace.py
 //// def f():
 ////     return [|/*marker34*/1 + 3 |]
 // @ts-ignore
-await helper.verifyExtractMethod('marker34', {
-    ['file:///TestExtractEndOfFunctionWithTailSpace.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker34', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 3`,
-    ],
-});
+]);
 
 // @filename: TestExtractEndOfFunctionWithLeadingSpace.py
 //// def f():
 ////     return [|/*marker35*/ 1 + 3 |]
 // @ts-ignore
-await helper.verifyExtractMethod('marker35', {
-    ['file:///TestExtractEndOfFunctionWithLeadingSpace.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker35', [
+    `new_func()`,
+    `\n
 def new_func():
     return 1 + 3`,
-    ],
-});
+]);
 
 // @filename: TestCompleteIfElse.py
 ////def function(name: str):
@@ -522,17 +452,15 @@ def new_func():
 ////    elif name == 'mark':
 ////        print('hello mark')|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker36', {
-    ['file:///TestCompleteIfElse.py']: [
-        `new_func(name)`,
-        `\n
+await helper.verifyExtractMethod('marker36', [
+    `new_func(name)`,
+    `\n
 def new_func(name):
     if name == 'john':
         print('hello john')
     elif name == 'mark':
         print('hello mark')`,
-    ],
-});
+]);
 
 // @filename: TestPartialElseShouldThrow.py
 ////def function(name: str):
@@ -541,11 +469,9 @@ def new_func(name):
 ////    [|/*marker37*/elif name == 'mark':
 ////        print('hello mark')|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker37', {
-        ['file:///TestPartialElseShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.ContainsPartialIfElseStatement);
+await expect(helper.verifyExtractMethod('marker37', [])).rejects.toThrowError(
+    CannotExtractReason.ContainsPartialIfElseStatement
+);
 
 // @filename: TestExtractArgumentShouldHaveReturn.py
 //// from werkzeug import url_quote
@@ -556,11 +482,9 @@ await expect(
 ////         hello += url_quote([|/*marker38*/anchor|])
 ////     return hello
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker38', {
-        ['file:///TestExtractArgumentShouldHaveReturn.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker38', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractDoubleIndentedCode.py
 //// def function(url_adapter, old_scheme):
@@ -573,18 +497,16 @@ await expect(
 ////     except ValueError as error:
 ////         pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker39', {
-    ['file:///TestExtractDoubleIndentedCode.py']: [
-        `new_func(url_adapter, old_scheme)`,
-        `\n
+await helper.verifyExtractMethod('marker39', [
+    `new_func(url_adapter, old_scheme)`,
+    `\n
 def new_func(url_adapter, old_scheme):
     try:
         rv = url_adapter.build()
     finally:
         if old_scheme is not None:
             url_adapter.url_scheme = old_scheme`,
-    ],
-});
+]);
 
 // @filename: TestExtractDoubleIndentedCodeWithMultilineComment.py
 ////def function(url_adapter, old_scheme):
@@ -599,10 +521,9 @@ def new_func(url_adapter, old_scheme):
 ////    except ValueError as error:
 ////        pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker40', {
-    ['file:///TestExtractDoubleIndentedCodeWithMultilineComment.py']: [
-        `new_func(url_adapter, old_scheme)`,
-        `\n
+await helper.verifyExtractMethod('marker40', [
+    `new_func(url_adapter, old_scheme)`,
+    `\n
 def new_func(url_adapter, old_scheme):
     try:
         rv = url_adapter.build()
@@ -611,34 +532,29 @@ def new_func(url_adapter, old_scheme):
     finally:
         if old_scheme is not None:
             url_adapter.url_scheme = old_scheme`,
-    ],
-});
+]);
 
 // @filename: TestInvalidExpressionWithStatementShouldThrow.py
 ////def function():
 ////    x =[|/*marker41*/ 1
 ////    y = 2|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker41', {
-        ['file:///TestInvalidExpressionWithStatementShouldThrow.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+await expect(helper.verifyExtractMethod('marker41', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidExpressionAndStatementSelected
+);
 
 // @filename: TestMultilineStatement.py
 ////total = [|/*marker42*/1 + \
 ////    2 + \
 ////    3|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker42', {
-    ['file:///TestMultilineStatement.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker42', [
+    `def new_func():
     return 1 + \\
     2 + \\
     3\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestMultilineComment.py
 ////[|/*marker43*/""" This is a comment
@@ -647,29 +563,25 @@ await helper.verifyExtractMethod('marker42', {
 ////
 ////print("Hello, World!")|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker43', {
-    ['file:///TestMultilineComment.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker43', [
+    `def new_func():
     """ This is a comment
 written in
 more than just one line """
     print("Hello, World!")\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestReadBeforeWriteAfterSelection.py
 ////[|/*marker44*/x = 1|]
 ////x = x
 // @ts-ignore
-await helper.verifyExtractMethod('marker44', {
-    ['file:///TestReadBeforeWriteAfterSelection.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker44', [
+    `def new_func():
     x = 1
     return x\n\n`,
-        `x = new_func()`,
-    ],
-});
+    `x = new_func()`,
+]);
 
 // @filename: TestDuplicateSelfParams.py
 ////import os.path
@@ -683,16 +595,14 @@ await helper.verifyExtractMethod('marker44', {
 ////        print(var1)
 ////        print(var2)
 // @ts-ignore
-await helper.verifyExtractMethod('marker45', {
-    ['file:///TestDuplicateSelfParams.py']: [
-        `var1, var2 = self.new_method()`,
-        `\n
+await helper.verifyExtractMethod('marker45', [
+    `var1, var2 = self.new_method()`,
+    `\n
     def new_method(self):
         var1 = os.path.dirname(self.import_name)
         var2 = os.path.basename(self.import_name)
         return var1,var2`,
-    ],
-});
+]);
 
 // @filename: TestExtractMultiArgumentShouldFail.py
 ////class MyBase:
@@ -707,11 +617,9 @@ await helper.verifyExtractMethod('marker45', {
 ////        )
 ////        print('end of init')
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker46', {
-        ['file:///TestExtractMultiArgumentShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker46', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractSingleArgumentShouldFail.py
 //// from werkzeug import url_quote
@@ -722,11 +630,9 @@ await expect(
 ////         hello += url_quote([|/*marker47*/anchor|])
 ////     return hello
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker47', {
-        ['file:///TestExtractSingleArgumentShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker47', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestBlankLineEndOfSelectionFunctionScope.py
 ////def function(name: str):
@@ -734,14 +640,12 @@ await expect(
 ////|]
 ////    y = 2
 // @ts-ignore
-await helper.verifyExtractMethod('marker48', {
-    ['file:///TestBlankLineEndOfSelectionFunctionScope.py']: [
-        `new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker48', [
+    `new_func()`,
+    `\n
 def new_func():
     x = 1`,
-    ],
-});
+]);
 
 // @filename: TestBlankLineAheadOfSelectionGlobalScope.py
 ////
@@ -749,9 +653,7 @@ def new_func():
 ////
 ////[|/*marker49*/y = 2|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker49', {
-    ['file:///TestBlankLineAheadOfSelectionGlobalScope.py']: [`def new_func():\n    y = 2\n\n`, `new_func()`],
-});
+await helper.verifyExtractMethod('marker49', [`def new_func():\n    y = 2\n\n`, `new_func()`]);
 
 // @filename: TestExtractComment.py
 ////def f(c:int):
@@ -759,175 +661,145 @@ await helper.verifyExtractMethod('marker49', {
 ////    XYX = 100
 ////    return ABC
 //@ts-ignore
-await helper.verifyExtractMethod('marker50', {
-    ['file:///TestExtractComment.py']: [
-        `ABC = new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker50', [
+    `ABC = new_func()`,
+    `\n
 def new_func():
     ABC = 1 + 42 #comment
     return ABC`,
-    ],
-});
+]);
 
 // @filename: TestExtendingEndPointToSpanOperator.py
 ////def function(add_etags, filename):
 ////    if [|/*marker51*/add_etags and filename|] is not None:
 ////        pass
 // @ts-ignore
-await helper.verifyExtractMethod('marker51', {
-    ['file:///TestExtendingEndPointToSpanOperator.py']: [
-        `new_func(add_etags, filename)`,
-        `\n
+await helper.verifyExtractMethod('marker51', [
+    `new_func(add_etags, filename)`,
+    `\n
 def new_func(add_etags, filename):
     return add_etags and filename is not None`,
-    ],
-});
+]);
 
 // @filename: TestTernarySelection.py
 ////def function(session):
 ////    flashes = [|/*marker52*/session.pop("_flashes") if "_flashes" in session else []|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker52', {
-    ['file:///TestTernarySelection.py']: [
-        `new_func(session)`,
-        `\n
+await helper.verifyExtractMethod('marker52', [
+    `new_func(session)`,
+    `\n
 def new_func(session):
     return session.pop("_flashes") if "_flashes" in session else []`,
-    ],
-});
+]);
 
 // @filename: TestExpandTernarySelectionEndpoint.py
 ////def function(session):
 ////    flashes = [|/*marker53*/session.pop("_flashes") if "_flashes"|] in session else []
 // @ts-ignore
-await helper.verifyExtractMethod('marker53', {
-    ['file:///TestExpandTernarySelectionEndpoint.py']: [
-        `new_func(session)`,
-        `\n
+await helper.verifyExtractMethod('marker53', [
+    `new_func(session)`,
+    `\n
 def new_func(session):
     return session.pop("_flashes") if "_flashes" in session else []`,
-    ],
-});
+]);
 
 // @filename: TestTernaryWithInvalidStartSelectionShouldFail.py
 ////def function(session):
 ////    flashes = session.pop("_flashes") if [|/*marker54*/"_flashes" in session else []|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker54', {
-        ['file:///TestTernaryWithInvalidStartSelectionShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker54', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractCommentOnLastStatement.py
 ////def f(c:int):
 ////    ABC = 1
 ////    [|/*marker55*/return ABC #comment|]
 //@ts-ignore
-await helper.verifyExtractMethod('marker55', {
-    ['file:///TestExtractCommentOnLastStatement.py']: [
-        `return new_func(ABC)`,
-        `\n
+await helper.verifyExtractMethod('marker55', [
+    `return new_func(ABC)`,
+    `\n
 def new_func(ABC):
     return ABC #comment`,
-    ],
-});
+]);
 
 // @filename: TestExtractInlinedForStatement.py
 ////def f(weights):
 ////    names = [[|/*marker56*/w.name|] for w in weights]
 //@ts-ignore
-await helper.verifyExtractMethod('marker56', {
-    ['file:///TestExtractInlinedForStatement.py']: [
-        `new_func(w)`,
-        `\n
+await helper.verifyExtractMethod('marker56', [
+    `new_func(w)`,
+    `\n
 def new_func(w):
     return w.name`,
-    ],
-});
+]);
 
 // @filename: TestExtractBinaryOperationInsideParens.py
 ////x = ([|/*marker57*/1 + 2|])
 //@ts-ignore
-await helper.verifyExtractMethod('marker57', {
-    ['file:///TestExtractBinaryOperationInsideParens.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker57', [
+    `def new_func():
     return 1 + 2\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestExtractCompleteForLoop.py
 ////fruits = ["apple", "banana", "cherry"]
 ////[|/*marker58*/for x in fruits:
 ////    print(x)|]
 //@ts-ignore
-await helper.verifyExtractMethod('marker58', {
-    ['file:///TestExtractCompleteForLoop.py']: [
-        `def new_func(fruits):
+await helper.verifyExtractMethod('marker58', [
+    `def new_func(fruits):
     for x in fruits:
         print(x)\n\n`,
-        `new_func(fruits)`,
-    ],
-});
+    `new_func(fruits)`,
+]);
 
 // @filename: TestExtractImportShouldFail.py
 ////from __future__ import [|/*marker59*/print_function|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker59', {
-        ['file:///TestExtractImportShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker59', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractImportFromShouldFail.py
 ////from [|/*marker60*/__future__|] import print_function
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker60', {
-        ['file:///TestExtractImportFromShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker60', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractImportAsShouldFail.py
 ////import os as [|/*marker61*/osAlias|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker61', {
-        ['file:///TestExtractImportAsShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker61', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractImportOsShouldFail.py
 ////import [|/*marker62*/os|]
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker62', {
-        ['file:///TestExtractImportOsShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker62', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractImportRef.py
 ////import gc
 ////[|/*marker63*/gc.collect()|]
 //@ts-ignore
-await helper.verifyExtractMethod('marker63', {
-    ['file:///TestExtractImportRef.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker63', [
+    `def new_func():
     gc.collect()\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestExtractParameterExpressionShouldFail.py
 ////def f([|/*marker64*/x=1|])
 ////    x = 2
 //@ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker64', {
-        ['file:///TestExtractParameterExpressionShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionSelected);
+await expect(helper.verifyExtractMethod('marker64', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidExpressionSelected
+);
 
 // @filename: TestExtractNewLinePre.py
 ////import gc
@@ -936,13 +808,11 @@ await expect(
 ////gc.collect()|]
 ////x = 1
 //@ts-ignore
-await helper.verifyExtractMethod('marker65', {
-    ['file:///TestExtractNewLinePre.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker65', [
+    `def new_func():
     gc.collect()\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestExtractNewLinePost.py
 ////import gc
@@ -950,49 +820,41 @@ await helper.verifyExtractMethod('marker65', {
 ////|]
 ////x = 1
 //@ts-ignore
-await helper.verifyExtractMethod('marker66', {
-    ['file:///TestExtractNewLinePost.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker66', [
+    `def new_func():
     gc.collect()\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestPartialForLoopGeneratorShouldFail.py
 ////list = []
 ////x = {print(i) [|/*marker67*/for i in list|]}
 //@ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker67', {
-        ['file:///TestPartialForLoopGeneratorShouldFail.py']: [],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractMethod('marker67', [])).rejects.toThrowError(
+    CannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestInsideForLoopGenerator.py
 ////list = []
 ////x = {[|/*marker68*/print(i)|] for i in list}
 //@ts-ignore
-await helper.verifyExtractMethod('marker68', {
-    ['file:///TestInsideForLoopGenerator.py']: [
-        `def new_func(i):
+await helper.verifyExtractMethod('marker68', [
+    `def new_func(i):
     print(i)\n\n`,
-        `new_func(i)`,
-    ],
-});
+    `new_func(i)`,
+]);
 
 // @filename: TestAwait.py
 ////async def hello():
 ////    [|/*marker69*/await print("")|]
 ////
 //@ts-ignore
-await helper.verifyExtractMethod('marker69', {
-    ['file:///TestAwait.py']: [
-        `await new_func()`,
-        `\n
+await helper.verifyExtractMethod('marker69', [
+    `await new_func()`,
+    `\n
 async def new_func():
     return await print("")`,
-    ],
-});
+]);
 
 // @filename: TestCommentAbove.py
 //// [|/*marker70*/# Comment
@@ -1000,15 +862,13 @@ async def new_func():
 //// print(z)|]
 ////
 // @ts-ignore
-await helper.verifyExtractMethod('marker70', {
-    ['file:///TestCommentAbove.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker70', [
+    `def new_func():
     # Comment
     z = 1
     print(z)\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestPartialCommentAboveShouldThrow.py
 //// # Com[|/*marker71*/ment
@@ -1016,11 +876,9 @@ await helper.verifyExtractMethod('marker70', {
 //// print(z)|]
 ////
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker71', {
-        ['file:///TestPartialCommentAbove.py']: [``, ``],
-    })
-).rejects.toThrowError(CannotExtractReason.InvalidExpressionAndStatementSelected);
+await expect(helper.verifyExtractMethod('marker71', [``, ``])).rejects.toThrowError(
+    CannotExtractReason.InvalidExpressionAndStatementSelected
+);
 
 // @filename: TestMulitlineCommentAbove.py
 //// [|/*marker72*/"""
@@ -1030,17 +888,15 @@ await expect(
 //// print(z)|]
 ////
 // @ts-ignore
-await helper.verifyExtractMethod('marker72', {
-    ['file:///TestMulitlineCommentAbove.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker72', [
+    `def new_func():
     """
 multiline comment
 """
     z = 1
     print(z)\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);
 
 // @filename: TestPartialMulitlineCommentAboveShouldThrow.py
 //// """
@@ -1050,23 +906,19 @@ multiline comment
 //// print(z)|]
 ////
 // @ts-ignore
-await expect(
-    helper.verifyExtractMethod('marker73', {
-        ['file:///TestPartialMulitlineCommentAboveShouldThrow.py']: [``, ``],
-    })
-).rejects.toThrowError(CannotExtractReason.PartialCommentSelected);
+await expect(helper.verifyExtractMethod('marker73', [``, ``])).rejects.toThrowError(
+    CannotExtractReason.PartialCommentSelected
+);
 
 // @filename: TestCommentBelow.py
 //// [|/*marker74*/z = 1
 //// print(z)
 //// # Comment|]
 // @ts-ignore
-await helper.verifyExtractMethod('marker74', {
-    ['file:///TestCommentBelow.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker74', [
+    `def new_func():
     z = 1
     print(z)
     # Comment\n\n`,
-        `new_func()`,
-    ],
-});
+    `new_func()`,
+]);

@@ -6,8 +6,8 @@ declare namespace _ {
             data: { fileOrStartMarker: string; endMarker?: string; tokens: { type: string; modifiers?: string[] }[] }[]
         ): void;
 
-        verifyExtractMethod(marker: string, files: { [filePath: string]: string[] }): Promise<any>;
-        verifyExtractVariable(marker: string, files: { [filePath: string]: string[] }): Promise<any>;
-        verifyPylanceCommand(command: Command, files: { [filePath: string]: string[] }): Promise<any>;
+        verifyExtractMethod(marker: string, edits: string[]): Promise<any>;
+        verifyExtractVariable(marker: string, edits: string[]): Promise<any>;
+        verifyPylanceCommand(command: Command, edits: string[]): Promise<any>;
     }
 }

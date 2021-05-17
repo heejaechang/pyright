@@ -19,27 +19,21 @@ enum ExtractVariableCannotExtractReason {
 ////    b = [|/*marker*/2 + 3|]
 ////    return b
 // @ts-ignore
-await helper.verifyExtractVariable('marker', {
-    ['file:///testBasicExpression.py']: [`new_var`, `new_var = 2 + 3\n    `],
-});
+await helper.verifyExtractVariable('marker', [`new_var`, `new_var = 2 + 3\n    `]);
 
 // @filename: testMiddleExpression.py
 ////def f():
 ////    b = [|/*marker2*/2 + 3|] + 1
 ////    return b
 // @ts-ignore
-await helper.verifyExtractVariable('marker2', {
-    ['file:///testMiddleExpression.py']: [`new_var`, `new_var = 2 + 3\n    `],
-});
+await helper.verifyExtractVariable('marker2', [`new_var`, `new_var = 2 + 3\n    `]);
 
 // @filename: testExpressionWithComment.py
 ////def f():
 ////    b = [|/*marker3*/2 + 3 + 1 #comment|]
 ////    return b
 // @ts-ignore
-await helper.verifyExtractVariable('marker3', {
-    ['file:///testExpressionWithComment.py']: [`new_var`, `new_var = 2 + 3 + 1 #comment\n    `],
-});
+await helper.verifyExtractVariable('marker3', [`new_var`, `new_var = 2 + 3 + 1 #comment\n    `]);
 
 // @filename: testExpressionWithPartialComment.py
 ////def f():
@@ -47,9 +41,7 @@ await helper.verifyExtractVariable('marker3', {
 ////    return b
 
 // @ts-ignore
-await helper.verifyExtractVariable('marker4', {
-    ['file:///testExpressionWithPartialComment.py']: [`new_var`, `new_var = 2 + 3 + 1 #comment\n    `],
-});
+await helper.verifyExtractVariable('marker4', [`new_var`, `new_var = 2 + 3 + 1 #comment\n    `]);
 
 // @filename: testExpressionAndStatementShouldThrow.py
 ////def f():
@@ -57,9 +49,9 @@ await helper.verifyExtractVariable('marker4', {
 ////    a = 1 |]
 ////    return b
 // @ts-ignore
-await expect(
-    helper.verifyExtractVariable('marker5', { ['file:///testExpressionAndStatementShouldThrow.py']: [] })
-).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+await expect(helper.verifyExtractVariable('marker5', [])).rejects.toThrowError(
+    ExtractVariableCannotExtractReason.InvalidExpressionSelected
+);
 
 // @filename: testAssignmentShouldThrow.py
 ////def f():
@@ -67,11 +59,9 @@ await expect(
 ////    a = 1
 ////    return b
 // @ts-ignore
-await expect(
-    helper.verifyExtractVariable('marker6', {
-        ['file:///testAssignmentShouldThrow.py']: [],
-    })
-).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+await expect(helper.verifyExtractVariable('marker6', [])).rejects.toThrowError(
+    ExtractVariableCannotExtractReason.InvalidExpressionSelected
+);
 
 // @filename: TestUniqueVariableNameInFunction.py
 ////def f():
@@ -79,26 +69,22 @@ await expect(
 ////    b = [|/*marker7*/2 + 3|]
 ////    return b
 // @ts-ignore
-await helper.verifyExtractVariable('marker7', {
-    ['file:///TestUniqueVariableNameInFunction.py']: [`new_var1`, `new_var1 = 2 + 3\n    `],
-});
+await helper.verifyExtractVariable('marker7', [`new_var1`, `new_var1 = 2 + 3\n    `]);
 
 // @filename: TestUniqueVariableNameInModule.py
 ////new_var = 1
 ////b = [|/*marker8*/2 + 3|]
 // @ts-ignore
-await helper.verifyExtractVariable('marker8', {
-    ['file:///TestUniqueVariableNameInModule.py']: [`new_var1`, `new_var1 = 2 + 3\n`],
-});
+await helper.verifyExtractVariable('marker8', [`new_var1`, `new_var1 = 2 + 3\n`]);
 
 // @filename: testAugmentedAssignmentShouldThrow.py
 ////def f():
 ////    [|/*marker9*/b|] += 1
 ////    return b
 // @ts-ignore
-await expect(
-    helper.verifyExtractVariable('marker9', { ['file:///testAugmentedAssignmentShouldThrow.py']: [] })
-).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+await expect(helper.verifyExtractVariable('marker9', [])).rejects.toThrowError(
+    ExtractVariableCannotExtractReason.InvalidExpressionSelected
+);
 
 // @filename: testMultiIndention.py
 ////class MyClass:
@@ -106,46 +92,36 @@ await expect(
 ////        if name is not [|/*marker10*/None|]:
 ////            pass
 // @ts-ignore
-await helper.verifyExtractVariable('marker10', {
-    ['file:///testMultiIndention.py']: [`new_var`, `new_var = None\n        `],
-});
+await helper.verifyExtractVariable('marker10', [`new_var`, `new_var = None\n        `]);
 
 // @filename: testMultilineString.py
 ////def f():
 ////    str = [|/*marker11*/"""Multiline
 //// string"""|]
 // @ts-ignore
-await helper.verifyExtractVariable('marker11', {
-    ['file:///testMultilineString.py']: [`new_var`, `new_var = """Multiline\n string"""\n    `],
-});
+await helper.verifyExtractVariable('marker11', [`new_var`, `new_var = """Multiline\n string"""\n    `]);
 
 // @filename: TestExtractParamShouldFail.py
 ////def function([|/*marker12*/session|]):
 ////    pass
 // @ts-ignore
-await expect(
-    helper.verifyExtractVariable('marker12', {
-        ['file:///TestExtractParamShouldFail.py']: [],
-    })
-).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidTargetSelected);
+await expect(helper.verifyExtractVariable('marker12', [])).rejects.toThrowError(
+    ExtractVariableCannotExtractReason.InvalidTargetSelected
+);
 
 // @filename: TestExtractModuleLevelCallSpacing.py
 ////import gc
 ////[|/*marker13*/gc.collect()|]
 //@ts-ignore
-await helper.verifyExtractVariable('marker13', {
-    ['file:///TestExtractModuleLevelCallSpacing.py']: [`new_var`, `new_var = gc.collect()\n`],
-});
+await helper.verifyExtractVariable('marker13', [`new_var`, `new_var = gc.collect()\n`]);
 
 // @filename: TestExtractParameterExpressionShouldFail.py
 ////def f([|/*marker14*/x=1|])
 ////    x = 2
 //@ts-ignore
-await expect(
-    helper.verifyExtractVariable('marker14', {
-        ['file:///TestExtractParameterExpressionShouldFail.py']: [],
-    })
-).rejects.toThrowError(ExtractVariableCannotExtractReason.InvalidExpressionSelected);
+await expect(helper.verifyExtractVariable('marker14', [])).rejects.toThrowError(
+    ExtractVariableCannotExtractReason.InvalidExpressionSelected
+);
 
 // @filename: TestExtractMultilineSpacingPost.py
 ////import gc
@@ -153,9 +129,7 @@ await expect(
 ////|]
 ////x = 1
 //@ts-ignore
-await helper.verifyExtractVariable('marker15', {
-    ['file:///TestExtractMultilineSpacingPost.py']: [`new_var`, `new_var = gc.collect()\n`],
-});
+await helper.verifyExtractVariable('marker15', [`new_var`, `new_var = gc.collect()\n`]);
 
 // @filename: TestExtractMultilineSpacingPre.py
 ////import gc
@@ -164,6 +138,4 @@ await helper.verifyExtractVariable('marker15', {
 ////gc.collect()|]
 ////x = 1
 //@ts-ignore
-await helper.verifyExtractVariable('marker16', {
-    ['file:///TestExtractMultilineSpacingPre.py']: [`new_var`, `new_var = gc.collect()\n`],
-});
+await helper.verifyExtractVariable('marker16', [`new_var`, `new_var = gc.collect()\n`]);

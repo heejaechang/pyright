@@ -11,9 +11,8 @@
 ////     pass|]
 
 //@ts-ignore
-await helper.verifyExtractMethod('marker', {
-    ['file:///test.py']: [
-        `def new_func():
+await helper.verifyExtractMethod('marker', [
+    `def new_func():
     some_very_long_variable_forcing_a_line_break = []
     for variable in [
     some_very_long_variable_forcing_a_line_break
@@ -23,6 +22,5 @@ await helper.verifyExtractMethod('marker', {
         pass
 
 `,
-        'new_func()',
-    ],
-});
+    'new_func()',
+]);

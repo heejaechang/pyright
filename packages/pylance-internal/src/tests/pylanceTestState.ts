@@ -37,7 +37,7 @@ export class PylanceTestState extends TestState {
         super(basePath, testData, mountPaths, hostSpecificFeatures);
     }
 
-    async verifyExtractVariable(marker: string, files: { [filePath: string]: string[] }): Promise<any> {
+    async verifyExtractVariable(marker: string, edits: string[]): Promise<any> {
         const filename = this.getMarkerByName(marker).fileName;
         const range = this.getPositionRange(marker);
         const command = {
@@ -46,10 +46,10 @@ export class PylanceTestState extends TestState {
             arguments: [filename, range],
         };
 
-        return await this.verifyPylanceCommand(command, files);
+        return await this.verifyPylanceCommand(command, edits);
     }
 
-    async verifyExtractMethod(marker: string, files: { [filePath: string]: string[] }): Promise<any> {
+    async verifyExtractMethod(marker: string, edits: string[]): Promise<any> {
         const filename = this.getMarkerByName(marker).fileName;
         const range = this.getPositionRange(marker);
         const command = {
@@ -58,10 +58,10 @@ export class PylanceTestState extends TestState {
             arguments: [filename, range],
         };
 
-        return await this.verifyPylanceCommand(command, files);
+        return await this.verifyPylanceCommand(command, edits);
     }
 
-    async verifyPylanceCommand(command: Command, files: { [filePath: string]: string[] }): Promise<any> {
+    async verifyPylanceCommand(command: Command, edits: string[]): Promise<any> {
         const emptyFiles = { ['']: `` };
 
         // if (command?.arguments && command?.arguments[0]) {
@@ -77,10 +77,10 @@ export class PylanceTestState extends TestState {
                 let index = 0;
                 for (const change of changes) {
                     const actualText = change.newText;
-                    const expectedText: string = Object.values(files[url])[index];
+                    const expectedText: string = edits[index];
                     if (actualText !== expectedText) {
                         this.raiseError(
-                            `${command.title}\n${url} doesn't contain expected result:\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
+                            `${command.title}\n${url} doesn't contain expected result:\n\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
                         );
                     }
                     index++;
