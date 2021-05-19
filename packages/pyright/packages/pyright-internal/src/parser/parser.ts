@@ -185,6 +185,10 @@ const enum ParseTextMode {
     FunctionAnnotation,
 }
 
+// PEP 637 proposed support for keyword arguments in subscript
+// expressions, but it was rejected.
+const supportPEP637 = false;
+
 export class Parser {
     private _fileContents?: string;
     private _tokenizerOutput?: TokenizerOutput;
@@ -2452,9 +2456,13 @@ export class Parser {
                 const invalidToken = this._getNextToken();
                 const text = this._fileContents!.substr(invalidToken.start, invalidToken.length);
 
+                const firstCharCode = text.charCodeAt(0);
+
                 // Remove any non-printable characters.
-                const cleanedText = text.replace(/[\S\W]/g, '');
-                this._addError(Localizer.Diagnostic.invalidTokenChars().format({ text: cleanedText }), invalidToken);
+                this._addError(
+                    Localizer.Diagnostic.invalidTokenChars().format({ text: `\\u${firstCharCode.toString(16)}` }),
+                    invalidToken
+                );
                 this._consumeTokensUntilType([TokenType.NewLine]);
                 break;
             }
@@ -3171,7 +3179,16 @@ export class Parser {
             }
             argList.push(argNode);
 
-            if (!this._parseOptions.isStubFile && this._getLanguageVersion() < PythonVersion.V3_10) {
+            if (supportPEP637) {
+                if (!this._parseOptions.isStubFile && this._getLanguageVersion() < PythonVersion.V3_10) {
+                    if (argNode.name) {
+                        this._addError(Localizer.Diagnostic.keywordSubscriptIllegal(), argNode.name);
+                    }
+                    if (argType !== ArgumentCategory.Simple) {
+                        this._addError(Localizer.Diagnostic.unpackedSubscriptIllegal(), argNode);
+                    }
+                }
+            } else {
                 if (argNode.name) {
                     this._addError(Localizer.Diagnostic.keywordSubscriptIllegal(), argNode.name);
                 }

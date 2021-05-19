@@ -465,7 +465,7 @@ test('Function1', () => {
 test('Function2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function2.py']);
 
-    TestUtils.validateResults(analysisResults, 9);
+    TestUtils.validateResults(analysisResults, 11);
 });
 
 test('Function3', () => {
@@ -635,7 +635,7 @@ test('CodeFlow1', () => {
 test('CodeFlow2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow2.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('CodeFlow3', () => {
@@ -855,7 +855,7 @@ test('Tuples12', () => {
 test('NamedTuples1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples1.py']);
 
-    TestUtils.validateResults(analysisResults, 9);
+    TestUtils.validateResults(analysisResults, 11);
 });
 
 test('NamedTuples2', () => {
