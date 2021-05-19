@@ -374,6 +374,12 @@ export interface ClassType extends TypeBase {
     // some or all of the type parameters.
     typeArguments?: Type[];
 
+    // A bool value that has been returned by a user-defined
+    // type guard (see PEP 647) will have additional type information
+    // that indicates how a type should be narrowed. This field will
+    // be used only in a bool class.
+    typeGuardType?: Type;
+
     // If a generic container class (like a list or dict) is known
     // to contain no elements, its type arguments may be "Unknown".
     // This value allows us to elide the Unknown when it's safe to
@@ -501,6 +507,12 @@ export namespace ClassType {
         const newClassType = { ...classType };
         newClassType.details = { ...newClassType.details };
         newClassType.details.typeParameters = typeParams;
+        return newClassType;
+    }
+
+    export function cloneForTypeGuard(classType: ClassType, typeGuardType: Type): ClassType {
+        const newClassType = { ...classType };
+        newClassType.typeGuardType = typeGuardType;
         return newClassType;
     }
 
@@ -1596,6 +1608,10 @@ export interface TypeVarType extends TypeBase {
 
     // Is this variadic TypeVar unpacked (i.e. Unpack or * operator applied)?
     isVariadicUnpacked?: boolean;
+
+    // Is this variadic TypeVar included in a Union[]? This allows us to
+    // differentiate between Unpack[Vs] and Union[Unpack[Vs]].
+    isVariadicInUnion?: boolean;
 }
 
 export namespace TypeVarType {
@@ -1631,10 +1647,11 @@ export namespace TypeVarType {
         return newInstance;
     }
 
-    export function cloneForUnpacked(type: TypeVarType) {
+    export function cloneForUnpacked(type: TypeVarType, isInUnion = false) {
         assert(type.details.isVariadic);
         const newInstance: TypeVarType = { ...type };
         newInstance.isVariadicUnpacked = true;
+        newInstance.isVariadicInUnion = isInUnion;
         return newInstance;
     }
 
@@ -1642,6 +1659,7 @@ export namespace TypeVarType {
         assert(type.details.isVariadic);
         const newInstance: TypeVarType = { ...type };
         newInstance.isVariadicUnpacked = false;
+        newInstance.isVariadicInUnion = false;
         return newInstance;
     }
 
@@ -2145,7 +2163,7 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
     }
 
     // Handle the common case where there is only one type.
-    if (subtypes.length === 1 && !subtypes[0].constraints && !isUnpackedVariadicTypeVar(subtypes[0].type)) {
+    if (subtypes.length === 1 && !subtypes[0].constraints) {
         return subtypes[0].type;
     }
 
@@ -2218,13 +2236,9 @@ export function combineConstrainedTypes(subtypes: ConstrainedSubtype[], maxSubty
         return AnyType.create();
     }
 
-    // If only one type remains and there are no constraints and no variadic
-    // type var, convert it from a union to a simple type.
-    if (
-        newUnionType.subtypes.length === 1 &&
-        !newUnionType.constraints &&
-        !isUnpackedVariadicTypeVar(newUnionType.subtypes[0])
-    ) {
+    // If only one type remains and there are no constraints, convert it from
+    // a union to a simple type.
+    if (newUnionType.subtypes.length === 1 && !newUnionType.constraints) {
         return newUnionType.subtypes[0];
     }
 

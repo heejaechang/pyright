@@ -14,7 +14,15 @@ import Char from 'typescript-char';
 
 import { TextRange } from '../common/textRange';
 import { TextRangeCollection } from '../common/textRangeCollection';
-import { isBinary, isDecimal, isHex, isIdentifierChar, isIdentifierStartChar, isOctal } from './characters';
+import {
+    isBinary,
+    isDecimal,
+    isHex,
+    isIdentifierChar,
+    isIdentifierStartChar,
+    isOctal,
+    isSurrogateChar,
+} from './characters';
 import { CharacterStream } from './characterStream';
 import {
     Comment,
@@ -624,13 +632,29 @@ export class Tokenizer {
     }
 
     private _tryIdentifier(): boolean {
+        const swallowRemainingChars = () => {
+            while (true) {
+                if (isIdentifierChar(this._cs.currentChar)) {
+                    this._cs.moveNext();
+                } else if (isIdentifierChar(this._cs.currentChar, this._cs.nextChar)) {
+                    this._cs.moveNext();
+                    this._cs.moveNext();
+                } else {
+                    break;
+                }
+            }
+        };
+
         const start = this._cs.position;
         if (isIdentifierStartChar(this._cs.currentChar)) {
             this._cs.moveNext();
-            while (isIdentifierChar(this._cs.currentChar)) {
-                this._cs.moveNext();
-            }
+            swallowRemainingChars();
+        } else if (isIdentifierStartChar(this._cs.currentChar, this._cs.nextChar)) {
+            this._cs.moveNext();
+            this._cs.moveNext();
+            swallowRemainingChars();
         }
+
         if (this._cs.position > start) {
             const value = this._cs.getText().substr(start, this._cs.position - start);
             if (_keywords[value] !== undefined) {
@@ -912,7 +936,13 @@ export class Tokenizer {
             ) {
                 break;
             }
-            this._cs.moveNext();
+
+            if (isSurrogateChar(this._cs.currentChar)) {
+                this._cs.moveNext();
+                this._cs.moveNext();
+            } else {
+                this._cs.moveNext();
+            }
         }
         const length = this._cs.position - start;
         if (length > 0) {

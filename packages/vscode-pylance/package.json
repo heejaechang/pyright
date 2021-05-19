@@ -636,6 +636,17 @@
                                 "error"
                             ]
                         },
+                        "reportIncompleteStub": {
+                            "type": "string",
+                            "description": "Diagnostics for the use of a module-level “__getattr__” function, indicating that the stub is incomplete.",
+                            "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
                         "reportUndefinedVariable": {
                             "type": "string",
                             "description": "Diagnostics for a missing or misnamed “self” parameter in instance methods and “cls” parameter in class methods. Instance methods in metaclasses (classes that derive from “type”) are allowed to use “cls” for instance methods.",

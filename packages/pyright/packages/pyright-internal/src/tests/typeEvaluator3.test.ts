@@ -431,6 +431,12 @@ test('TypeGuard1', () => {
     TestUtils.validateResults(analysisResults, 5);
 });
 
+test('TypeGuard2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeGuard2.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Never1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['never1.py']);
 
@@ -726,9 +732,10 @@ test('Subscript3', () => {
     TestUtils.validateResults(analysisResults39, 30);
 
     // Analyze with Python 3.10 settings.
-    configOptions.defaultPythonVersion = PythonVersion.V3_10;
-    const analysisResults310 = TestUtils.typeAnalyzeSampleFiles(['subscript3.py'], configOptions);
-    TestUtils.validateResults(analysisResults310, 11);
+    // These are disabled because PEP 637 was rejected.
+    // configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    // const analysisResults310 = TestUtils.typeAnalyzeSampleFiles(['subscript3.py'], configOptions);
+    // TestUtils.validateResults(analysisResults310, 11);
 });
 
 test('Decorator1', () => {
