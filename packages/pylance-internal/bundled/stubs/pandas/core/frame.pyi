@@ -64,6 +64,8 @@ class _LocIndexerFrame(_LocIndexer):
     def __getitem__(self, idx: Tuple[Union[IndexType, MaskType], StrLike],) -> Series[Dtype]: ...    
     @overload
     def __getitem__(self, idx: Tuple[Union[IndexType, MaskType], Union[List[StrLike], slice]],) -> DataFrame: ...    
+    @overload
+    def __getitem__(self, idx: Index) -> DataFrame: ...
 
     def __setitem__(
         self,
@@ -624,7 +626,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
         labels: Optional[Union[_str, List]] = ...,
         axis: AxisType = ...,
         index: Optional[Union[List[_str], List[int], Index]] = ...,
-        columns: Optional[Union[_str, List]] = ...,
+        columns: Optional[Union[_str, List, Index]] = ...,
         level: Optional[Level] = ...,
         inplace: _bool = ...,
         errors: Union[_str, Literal["ignore", "raise"]] = ...,
