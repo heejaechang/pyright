@@ -21,10 +21,10 @@
         marker: {
             codeActions: [
                 {
-                    title: `Add import testLib`,
+                    title: `Add "import testLib"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import testLib',
+                        title: 'Add "import testLib"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange), 'testLib', undefined],
                     },

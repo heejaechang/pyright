@@ -28,7 +28,7 @@
     await helper.verifyInvokeCodeAction(
         {
             marker: {
-                title: 'Add import MyClass2 from testLib',
+                title: 'Add "from testLib import MyClass2"',
                 edits: [
                     { range: resultRange, newText: ', MyClass2' },
                     { range: markerRange, newText: 'MyClass2' },

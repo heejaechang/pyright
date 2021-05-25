@@ -21,10 +21,10 @@
         marker: {
             codeActions: [
                 {
-                    title: `Add import TypingStubFileFunction from stubFile`,
+                    title: `Add "from stubFile import TypingStubFileFunction"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import TypingStubFileFunction from stubFile',
+                        title: 'Add "from stubFile import TypingStubFileFunction"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange), 'TypingStubFileFunction', 'stubFile'],
                     },

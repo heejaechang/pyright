@@ -24,10 +24,10 @@
         marker1: {
             codeActions: [
                 {
-                    title: `Add import os`,
+                    title: `Add "import os"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import os',
+                        title: 'Add "import os"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange1), 'os', undefined],
                     },
@@ -37,10 +37,10 @@
         marker2: {
             codeActions: [
                 {
-                    title: `Add import sys`,
+                    title: `Add "import sys"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import sys',
+                        title: 'Add "import sys"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange2), 'sys', undefined],
                     },

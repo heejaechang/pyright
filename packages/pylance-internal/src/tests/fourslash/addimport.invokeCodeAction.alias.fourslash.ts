@@ -39,7 +39,7 @@
     // @ts-ignore
     await helper.verifyInvokeCodeAction({
         marker: {
-            title: 'Add import SubModType from testLib',
+            title: 'Add "from testLib import SubModType"',
             edits: [
                 { range: resultRange, newText: 'from testLib import SubModType\n\n\n' },
                 { range: markerRange, newText: 'SubModType' },

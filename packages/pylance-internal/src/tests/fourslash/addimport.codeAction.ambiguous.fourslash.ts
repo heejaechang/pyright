@@ -12,19 +12,19 @@
         marker: {
             codeActions: [
                 {
-                    title: `Add import time`,
+                    title: `Add "import time"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import time',
+                        title: 'Add "import time"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange), 'time', undefined],
                     },
                 },
                 {
-                    title: `Add import time from time`,
+                    title: `Add "from time import time"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import time from time',
+                        title: 'Add "from time import time"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange), 'time', 'time'],
                     },

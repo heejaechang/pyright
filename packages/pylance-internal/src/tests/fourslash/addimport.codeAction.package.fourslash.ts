@@ -86,10 +86,10 @@
         marker1: {
             codeActions: [
                 {
-                    title: `Add import stubFile`,
+                    title: `Add "import stubFile"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import stubFile',
+                        title: 'Add "import stubFile"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange1), 'stubFile', undefined],
                     },
@@ -99,10 +99,10 @@
         marker2: {
             codeActions: [
                 {
-                    title: `Add import testLib`,
+                    title: `Add "import testLib"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import testLib',
+                        title: 'Add "import testLib"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange2), 'testLib', undefined],
                     },
@@ -118,10 +118,10 @@
         marker5: {
             codeActions: [
                 {
-                    title: `Add import topLevelStubFile`,
+                    title: `Add "import topLevelStubFile"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import topLevelStubFile',
+                        title: 'Add "import topLevelStubFile"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange5), 'topLevelStubFile', undefined],
                     },

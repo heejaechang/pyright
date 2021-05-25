@@ -37,7 +37,7 @@
     // @ts-ignore
     await helper.verifyInvokeCodeAction({
         marker: {
-            title: 'Add import test1 from testLib',
+            title: 'Add "from testLib import test1"',
             edits: [
                 { range: resultRange, newText: 'from testLib import test1\n\n\n' },
                 { range: markerRange, newText: 'test1' },

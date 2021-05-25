@@ -16,14 +16,14 @@
     // @ts-ignore
     await helper.verifyInvokeCodeAction({
         marke1r: {
-            title: 'Add import os',
+            title: 'Add "import os"',
             edits: [
                 { range: insert1Range, newText: 'import os\n\n\n' },
                 { range: marker1Range, newText: 'os' },
             ],
         },
         marker2: {
-            title: 'Add import sys',
+            title: 'Add "import sys"',
             edits: [
                 { range: insert2Range, newText: '\nimport sys' },
                 { range: marker2Range, newText: 'sys' },

@@ -23,19 +23,19 @@
             marker: {
                 codeActions: [
                     {
-                        title: `Add import db from test2`,
+                        title: `Add "from test2 import db"`,
                         kind: Consts.CodeActionKind.QuickFix,
                         command: {
-                            title: 'Add import db from test2',
+                            title: 'Add "from test2 import db"',
                             command: 'python.addImport',
                             arguments: ['\\test1.py', JSON.stringify(positionRange), 'db', 'test2'],
                         },
                     },
                     {
-                        title: `Add import DB from test2`,
+                        title: `Add "from test2 import DB"`,
                         kind: Consts.CodeActionKind.QuickFix,
                         command: {
-                            title: 'Add import DB from test2',
+                            title: 'Add "from test2 import DB"',
                             command: 'python.addImport',
                             arguments: ['\\test1.py', JSON.stringify(positionRange), 'DB', 'test2'],
                         },

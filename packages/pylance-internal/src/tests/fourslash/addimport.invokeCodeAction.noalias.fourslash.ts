@@ -29,7 +29,7 @@
     await helper.verifyInvokeCodeAction(
         {
             marker: {
-                title: 'Add import TestType from testLib2',
+                title: 'Add "from testLib2 import TestType"',
                 edits: [
                     { range: resultRange, newText: 'from testLib2 import TestType\n\n\n' },
                     { range: markerRange, newText: 'TestType' },

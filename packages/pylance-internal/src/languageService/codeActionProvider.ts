@@ -14,6 +14,7 @@ import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
 import { convertRangeToTextRange } from 'pyright-internal/common/positionUtils';
 import { getCharacterCount } from 'pyright-internal/common/stringUtils';
 import { Range } from 'pyright-internal/common/textRange';
+import { getAutoImportText } from 'pyright-internal/languageService/tooltipUtils';
 
 import { PylanceWorkspaceServiceInstance } from '../../src/server';
 import { Commands } from '../commands/commands';
@@ -83,11 +84,7 @@ export class CodeActionProvider {
                     continue;
                 }
 
-                let title = result.source
-                    ? `Add import ${result.name} from ${result.source}`
-                    : `Add import ${result.name}`;
-
-                title = result.alias ? `${title} as ${result.alias}` : title;
+                const title = `Add "${getAutoImportText(result.name, result.source, result.alias)}"`;
                 addImportsCodeActions.push(
                     CodeAction.create(
                         title,

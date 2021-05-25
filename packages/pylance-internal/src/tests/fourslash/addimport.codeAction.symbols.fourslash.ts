@@ -85,10 +85,10 @@
         marker1: {
             codeActions: [
                 {
-                    title: `Add import ClosedFileType from test2`,
+                    title: `Add "from test2 import ClosedFileType"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import ClosedFileType from test2',
+                        title: 'Add "from test2 import ClosedFileType"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange1), 'ClosedFileType', 'test2'],
                     },
@@ -98,10 +98,10 @@
         marker3: {
             codeActions: [
                 {
-                    title: `Add import TestLibVariable from testLib`,
+                    title: `Add "from testLib import TestLibVariable"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import TestLibVariable from testLib',
+                        title: 'Add "from testLib import TestLibVariable"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange3), 'TestLibVariable', 'testLib'],
                     },
@@ -123,10 +123,10 @@
         marker8: {
             codeActions: [
                 {
-                    title: `Add import StubFileType from topLevelStubFile`,
+                    title: `Add "from topLevelStubFile import StubFileType"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import StubFileType from topLevelStubFile',
+                        title: 'Add "from topLevelStubFile import StubFileType"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange8), 'StubFileType', 'topLevelStubFile'],
                     },

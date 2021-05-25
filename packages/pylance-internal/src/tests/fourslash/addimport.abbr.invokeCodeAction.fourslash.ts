@@ -24,7 +24,7 @@
     // @ts-ignore
     await helper.verifyInvokeCodeAction({
         marker: {
-            title: 'Add import numpy as np',
+            title: 'Add "import numpy as np"',
             edits: [
                 { range: resultRange, newText: 'import numpy as np\n\n\n' },
                 { range: markerRange, newText: 'np' },

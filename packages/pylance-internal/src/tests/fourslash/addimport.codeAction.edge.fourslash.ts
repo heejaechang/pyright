@@ -24,10 +24,10 @@
         marker1: {
             codeActions: [
                 {
-                    title: `Add import T from test2`,
+                    title: `Add "from test2 import T"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import T from test2',
+                        title: 'Add "from test2 import T"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange1), 'T', 'test2'],
                     },
@@ -37,10 +37,10 @@
         marker2: {
             codeActions: [
                 {
-                    title: `Add import S from test2`,
+                    title: `Add "from test2 import S"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import S from test2',
+                        title: 'Add "from test2 import S"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange2), 'S', 'test2'],
                     },

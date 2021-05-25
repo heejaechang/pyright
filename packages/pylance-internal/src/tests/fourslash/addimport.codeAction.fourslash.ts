@@ -20,10 +20,10 @@
         marker: {
             codeActions: [
                 {
-                    title: `Add import Test from test2`,
+                    title: `Add "from test2 import Test"`,
                     kind: Consts.CodeActionKind.QuickFix,
                     command: {
-                        title: 'Add import Test from test2',
+                        title: 'Add "from test2 import Test"',
                         command: 'python.addImport',
                         arguments: ['\\test1.py', JSON.stringify(positionRange), 'Test', 'test2'],
                     },
