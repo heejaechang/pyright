@@ -1834,7 +1834,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
     ) -> Series[S1]: ...
     def astype(
         self,
-        dtype: Union[S1, _str],
+        dtype: Union[S1, _str, Type[Scalar]],
         copy: _bool = ...,
         errors: Union[_str, Literal["raise", "ignore"]] = ...,
     ) -> Series: ...
