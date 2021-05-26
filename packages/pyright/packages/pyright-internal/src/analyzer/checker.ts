@@ -349,11 +349,14 @@ export class Checker extends ParseTreeWalker {
             const paramSpecParams = node.parameters.filter((param, index) => {
                 const paramInfo = functionTypeResult.functionType.details.parameters[index];
                 if (paramInfo.typeAnnotation && isTypeVar(paramInfo.type) && isParamSpec(paramInfo.type)) {
-                    if (
-                        paramInfo.category !== ParameterCategory.Simple &&
-                        paramInfo.typeAnnotation.nodeType === ParseNodeType.MemberAccess
-                    ) {
-                        return true;
+                    if (paramInfo.category !== ParameterCategory.Simple) {
+                        const paramAnnotation =
+                            paramInfo.typeAnnotation.nodeType === ParseNodeType.StringList
+                                ? paramInfo.typeAnnotation.typeAnnotation
+                                : paramInfo.typeAnnotation;
+                        if (paramAnnotation?.nodeType === ParseNodeType.MemberAccess) {
+                            return true;
+                        }
                     }
                 }
 
@@ -2687,7 +2690,12 @@ export class Checker extends ParseTreeWalker {
                 }
 
                 const diag = new DiagnosticAddendum();
-                if (this._containsContravariantTypeVar(declaredReturnType, diag)) {
+                if (isTypeVar(declaredReturnType) && declaredReturnType.details.variance === Variance.Contravariant) {
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.typeVarIsContravariant().format({
+                            name: TypeVarType.getReadableName(declaredReturnType),
+                        })
+                    );
                     this._evaluator.addDiagnostic(
                         this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                         DiagnosticRule.reportGeneralTypeIssues,
@@ -2764,27 +2772,6 @@ export class Checker extends ParseTreeWalker {
                 );
             }
         }
-    }
-
-    private _containsContravariantTypeVar(type: Type, diag: DiagnosticAddendum): boolean {
-        let isValid = true;
-
-        doForEachSubtype(type, (subtype) => {
-            if (
-                isTypeVar(subtype) &&
-                subtype.details.variance === Variance.Contravariant &&
-                !subtype.details.isSynthesized
-            ) {
-                diag.addMessage(
-                    Localizer.DiagnosticAddendum.typeVarIsContravariant().format({
-                        name: TypeVarType.getReadableName(subtype),
-                    })
-                );
-                isValid = false;
-            }
-        });
-
-        return !isValid;
     }
 
     // Validates that any overridden member variables are not marked
@@ -2912,10 +2899,6 @@ export class Checker extends ParseTreeWalker {
 
     private _validateBaseClassOverrides(classType: ClassType) {
         classType.details.fields.forEach((symbol, name) => {
-            if (!symbol.isClassMember()) {
-                return;
-            }
-
             // Private symbols do not need to match in type since their
             // names are mangled, and subclasses can't access the value in
             // the parent class.

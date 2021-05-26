@@ -264,7 +264,7 @@ export namespace Localizer {
         export const duplicateImport = () =>
             new ParameterizedString<{ importName: string }>(getRawString('Diagnostic.duplicateImport'));
         export const duplicateKwargsParam = () => getRawString('Diagnostic.duplicateKwargsParam');
-        export const duplicateNameOnly = () => getRawString('Diagnostic.duplicateNameOnly');
+        export const duplicateKeywordOnly = () => getRawString('Diagnostic.duplicateKeywordOnly');
         export const duplicateParam = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.duplicateParam'));
         export const duplicateCapturePatternTarget = () =>
@@ -399,6 +399,7 @@ export namespace Localizer {
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.isSubclassInvalidType'));
         export const keyValueInSet = () => getRawString('Diagnostic.keyValueInSet');
         export const keywordArgInTypeArgument = () => getRawString('Diagnostic.keywordArgInTypeArgument');
+        export const keywordOnlyAfterArgs = () => getRawString('Diagnostic.keywordOnlyAfterArgs');
         export const keywordSubscriptIllegal = () => getRawString('Diagnostic.keywordSubscriptIllegal');
         export const lambdaReturnTypeUnknown = () => getRawString('Diagnostic.lambdaReturnTypeUnknown');
         export const lambdaReturnTypePartiallyUnknown = () =>
@@ -535,7 +536,8 @@ export namespace Localizer {
         export const parenthesizedContextManagerIllegal = () =>
             getRawString('Diagnostic.parenthesizedContextManagerIllegal');
         export const positionArgAfterNamedArg = () => getRawString('Diagnostic.positionArgAfterNamedArg');
-        export const positionOnlyAfterNameOnly = () => getRawString('Diagnostic.positionOnlyAfterNameOnly');
+        export const positionOnlyAfterArgs = () => getRawString('Diagnostic.positionOnlyAfterArgs');
+        export const positionOnlyAfterKeywordOnly = () => getRawString('Diagnostic.positionOnlyAfterKeywordOnly');
         export const positionOnlyIncompatible = () => getRawString('Diagnostic.positionOnlyIncompatible');
         export const positionOnlyFirstParam = () => getRawString('Diagnostic.positionOnlyFirstParam');
         export const privateUsedOutsideOfClass = () =>
@@ -760,6 +762,7 @@ export namespace Localizer {
         export const unpackedArgWithVariadicParam = () => getRawString('Diagnostic.unpackedArgWithVariadicParam');
         export const unpackedDictArgumentNotMapping = () => getRawString('Diagnostic.unpackedDictArgumentNotMapping');
         export const unpackedSubscriptIllegal = () => getRawString('Diagnostic.unpackedSubscriptIllegal');
+        export const unpackedTypedDictArgument = () => getRawString('Diagnostic.unpackedTypedDictArgument');
         export const unpackedTypeVarTupleExpected = () =>
             new ParameterizedString<{ name1: string; name2: string }>(
                 getRawString('Diagnostic.unpackedTypeVarTupleExpected')
@@ -842,6 +845,8 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.keyRequiredDeleted'));
         export const keyUndefined = () =>
             new ParameterizedString<{ name: string; type: string }>(getRawString('DiagnosticAddendum.keyUndefined'));
+        export const kwargsParamMissing = () =>
+            new ParameterizedString<{ paramName: string }>(getRawString('DiagnosticAddendum.kwargsParamMissing'));
         export const literalAssignmentMismatch = () =>
             new ParameterizedString<{ sourceType: string; destType: string }>(
                 getRawString('DiagnosticAddendum.literalAssignmentMismatch')
