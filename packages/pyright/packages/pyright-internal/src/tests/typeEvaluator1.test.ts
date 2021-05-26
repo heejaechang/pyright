@@ -346,6 +346,12 @@ test('TypeNarrowing21', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowing22', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing22.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ReturnTypes1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['returnTypes1.py']);
 
@@ -474,12 +480,12 @@ test('Function3', () => {
     // Analyze with Python 3.7 settings. This will generate more errors.
     configOptions.defaultPythonVersion = PythonVersion.V3_7;
     const analysisResults37 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
-    TestUtils.validateResults(analysisResults37, 24);
+    TestUtils.validateResults(analysisResults37, 28);
 
     // Analyze with Python 3.8 settings.
     configOptions.defaultPythonVersion = PythonVersion.V3_8;
     const analysisResults38 = TestUtils.typeAnalyzeSampleFiles(['function3.py'], configOptions);
-    TestUtils.validateResults(analysisResults38, 14);
+    TestUtils.validateResults(analysisResults38, 17);
 });
 
 test('Function4', () => {
@@ -558,6 +564,12 @@ test('Function15', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function15.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Function16', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function16.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Annotations1', () => {
@@ -646,6 +658,12 @@ test('CodeFlow3', () => {
 
 test('CodeFlow4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow4.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('CodeFlow5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['codeFlow5.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
@@ -848,6 +866,12 @@ test('Tuples11', () => {
 
 test('Tuples12', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples12.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Tuples13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tuples13.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

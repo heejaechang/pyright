@@ -94,7 +94,7 @@ For more details about generic types, type parameters, and invariance, refer to 
 
 ### Type Narrowing
 
-Pyright uses a technique called “type narrowing” to track the type of a symbol based on code flow. Consider the following code:
+Pyright uses a technique called “type narrowing” to track the type of an expression based on code flow. Consider the following code:
 
 ```python
 val_str: str = "hi"
@@ -126,6 +126,23 @@ Another assignment occurs several lines further down, this time within a conditi
 
 Another way that types can be narrowed is through the use of conditional code flow statements like `if`, `while`, and `assert`. Type narrowing applies to the block of code that is “guarded” by that condition, so type narrowing in this context is sometimes referred to as a “type guard”. For example, if you see the conditional statement `if x is None:`, the code within that `if` statement can assume that `x` contains `None`. Within the code sample above, we see an example of a type guard involving a call to `isinstance`. The type checker knows that `isinstance(val, int)` will return True only in the case where `val` contains a value of type `int`, not type `str`. So the code within the `if` block can assume that `val` contains a value of type `int`, and the code within the `else` block can assume that `val` contains a value of type `str`. This demonstrates how a type (in this case `Union[int, str]`) can be narrowed in both a positive (`if`) and negative (`else`) test.
 
+The following expression forms support type narrowing:
+
+* `<ident>` (where `<ident>` is an identifier)
+* `<expr>.<member>` (member access expression where `<expr>` is a supported expression form)
+* `<expr>[<int>]` (subscript expression where `<int>` is a non-negative integer)
+* `<expr>[<str>]` (subscript expression where `<str>` is a string literal)
+
+Examples of expressions that support type narrowing:
+
+* `my_var`
+* `employee.name`
+* `a.foo.next`
+* `args[3]`
+* `kwargs["bar"]`
+* `a.b.c[3]["x"].d`
+
+
 ### Type Guards
 
 In addition to assignment-based type narrowing, Pyright supports the following type guards.
@@ -136,13 +153,13 @@ In addition to assignment-based type narrowing, Pyright supports the following t
 * `x is E` and `x is not E` (where E is an enum value)
 * `x == L` and `x != L` (where L is a literal expression)
 * `x.y == L` and `x.y != L` (where L is a literal expression and x is a type that is distinguished by a field with a literal type)
+* `x[K] == V` and `x[K] != V` (where K and V are literal expressions and x is a type that is distinguished by a TypedDict field with a literal type)
 * `x in y` (where y is instance of list, set, frozenset, or deque)
 * `S in D` and `S not in D` (where S is a string literal and D is a TypedDict)
 * `isinstance(x, T)` (where T is a type or a tuple of types)
 * `issubclass(x, T)` (where T is a type or a tuple of types)
 * `callable(x)`
 * `f(x)` (where f is a user-defined type guard as defined in [PEP 647](https://www.python.org/dev/peps/pep-0647/))
-
 * `x` (where x is any expression that is statically verifiable to be truthy or falsy in all cases)
 
 Expressions supported for type guards include simple names, member access chains (e.g. `a.b.c.d`), the unary `not` operator, the binary `and` and `or` operators, subscripts that are constant numbers (e.g. `a[2]`), and call expressions. Other operators (such as arithmetic operators or other subscripts) are not supported.

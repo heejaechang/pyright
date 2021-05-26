@@ -27,8 +27,8 @@ import {
     LambdaNode,
     ModuleNode,
     NameNode,
-    NumberNode,
     ParameterCategory,
+    ParameterNode,
     ParseNode,
     ParseNodeType,
     StatementNode,
@@ -143,13 +143,14 @@ export function printExpression(node: ExpressionNode, flags = PrintExpressionFla
         }
 
         case ParseNodeType.BinaryOperation: {
-            return (
+            const exprStr =
                 printExpression(node.leftExpression, flags) +
                 ' ' +
                 printOperator(node.operator) +
                 ' ' +
-                printExpression(node.rightExpression, flags)
-            );
+                printExpression(node.rightExpression, flags);
+
+            return node.parenthesized ? `(${exprStr})` : exprStr;
         }
 
         case ParseNodeType.Number: {
@@ -858,13 +859,35 @@ export function isMatchingExpression(reference: ExpressionNode, expression: Expr
             return false;
         }
 
-        const referenceNumberNode = reference.items[0].valueExpression as NumberNode;
-        const subscriptNode = expression.items[0].valueExpression;
-        if (subscriptNode.nodeType !== ParseNodeType.Number || subscriptNode.isImaginary || !subscriptNode.isInteger) {
-            return false;
+        if (reference.items[0].valueExpression.nodeType === ParseNodeType.Number) {
+            const referenceNumberNode = reference.items[0].valueExpression;
+            const subscriptNode = expression.items[0].valueExpression;
+            if (
+                subscriptNode.nodeType !== ParseNodeType.Number ||
+                subscriptNode.isImaginary ||
+                !subscriptNode.isInteger
+            ) {
+                return false;
+            }
+
+            return referenceNumberNode.value === subscriptNode.value;
         }
 
-        return referenceNumberNode.value === subscriptNode.value;
+        if (reference.items[0].valueExpression.nodeType === ParseNodeType.StringList) {
+            const referenceStringListNode = reference.items[0].valueExpression;
+            const subscriptNode = expression.items[0].valueExpression;
+            if (
+                referenceStringListNode.strings.length === 1 &&
+                referenceStringListNode.strings[0].nodeType === ParseNodeType.String &&
+                subscriptNode.nodeType === ParseNodeType.StringList &&
+                subscriptNode.strings.length === 1 &&
+                subscriptNode.strings[0].nodeType === ParseNodeType.String
+            ) {
+                return referenceStringListNode.strings[0].value === subscriptNode.strings[0].value;
+            }
+        }
+
+        return false;
     }
 
     return false;
@@ -1212,6 +1235,19 @@ export class NameNodeWalker extends ParseTreeWalker {
 
         return false;
     }
+}
+
+export function getEnclosingParameter(node: ParseNode): ParameterNode | undefined {
+    let curNode: ParseNode | undefined = node;
+
+    while (curNode) {
+        if (curNode.nodeType === ParseNodeType.Parameter) {
+            return curNode;
+        }
+        curNode = curNode.parent;
+    }
+
+    return undefined;
 }
 
 export function getCallNodeAndActiveParameterIndex(

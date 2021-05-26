@@ -1836,6 +1836,9 @@ function _transformTypeVarsInClassType(
 
             if (typeParam.details.isParamSpec) {
                 replacementType = transformParamSpec(typeParam);
+                if (replacementType !== typeParam) {
+                    specializationNeeded = true;
+                }
             } else {
                 const typeParamName = TypeVarType.getNameWithScope(typeParam);
                 if (!recursionMap.has(typeParamName)) {
@@ -2075,7 +2078,7 @@ export function requiresTypeArguments(classType: ClassType) {
 
     // There are a few built-in special classes that require
     // type arguments even though typeParameters is empty.
-    if (ClassType.isBuiltIn(classType)) {
+    if (ClassType.isSpecialBuiltIn(classType)) {
         const specialClasses = [
             'Tuple',
             'Callable',
