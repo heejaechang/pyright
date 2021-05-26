@@ -133,6 +133,11 @@
                         "strict"
                     ],
                     "description": "Defines the default rule set for type checking.",
+                    "enumDescriptions": [
+                        "Surfaces diagnostics for invalid syntax, unresolved imports, undefined variables.",
+                        "All \"off\" rules + basic type checking rules.",
+                        "All \"off\" rules + all type checking rules."
+                    ],
                     "scope": "resource"
                 },
                 "python.analysis.diagnosticSeverityOverrides": {
