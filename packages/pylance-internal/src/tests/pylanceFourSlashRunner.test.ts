@@ -10,6 +10,7 @@ import * as path from 'path';
 import { CancellationToken, CodeAction, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { ImportResolverFactory } from 'pyright-internal/analyzer/importResolver';
+import { createConfigOptionsFrom } from 'pyright-internal/backgroundThreadBase';
 import { NullConsole } from 'pyright-internal/common/console';
 import * as consts from 'pyright-internal/common/pathConsts';
 import { combinePaths, normalizeSlashes, resolvePaths } from 'pyright-internal/common/pathUtils';
@@ -44,10 +45,11 @@ class PylanceFeatures implements HostSpecificFeatures {
             excludes.push(typeshedFolder, bundledStubsFolder);
         }
 
-        // create indices for libraries
+        // create indices for libraries,
+        // make sure to clone configOption since libraryMap will modify the config
         const libraryMap = Indexer.indexLibraries(
             workspace.serviceInstance.getImportResolver(),
-            configOptions,
+            createConfigOptionsFrom(configOptions),
             new NullConsole(),
             'Test',
             excludes,

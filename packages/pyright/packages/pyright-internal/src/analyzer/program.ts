@@ -464,10 +464,19 @@ export class Program {
         return this._runEvaluatorWithCancellationToken(token, () => {
             // Go through all workspace files to create indexing data.
             // This will cause all files in the workspace to be parsed and bound. But
-            // _handleMemoryHighUsage will make sure we don't OOM
+            // _handleMemoryHighUsage will make sure we don't OOM and
+            // at the end of this method, we will drop all trees and symbol tables
+            // created due to indexing.
+            const initiallyParsedSet = new Set<SourceFileInfo>();
+            for (const sourceFileInfo of this._sourceFileList) {
+                if (!sourceFileInfo.sourceFile.isParseRequired()) {
+                    initiallyParsedSet.add(sourceFileInfo);
+                }
+            }
+
             let count = 0;
             for (const sourceFileInfo of this._sourceFileList) {
-                if (!this._isUserCode(sourceFileInfo)) {
+                if (!this._isUserCode(sourceFileInfo) || !sourceFileInfo.sourceFile.isIndexingRequired()) {
                     continue;
                 }
 
@@ -476,6 +485,8 @@ export class Program {
                 if (results) {
                     if (++count > MaxWorkspaceIndexFileCount) {
                         this._console.warn(`Workspace indexing has hit its upper limit: 2000 files`);
+
+                        dropParseAndBindInfoCreatedForIndexing(this._sourceFileList, initiallyParsedSet);
                         return count;
                     }
 
@@ -485,8 +496,23 @@ export class Program {
                 this._handleMemoryHighUsage();
             }
 
+            dropParseAndBindInfoCreatedForIndexing(this._sourceFileList, initiallyParsedSet);
             return count;
         });
+
+        function dropParseAndBindInfoCreatedForIndexing(
+            sourceFiles: SourceFileInfo[],
+            initiallyParsedSet: Set<SourceFileInfo>
+        ) {
+            for (const sourceFileInfo of sourceFiles) {
+                if (sourceFileInfo.sourceFile.isParseRequired() || initiallyParsedSet.has(sourceFileInfo)) {
+                    continue;
+                }
+
+                // Drop parse and bind info created during indexing.
+                sourceFileInfo.sourceFile.dropParseAndBindInfo();
+            }
+        }
     }
 
     // Prints import dependency information for each of the files in
