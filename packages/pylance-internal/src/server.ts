@@ -597,7 +597,7 @@ class PylanceServer extends LanguageServerBase {
 
                 return completionResults;
             },
-            IS_INSIDERS ? 0 : 1000
+            1000
         );
 
         StubTelemetry.sendStubCompletionTelemetryForMissingTypes(results, this._telemetry);
