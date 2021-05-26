@@ -30,6 +30,7 @@ export enum TelemetryEventName {
     COMPLETION_SLOW = 'completion_slow',
     INDEX_SLOW = 'index_slow',
     WORKSPACEINDEX_SLOW = 'workspaceindex_slow',
+    WORKSPACEINDEX_THRESHOLD_REACHED = 'workspaceindex_threshold_reached',
     SEMANTICTOKENS_SLOW = 'semantictokens_slow',
     EXECUTE_COMMAND = 'execute_command',
     SETTINGS = 'settings',

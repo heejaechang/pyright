@@ -10,7 +10,7 @@ import { CancellationToken, SemanticTokens } from 'vscode-languageserver';
 import { MessageChannel, MessagePort, parentPort, Worker, workerData } from 'worker_threads';
 
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
-import { Indices } from 'pyright-internal/analyzer/program';
+import { Indices, MaxWorkspaceIndexFileCount } from 'pyright-internal/analyzer/program';
 import {
     AnalysisRequest,
     AnalysisResponse,
@@ -35,6 +35,7 @@ import { Duration } from 'pyright-internal/common/timing';
 
 import { mainFilename } from './common/mainModuleFileName';
 import {
+    TelemetryEvent,
     TelemetryEventInterface,
     TelemetryEventName,
     TelemetryInterface,
@@ -223,6 +224,13 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
                         this.log(LogLevel.Log, `Indexing Done: ${p}`);
                         this.reportIndex(port, { path: p, indexResults: r });
                     }, token);
+
+                    if (count > MaxWorkspaceIndexFileCount) {
+                        const te = new TelemetryEvent(TelemetryEventName.WORKSPACEINDEX_THRESHOLD_REACHED);
+                        te.Measurements['index_count'] = count;
+
+                        this._telemetry.sendTelemetry(te);
+                    }
 
                     cm.addCustomMeasure('count', count);
                 },

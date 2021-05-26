@@ -77,6 +77,8 @@ import { TypeStubWriter } from './typeStubWriter';
 
 const _maxImportDepth = 256;
 
+export const MaxWorkspaceIndexFileCount = 2000;
+
 // Tracks information about each source file in a program,
 // including the reason it was added to the program and any
 // dependencies that it has on other files in the program.
@@ -472,7 +474,7 @@ export class Program {
                 this._bindFile(sourceFileInfo);
                 const results = sourceFileInfo.sourceFile.index({ indexingForAutoImportMode: false }, token);
                 if (results) {
-                    if (++count > 2000) {
+                    if (++count > MaxWorkspaceIndexFileCount) {
                         this._console.warn(`Workspace indexing has hit its upper limit: 2000 files`);
                         return count;
                     }
