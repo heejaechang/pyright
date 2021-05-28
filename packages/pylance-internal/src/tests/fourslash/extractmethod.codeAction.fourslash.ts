@@ -568,6 +568,7 @@ await helper.verifyExtractMethod('marker43', [
     """ This is a comment
 written in
 more than just one line """
+
     print("Hello, World!")\n\n`,
     `new_func()`,
 ]);
@@ -920,5 +921,44 @@ await helper.verifyExtractMethod('marker74', [
     z = 1
     print(z)
     # Comment\n\n`,
+    `new_func()`,
+]);
+
+// @filename: NestedCommentBelow.py
+//// def func():
+////     [|/*marker75*/var = 1
+////     # THIS NEWLINE GETS MUNGED ->
+////     if var:
+////         # if comment
+////         var = 0|]
+////
+////     # more code
+////     var = 2
+// @ts-ignore
+await helper.verifyExtractMethod('marker75', [
+    `new_func()`,
+    `\n
+def new_func():
+    var = 1
+    # THIS NEWLINE GETS MUNGED ->
+    if var:
+        # if comment
+        var = 0`,
+]);
+
+// @filename: CommentSeparateLine.py
+//// # todo: fix indent on comment after extracted
+//// [|/*marker76*/z = 1
+//// # comment
+//// if z:
+////     print(z)|]
+////
+// @ts-ignore
+await helper.verifyExtractMethod('marker76', [
+    `def new_func():
+    z = 1
+# comment
+    if z:
+        print(z)\n\n`,
     `new_func()`,
 ]);

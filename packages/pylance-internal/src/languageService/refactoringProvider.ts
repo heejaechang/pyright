@@ -43,7 +43,7 @@ import {
 import { ParseResults } from 'pyright-internal/parser/parser';
 import { KeywordType, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
-import { formatCode } from '../common/formatter';
+import { formatCode, splitCodeLines } from '../common/formatter';
 
 enum StepDirection {
     Backward = 0,
@@ -862,7 +862,7 @@ export class ExtractMethodProvider {
     ): string[] {
         const bodyLines: string[] = [];
         let curTextRange = range;
-        let preTextRange = TextRange.getEnd(curTextRange);
+        let prevStartOffset = TextRange.getEnd(curTextRange);
         let curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines);
         let prevPos = curRange.end;
 
@@ -883,70 +883,46 @@ export class ExtractMethodProvider {
             // Make sure nodes like Suites, which include multiple statements don't duplicate previous
             // written strings
             curRange = convertTextRangeToRange(curTextRange, parseResults.tokenizerOutput.lines);
-            const curLength =
-                curTextRange.start + node.length > preTextRange ? preTextRange - curTextRange.start : node.length;
-            const nodeStr = parseResults.text.substr(curTextRange.start, curLength);
-            const nodeAsCodeLines = formatCode(nodeStr, node);
-
-            // Capture any strings after the current node back to the previous node
-            // in order to grab comments
-            const postNodeStartOffset = TextRange.getEnd(node);
-            const postNodeLength = preTextRange - postNodeStartOffset;
-            if (postNodeLength > 0) {
-                const postNodeStr = parseResults.text.substr(postNodeStartOffset, postNodeLength);
-                const postNodeStrings = formatCode(postNodeStr, undefined);
-                if (bodyLines.length === 0) {
-                    bodyLines.push(...postNodeStrings);
-                } else {
-                    bodyLines[bodyLines.length - 1] = postNodeStrings.join() + bodyLines[bodyLines.length - 1];
-                }
+            let curLength = node.length;
+            const curStartOffset = curTextRange.start;
+            if (curStartOffset + curLength > prevStartOffset) {
+                curLength = prevStartOffset - curStartOffset;
             }
 
+            const nodeStr = parseResults.text.substr(curStartOffset, curLength);
+            const curNodeCodeLines = formatCode(nodeStr);
+
+            const curNodeEnd = TextRange.getEnd(node);
+            addInbetweenText(curNodeEnd, prevStartOffset, parseResults, bodyLines, curNodeCodeLines);
+
             if (curRange.start.line !== prevPos.line) {
-                const index = parseResults.tokenizerOutput.tokens.getItemAtPosition(preTextRange);
+                const index = parseResults.tokenizerOutput.tokens.getItemAtPosition(prevStartOffset);
                 const token = parseResults.tokenizerOutput.tokens.getItemAt(index);
                 if (token.type === TokenType.Colon && curRange.end.line === prevPos.line) {
                     const lastLine = bodyLines.pop();
-                    nodeAsCodeLines[nodeAsCodeLines.length - 1] =
-                        nodeAsCodeLines[nodeAsCodeLines.length - 1] + lastLine;
+                    const newcodeLine = (curNodeCodeLines.pop() ?? '') + lastLine;
+                    curNodeCodeLines.push(newcodeLine);
                 } else {
                     // Format previous line
-                    const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prevPos.line);
-                    const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
-                    const indent = rawLine.indexOf(rawLine.trimStart());
-
-                    if (indent >= firstLineIndent && bodyLines.length > 0) {
-                        const newIndent = indent - firstLineIndent + 4 + indentionOffset;
-                        let line = bodyLines[bodyLines.length - 1];
-                        line = !line ? line : line.trimStart();
-                        bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
-                    }
+                    formatPreviousLine(prevPos.line, parseResults, firstLineIndent, bodyLines, indentionOffset);
                 }
 
-                bodyLines.push(...nodeAsCodeLines.reverse());
+                bodyLines.push(...curNodeCodeLines.reverse());
             } else {
                 if (bodyLines.length === 0) {
-                    bodyLines.push(...nodeAsCodeLines.reverse());
+                    bodyLines.push(...curNodeCodeLines.reverse());
                 } else {
-                    bodyLines[bodyLines.length - 1] = nodeAsCodeLines.join() + bodyLines[bodyLines.length - 1];
+                    const newPreviousLine = curNodeCodeLines.join('') + (bodyLines.pop() ?? '');
+                    bodyLines.push(newPreviousLine);
                 }
             }
 
-            preTextRange = curTextRange.start;
+            prevStartOffset = curStartOffset;
             prevPos = curRange.start;
         });
 
         // Format last line
-        const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(curRange!.start.line);
-        const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
-        const indent = rawLine.indexOf(rawLine.trimStart());
-
-        if (indent >= firstLineIndent && bodyLines.length > 0) {
-            const newIndent = indent - firstLineIndent + 4 + indentionOffset;
-            let line = bodyLines[bodyLines.length - 1];
-            line = !line ? line : line.trimStart();
-            bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
-        }
+        formatPreviousLine(prevPos.line, parseResults, firstLineIndent, bodyLines, indentionOffset);
 
         return bodyLines.reverse();
     }
@@ -1299,6 +1275,20 @@ export class ExtractMethodProvider {
     }
 }
 
+function grabTextBetweenOffsets(
+    curNodeEndOffset: number,
+    prevStartOffset: number,
+    parseResults: ParseResults
+): string[] {
+    const nonCapturedNodeLength = prevStartOffset - curNodeEndOffset;
+    if (nonCapturedNodeLength > 0) {
+        const postNodeStr = parseResults.text.substr(curNodeEndOffset, nonCapturedNodeLength);
+        const postNodeStrings = splitCodeLines(postNodeStr);
+        return postNodeStrings;
+    }
+    return [];
+}
+
 function isImport(node: ParseNode) {
     const importTypes = [
         ParseNodeType.ModuleName,
@@ -1514,5 +1504,56 @@ class AwaitFinder extends ParseTreeWalker {
     visitAwait(_: AwaitNode): boolean {
         this._containsAwait = true;
         return false;
+    }
+}
+
+function formatPreviousLine(
+    prevLine: number,
+    parseResults: ParseResults,
+    firstLineIndent: number,
+    bodyLines: string[],
+    indentionOffset: number
+) {
+    const rawLineRange = parseResults.tokenizerOutput.lines.getItemAt(prevLine);
+    const rawLine = parseResults.text.substr(rawLineRange.start, rawLineRange.length);
+    const indent = rawLine.indexOf(rawLine.trimStart());
+
+    if (indent >= firstLineIndent && bodyLines.length > 0) {
+        const newIndent = indent - firstLineIndent + 4 + indentionOffset;
+        let line = bodyLines[bodyLines.length - 1];
+        line = !line ? line : line.trimStart();
+        bodyLines[bodyLines.length - 1] = ' '.repeat(newIndent) + line;
+    }
+}
+
+// Capture any strings after the current node back to the previous node
+// in order to grab comments and other things not found in the parse nodes like 'try/finally' and '='
+function addInbetweenText(
+    curNodeEndOffset: number,
+    prevStartOffset: number,
+    parseResults: ParseResults,
+    bodyLines: string[],
+    curNodeLines: string[]
+) {
+    const stringsBetweenNodes = grabTextBetweenOffsets(curNodeEndOffset, prevStartOffset, parseResults);
+
+    // Current node and previous node offsets span multiple lines
+    if (stringsBetweenNodes.length > 1) {
+        // the first item is appened to the end of the current line.
+        const newCurrentLine = curNodeLines.pop() + stringsBetweenNodes[0];
+        curNodeLines.push(newCurrentLine);
+
+        // Any remaining items are in their own line
+        stringsBetweenNodes.slice(1, -1).forEach((line) => {
+            curNodeLines.push(line);
+        });
+
+        // last item is appended to the begining of the previous line
+        const previousLinePrefixText = stringsBetweenNodes.slice(-1);
+        const newPreviousLine = previousLinePrefixText + (bodyLines.pop() ?? '');
+        bodyLines.push(newPreviousLine);
+    } else {
+        const newPreviousLine = stringsBetweenNodes.join('') + (bodyLines.pop() ?? '');
+        bodyLines.push(newPreviousLine);
     }
 }

@@ -14,6 +14,7 @@
 await helper.verifyExtractMethod('marker', [
     `def new_func():
     some_very_long_variable_forcing_a_line_break = []
+
     for variable in [
     some_very_long_variable_forcing_a_line_break
     for some_very_long_variable_forcing_a_line_break in some_very_long_variable_forcing_a_line_break

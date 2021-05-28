@@ -99,7 +99,7 @@ await helper.verifyExtractVariable('marker10', [`new_var`, `new_var = None\n    
 ////    str = [|/*marker11*/"""Multiline
 //// string"""|]
 // @ts-ignore
-await helper.verifyExtractVariable('marker11', [`new_var`, `new_var = """Multiline\n string"""\n    `]);
+await helper.verifyExtractVariable('marker11', [`new_var`, `new_var = """Multiline\n string"""\n\n    `]);
 
 // @filename: TestExtractParamShouldFail.py
 ////def function([|/*marker12*/session|]):
