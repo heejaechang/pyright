@@ -3,9 +3,6 @@
  * Copyright: Microsoft 2018
  */
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-//@ts-check
-
 const path = require('path');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
 

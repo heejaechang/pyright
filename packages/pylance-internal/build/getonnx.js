@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable @typescript-eslint/no-var-requires */
-// @ts-check
 
 // Allow skipping of this script; useful when needing to run npm install
 // without package-lock existing (which this script depends on).
@@ -37,7 +35,7 @@ async function downloadOne(platform, arch) {
     const tarName = path.basename(url);
     const tarPath = path.resolve(downloadCacheDir, tarName);
 
-    /** @type {import('got').Response} */
+    /** @type {import('got').Response | undefined} */
     let response;
 
     if (!fs.existsSync(tarPath)) {
@@ -47,6 +45,9 @@ async function downloadOne(platform, arch) {
             response = r;
         });
         await pipeline(stream, fs.createWriteStream(tarPath));
+        if (!response) {
+            throw new Error('No response');
+        }
     } else {
         console.log(`Already downloaded ${tarName}; skipping`);
         response = await got.head(url);

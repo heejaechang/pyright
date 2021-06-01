@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as cp from 'child_process';
 import { default as detectIndent } from 'detect-indent';
-import * as fsExtra from 'fs-extra';
+import { promises as fsAsync } from 'fs';
 import { gitDescribe } from 'git-describe';
 import { SemVer } from 'semver';
 import type { TaskFunction } from 'undertaker';
@@ -11,7 +11,7 @@ import * as yargs from 'yargs';
 const exec = util.promisify(cp.exec);
 
 async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void) {
-    const input = await fsExtra.readFile(filepath, 'utf-8');
+    const input = await fsAsync.readFile(filepath, 'utf-8');
     const indent = detectIndent(input);
     const obj = JSON.parse(input);
 
@@ -27,7 +27,7 @@ async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void)
         output = output.replace(/\n/g, '\r\n');
     }
 
-    await fsExtra.writeFile(filepath, output, 'utf-8');
+    await fsAsync.writeFile(filepath, output, 'utf-8');
 }
 
 const metadataFilepath = 'packages/pylance-internal/src/common/metadata.json';

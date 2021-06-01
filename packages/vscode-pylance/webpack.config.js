@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable @typescript-eslint/no-var-requires */
-//@ts-check
-
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
@@ -21,10 +17,9 @@ const onnxLoader = path.resolve(__dirname, 'build', 'onnxLoader.js');
 
 const { binDir: onnxBin } = require('../pylance-internal/build/findonnx');
 
-/**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
+/** @type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration} */
 module.exports = (_, { mode }) => {
-    // CopyPlugin is typed based on the wrong webpack version, so use any[] to ignore it.
-    /** @type {any} */
+    /** @type {import('webpack').Configuration['plugins']} */
     const plugins = [
         new CopyPlugin({
             patterns: [
@@ -93,7 +88,6 @@ module.exports = (_, { mode }) => {
         resolve: {
             extensions: ['.ts', '.js'],
             plugins: [
-                // @ts-ignore
                 new TsconfigPathsPlugin({
                     configFile: 'tsconfig.withBaseUrl.json', // TODO: Remove once the plugin understands TS 4.1's implicit baseUrl.
                     extensions: ['.ts', '.js'],
@@ -121,8 +115,6 @@ module.exports = (_, { mode }) => {
         },
         optimization: {
             usedExports: true,
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            //@ts-ignore
             minimizer:
                 mode === 'production'
                     ? [

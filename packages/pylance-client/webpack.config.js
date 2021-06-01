@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-//@ts-check
-
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');

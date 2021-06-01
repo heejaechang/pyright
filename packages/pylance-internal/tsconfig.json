@@ -6,5 +6,12 @@
             "pyright-internal/*": ["../pyright/packages/pyright-internal/src/*"]
         }
     },
-    "include": ["./src/**/*", "./src/localization/*.json", "./intelliCode/**/*", "./*.ts", "./src/common/metadata.json"]
+    "include": [
+        "./src/**/*",
+        "./src/localization/*.json",
+        "./intelliCode/**/*",
+        "./src/common/metadata.json",
+        "**/*.js"
+    ],
+    "exclude": ["node_modules", "dist", "out"]
 }

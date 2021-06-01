@@ -1,11 +1,9 @@
-//@ts-check
-
 /**
  * Builds a faked resource path for production source maps in webpack.
  *
- * @param package {string} The name of the package where webpack is running.
+ * @param packageName {string} The name of the package where webpack is running.
  */
-function monorepoResourceNameMapper(package) {
+function monorepoResourceNameMapper(packageName) {
     /**@type {(info: {resourcePath: string}) => string} */
     const mapper = (info) => {
         const parts = [];
@@ -17,7 +15,7 @@ function monorepoResourceNameMapper(package) {
             }
 
             if (part === '.') {
-                parts.push(package);
+                parts.push(packageName);
                 break;
             }
 

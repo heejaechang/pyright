@@ -1,10 +1,12 @@
 {
     "extends": "../pyright/tsconfig.json",
     "compilerOptions": {
+        "outDir": "./out",
         "paths": {
             "pyright-internal/*": ["../pyright/packages/pyright-internal/src/*"],
             "pylance-internal/*": ["../pylance-internal/src/*"]
         }
     },
-    "include": ["src/**/*"]
+    "include": ["src/**/*", "**/*.js"],
+    "exclude": ["node_modules", "dist", "out"]
 }
