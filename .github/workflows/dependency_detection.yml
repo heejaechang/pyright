@@ -1,0 +1,53 @@
+name: 'Dependency Detection'
+
+env:
+  NODE_VERSION: '12' # Shipped with VS Code.
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  detection:
+    if: github.repository == 'microsoft/pyrx'
+    runs-on: ubuntu-18.04
+    name: Dependency Detection
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - run: npm install
+
+      - name: Get private repo with action
+        uses: actions/checkout@v2
+        with:
+          repository: github/dependency-detection
+          ref: releases/v1
+          token: ${{ secrets.GH_PRIVATE_REPO_PAT }}
+          path: .github/actions/dependency-detection
+
+      - name: Dependency Detection
+        uses: ./.github/actions/dependency-detection
+        with:
+          token: ${{ github.token }}
