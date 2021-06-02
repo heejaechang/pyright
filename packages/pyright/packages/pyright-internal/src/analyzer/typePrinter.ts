@@ -53,6 +53,10 @@ export const enum PrintTypeFlags {
 
     // Expand type aliases to display their individual parts?
     ExpandTypeAlias = 1 << 5,
+
+    // Add "*" for types that are conditionally constrained when
+    // used with constrained TypeVars.
+    OmitConditionalConstraint = 1 << 6,
 }
 
 export type FunctionReturnTypeCallback = (type: FunctionType) => Type;
@@ -140,6 +144,11 @@ export function printType(
         }
     }
 
+    const includeConditionalIndicator = (printTypeFlags & PrintTypeFlags.OmitConditionalConstraint) === 0;
+    const getConditionalIndicator = (subtype: Type) => {
+        return subtype.condition !== undefined && includeConditionalIndicator ? '*' : '';
+    };
+
     switch (type.category) {
         case TypeCategory.Unbound: {
             return 'Unbound';
@@ -155,10 +164,15 @@ export function printType(
 
         case TypeCategory.Class: {
             if (type.literalValue !== undefined) {
-                return `Type[Literal[${printLiteralValue(type)}]]`;
+                return `Type[Literal[${printLiteralValue(type)}]]${getConditionalIndicator(type)}`;
             }
 
-            return `Type[${printObjectTypeForClass(type, printTypeFlags, returnTypeCallback, recursionCount + 1)}]`;
+            return `Type[${printObjectTypeForClass(
+                type,
+                printTypeFlags,
+                returnTypeCallback,
+                recursionCount + 1
+            )}]${getConditionalIndicator(type)}`;
         }
 
         case TypeCategory.Object: {
@@ -166,7 +180,12 @@ export function printType(
                 return `Literal[${printLiteralValue(type.classType)}]`;
             }
 
-            return printObjectTypeForClass(type.classType, printTypeFlags, returnTypeCallback, recursionCount + 1);
+            return `${printObjectTypeForClass(
+                type.classType,
+                printTypeFlags,
+                returnTypeCallback,
+                recursionCount + 1
+            )}${getConditionalIndicator(type.classType)}`;
         }
 
         case TypeCategory.Function: {
@@ -316,7 +335,7 @@ export function printType(
         }
 
         case TypeCategory.None: {
-            return TypeBase.isInstantiable(type) ? 'NoneType' : 'None';
+            return `${TypeBase.isInstantiable(type) ? 'NoneType' : 'None'}${getConditionalIndicator(type)}`;
         }
 
         case TypeCategory.Never: {

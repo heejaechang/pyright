@@ -9,6 +9,7 @@
  */
 
 import {
+    ArgumentCategory,
     AssignmentNode,
     AugmentedAssignmentNode,
     ClassNode,
@@ -40,6 +41,7 @@ import { SourceFile } from './sourceFile';
 import { Symbol } from './symbol';
 import * as SymbolNameUtils from './symbolNameUtils';
 import { TypeEvaluator } from './typeEvaluator';
+import { isFunction, isNever, isUnknown, removeUnknownFromUnion } from './types';
 
 class TrackedImport {
     constructor(public importName: string) {}
@@ -157,8 +159,18 @@ export class TypeStubWriter extends ParseTreeWalker {
         this._emitDocString = true;
         this._emitDecorators(node.decorators);
         let line = `class ${className}`;
-        if (node.arguments.length > 0) {
-            line += `(${node.arguments
+
+        // Remove "object" from the list, since it's implied
+        const args = node.arguments.filter(
+            (arg) =>
+                arg.name !== undefined ||
+                arg.argumentCategory !== ArgumentCategory.Simple ||
+                arg.valueExpression.nodeType !== ParseNodeType.Name ||
+                arg.valueExpression.value !== 'object'
+        );
+
+        if (args.length > 0) {
+            line += `(${args
                 .map((arg) => {
                     let argString = '';
                     if (arg.name) {
@@ -226,6 +238,20 @@ export class TypeStubWriter extends ParseTreeWalker {
             }
 
             line += ':';
+
+            // If there was not return type annotation, see if we can infer
+            // a type that is not unknown and add it as a comment.
+            if (!returnAnnotation) {
+                const functionType = this._evaluator.getTypeOfFunction(node);
+                if (functionType && isFunction(functionType.functionType)) {
+                    let returnType = this._evaluator.getFunctionInferredReturnType(functionType.functionType);
+                    returnType = removeUnknownFromUnion(returnType);
+                    if (!isNever(returnType) && !isUnknown(returnType)) {
+                        line += ` # -> ${this._evaluator.printType(returnType, /* expandTypeAlias */ false)}:`;
+                    }
+                }
+            }
+
             this._emitLine(line);
 
             this._emitSuite(() => {
