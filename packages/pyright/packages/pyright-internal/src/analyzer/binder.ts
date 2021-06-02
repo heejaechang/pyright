@@ -142,10 +142,6 @@ export class Binder extends ParseTreeWalker {
     // The current scope in effect.
     private _currentScope!: Scope;
 
-    // Number of nested except statements at current point of analysis.
-    // Used to determine if a naked "raise" statement is allowed.
-    private _nestedExceptDepth = 0;
-
     // Current control-flow node.
     private _currentFlowNode: FlowNode | undefined;
 
@@ -372,6 +368,12 @@ export class Binder extends ParseTreeWalker {
 
         this._createNewScope(ScopeType.Class, parentScope, () => {
             AnalyzerNodeInfo.setScope(node, this._currentScope);
+
+            this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str', /* isExclusiveClassMember */ false);
+            this._addBuiltInSymbolToCurrentScope('__module__', node, 'str', /* isExclusiveClassMember */ false);
+
+            this._addBuiltInSymbolToCurrentScope('__name__', node, 'str', /* isExclusiveClassMember */ true);
+            this._addBuiltInSymbolToCurrentScope('__qualname__', node, 'str', /* isExclusiveClassMember */ true);
 
             if (!this._moduleSymbolOnly) {
                 // Analyze the suite.
@@ -1120,10 +1122,6 @@ export class Binder extends ParseTreeWalker {
             this._targetFunctionDeclaration.raiseStatements.push(node);
         }
 
-        if (!node.typeExpression && this._nestedExceptDepth === 0) {
-            this._addError(Localizer.Diagnostic.raiseParams(), node);
-        }
-
         if (node.typeExpression) {
             this.walk(node.typeExpression);
         }
@@ -1237,7 +1235,6 @@ export class Binder extends ParseTreeWalker {
         }
 
         // Handle the except blocks.
-        this._nestedExceptDepth++;
         node.exceptClauses.forEach((exceptNode, index) => {
             this._currentFlowNode = this._finishFlowLabel(curExceptTargets[index]);
             this.walk(exceptNode);
@@ -1246,7 +1243,6 @@ export class Binder extends ParseTreeWalker {
                 isAfterElseAndExceptsReachable = true;
             }
         });
-        this._nestedExceptDepth--;
 
         if (node.finallySuite) {
             this._finallyTargets.pop();
@@ -1276,7 +1272,12 @@ export class Binder extends ParseTreeWalker {
         // Make sure this is within an async lambda or function.
         const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
         if (enclosingFunction === undefined || !enclosingFunction.isAsync) {
-            this._addError(Localizer.Diagnostic.awaitNotInAsync(), node);
+            // Allow if it's within a generator expression. Execution of
+            // generator expressions is deferred and therefore can be
+            // run within the context of an async function later.
+            if (node.parent?.nodeType !== ParseNodeType.ListComprehension) {
+                this._addError(Localizer.Diagnostic.awaitNotInAsync(), node);
+            }
         }
 
         return true;
@@ -2771,6 +2772,11 @@ export class Binder extends ParseTreeWalker {
                 if (addedSymbols) {
                     addedSymbols.set(name, symbol);
                 }
+            } else {
+                // If the "exclusive class member" flag was previously set for
+                // the symbol because of an intrinsic class variable, clear it
+                // now because it is being overridden by an explicit class variable.
+                symbol.setIsNotExclusiveClassMember();
             }
 
             return symbol;
@@ -2815,7 +2821,8 @@ export class Binder extends ParseTreeWalker {
     private _addBuiltInSymbolToCurrentScope(
         nameValue: string,
         node: ModuleNode | ClassNode | FunctionNode,
-        type: IntrinsicType
+        type: IntrinsicType,
+        isExclusiveClassMember = false
     ) {
         const symbol = this._addSymbolToCurrentScope(nameValue, /* isInitiallyUnbound */ false);
         if (symbol) {
@@ -2828,6 +2835,10 @@ export class Binder extends ParseTreeWalker {
                 moduleName: this._fileInfo.moduleName,
             });
             symbol.setIsIgnoredForProtocolMatch();
+
+            if (isExclusiveClassMember) {
+                symbol.setIsExclusiveClassMember();
+            }
         }
     }
 
@@ -2853,6 +2864,10 @@ export class Binder extends ParseTreeWalker {
             // Add the symbol. Assume that symbols with a default type source ID
             // are "implicit" symbols added to the scope. These are not initially unbound.
             symbol = this._currentScope.addSymbol(nameValue, symbolFlags);
+        } else {
+            // Clear the "exclusive class member" flag if it was previously set
+            // on one of the intrinsic symbols, such as `__name__`.
+            symbol.setIsNotExclusiveClassMember();
         }
 
         return symbol;
@@ -3361,7 +3376,6 @@ export class Binder extends ParseTreeWalker {
 
             // Reset the state
             this._currentScope = nextItem.scope;
-            this._nestedExceptDepth = 0;
             this._currentExecutionScopeReferenceMap = nextItem.codeFlowExpressionMap;
 
             nextItem.callback();

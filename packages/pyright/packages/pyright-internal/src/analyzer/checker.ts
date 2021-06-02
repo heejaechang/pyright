@@ -1690,7 +1690,7 @@ export class Checker extends ParseTreeWalker {
 
                     this._reportIncompatibleDeclarations(name, symbol);
 
-                    this._reportMultipleFinalDeclarations(name, symbol);
+                    this._reportMultipleFinalDeclarations(name, symbol, scope.type);
 
                     this._reportMultipleTypeAliasDeclarations(name, symbol);
 
@@ -1779,7 +1779,7 @@ export class Checker extends ParseTreeWalker {
         }
     }
 
-    private _reportMultipleFinalDeclarations(name: string, symbol: Symbol) {
+    private _reportMultipleFinalDeclarations(name: string, symbol: Symbol, scopeType: ScopeType) {
         if (!isFinalVariable(symbol)) {
             return;
         }
@@ -1798,7 +1798,13 @@ export class Checker extends ParseTreeWalker {
 
             if (decl.type === DeclarationType.Variable && decl.inferredTypeSource) {
                 if (sawAssignment) {
-                    this._evaluator.addError(Localizer.Diagnostic.finalReassigned().format({ name }), decl.node);
+                    // We check for assignment of Final instance and class variables
+                    // the type evaluator because we need to take into account whether
+                    // the assignment is within an `__init__` method, so ignore class
+                    // scopes here.
+                    if (scopeType !== ScopeType.Class) {
+                        this._evaluator.addError(Localizer.Diagnostic.finalReassigned().format({ name }), decl.node);
+                    }
                 }
                 sawAssignment = true;
             }
@@ -3145,32 +3151,69 @@ export class Checker extends ParseTreeWalker {
                 // This check can be expensive, so don't perform it if the corresponding
                 // rule is disabled.
                 if (this._fileInfo.diagnosticRuleSet.reportIncompatibleVariableOverride !== 'none') {
-                    // Verify that the override type is assignable to (same or narrower than)
-                    // the declared type of the base symbol.
-                    const diagAddendum = new DiagnosticAddendum();
-                    if (!this._evaluator.canAssignType(baseClassSymbolType, typeOfSymbol, diagAddendum)) {
-                        const decls = symbol.getDeclarations();
-                        if (decls.length > 0) {
-                            const lastDecl = decls[decls.length - 1];
-                            if (lastDecl) {
-                                const diag = this._evaluator.addDiagnostic(
-                                    this._fileInfo.diagnosticRuleSet.reportIncompatibleVariableOverride,
-                                    DiagnosticRule.reportIncompatibleVariableOverride,
-                                    Localizer.Diagnostic.symbolOverridden().format({
-                                        name,
-                                        className: baseClassAndSymbol.classType.details.name,
-                                    }) + diagAddendum.getString(),
-                                    lastDecl.node
-                                );
+                    const decls = symbol.getDeclarations();
+                    if (decls.length > 0) {
+                        const lastDecl = decls[decls.length - 1];
+                        // Verify that the override type is assignable to (same or narrower than)
+                        // the declared type of the base symbol.
+                        const diagAddendum = new DiagnosticAddendum();
+                        if (!this._evaluator.canAssignType(baseClassSymbolType, typeOfSymbol, diagAddendum)) {
+                            const diag = this._evaluator.addDiagnostic(
+                                this._fileInfo.diagnosticRuleSet.reportIncompatibleVariableOverride,
+                                DiagnosticRule.reportIncompatibleVariableOverride,
+                                Localizer.Diagnostic.symbolOverridden().format({
+                                    name,
+                                    className: baseClassAndSymbol.classType.details.name,
+                                }) + diagAddendum.getString(),
+                                lastDecl.node
+                            );
 
-                                const origDecl = getLastTypedDeclaredForSymbol(baseClassAndSymbol.symbol);
-                                if (diag && origDecl) {
-                                    diag.addRelatedInfo(
-                                        Localizer.DiagnosticAddendum.overriddenSymbol(),
-                                        origDecl.path,
-                                        origDecl.range
-                                    );
-                                }
+                            const origDecl = getLastTypedDeclaredForSymbol(baseClassAndSymbol.symbol);
+                            if (diag && origDecl) {
+                                diag.addRelatedInfo(
+                                    Localizer.DiagnosticAddendum.overriddenSymbol(),
+                                    origDecl.path,
+                                    origDecl.range
+                                );
+                            }
+                        }
+
+                        // Verify that a class variable isn't overriding an instance
+                        // variable or vice versa.
+                        const isBaseClassVar = baseClassAndSymbol.symbol.isClassVar();
+                        let isClassVar = symbol.isClassVar();
+
+                        // If the subclass doesn't redeclare the type but simply assigns
+                        // it without declaring its type, we won't consider it an instance
+                        // variable.
+                        if (isBaseClassVar && !isClassVar) {
+                            if (!symbol.hasTypedDeclarations()) {
+                                isClassVar = true;
+                            }
+                        }
+
+                        if (isBaseClassVar !== isClassVar) {
+                            const unformattedMessage = symbol.isClassVar()
+                                ? Localizer.Diagnostic.classVarOverridesInstanceVar()
+                                : Localizer.Diagnostic.instanceVarOverridesClassVar();
+
+                            const diag = this._evaluator.addDiagnostic(
+                                this._fileInfo.diagnosticRuleSet.reportIncompatibleVariableOverride,
+                                DiagnosticRule.reportIncompatibleVariableOverride,
+                                unformattedMessage.format({
+                                    name,
+                                    className: baseClassAndSymbol.classType.details.name,
+                                }),
+                                lastDecl.node
+                            );
+
+                            const origDecl = getLastTypedDeclaredForSymbol(baseClassAndSymbol.symbol);
+                            if (diag && origDecl) {
+                                diag.addRelatedInfo(
+                                    Localizer.DiagnosticAddendum.overriddenSymbol(),
+                                    origDecl.path,
+                                    origDecl.range
+                                );
                             }
                         }
                     }

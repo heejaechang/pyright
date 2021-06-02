@@ -219,6 +219,10 @@ export namespace Localizer {
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.classDefinitionCycle'));
         export const classGetItemClsParam = () => getRawString('Diagnostic.classGetItemClsParam');
         export const classVarFirstArgMissing = () => getRawString('Diagnostic.classVarFirstArgMissing');
+        export const classVarOverridesInstanceVar = () =>
+            new ParameterizedString<{ name: string; className: string }>(
+                getRawString('Diagnostic.classVarOverridesInstanceVar')
+            );
         export const classVarTooManyArgs = () => getRawString('Diagnostic.classVarTooManyArgs');
         export const clsSelfParamTypeMismatch = () =>
             new ParameterizedString<{ name: string; classType: string }>(
@@ -381,6 +385,10 @@ export namespace Localizer {
         export const initMustReturnNone = () => getRawString('Diagnostic.initMustReturnNone');
         export const initSubclassClsParam = () => getRawString('Diagnostic.initSubclassClsParam');
         export const instanceMethodSelfParam = () => getRawString('Diagnostic.instanceMethodSelfParam');
+        export const instanceVarOverridesClassVar = () =>
+            new ParameterizedString<{ name: string; className: string }>(
+                getRawString('Diagnostic.instanceVarOverridesClassVar')
+            );
         export const internalBindError = () =>
             new ParameterizedString<{ file: string; message: string }>(getRawString('Diagnostic.internalBindError'));
         export const internalParseError = () =>
@@ -568,7 +576,6 @@ export namespace Localizer {
             new ParameterizedString<{ variable: string; class: string }>(
                 getRawString('Diagnostic.protocolVarianceInvariant')
             );
-        export const raiseParams = () => getRawString('Diagnostic.raiseParams');
         export const recursiveDefinition = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.recursiveDefinition'));
         export const relativeImportNotAllowed = () => getRawString('Diagnostic.relativeImportNotAllowed');
@@ -627,8 +634,10 @@ export namespace Localizer {
             );
         export const typeAbstract = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.typeAbstract'));
-        export const typeAliasIsRecursive = () =>
-            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeAliasIsRecursive'));
+        export const typeAliasIsRecursiveDirect = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeAliasIsRecursiveDirect'));
+        export const typeAliasIsRecursiveIndirect = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeAliasIsRecursiveIndirect'));
         export const typeAliasNotInModule = () => getRawString('Diagnostic.typeAliasNotInModule');
         export const typeAliasRedeclared = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeAliasRedeclared'));

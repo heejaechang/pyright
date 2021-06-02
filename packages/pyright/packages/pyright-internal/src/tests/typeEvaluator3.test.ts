@@ -321,6 +321,12 @@ test('TypeAlias12', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeAlias13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias13.pyi']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
 test('Dictionary1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dictionary1.py']);
 
@@ -355,7 +361,7 @@ test('Classes2', () => {
 test('Classes3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes3.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Classes4', () => {
@@ -374,7 +380,7 @@ test('Classes5', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleVariableOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes5.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 9);
+    TestUtils.validateResults(analysisResults, 11);
 });
 
 test('Classes6', () => {

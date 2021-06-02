@@ -250,7 +250,7 @@ test('Final2', () => {
 
 test('Final3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final3.py']);
-    TestUtils.validateResults(analysisResults, 16);
+    TestUtils.validateResults(analysisResults, 15);
 });
 
 test('Final4', () => {
@@ -422,7 +422,7 @@ test('DataClass13', () => {
 test('DataClass14', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass14.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Callable1', () => {
@@ -666,6 +666,12 @@ test('TypeVar10', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeVar11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar11.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Annotated1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -687,7 +693,7 @@ test('Circular1', () => {
 test('TryExcept1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['tryExcept1.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('TryExcept2', () => {
