@@ -3,7 +3,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 const { TsconfigPathsPlugin } = require('tsconfig-paths-webpack-plugin');
 const WebpackObfuscator = require('webpack-obfuscator');
 const TerserPlugin = require('terser-webpack-plugin');
-const { monorepoResourceNameMapper } = require('../pyright/build/lib/webpack');
+const { cacheConfig, monorepoResourceNameMapper } = require('../pyright/build/lib/webpack');
 const webpack = require('webpack');
 
 const outPath = path.resolve(__dirname, 'dist');
@@ -80,6 +80,7 @@ module.exports = (_, { mode }) => {
             clean: true,
         },
         devtool: mode === 'development' ? 'source-map' : undefined,
+        cache: mode === 'development' ? cacheConfig(__dirname, __filename) : undefined,
         stats: {
             all: false,
             errors: true,
