@@ -26,9 +26,6 @@ jobs:
       - script: npx lerna exec --stream --no-bail --ignore=pyright-root -- tsc --noEmit
         displayName: tsc packages
 
-      - script: npx gulp --tasks
-        displayName: Check gulp
-
   - job: style
     displayName: Style
     pool:

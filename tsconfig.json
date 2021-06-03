@@ -1,12 +1,12 @@
 {
-    // This file is intended to typecheck gulpfile.ts; if more code needs this tsconfig, reconsider these values.
+    "extends": "./packages/pyright/tsconfig.json",
     "compilerOptions": {
-        "strict": true,
-        "noEmit": true,
-        "noImplicitAny": false, // Workaround for gulp's ts-node loader not loading d.ts files.
-        "esModuleInterop": true,
-        "skipLibCheck": true
+        "outDir": "./out",
+        "baseUrl": "build",
+        "paths": {
+            "*": ["types/*"]
+        }
     },
-    "include": ["*.ts"],
+    "include": ["build/**/*.ts", "build/**/*.js"],
     "exclude": ["node_modules", "dist", "out"]
 }

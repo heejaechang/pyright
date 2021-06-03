@@ -1,16 +1,19 @@
-import * as assert from 'assert';
-import * as cp from 'child_process';
-import { default as detectIndent } from 'detect-indent';
-import { promises as fsAsync } from 'fs';
-import { gitDescribe } from 'git-describe';
-import { SemVer } from 'semver';
-import type { TaskFunction } from 'undertaker';
-import * as util from 'util';
-import * as yargs from 'yargs';
+const assert = require('assert');
+const cp = require('child_process');
+const detectIndent = require('detect-indent');
+const { promises: fsAsync } = require('fs');
+const { gitDescribe } = require('git-describe');
+const { SemVer } = require('semver');
+const util = require('util');
+const yargs = require('yargs');
 
 const exec = util.promisify(cp.exec);
 
-async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void) {
+/**
+ * @param {string} filepath Path to json file to modify.
+ * @param {(obj: any) => void} modifier Function that modifies the JSON object.
+ */
+async function modifyJsonInPlace(filepath, modifier) {
     const input = await fsAsync.readFile(filepath, 'utf-8');
     const indent = detectIndent(input);
     const obj = JSON.parse(input);
@@ -32,8 +35,6 @@ async function modifyJsonInPlace(filepath: string, modifier: (obj: any) => void)
 
 const metadataFilepath = 'packages/pylance-internal/src/common/metadata.json';
 
-// Don't bother updating package-lock.json; setVersion is used in the build where doing this
-// messes with npm caching, and these files aren't referenced from real code or shipped.
 const filesWithVersion = [
     metadataFilepath,
     'packages/pylance/package.json',
@@ -42,7 +43,10 @@ const filesWithVersion = [
     'packages/pylance-pythia/package.json',
 ];
 
-async function setAllVersions(version: string) {
+/**
+ * @param {string} version Version string.
+ */
+async function setAllVersions(version) {
     for (const filepath of filesWithVersion) {
         await modifyJsonInPlace(filepath, (obj) => {
             console.log(`Modifying ${filepath}: ${obj.version} -> ${version}`);
@@ -61,7 +65,7 @@ async function setPyrightCommit() {
     });
 }
 
-async function getExactVersion(): Promise<string | undefined> {
+async function getExactVersion() {
     const gitInfo = await gitDescribe('.', { match: '*.*.*', dirtySemver: false });
 
     if (!gitInfo.semver || gitInfo.distance) {
@@ -71,7 +75,12 @@ async function getExactVersion(): Promise<string | undefined> {
     return gitInfo.semver.format();
 }
 
-async function buildGitVersion(prBuildId?: string): Promise<string> {
+/**
+ *
+ * @param {string | undefined} prBuildId
+ * @returns {Promise<string>}
+ */
+async function buildGitVersion(prBuildId) {
     const exact = await getExactVersion();
     if (exact) {
         assert.ok(!prBuildId, `Got prBuildId for exact git tag: ${exact}`);
@@ -101,7 +110,7 @@ async function buildGitVersion(prBuildId?: string): Promise<string> {
     return gitInfo.semver.format();
 }
 
-export const setVersion: TaskFunction = async () => {
+async function main() {
     const argv = yargs.options({
         to: { type: 'string' },
         prBuildId: { type: 'string' },
@@ -117,4 +126,6 @@ export const setVersion: TaskFunction = async () => {
     await setAllVersions(to);
 
     await setPyrightCommit();
-};
+}
+
+main();

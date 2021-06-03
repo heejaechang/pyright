@@ -50,7 +50,6 @@ jobs:
 
       - run: npx tsc --noEmit
       - run: npx lerna exec --stream --no-bail --ignore=pyright-root --concurrency=4 -- tsc --noEmit
-      - run: npx gulp --tasks
 
   hygiene:
     if: github.repository == 'microsoft/pyrx'

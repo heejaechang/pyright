@@ -1,3 +1,5 @@
+import { SemVer } from 'semver';
+
 declare module 'git-describe' {
     export interface GitInfo {
         raw: string;
@@ -10,7 +12,7 @@ declare module 'git-describe' {
         semverString: string | null;
     }
 
-    export async function gitDescribe(
+    export function gitDescribe(
         directory: string,
         options?: {
             dirtyMark?: string;
