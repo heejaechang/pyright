@@ -34,6 +34,7 @@ export enum TelemetryEventName {
     SEMANTICTOKENS_SLOW = 'semantictokens_slow',
     EXECUTE_COMMAND = 'execute_command',
     SETTINGS = 'settings',
+    STARTUP_METRICS = 'startup_metrics',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes
