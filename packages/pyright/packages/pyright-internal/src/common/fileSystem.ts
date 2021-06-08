@@ -12,10 +12,11 @@
 import { FakeFS, NativePath, PortablePath, PosixFS, ppath, VirtualFS, ZipOpenFS } from '@yarnpkg/fslib';
 import { getLibzipSync } from '@yarnpkg/libzip';
 import * as chokidar from 'chokidar';
-import type * as fs from 'fs';
+import * as fs from 'fs';
 import * as tmp from 'tmp';
 
 import { ConsoleInterface, NullConsole } from './console';
+import { getRootLength } from './pathUtils';
 
 // Automatically remove files created by tmp at process exit.
 tmp.setGracefulCleanup();
@@ -74,6 +75,9 @@ export interface FileSystem {
     // The directory returned by tmpdir must exist and be the same each time tmpdir is called.
     tmpdir(): string;
     tmpfile(options?: TmpfileOptions): string;
+
+    // Return path in casing on OS.
+    realCasePath(path: string): string;
 }
 
 export interface FileWatcherProvider {
@@ -86,7 +90,8 @@ export function createFromRealFileSystem(
     console?: ConsoleInterface,
     fileWatcherProvider?: FileWatcherProvider
 ): FileSystem {
-    return new RealFileSystem(fileWatcherProvider ?? new ChokidarFileWatcherProvider(console ?? new NullConsole()));
+    console = console ?? new NullConsole();
+    return new RealFileSystem(fileWatcherProvider ?? new ChokidarFileWatcherProvider(console), console);
 }
 
 // File watchers can give "changed" event even for a file open. but for those cases,
@@ -259,12 +264,9 @@ class YarnFS extends PosixFS {
 const yarnFS = new YarnFS();
 
 class RealFileSystem implements FileSystem {
-    private _fileWatcherProvider: FileWatcherProvider;
     private _tmpdir?: string;
 
-    constructor(fileWatcherProvider: FileWatcherProvider) {
-        this._fileWatcherProvider = fileWatcherProvider;
-    }
+    constructor(private _fileWatcherProvider: FileWatcherProvider, private _console: ConsoleInterface) {}
 
     existsSync(path: string) {
         try {
@@ -393,6 +395,34 @@ class RealFileSystem implements FileSystem {
     tmpfile(options?: TmpfileOptions): string {
         const f = tmp.fileSync({ dir: this.tmpdir(), discardDescriptor: true, ...options });
         return f.name;
+    }
+
+    realCasePath(path: string): string {
+        try {
+            // If it doesn't exist in the real FS, return path as it is.
+            if (!fs.existsSync(path)) {
+                return path;
+            }
+
+            // realpathSync.native will return casing as in OS rather than
+            // trying to preserve casing given.
+            const realPath = fs.realpathSync.native(path);
+
+            // path is not rooted, return as it is
+            const rootLength = getRootLength(realPath);
+            if (rootLength <= 0) {
+                return realPath;
+            }
+
+            // path is rooted, make sure we lower case the root part
+            // to follow vscode's behavior.
+            return realPath.substr(0, rootLength).toLowerCase() + realPath.substr(rootLength);
+        } catch (e) {
+            // Return as it is, if anything failed.
+            this._console.error(`Failed to get real file system casing for ${path}: ${e}`);
+
+            return path;
+        }
     }
 }
 

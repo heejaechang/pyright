@@ -28,7 +28,6 @@ import {
     getRelativePathComponentsFromDirectory,
     isDirectory,
     isFile,
-    normalizePathCase,
     resolvePaths,
     stripFileExtension,
     stripTrailingDirectorySeparator,
@@ -1231,7 +1230,7 @@ export class ImportResolver {
         if (!this._cachedPythonSearchPaths.has(cacheKey)) {
             let paths = (
                 PythonPathUtils.findPythonSearchPaths(this.fileSystem, this._configOptions, importFailureInfo) || []
-            ).map((p) => normalizePathCase(this.fileSystem, p));
+            ).map((p) => this.fileSystem.realCasePath(p));
 
             // Remove duplicates (yes, it happens).
             paths = [...new Set(paths)];
