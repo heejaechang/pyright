@@ -329,6 +329,7 @@ class PylanceServer extends LanguageServerBase {
         te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
         te.Properties['useImportHeuristic'] = `${serverSettings.useImportHeuristic}`;
         te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
+        te.Measurements['workspaceCount'] = this._workspaceMap.getNonDefaultWorkspaces().length;
         this._telemetry.sendTelemetry(te);
 
         return serverSettings;
