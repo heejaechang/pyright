@@ -51,6 +51,7 @@ import {
     TypeCondition,
     TypeVarScopeId,
     TypeVarType,
+    UnionType,
     UnknownType,
 } from './types';
 import { TypeVarMap } from './typeVarMap';
@@ -152,6 +153,7 @@ interface TypeVarTransformer {
     transformTypeVar: (typeVar: TypeVarType) => Type;
     transformVariadicTypeVar: (paramSpec: TypeVarType) => Type[] | undefined;
     transformParamSpec: (paramSpec: TypeVarType) => ParamSpecValue | undefined;
+    transformUnion?: (type: UnionType) => Type;
 }
 
 let synthesizedTypeVarIndexForExpectedType = 1;
@@ -652,9 +654,11 @@ export function applySolvedTypeVars(
     type: Type,
     typeVarMap: TypeVarMap,
     unknownIfNotFound = false,
-    useNarrowBoundOnly = false
+    useNarrowBoundOnly = false,
+    eliminateUnsolvedInUnions = false
 ): Type {
-    if (typeVarMap.isEmpty() && !unknownIfNotFound) {
+    // Use a shortcut if the typeVarMap is empty and no transform is necessary.
+    if (typeVarMap.isEmpty() && !unknownIfNotFound && !eliminateUnsolvedInUnions) {
         return type;
     }
 
@@ -676,6 +680,29 @@ export function applySolvedTypeVars(
             }
 
             return typeVar;
+        },
+        transformUnion: (type: UnionType) => {
+            // If a union contains unsolved TypeVars within scope, eliminate them
+            // unless this results in an empty union. This elimination is needed
+            // in cases where TypeVars can go unmatched due to unions in parameter
+            // annotations, like this:
+            //   def test(x: Union[str, T]) -> Union[str, T]
+            if (eliminateUnsolvedInUnions) {
+                const updatedUnion = mapSubtypes(type, (subtype) => {
+                    if (
+                        isTypeVar(subtype) &&
+                        subtype.scopeId !== undefined &&
+                        typeVarMap.hasSolveForScope(subtype.scopeId)
+                    ) {
+                        return undefined;
+                    }
+                    return subtype;
+                });
+
+                return isNever(updatedUnion) ? type : updatedUnion;
+            }
+
+            return type;
         },
         transformVariadicTypeVar: (typeVar: TypeVarType) => {
             if (!typeVar.scopeId || !typeVarMap.hasSolveForScope(typeVar.scopeId)) {
@@ -1164,7 +1191,9 @@ export function buildTypeVarMap(
                                 type: param.type,
                             });
                         });
-                        typeVarMap.setParamSpec(typeParam, { parameters: paramSpecEntries });
+                        typeVarMap.setParamSpec(typeParam, {
+                            concrete: { parameters: paramSpecEntries, flags: typeArgType.details.flags },
+                        });
                     } else if (isParamSpec(typeArgType)) {
                         typeVarMap.setParamSpec(typeParam, { paramSpec: typeArgType });
                     }
@@ -1736,7 +1765,7 @@ export function _transformTypeVars(
     }
 
     if (isUnion(type)) {
-        return mapSubtypes(type, (subtype) => {
+        const newUnionType = mapSubtypes(type, (subtype) => {
             let transformedType = _transformTypeVars(subtype, callbacks, recursionMap, recursionLevel + 1);
 
             // If we're transforming a variadic type variable within a union,
@@ -1752,21 +1781,43 @@ export function _transformTypeVars(
 
             return transformedType;
         });
+
+        if (callbacks.transformUnion && isUnion(newUnionType)) {
+            return callbacks.transformUnion(newUnionType);
+        }
+
+        return newUnionType;
     }
 
     if (isObject(type)) {
-        const classType = _transformTypeVarsInClassType(type.classType, callbacks, recursionMap, recursionLevel + 1);
+        let classType = _transformTypeVarsInClassType(type.classType, callbacks, recursionMap, recursionLevel + 1);
 
         // Handle the "Type" special class.
         if (ClassType.isBuiltIn(classType, 'Type')) {
             const typeArgs = classType.typeArguments;
             if (typeArgs && typeArgs.length >= 1) {
                 if (isObject(typeArgs[0])) {
-                    return _transformTypeVars(typeArgs[0].classType, callbacks, recursionMap, recursionLevel + 1);
+                    const transformedObj = _transformTypeVars(
+                        typeArgs[0].classType,
+                        callbacks,
+                        recursionMap,
+                        recursionLevel + 1
+                    );
+                    if (transformedObj !== typeArgs[0]) {
+                        classType = ClassType.cloneForSpecialization(
+                            classType,
+                            [transformedObj],
+                            /* usTypeArgumentExplicit */ true
+                        );
+                    }
                 } else if (isTypeVar(typeArgs[0])) {
                     const replacementType = callbacks.transformTypeVar(typeArgs[0]);
                     if (replacementType && isObject(replacementType)) {
-                        return replacementType.classType;
+                        classType = ClassType.cloneForSpecialization(
+                            classType,
+                            [ObjectType.create(replacementType.classType)],
+                            /* usTypeArgumentExplicit */ true
+                        );
                     }
                 }
             }
@@ -1827,11 +1878,11 @@ function _transformTypeVarsInClassType(
     const transformParamSpec = (paramSpec: TypeVarType) => {
         const paramSpecEntries = callbacks.transformParamSpec(paramSpec);
         if (paramSpecEntries) {
-            if (paramSpecEntries.parameters) {
+            if (paramSpecEntries.concrete) {
                 // Create a function type from the param spec entries.
                 const functionType = FunctionType.createInstance('', '', '', FunctionTypeFlags.ParamSpecValue);
 
-                paramSpecEntries.parameters.forEach((entry) => {
+                paramSpecEntries.concrete.parameters.forEach((entry) => {
                     FunctionType.addParameter(functionType, {
                         category: entry.category,
                         name: entry.name,

@@ -327,6 +327,12 @@ test('TypeAlias13', () => {
     TestUtils.validateResults(analysisResults, 2);
 });
 
+test('TypeAlias14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias14.py']);
+
+    TestUtils.validateResults(analysisResults, 6);
+});
+
 test('Dictionary1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dictionary1.py']);
 
@@ -584,7 +590,7 @@ test('Match7', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['match7.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('List1', () => {
@@ -666,6 +672,12 @@ test('Constructor7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor7.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Constructor8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor8.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('ClassGetItem1', () => {
