@@ -85,6 +85,7 @@ import {
     FlowAssignmentAlias,
     FlowCall,
     FlowCondition,
+    FlowExhaustedMatch,
     FlowFlags,
     FlowLabel,
     FlowNarrowForPattern,
@@ -1798,6 +1799,7 @@ export class Binder extends ParseTreeWalker {
         }
 
         const postMatchLabel = this._createBranchLabel();
+        let foundIrrefutableCase = false;
 
         // Model the match statement as a series of if/elif clauses
         // each of which tests for the specified pattern (and optionally
@@ -1812,12 +1814,18 @@ export class Binder extends ParseTreeWalker {
 
             if (!caseStatement.isIrrefutable) {
                 this._addAntecedent(postCaseLabel, this._currentFlowNode!);
+            } else if (!caseStatement.guardExpression) {
+                foundIrrefutableCase = true;
             }
 
             this._currentFlowNode = this._finishFlowLabel(preGuardLabel);
 
             // Bind the pattern.
             this.walk(caseStatement.pattern);
+
+            if (isSubjectNarrowable) {
+                this._createFlowNarrowForPattern(node.subjectExpression, caseStatement);
+            }
 
             // Apply the guard expression.
             if (caseStatement.guardExpression) {
@@ -1828,16 +1836,25 @@ export class Binder extends ParseTreeWalker {
 
             this._currentFlowNode = this._finishFlowLabel(preSuiteLabel);
 
-            if (isSubjectNarrowable) {
-                this._createFlowNarrowForPattern(node.subjectExpression, caseStatement);
-            }
-
             // Bind the body of the case statement.
             this.walk(caseStatement.suite);
             this._addAntecedent(postMatchLabel, this._currentFlowNode);
 
             this._currentFlowNode = this._finishFlowLabel(postCaseLabel);
         });
+
+        // Add a final narrowing step for the subject expression for the entire
+        // match statement. This will compute the narrowed type if no case
+        // statements are matched.
+        if (isSubjectNarrowable) {
+            this._createFlowNarrowForPattern(node.subjectExpression, node);
+
+            // Create an "implied else" to conditionally gate code flow based on
+            // whether the narrowed type of the subject expression is Never at this point.
+            if (!foundIrrefutableCase) {
+                this._createFlowExhaustedMatch(node);
+            }
+        }
 
         this._addAntecedent(postMatchLabel, this._currentFlowNode!);
         this._currentFlowNode = this._finishFlowLabel(postMatchLabel);
@@ -2141,12 +2158,15 @@ export class Binder extends ParseTreeWalker {
         return flowNode;
     }
 
-    private _createFlowNarrowForPattern(subjectExpression: ExpressionNode, caseStatement: CaseNode) {
+    // Create a flow node that narrows the type of the subject expression for
+    // a specified case statement or the entire match statement (if the flow
+    // falls through the bottom of all cases).
+    private _createFlowNarrowForPattern(subjectExpression: ExpressionNode, statement: CaseNode | MatchNode) {
         const flowNode: FlowNarrowForPattern = {
             flags: FlowFlags.NarrowForPattern,
             id: getUniqueFlowNodeId(),
             subjectExpression,
-            caseStatement,
+            statement,
             antecedent: this._currentFlowNode!,
         };
 
@@ -2697,6 +2717,21 @@ export class Binder extends ParseTreeWalker {
         AnalyzerNodeInfo.setFlowNode(node, this._currentFlowNode!);
     }
 
+    private _createFlowExhaustedMatch(node: MatchNode) {
+        if (!this._isCodeUnreachable()) {
+            const flowNode: FlowExhaustedMatch = {
+                flags: FlowFlags.ExhaustedMatch,
+                id: getUniqueFlowNodeId(),
+                node,
+                antecedent: this._currentFlowNode!,
+            };
+
+            this._currentFlowNode = flowNode;
+        }
+
+        AnalyzerNodeInfo.setFlowNode(node, this._currentFlowNode!);
+    }
+
     private _isCodeUnreachable() {
         return !!(this._currentFlowNode!.flags & FlowFlags.Unreachable);
     }
@@ -3035,12 +3070,25 @@ export class Binder extends ParseTreeWalker {
                     };
                     symbolWithScope.symbol.addDeclaration(declaration);
 
-                    // Is this annotation indicating that the variable is a "ClassVar"? Note
-                    // that this check is somewhat fragile because we can't verify here that
-                    // "ClassVar" maps to the typing module symbol by this name.
-                    const isClassVar =
+                    // Is this annotation indicating that the variable is a "ClassVar"?
+                    let isClassVar =
                         typeAnnotation.nodeType === ParseNodeType.Index &&
                         this._isTypingAnnotation(typeAnnotation.baseExpression, 'ClassVar');
+
+                    // PEP 591 indicates that a Final variable initialized within a class
+                    // body should also be considered a ClassVar.
+                    if (finalInfo.isFinal) {
+                        const containingClass = ParseTreeUtils.getEnclosingClassOrFunction(target);
+                        if (containingClass && containingClass.nodeType === ParseNodeType.Class) {
+                            // Make sure it's part of an assignment.
+                            if (
+                                target.parent?.nodeType === ParseNodeType.Assignment ||
+                                target.parent?.parent?.nodeType === ParseNodeType.Assignment
+                            ) {
+                                isClassVar = true;
+                            }
+                        }
+                    }
 
                     if (isClassVar) {
                         symbolWithScope.symbol.setIsClassVar();

@@ -21,6 +21,7 @@ import {
     ExpressionNode,
     ImportFromNode,
     IndexNode,
+    MatchNode,
     MemberAccessNode,
     NameNode,
     NumberNode,
@@ -48,6 +49,7 @@ export enum FlowFlags {
     TrueNeverCondition = 1 << 16, // Condition whose type evaluates to never when narrowed in positive test
     FalseNeverCondition = 1 << 17, // Condition whose type evaluates to never when narrowed in negative test
     NarrowForPattern = 1 << 18, // Narrow the type of the subject expression within a case statement
+    ExhaustedMatch = 1 << 19, // Control flow gate that is closed when match is provably exhaustive
 }
 
 let _nextFlowNodeId = 1;
@@ -117,7 +119,15 @@ export interface FlowCondition extends FlowNode {
 
 export interface FlowNarrowForPattern extends FlowNode {
     subjectExpression: ExpressionNode;
-    caseStatement: CaseNode;
+    statement: CaseNode | MatchNode;
+    antecedent: FlowNode;
+}
+
+// FlowExhaustedMatch represents a control flow gate that is "closed"
+// if a match statement can be statically proven to exhaust all cases
+// (i.e. the narrowed type of the subject expression is Never at the bottom).
+export interface FlowExhaustedMatch extends FlowNode {
+    node: MatchNode;
     antecedent: FlowNode;
 }
 
