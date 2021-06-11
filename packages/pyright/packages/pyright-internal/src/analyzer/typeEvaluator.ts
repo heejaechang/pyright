@@ -208,6 +208,7 @@ import {
     convertToInstantiable,
     derivesFromClassRecursive,
     doForEachSubtype,
+    explodeGenericClass,
     getDeclaredGeneratorReturnType,
     getDeclaredGeneratorSendType,
     getGeneratorTypeArgs,
@@ -4205,6 +4206,12 @@ export function createTypeEvaluator(
                             addTypeVarsToListIfUnique(typeVarsForScope!, getTypeVarArgumentsRecursive(param.type));
                         }
                     });
+                    if (functionTypeInfo.functionType.details.declaredReturnType) {
+                        addTypeVarsToListIfUnique(
+                            typeVarsForScope!,
+                            getTypeVarArgumentsRecursive(functionTypeInfo.functionType.details.declaredReturnType)
+                        );
+                    }
                 }
             } else if (curNode.nodeType === ParseNodeType.Module) {
                 break;
@@ -6866,6 +6873,10 @@ export function createTypeEvaluator(
                 const constructorMethodType = constructorMethodInfo.type;
                 const typeVarMap = new TypeVarMap(getTypeVarScopeId(type));
 
+                if (type.typeAliasInfo) {
+                    typeVarMap.addSolveForScope(type.typeAliasInfo.typeVarScopeId);
+                }
+
                 if (constructorMethodType) {
                     // Skip the unknown argument check if we've already checked for __init__.
                     const callResult = validateCallArguments(
@@ -8459,7 +8470,7 @@ export function createTypeEvaluator(
             applySolvedTypeVars(
                 returnType,
                 typeVarMap,
-                /*unknownIfNotFound */ false,
+                /* unknownIfNotFound */ false,
                 /* useNarrowBoundOnly */ false,
                 /* eliminateUnsolvedInUnions */ true
             ),
@@ -18228,7 +18239,11 @@ export function createTypeEvaluator(
                 }
 
                 case 'Type': {
-                    return createSpecialType(classType, typeArgs, 1);
+                    let typeType = createSpecialType(classType, typeArgs, 1);
+                    if (isClass(typeType)) {
+                        typeType = explodeGenericClass(typeType);
+                    }
+                    return typeType;
                 }
 
                 case 'ClassVar': {
@@ -18290,13 +18305,19 @@ export function createTypeEvaluator(
             if (ClassType.isBuiltIn(classType, 'type') && typeArgs) {
                 const typeClass = getTypingType(errorNode, 'Type');
                 if (typeClass && isClass(typeClass)) {
-                    return createSpecialType(
+                    let typeType = createSpecialType(
                         typeClass,
                         typeArgs,
                         1,
                         /* allowParamSpec */ undefined,
                         /* isCallable */ true
                     );
+
+                    if (isClass(typeType)) {
+                        typeType = explodeGenericClass(typeType);
+                    }
+
+                    return typeType;
                 }
             }
 
