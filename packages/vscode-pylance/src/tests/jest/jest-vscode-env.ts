@@ -2,7 +2,7 @@
 // Tests would otherwise not have access because they are sandboxed.
 // See https://github.com/Unibeautify/vscode/blob/61897cd6cd0567db2c8688c3c0b835f9b5c5b446/test/jest-vscode-environment.ts
 
-import NodeEnvironment = require('jest-environment-node/build');
+import NodeEnvironment = require('jest-environment-node');
 import * as vscode from 'vscode';
 
 class VsCodeEnvironment extends NodeEnvironment {

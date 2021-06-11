@@ -23,6 +23,8 @@ async function main() {
         'vscode-languageserver-protocol',
         'vscode-languageserver-types',
         'onnxruntime',
+        // Minor version changes have breaks; require a manual update.
+        'typescript',
     ]);
     process.env.SKIP_GET_ONNX = undefined;
 
