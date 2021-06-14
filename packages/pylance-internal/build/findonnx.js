@@ -14,6 +14,6 @@ const version = packageJson.dependencies['onnxruntime'].version;
 const rootDir = path.resolve(__dirname, '..', '.onnxruntime');
 
 module.exports.version = version;
-module.exports.rootDir = rootDir;
-module.exports.binDir = path.resolve(rootDir, 'bin');
+module.exports.rootDir = path.resolve(rootDir, version);
+module.exports.binDir = path.resolve(rootDir, version, 'bin');
 module.exports.downloadCacheDir = path.resolve(rootDir, 'downloadCache');
