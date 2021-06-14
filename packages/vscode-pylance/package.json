@@ -809,7 +809,7 @@
         "@types/terser-webpack-plugin": "^5.0.3",
         "@types/vscode": "~1.54.0",
         "copy-webpack-plugin": "^9.0.0",
-        "javascript-obfuscator": "^2.15.1",
+        "javascript-obfuscator": "^2.15.2",
         "jest": "^27.0.4",
         "jest-cli": "^27.0.4",
         "jest-environment-node": "^27.0.3",
@@ -826,7 +826,7 @@
         "vscode-test": "^1.5.2",
         "webpack": "^5.38.1",
         "webpack-cli": "^4.7.2",
-        "webpack-obfuscator": "^3.3.1"
+        "webpack-obfuscator": "^3.3.2"
     },
     "dependencies": {
         "@azure/storage-blob": "^12.6.0",
