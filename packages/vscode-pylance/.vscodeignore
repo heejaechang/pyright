@@ -12,3 +12,4 @@ build/**
 tsconfig.*
 webpack.*
 jest.config.js
+.webpack_cache
