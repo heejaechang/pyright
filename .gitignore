@@ -122,3 +122,6 @@ junit.xml
 realModel.zip
 
 .webpack_cache/
+
+# vs setting
+.vs
