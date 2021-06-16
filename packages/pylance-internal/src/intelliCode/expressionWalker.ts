@@ -34,12 +34,12 @@ export class ExpressionWalker extends BaseParseTreeWalker {
     }
 
     // Scope closure tracking
-    visitNode(node: ParseNode): ParseNodeArray {
+    override visitNode(node: ParseNode): ParseNodeArray {
         this.updateCurrentScope(node);
         return super.visitNode(node);
     }
 
-    visitFunction(node: FunctionNode): boolean {
+    override visitFunction(node: FunctionNode): boolean {
         const scope = this.scopes!.find((s) => s.node === node);
         if (scope) {
             this._currentScope = scope;
@@ -47,7 +47,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
         return true;
     }
 
-    visitMemberAccess(node: MemberAccessNode): boolean {
+    override visitMemberAccess(node: MemberAccessNode): boolean {
         if (node.memberName?.value) {
             this.methodCount++;
             this.handleMemberExpression(node.memberName.value, node.leftExpression);
@@ -55,7 +55,7 @@ export class ExpressionWalker extends BaseParseTreeWalker {
         return true;
     }
 
-    visitError(node: ErrorNode): boolean {
+    override visitError(node: ErrorNode): boolean {
         // Handle 'missing member name'
         if (node.category === ErrorExpressionCategory.MissingMemberAccessName) {
             switch (node.child?.nodeType) {

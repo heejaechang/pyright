@@ -190,12 +190,12 @@ function hasZipMagic(fs: FakeFS<PortablePath>, p: PortablePath): boolean {
 //@ts-expect-error
 class EggZipOpenFS extends ZipOpenFS {
     // Copied from the ZipOpenFS implementation.
-    private readonly baseFs!: FakeFS<PortablePath>;
-    private readonly filter!: RegExp | null;
-    private isZip!: Set<PortablePath>;
-    private notZip!: Set<PortablePath>;
+    private override readonly baseFs!: FakeFS<PortablePath>;
+    private override readonly filter!: RegExp | null;
+    private override isZip!: Set<PortablePath>;
+    private override notZip!: Set<PortablePath>;
 
-    findZip(p: PortablePath) {
+    override findZip(p: PortablePath) {
         if (this.filter && !this.filter.test(p)) return null;
 
         let filePath = `` as PortablePath;
@@ -320,7 +320,7 @@ class RealFileSystem implements FileSystem {
     }
 
     writeFileSync(path: string, data: string | Buffer, encoding: BufferEncoding | null) {
-        yarnFS.writeFileSync(path, data, { encoding: encoding ?? undefined });
+        yarnFS.writeFileSync(path, data, encoding || undefined);
     }
 
     statSync(path: string) {
@@ -415,7 +415,7 @@ class RealFileSystem implements FileSystem {
             // path is rooted, make sure we lower case the root part
             // to follow vscode's behavior.
             return realPath.substr(0, rootLength).toLowerCase() + realPath.substr(rootLength);
-        } catch (e) {
+        } catch (e: any) {
             // Return as it is, if anything failed.
             this._console.error(`Failed to get real file system casing for ${path}: ${e}`);
 

@@ -57,6 +57,7 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         const initialData: InitializationData = {
             rootDirectory: (global as any).__rootDirectory as string,
             cancellationFolderName: getCancellationFolderName(),
+            runner: undefined,
         };
 
         // this will load this same file in BG thread and start listener
@@ -65,7 +66,7 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         this.setup(worker);
     }
 
-    protected onMessage(msg: AnalysisResponse) {
+    protected override onMessage(msg: AnalysisResponse) {
         switch (msg.requestType) {
             case 'telemetry': {
                 this._telemetry.sendTelemetry(msg.data as TelemetryEventInterface);
@@ -78,11 +79,11 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         }
     }
 
-    startIndexing(configOptions: ConfigOptions, indices: Indices) {
+    override startIndexing(configOptions: ConfigOptions, indices: Indices) {
         Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
     }
 
-    refreshIndexing(configOptions: ConfigOptions, indices?: Indices) {
+    override refreshIndexing(configOptions: ConfigOptions, indices?: Indices) {
         if (!indices) {
             return;
         }
@@ -90,7 +91,7 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
     }
 
-    cancelIndexing(configOptions: ConfigOptions) {
+    override cancelIndexing(configOptions: ConfigOptions) {
         Indexer.cancelIndexingRequest(configOptions);
     }
 
@@ -175,7 +176,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
         };
     }
 
-    protected onMessage(msg: AnalysisRequest) {
+    protected override onMessage(msg: AnalysisRequest) {
         switch (msg.requestType) {
             case 'getSemanticTokens': {
                 const { filePath, range, previousResultId, cancellationId } = msg.data;
@@ -263,7 +264,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
         this._startupTelemetry.peakRssMB = Math.max(usage.rss, this._startupTelemetry.peakRssMB);
     }
 
-    protected analysisDone(port: MessagePort, cancellationId: string) {
+    protected override analysisDone(port: MessagePort, cancellationId: string) {
         super.analysisDone(port, cancellationId);
 
         const current = this._telemetryDuration.getDurationInSeconds();
@@ -316,11 +317,11 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
         };
     }
 
-    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
+    protected override createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
         return createPylanceImportResolver(fs, options, this._resolverId++, this.getConsole(), this._telemetry);
     }
 
-    protected processIndexing(port: MessagePort, token: CancellationToken) {
+    protected override processIndexing(port: MessagePort, token: CancellationToken) {
         try {
             const indexDuration = new Duration();
             trackPerf(

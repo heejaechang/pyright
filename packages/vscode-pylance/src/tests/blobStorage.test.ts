@@ -21,11 +21,11 @@ class TestBlobStorage extends BlobStorageImpl {
         super();
     }
 
-    protected listBlobs(): AsyncIterable<BlobItem> {
+    protected override listBlobs(): AsyncIterable<BlobItem> {
         return this.testProxy.listBlobs();
     }
 
-    protected downloadBlob(
+    protected override downloadBlob(
         blobName: string,
         dstFileName: string,
         onProgress?: (p: DownloadProgress) => void

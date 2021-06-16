@@ -188,7 +188,11 @@ export class PylanceImportResolver extends ImportResolver {
         this._cachedHeuristicResults.useImportHeuristic = useImportHeuristic;
     }
 
-    resolveImport(sourceFilePath: string, execEnv: ExecutionEnvironment, moduleDescriptor: ImportedModuleDescriptor) {
+    override resolveImport(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        moduleDescriptor: ImportedModuleDescriptor
+    ) {
         const importResult = this._resolveImport(sourceFilePath, execEnv, moduleDescriptor);
         this._addResultToImportMetrics(sourceFilePath, execEnv, moduleDescriptor, importResult);
         return importResult;
@@ -285,7 +289,7 @@ export class PylanceImportResolver extends ImportResolver {
         return importResult;
     }
 
-    getCompletionSuggestions(
+    override getCompletionSuggestions(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
@@ -314,11 +318,14 @@ export class PylanceImportResolver extends ImportResolver {
         return suggestions;
     }
 
-    protected getTypeshedPathEx(execEnv: ExecutionEnvironment, importFailureInfo: string[]): string | undefined {
+    protected override getTypeshedPathEx(
+        execEnv: ExecutionEnvironment,
+        importFailureInfo: string[]
+    ): string | undefined {
         return getBundledTypeStubsPath(this.fileSystem.getModulePath());
     }
 
-    protected resolveImportEx(
+    protected override resolveImportEx(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
@@ -352,7 +359,7 @@ export class PylanceImportResolver extends ImportResolver {
         return undefined;
     }
 
-    protected resolveNativeImportEx(
+    protected override resolveNativeImportEx(
         libraryFilePath: string,
         importName: string,
         importFailureInfo: string[] = []
@@ -374,7 +381,7 @@ export class PylanceImportResolver extends ImportResolver {
         return undefined;
     }
 
-    invalidateCache() {
+    override invalidateCache() {
         this.sendTelemetry();
         this._importMetrics.reset();
         this._cachedHeuristicResults.reset();
@@ -406,7 +413,11 @@ export class PylanceImportResolver extends ImportResolver {
         this._cachedHeuristicResults.report(this._telemetry);
     }
 
-    getSourceFilesFromStub(stubFilePath: string, execEnv: ExecutionEnvironment, mapCompiled: boolean): string[] {
+    override getSourceFilesFromStub(
+        stubFilePath: string,
+        execEnv: ExecutionEnvironment,
+        mapCompiled: boolean
+    ): string[] {
         if (mapCompiled) {
             // Native stubs in the native stub folder has "pyi" extension but acts like the source file.
             // If the stub is in the native stub folder, return itself.

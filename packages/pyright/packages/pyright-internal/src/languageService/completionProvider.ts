@@ -192,16 +192,16 @@ export interface CompletionItemData {
     filePath: string;
     workspacePath: string;
     position: Position;
-    autoImportText?: string;
-    symbolLabel?: string;
-    funcParensDisabled?: boolean;
+    autoImportText?: string | undefined;
+    symbolLabel?: string | undefined;
+    funcParensDisabled?: boolean | undefined;
 }
 
 // MemberAccessInfo attempts to gather info for unknown types
 export interface MemberAccessInfo {
-    lastKnownModule?: string;
-    lastKnownMemberName?: string;
-    unknownMemberName?: string;
+    lastKnownModule?: string | undefined;
+    lastKnownMemberName?: string | undefined;
+    unknownMemberName?: string | undefined;
 }
 
 export interface AutoImportInfo {
@@ -229,9 +229,9 @@ export interface ExtensionInfo {
 
 export interface CompletionResults {
     completionList: CompletionList | undefined;
-    memberAccessInfo?: MemberAccessInfo;
-    autoImportInfo?: AutoImportInfo;
-    extensionInfo?: ExtensionInfo;
+    memberAccessInfo?: MemberAccessInfo | undefined;
+    autoImportInfo?: AutoImportInfo | undefined;
+    extensionInfo?: ExtensionInfo | undefined;
 }
 
 export interface CompletionOptions {
@@ -243,8 +243,8 @@ export interface CompletionOptions {
 export type AbbreviationMap = Map<string, AbbreviationInfo>;
 
 export interface AutoImportMaps {
-    nameMap?: AbbreviationMap;
-    libraryMap?: Map<string, IndexResults>;
+    nameMap?: AbbreviationMap | undefined;
+    libraryMap?: Map<string, IndexResults> | undefined;
     getModuleSymbolsMap: () => ModuleSymbolMap;
 }
 
@@ -254,25 +254,25 @@ interface RecentCompletionInfo {
 }
 
 interface Edits {
-    format?: InsertTextFormat;
-    textEdit?: TextEdit;
-    additionalTextEdits?: TextEditAction[];
+    format?: InsertTextFormat | undefined;
+    textEdit?: TextEdit | undefined;
+    additionalTextEdits?: TextEditAction[] | undefined;
 }
 
 interface SymbolDetail {
-    funcParensDisabled?: boolean;
-    autoImportSource?: string;
-    autoImportAlias?: string;
-    boundObject?: ObjectType;
-    edits?: Edits;
+    funcParensDisabled?: boolean | undefined;
+    autoImportSource?: string | undefined;
+    autoImportAlias?: string | undefined;
+    boundObject?: ObjectType | undefined;
+    edits?: Edits | undefined;
 }
 
 interface CompletionDetail {
-    funcParensDisabled?: boolean;
-    typeDetail?: string;
-    documentation?: string;
-    autoImportText?: string;
-    edits?: Edits;
+    funcParensDisabled?: boolean | undefined;
+    typeDetail?: string | undefined;
+    documentation?: string | undefined;
+    autoImportText?: string | undefined;
+    edits?: Edits | undefined;
 }
 
 export const autoImportDetail = 'Auto-import';
@@ -1165,6 +1165,11 @@ export class CompletionProvider {
 
         const completionList = CompletionList.create();
         const completionResults = { completionList };
+
+        // Return empty completionList for Ellipsis
+        if (priorText.slice(-2) === '..') {
+            return completionResults;
+        }
 
         // Add call argument completions.
         this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
@@ -2309,7 +2314,7 @@ export class CompletionProvider {
         const execEnvironment = this._configOptions.findExecEnvironment(this._filePath);
         const moduleDescriptor: ImportedModuleDescriptor = {
             leadingDots: node.leadingDots,
-            hasTrailingDot: node.hasTrailingDot,
+            hasTrailingDot: node.hasTrailingDot || false,
             nameParts: node.nameParts.map((part) => part.value),
             importedSymbols: [],
         };

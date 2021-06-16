@@ -36,20 +36,20 @@ export class AssignmentWalker extends BaseParseTreeWalker {
     }
 
     // Scope closure tracking
-    visitNode(node: ParseNode): ParseNodeArray {
+    override visitNode(node: ParseNode): ParseNodeArray {
         this.updateCurrentScope(node);
         return super.visitNode(node);
     }
 
-    visitClass(node: ClassNode): boolean {
+    override visitClass(node: ClassNode): boolean {
         return this.handleClassOrFunction(node);
     }
 
-    visitFunction(node: FunctionNode): boolean {
+    override visitFunction(node: FunctionNode): boolean {
         return this.handleClassOrFunction(node);
     }
 
-    visitAssignment(node: AssignmentNode): boolean {
+    override visitAssignment(node: AssignmentNode): boolean {
         if (node.leftExpression.nodeType === ParseNodeType.Name) {
             const n = node.leftExpression;
             this.handleAssignment(n.value, n.start, node.rightExpression);
@@ -58,7 +58,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
     }
 
     // Handle from import assignments
-    visitImportFrom(node: ImportFromNode): boolean {
+    override visitImportFrom(node: ImportFromNode): boolean {
         if (!node.module) {
             // Module name is missing
             if (node.imports.length > 0) {
@@ -96,7 +96,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
     }
 
     // Handle import assignments
-    visitImport(node: ImportNode): boolean {
+    override visitImport(node: ImportNode): boolean {
         for (const asNameNode of node.list) {
             const nameParts = asNameNode.module.nameParts;
             if (nameParts.length > 0) {
@@ -114,7 +114,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
         return false;
     }
 
-    visitWith(node: WithNode): boolean {
+    override visitWith(node: WithNode): boolean {
         for (const withItemNode of node.withItems.filter(
             (n) =>
                 n.expression?.nodeType === ParseNodeType.Call &&
@@ -134,7 +134,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
 
     // Handle assignments in for loops elements.
     // for p in list: p becomes list.element_inside.
-    visitFor(node: ForNode): boolean {
+    override visitFor(node: ForNode): boolean {
         const elementInsideString = 'element_inside';
         if (node.targetExpression.nodeType !== ParseNodeType.Name) {
             return false;
@@ -183,7 +183,7 @@ export class AssignmentWalker extends BaseParseTreeWalker {
         return false;
     }
 
-    visitListComprehensionFor(node: ListComprehensionForNode): boolean {
+    override visitListComprehensionFor(node: ListComprehensionForNode): boolean {
         if (
             node.targetExpression.nodeType !== ParseNodeType.Name ||
             node.iterableExpression.nodeType !== ParseNodeType.List
