@@ -63,18 +63,18 @@ export class DocumentSymbolCollector extends ParseTreeWalker {
         this.walk(this._startingNode);
     }
 
-    walk(node: ParseNode) {
+    override walk(node: ParseNode) {
         if (!isCodeUnreachable(node)) {
             super.walk(node);
         }
     }
 
-    visitModuleName(node: ModuleNameNode): boolean {
+    override visitModuleName(node: ModuleNameNode): boolean {
         // Don't ever look for references within a module name.
         return false;
     }
 
-    visitName(node: NameNode): boolean {
+    override visitName(node: NameNode): boolean {
         throwIfCancellationRequested(this._cancellationToken);
 
         // No need to do any more work if the symbol name doesn't match.
