@@ -570,7 +570,7 @@ class TreeDumper extends ParseTreeWalker {
         return this._output;
     }
 
-    walk(node: ParseNode): void {
+    override walk(node: ParseNode): void {
         const childrenToWalk = this.visitNode(node);
         if (childrenToWalk.length > 0) {
             this._indentation += '  ';
@@ -594,37 +594,37 @@ class TreeDumper extends ParseTreeWalker {
         this._output = '';
     }
 
-    visitArgument(node: ArgumentNode) {
+    override visitArgument(node: ArgumentNode) {
         this._log(`${this._getPrefix(node)} ${getArgumentCategoryString(node.argumentCategory)}`);
         return true;
     }
 
-    visitAssert(node: AssertNode) {
+    override visitAssert(node: AssertNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitAssignment(node: AssignmentNode) {
+    override visitAssignment(node: AssignmentNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitAssignmentExpression(node: AssignmentExpressionNode) {
+    override visitAssignmentExpression(node: AssignmentExpressionNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitAugmentedAssignment(node: AugmentedAssignmentNode) {
+    override visitAugmentedAssignment(node: AugmentedAssignmentNode) {
         this._log(`${this._getPrefix(node)} ${getOperatorTypeString(node.operator)}`);
         return true;
     }
 
-    visitAwait(node: AwaitNode) {
+    override visitAwait(node: AwaitNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitBinaryOperation(node: BinaryOperationNode) {
+    override visitBinaryOperation(node: BinaryOperationNode) {
         this._log(
             `${this._getPrefix(node)} ${getTokenString(node.operatorToken, this._lines)} ${getOperatorTypeString(
                 node.operator
@@ -633,87 +633,87 @@ class TreeDumper extends ParseTreeWalker {
         return true;
     }
 
-    visitBreak(node: BreakNode) {
+    override visitBreak(node: BreakNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitCall(node: CallNode) {
+    override visitCall(node: CallNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitClass(node: ClassNode) {
+    override visitClass(node: ClassNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitTernary(node: TernaryNode) {
+    override visitTernary(node: TernaryNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitContinue(node: ContinueNode) {
+    override visitContinue(node: ContinueNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitConstant(node: ConstantNode) {
+    override visitConstant(node: ConstantNode) {
         this._log(`${this._getPrefix(node)} ${getKeywordTypeString(node.constType)}`);
         return true;
     }
 
-    visitDecorator(node: DecoratorNode) {
+    override visitDecorator(node: DecoratorNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitDel(node: DelNode) {
+    override visitDel(node: DelNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitDictionary(node: DictionaryNode) {
+    override visitDictionary(node: DictionaryNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitDictionaryKeyEntry(node: DictionaryKeyEntryNode) {
+    override visitDictionaryKeyEntry(node: DictionaryKeyEntryNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitDictionaryExpandEntry(node: DictionaryExpandEntryNode) {
+    override visitDictionaryExpandEntry(node: DictionaryExpandEntryNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitError(node: ErrorNode) {
+    override visitError(node: ErrorNode) {
         this._log(`${this._getPrefix(node)} ${getErrorExpressionCategoryString(node.category)}`);
         return true;
     }
 
-    visitEllipsis(node: EllipsisNode) {
+    override visitEllipsis(node: EllipsisNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitIf(node: IfNode) {
+    override visitIf(node: IfNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitImport(node: ImportNode) {
+    override visitImport(node: ImportNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitImportAs(node: ImportAsNode) {
+    override visitImportAs(node: ImportAsNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitImportFrom(node: ImportFromNode) {
+    override visitImportFrom(node: ImportFromNode) {
         this._log(
             `${this._getPrefix(node)} wildcard import:(${node.isWildcardImport}) paren:(${
                 node.usesParens
@@ -724,27 +724,27 @@ class TreeDumper extends ParseTreeWalker {
         return true;
     }
 
-    visitImportFromAs(node: ImportFromAsNode) {
+    override visitImportFromAs(node: ImportFromAsNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitIndex(node: IndexNode) {
+    override visitIndex(node: IndexNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitExcept(node: ExceptNode) {
+    override visitExcept(node: ExceptNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitFor(node: ForNode) {
+    override visitFor(node: ForNode) {
         this._log(`${this._getPrefix(node)} async:(${node.isAsync})`);
         return true;
     }
 
-    visitFormatString(node: FormatStringNode) {
+    override visitFormatString(node: FormatStringNode) {
         this._log(
             `${this._getPrefix(node)} ${getTokenString(node.token, this._lines)} ${node.value} unescape errors:(${
                 node.hasUnescapeErrors
@@ -753,112 +753,112 @@ class TreeDumper extends ParseTreeWalker {
         return true;
     }
 
-    visitFunction(node: FunctionNode) {
+    override visitFunction(node: FunctionNode) {
         this._log(`${this._getPrefix(node)} async:(${node.isAsync})`);
         return true;
     }
 
-    visitFunctionAnnotation(node: FunctionAnnotationNode) {
+    override visitFunctionAnnotation(node: FunctionAnnotationNode) {
         this._log(`${this._getPrefix(node)} ellipsis:(${node.isParamListEllipsis})`);
         return true;
     }
 
-    visitGlobal(node: GlobalNode) {
+    override visitGlobal(node: GlobalNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitLambda(node: LambdaNode) {
+    override visitLambda(node: LambdaNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitList(node: ListNode) {
+    override visitList(node: ListNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitListComprehension(node: ListComprehensionNode) {
+    override visitListComprehension(node: ListComprehensionNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitListComprehensionFor(node: ListComprehensionForNode) {
+    override visitListComprehensionFor(node: ListComprehensionForNode) {
         this._log(`${this._getPrefix(node)} async:(${node.isAsync})`);
         return true;
     }
 
-    visitListComprehensionIf(node: ListComprehensionIfNode) {
+    override visitListComprehensionIf(node: ListComprehensionIfNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitMemberAccess(node: MemberAccessNode) {
+    override visitMemberAccess(node: MemberAccessNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitModule(node: ModuleNode) {
+    override visitModule(node: ModuleNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitModuleName(node: ModuleNameNode) {
+    override visitModuleName(node: ModuleNameNode) {
         this._log(`${this._getPrefix(node)} leading dots:(${node.leadingDots}) trailing dot:(${node.hasTrailingDot})`);
         return true;
     }
 
-    visitName(node: NameNode) {
+    override visitName(node: NameNode) {
         this._log(`${this._getPrefix(node)} ${getTokenString(node.token, this._lines)} ${node.value}`);
         return true;
     }
 
-    visitNonlocal(node: NonlocalNode) {
+    override visitNonlocal(node: NonlocalNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitNumber(node: NumberNode) {
+    override visitNumber(node: NumberNode) {
         this._log(`${this._getPrefix(node)} ${node.value} int:(${node.isInteger}) imaginary:(${node.isImaginary})`);
         return true;
     }
 
-    visitParameter(node: ParameterNode) {
+    override visitParameter(node: ParameterNode) {
         this._log(`${this._getPrefix(node)} ${getParameterCategoryString(node.category)}`);
         return true;
     }
 
-    visitPass(node: PassNode) {
+    override visitPass(node: PassNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitRaise(node: RaiseNode) {
+    override visitRaise(node: RaiseNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitReturn(node: ReturnNode) {
+    override visitReturn(node: ReturnNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitSet(node: SetNode) {
+    override visitSet(node: SetNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitSlice(node: SliceNode) {
+    override visitSlice(node: SliceNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitStatementList(node: StatementListNode) {
+    override visitStatementList(node: StatementListNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitString(node: StringNode) {
+    override visitString(node: StringNode) {
         this._log(
             `${this._getPrefix(node)} ${getTokenString(node.token, this._lines)} ${node.value} unescape errors:(${
                 node.hasUnescapeErrors
@@ -867,32 +867,32 @@ class TreeDumper extends ParseTreeWalker {
         return true;
     }
 
-    visitStringList(node: StringListNode) {
+    override visitStringList(node: StringListNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitSuite(node: SuiteNode) {
+    override visitSuite(node: SuiteNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitTuple(node: TupleNode) {
+    override visitTuple(node: TupleNode) {
         this._log(`${this._getPrefix(node)} paren:(${node.enclosedInParens})`);
         return true;
     }
 
-    visitTry(node: TryNode) {
+    override visitTry(node: TryNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitTypeAnnotation(node: TypeAnnotationNode) {
+    override visitTypeAnnotation(node: TypeAnnotationNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitUnaryOperation(node: UnaryOperationNode) {
+    override visitUnaryOperation(node: UnaryOperationNode) {
         this._log(
             `${this._getPrefix(node)} ${getTokenString(node.operatorToken, this._lines)} ${getOperatorTypeString(
                 node.operator
@@ -901,32 +901,32 @@ class TreeDumper extends ParseTreeWalker {
         return true;
     }
 
-    visitUnpack(node: UnpackNode) {
+    override visitUnpack(node: UnpackNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitWhile(node: WhileNode) {
+    override visitWhile(node: WhileNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitWith(node: WithNode) {
+    override visitWith(node: WithNode) {
         this._log(`${this._getPrefix(node)} async:(${node.isAsync})`);
         return true;
     }
 
-    visitWithItem(node: WithItemNode) {
+    override visitWithItem(node: WithItemNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitYield(node: YieldNode) {
+    override visitYield(node: YieldNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }
 
-    visitYieldFrom(node: YieldFromNode) {
+    override visitYieldFrom(node: YieldFromNode) {
         this._log(`${this._getPrefix(node)}`);
         return true;
     }

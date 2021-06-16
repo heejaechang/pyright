@@ -344,7 +344,7 @@ class PylanceServer extends LanguageServerBase {
         return new BackgroundAnalysis(this._telemetry, this.console);
     }
 
-    updateSettingsForAllWorkspaces(): void {
+    override updateSettingsForAllWorkspaces(): void {
         this._updateGlobalSettings().ignoreErrors();
         super.updateSettingsForAllWorkspaces();
         if (this._hasSemanticTokensRefreshCapability) {
@@ -352,7 +352,7 @@ class PylanceServer extends LanguageServerBase {
         }
     }
 
-    protected initialize(
+    protected override initialize(
         params: InitializeParams,
         supportedCommands: string[],
         supportedCodeActions: string[]
@@ -379,7 +379,7 @@ class PylanceServer extends LanguageServerBase {
         return result;
     }
 
-    protected setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
+    protected override setupConnection(supportedCommands: string[], supportedCodeActions: string[]): void {
         super.setupConnection(supportedCommands, supportedCodeActions);
 
         this._connection.languages.semanticTokens.on(
@@ -446,7 +446,7 @@ class PylanceServer extends LanguageServerBase {
         );
     }
 
-    protected createBackgroundAnalysisProgram(
+    protected override createBackgroundAnalysisProgram(
         console: ConsoleInterface,
         configOptions: ConfigOptions,
         importResolver: ImportResolver,
@@ -464,7 +464,7 @@ class PylanceServer extends LanguageServerBase {
         );
     }
 
-    protected isLongRunningCommand(command: string): boolean {
+    protected override isLongRunningCommand(command: string): boolean {
         // We should determine which commands are actually slow
         // rather assuming they are all slow wholesale.
         switch (command) {
@@ -483,7 +483,7 @@ class PylanceServer extends LanguageServerBase {
         return this._controller.execute(params, token);
     }
 
-    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
+    protected override createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
         return createPylanceImportResolver(fs, options);
     }
 
@@ -512,7 +512,7 @@ class PylanceServer extends LanguageServerBase {
         return [...actions1, ...actions2];
     }
 
-    protected resolveWorkspaceCompletionItem(
+    protected override resolveWorkspaceCompletionItem(
         workspace: WorkspaceServiceInstance,
         filePath: string,
         item: CompletionItem,
@@ -527,7 +527,7 @@ class PylanceServer extends LanguageServerBase {
         );
     }
 
-    protected async getWorkspaceCompletionsForPosition(
+    protected override async getWorkspaceCompletionsForPosition(
         workspace: WorkspaceServiceInstance,
         filePath: string,
         position: Position,
@@ -607,7 +607,7 @@ class PylanceServer extends LanguageServerBase {
         return results;
     }
 
-    protected onAnalysisCompletedHandler(results: AnalysisResults): void {
+    protected override onAnalysisCompletedHandler(results: AnalysisResults): void {
         super.onAnalysisCompletedHandler(results);
 
         if (results.error) {
@@ -622,7 +622,7 @@ class PylanceServer extends LanguageServerBase {
         this.sendTelemetry(results);
     }
 
-    protected async onCompletion(
+    protected override async onCompletion(
         params: CompletionParams,
         token: CancellationToken
     ): Promise<CompletionList | undefined> {
@@ -650,7 +650,7 @@ class PylanceServer extends LanguageServerBase {
         return completionList;
     }
 
-    protected createWorkspaceServiceInstance(
+    protected override createWorkspaceServiceInstance(
         workspace: WorkspaceFolder | undefined,
         rootPath: string
     ): PylanceWorkspaceServiceInstance {
@@ -658,7 +658,7 @@ class PylanceServer extends LanguageServerBase {
         return { ...src, completeFunctionParens: false, enableExtractCodeAction: false };
     }
 
-    async updateSettingsForWorkspace(
+    override async updateSettingsForWorkspace(
         workspace: WorkspaceServiceInstance,
         serverSettings?: ServerSettings
     ): Promise<void> {
@@ -750,7 +750,7 @@ class PylanceServer extends LanguageServerBase {
         };
     }
 
-    protected getDocumentationUrlForDiagnosticRule(rule: string): string | undefined {
+    protected override getDocumentationUrlForDiagnosticRule(rule: string): string | undefined {
         return 'https://github.com/microsoft/pylance-release/blob/main/DIAGNOSTIC_SEVERITY_RULES.md#diagnostic-severity-rules';
     }
 }

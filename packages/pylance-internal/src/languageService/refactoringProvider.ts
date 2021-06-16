@@ -1448,14 +1448,14 @@ class BreakAndContinueEnclosedInLoop extends ParseTreeWalker {
         this.walk(node);
     }
 
-    visitContinue(node: ContinueNode): boolean {
+    override visitContinue(node: ContinueNode): boolean {
         if (selectionContainsNode(this._selectionRange, node)) {
             this.hasNonEnclosedContinue = !getParentOfTypeInSelection(node, this._loopTypes, this._selectionRange);
         }
         return false;
     }
 
-    visitBreak(node: BreakNode): boolean {
+    override visitBreak(node: BreakNode): boolean {
         if (selectionContainsNode(this._selectionRange, node)) {
             this.hasNonEnclosedBreak = !getParentOfTypeInSelection(node, this._loopTypes, this._selectionRange);
         }
@@ -1501,7 +1501,7 @@ class AwaitFinder extends ParseTreeWalker {
         return this._containsAwait;
     }
 
-    visitAwait(_: AwaitNode): boolean {
+    override visitAwait(_: AwaitNode): boolean {
         this._containsAwait = true;
         return false;
     }

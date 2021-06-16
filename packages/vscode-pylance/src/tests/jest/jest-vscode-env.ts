@@ -10,12 +10,12 @@ class VsCodeEnvironment extends NodeEnvironment {
         super(config);
     }
 
-    public async setup(): Promise<void> {
+    public override async setup(): Promise<void> {
         await super.setup();
         this.global.vscode = vscode;
     }
 
-    public async teardown(): Promise<void> {
+    public override async teardown(): Promise<void> {
         this.global.vscode = {};
         return await super.teardown();
     }

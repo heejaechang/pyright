@@ -189,17 +189,17 @@ class TokenWalker extends ParseTreeWalker {
         super();
     }
 
-    visitSuite(node: SuiteNode) {
+    override visitSuite(node: SuiteNode) {
         // Perf optimization when out of range
         return this._isNodeInRange(node) ? true : false;
     }
 
-    visitStatementList(node: StatementListNode) {
+    override visitStatementList(node: StatementListNode) {
         // Perf optimization when out of range
         return this._isNodeInRange(node) ? true : false;
     }
 
-    visitName(node: NameNode) {
+    override visitName(node: NameNode) {
         throwIfCancellationRequested(this._cancellationToken);
 
         if (!this._isNodeInRange(node)) {
@@ -214,7 +214,7 @@ class TokenWalker extends ParseTreeWalker {
         return true;
     }
 
-    visitString(node: StringNode) {
+    override visitString(node: StringNode) {
         // Potential enhancement: distinguish regular string vs. docstring
         // type: string, modifier: documentation
         // or maybe
@@ -225,12 +225,12 @@ class TokenWalker extends ParseTreeWalker {
     }
 
     // Emit keywords for match/case; VS Code doesn't have these in its TextMate grammar yet.
-    visitMatch(node: MatchNode) {
+    override visitMatch(node: MatchNode) {
         this._pushKeyword(node);
         return true;
     }
 
-    visitCase(node: CaseNode) {
+    override visitCase(node: CaseNode) {
         this._pushKeyword(node);
         return true;
     }

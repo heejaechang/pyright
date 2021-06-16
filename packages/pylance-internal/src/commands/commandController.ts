@@ -82,7 +82,7 @@ export class CommandController extends PyrightCommandController {
         ];
     }
 
-    async execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any> {
+    override async execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         this._sendUserInitiatedCommandTelemetry(cmdParams);
 
         switch (cmdParams.command) {
