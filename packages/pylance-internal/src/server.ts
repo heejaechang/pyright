@@ -306,6 +306,13 @@ class PylanceServer extends LanguageServerBase {
                     serverSettings.useImportHeuristic = pythonAnalysisSection.useImportHeuristic;
                 }
 
+                if (!workspace.rootPath) {
+                    // useImportHeuristic is on by default and indexing is off by default
+                    // for the default workspace.
+                    serverSettings.indexing = false;
+                    serverSettings.useImportHeuristic = true;
+                }
+
                 forceProgressBar = !!pythonAnalysisSection._forceProgressBar;
             }
         } catch (error) {

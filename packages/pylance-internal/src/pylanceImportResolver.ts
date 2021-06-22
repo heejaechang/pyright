@@ -209,8 +209,6 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
-
-        const root = ensureTrailingDirectorySeparator(normalizePathCase(this.fileSystem, normalizePath(execEnv.root)));
         const origin = ensureTrailingDirectorySeparator(getDirectoryPath(sourceFilePath));
 
         const importName = this.formatImportName(moduleDescriptor);
@@ -222,6 +220,7 @@ export class PylanceImportResolver extends ImportResolver {
 
         // Check whether the give file is something we care for the heuristic.
         // Keep in sync with _addResultToImportMetrics.
+        const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
         if (!this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root, execEnv)) {
             return importResult;
         }
@@ -233,7 +232,7 @@ export class PylanceImportResolver extends ImportResolver {
             // Going up the given folder one by one until we can resolve the import.
             let level = 0;
             let current = origin;
-            while (current.length > root.length) {
+            while (this._shouldWalkUp(current, root, execEnv)) {
                 const result = this.resolveAbsoluteImport(
                     current,
                     execEnv,
@@ -296,17 +295,14 @@ export class PylanceImportResolver extends ImportResolver {
         similarityLimit: number
     ) {
         const suggestions = super.getCompletionSuggestions(sourceFilePath, execEnv, moduleDescriptor, similarityLimit);
-
         if (this._cachedHeuristicResults.useImportHeuristic) {
-            const root = ensureTrailingDirectorySeparator(
-                normalizePathCase(this.fileSystem, normalizePath(execEnv.root))
-            );
+            const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
             const origin = ensureTrailingDirectorySeparator(
                 getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
             );
 
             let current = origin;
-            while (current.length > root.length) {
+            while (this._shouldWalkUp(current, root, execEnv)) {
                 this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, similarityLimit);
 
                 current = ensureTrailingDirectorySeparator(
@@ -316,6 +312,18 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         return suggestions;
+    }
+
+    private _shouldWalkUp(current: string, root: string, execEnv: ExecutionEnvironment) {
+        return current.length > root.length || (current === root && !execEnv.root);
+    }
+
+    private _getImportHeuristicRoot(sourceFilePath: string, executionRoot: string) {
+        if (executionRoot) {
+            return ensureTrailingDirectorySeparator(normalizePathCase(this.fileSystem, normalizePath(executionRoot)));
+        }
+
+        return ensureTrailingDirectorySeparator(getDirectoryPath(sourceFilePath));
     }
 
     protected override getTypeshedPathEx(
@@ -515,10 +523,7 @@ export class PylanceImportResolver extends ImportResolver {
                 // Match resolveImport's algorithm to check if is user code.
                 sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
 
-                const root = ensureTrailingDirectorySeparator(
-                    normalizePathCase(this.fileSystem, normalizePath(execEnv.root))
-                );
-
+                const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
                 userUnresolved = this._cachedHeuristicResults.checkValidPath(
                     this.fileSystem,
                     sourceFilePath,
