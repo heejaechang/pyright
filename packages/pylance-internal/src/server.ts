@@ -54,12 +54,17 @@ import {
     autoImportDetail,
     CompletionItemData,
     CompletionResults,
+    dictionaryKeyDetail,
 } from 'pyright-internal/languageService/completionProvider';
 
 import { BackgroundAnalysis, ExperimentOptions, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { Commands } from './commands/commands';
-import { autoImportAcceptedCommand, nonAutoImportAcceptedCommand } from './commands/completionAcceptedCommand';
+import {
+    autoImportAcceptedCommand,
+    dictKeyAcceptedCommand,
+    normalCompletionAcceptedCommand,
+} from './commands/completionAcceptedCommand';
 import { mergeCommands } from './commands/multiCommand';
 import { IS_DEV, IS_INSIDERS, IS_PR, PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
@@ -598,7 +603,11 @@ class PylanceServer extends LanguageServerBase {
                 if (completionResults?.completionList) {
                     for (const item of completionResults.completionList.items) {
                         const command =
-                            item.detail === autoImportDetail ? autoImportAcceptedCommand : nonAutoImportAcceptedCommand;
+                            item.detail === autoImportDetail
+                                ? autoImportAcceptedCommand
+                                : item.detail === dictionaryKeyDetail
+                                ? dictKeyAcceptedCommand
+                                : normalCompletionAcceptedCommand;
                         item.command = mergeCommands(item.command, command);
                     }
                 }

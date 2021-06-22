@@ -5,17 +5,14 @@ import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/
 import { ServerCommand } from './commandController';
 
 export interface CompletionAcceptedArgs {
-    autoImport: boolean;
+    autoImport?: boolean;
+    dictionaryKey?: boolean;
 }
 
-const nonAutoArgs: CompletionAcceptedArgs = {
-    autoImport: false,
-};
-
-export const nonAutoImportAcceptedCommand: Command = {
+export const normalCompletionAcceptedCommand: Command = {
     title: '',
     command: Commands.completionAccepted,
-    arguments: [nonAutoArgs],
+    arguments: [],
 };
 
 const autoArgs: CompletionAcceptedArgs = {
@@ -26,6 +23,16 @@ export const autoImportAcceptedCommand: Command = {
     title: '',
     command: Commands.completionAccepted,
     arguments: [autoArgs],
+};
+
+const dictKeyArgs: CompletionAcceptedArgs = {
+    dictionaryKey: true,
+};
+
+export const dictKeyAcceptedCommand: Command = {
+    title: '',
+    command: Commands.completionAccepted,
+    arguments: [dictKeyArgs],
 };
 
 export class CompletionAcceptedCommand implements ServerCommand {
@@ -39,7 +46,12 @@ export class CompletionAcceptedCommand implements ServerCommand {
         const args: CompletionAcceptedArgs = cmdParams.arguments[0];
 
         const te = new TelemetryEvent(TelemetryEventName.COMPLETION_ACCEPTED);
-        te.Properties['autoImport'] = `${args.autoImport}`;
+        if (args.autoImport) {
+            te.Properties['autoImport'] = `${args.autoImport}`;
+        }
+        if (args.dictionaryKey) {
+            te.Properties['dictionaryKey'] = `${args.dictionaryKey}`;
+        }
 
         this._telemetry.sendTelemetry(te);
     }

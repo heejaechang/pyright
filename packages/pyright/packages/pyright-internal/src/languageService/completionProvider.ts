@@ -273,9 +273,12 @@ interface CompletionDetail {
     documentation?: string | undefined;
     autoImportText?: string | undefined;
     edits?: Edits | undefined;
+    sortText?: string | undefined;
+    itemDetail?: string | undefined;
 }
 
 export const autoImportDetail = 'Auto-import';
+export const dictionaryKeyDetail = 'Dictionary key';
 
 // We'll use a somewhat-arbitrary cutoff value here to determine
 // whether it's sufficiently similar.
@@ -1230,14 +1233,10 @@ export class CompletionProvider {
                     return;
                 }
 
-                this._addNameToCompletionList(
-                    key,
-                    CompletionItemKind.Constant,
-                    priorWord,
-                    completionList,
-                    /*detail*/ undefined,
-                    this._makeSortText(SortCategory.LiteralValue, key)
-                );
+                this._addNameToCompletionList(key, CompletionItemKind.Constant, priorWord, completionList, {
+                    sortText: this._makeSortText(SortCategory.LiteralValue, key),
+                    itemDetail: dictionaryKeyDetail,
+                });
             });
         }
 
@@ -1481,7 +1480,8 @@ export class CompletionProvider {
                         quoteValue.stringValue,
                         postText,
                         quoteValue.quoteCharacter,
-                        completionList
+                        completionList,
+                        dictionaryKeyDetail
                     );
                 });
             }
@@ -1570,7 +1570,8 @@ export class CompletionProvider {
         priorString: string | undefined,
         postText: string | undefined,
         quoteCharacter: string,
-        completionList: CompletionList
+        completionList: CompletionList,
+        detail?: string
     ) {
         if (StringUtils.isPatternInSymbol(priorString || '', value)) {
             const valueWithQuotes = `${quoteCharacter}${value}${quoteCharacter}`;
@@ -1597,6 +1598,7 @@ export class CompletionProvider {
                 end: { line: this._position.line, character: rangeEndCol },
             };
             completionItem.textEdit = TextEdit.replace(range, valueWithQuotes);
+            completionItem.detail = detail;
 
             completionList.items.push(completionItem);
         }
@@ -2086,8 +2088,7 @@ export class CompletionProvider {
         itemKind: CompletionItemKind,
         filter: string,
         completionList: CompletionList,
-        detail?: CompletionDetail,
-        sortText?: string
+        detail?: CompletionDetail
     ) {
         // Auto importer already filtered out unnecessary ones. No need to do it again.
         const similarity = detail?.autoImportText ? true : StringUtils.isPatternInSymbol(filter, name);
@@ -2110,8 +2111,9 @@ export class CompletionProvider {
 
         completionItem.data = completionItemData;
 
-        if (sortText) {
-            completionItem.sortText = sortText;
+        if (detail?.sortText || detail?.itemDetail) {
+            completionItem.sortText = detail.sortText;
+            completionItem.detail = detail.itemDetail;
         } else if (detail?.autoImportText) {
             // Force auto-import entries to the end.
             completionItem.sortText = this._makeSortText(SortCategory.AutoImport, name, detail.autoImportText);
