@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { Commands } from 'pylance-internal/commands/commands';
 
 import { LSExtensionApi } from './api';
+import { registerAutoClosing } from './autoClosing';
 import { ActivatePylanceBanner } from './banners';
 import reportIssue from './commands/reportIssue';
 import { ApplicationShellImpl } from './common/appShell';
@@ -78,6 +79,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     registerCommand(context, Command.ReportIssue, () => {
         reportIssue(browser, version);
     });
+
+    registerAutoClosing();
 
     return {
         languageServerFolder: async () => ({
