@@ -114,6 +114,12 @@ test('Super3', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Super4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super4.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('NewType1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType1.py']);
 
@@ -627,6 +633,12 @@ test('GenericTypes58', () => {
 
 test('GenericTypes59', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes59.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes60', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes60.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

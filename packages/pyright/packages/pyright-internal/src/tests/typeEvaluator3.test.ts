@@ -273,7 +273,7 @@ test('TypeAlias4', () => {
 test('TypeAlias5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias5.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('TypeAlias6', () => {
@@ -464,7 +464,7 @@ test('TypePromotions1', () => {
 test('Index1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['index1.py']);
 
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('ProtocolModule2', () => {
@@ -678,6 +678,12 @@ test('Constructor8', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor8.py']);
 
     TestUtils.validateResults(analysisResults, 4);
+});
+
+test('Constructor9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['constructor9.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('ClassGetItem1', () => {
