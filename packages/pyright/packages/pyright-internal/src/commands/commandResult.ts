@@ -7,6 +7,6 @@ export interface CommandResult {
 
 export namespace CommandResult {
     export function is(value: any): value is CommandResult {
-        return (value as CommandResult).edits !== undefined;
+        return value && value.edits && WorkspaceEdit.is(value.edits);
     }
 }
