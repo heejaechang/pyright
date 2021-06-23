@@ -40,14 +40,15 @@ function handleChange(doc: vscode.TextDocument, event: vscode.TextDocumentConten
         return;
     }
 
-    const docContents = doc.getText();
-
-    // The whole file must be tokenized, as the tokenizer doesn't let us tokenize up to
-    // and including the token the cursor is in. Truncating the string early would mean
-    // we couldn't check to see if the string had already been terminated.
+    // Truncate the file to the end of the line so we can avoid treating the entire end of the
+    // file as the rest of the yet-to-be-closed string.
     //
-    // TODO: allow the tokenizer to run up until a certain point, to speed up the case
-    // where the user is at the beginning of a large file (as the rest doesn't matter).
+    // This may mean we close a string that's already been closed on another line, but the user
+    // can easily undo this.
+    const docContents = doc.getText(
+        new vscode.Range(new vscode.Position(0, 0), new vscode.Position(endPos.line + 1, 0))
+    );
+
     const tokenizer = new Tokenizer();
     const { lines, tokens } = tokenizer.tokenize(docContents);
 
