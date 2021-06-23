@@ -28,9 +28,10 @@ import {
 import { Duration } from 'pyright-internal/common/timing';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
+import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
 import {
     addMeasurementsToEvent,
-    addNativeModuleInfoToEvent,
+    hashModuleNamesAndAddToEvent,
     TelemetryEvent,
     TelemetryEventName,
     TelemetryInterface,
@@ -53,9 +54,14 @@ function getStubsPath(moduleDirectory: string, stubType: string) {
     return combinePaths(getDirectoryPath(ensureTrailingDirectorySeparator(moduleDirectory)), 'bundled', stubType);
 }
 
+const MaxModuleThreshold = 100;
+
 export class ImportMetrics {
-    private readonly _currentModules: Set<string> = new Set();
-    private readonly _reportedModules: Set<string> = new Set();
+    private readonly _currentNativeModules: Set<string> = new Set();
+    private readonly _reportedNativeModules: Set<string> = new Set();
+
+    private readonly _currentUnresolvedModules: Set<string> = new Set();
+    private readonly _reportedUnresolvedModules: Set<string> = new Set();
 
     private _changed = false;
 
@@ -115,16 +121,30 @@ export class ImportMetrics {
     }
 
     addNativeModule(moduleName: string): void {
-        if (!this._reportedModules.has(moduleName)) {
-            this.setChanged();
-            this._currentModules.add(moduleName);
+        this._addModule(this._reportedNativeModules, this._currentNativeModules, moduleName);
+    }
+
+    addUnresolvedModule(moduleName: string): void {
+        if (IS_INSIDERS || IS_DEV || IS_PR) {
+            this._addModule(this._reportedUnresolvedModules, this._currentUnresolvedModules, moduleName);
         }
     }
 
-    private _getAndResetNativeModuleNames(): string[] {
-        this._currentModules.forEach((m) => this._reportedModules.add(m));
-        const moduleNames = [...this._currentModules];
-        this._currentModules.clear();
+    private _addModule(reported: Set<string>, current: Set<string>, moduleName: string) {
+        if (reported.size > MaxModuleThreshold || current.size > MaxModuleThreshold) {
+            return;
+        }
+
+        if (!reported.has(moduleName)) {
+            this.setChanged();
+            current.add(moduleName);
+        }
+    }
+
+    private _getAndResetModuleNames(reported: Set<string>, current: Set<string>): string[] {
+        current.forEach((m) => reported.add(m));
+        const moduleNames = [...current];
+        current.clear();
         return moduleNames;
     }
 
@@ -137,21 +157,25 @@ export class ImportMetrics {
 
         //send import metrics
         const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
-        const nativeModules: Set<string> = new Set();
-
         addMeasurementsToEvent(importEvent, this);
 
-        const nativeModuleNames = this._getAndResetNativeModuleNames();
-        if (nativeModuleNames.length > 0) {
-            nativeModuleNames.forEach((m) => nativeModules.add(m));
-
-            if (nativeModules.size > 0) {
-                addNativeModuleInfoToEvent(importEvent, [...nativeModules]);
-            }
-        }
+        addModuleNamesToEvent(
+            'Native',
+            this._getAndResetModuleNames(this._reportedNativeModules, this._currentNativeModules)
+        );
+        addModuleNamesToEvent(
+            'Unresolved',
+            this._getAndResetModuleNames(this._reportedUnresolvedModules, this._currentUnresolvedModules)
+        );
 
         importEvent.Properties['resolverId'] = this._resolverId;
         telemetry.sendTelemetry(importEvent);
+
+        function addModuleNamesToEvent(key: string, moduleNames: string[]) {
+            if (moduleNames.length > 0) {
+                hashModuleNamesAndAddToEvent(importEvent, key, moduleNames, key === 'Unresolved');
+            }
+        }
     }
 }
 
@@ -377,7 +401,10 @@ export class PylanceImportResolver extends ImportResolver {
             return;
         }
 
-        this._importMetrics.addNativeModule(importName);
+        if (this._telemetry) {
+            this._importMetrics.addNativeModule(importName);
+        }
+
         const nativeStubsPath = getBundledNativeStubsPath(this.fileSystem.getModulePath());
         const stub = this.findNativeStub(libraryFilePath, nativeStubsPath);
         if (stub) {
@@ -530,6 +557,10 @@ export class PylanceImportResolver extends ImportResolver {
                     root,
                     execEnv
                 );
+            }
+
+            if (userUnresolved && this._telemetry) {
+                this._importMetrics.addUnresolvedModule(importName);
             }
 
             this._lastUnresolvedImportName = importName;

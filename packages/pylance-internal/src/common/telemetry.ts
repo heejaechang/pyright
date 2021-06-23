@@ -197,13 +197,24 @@ export function addModuleInfoToEvent(te: TelemetryEvent, memberAccessInfo: Membe
     }
 }
 
-export function addNativeModuleInfoToEvent(te: TelemetryEvent, moduleNames: string[]): void {
-    const nativeModules = moduleNames.map((n) => hashString(n)).join(' ');
-    te.Properties['NativeModules'] = nativeModules;
+export function hashModuleNamesAndAddToEvent(
+    te: TelemetryEvent,
+    key: string,
+    moduleNames: string[],
+    reportLowerCase = false
+): void {
+    const hashedModules = moduleNames.map((n) => hashString(n)).join(' ');
+    te.Properties[`${key}Modules`] = hashedModules;
 
     // Assumes first word before the period is related to the package
-    const nativePackages = new Set(moduleNames.map((n) => n.split('.')[0]));
-    te.Properties['NativePackages'] = [...nativePackages.values()].map((n) => hashString(n)).join(' ');
+    const packages = new Set(moduleNames.map((n) => n.split('.')[0]));
+    te.Properties[`${key}Packages`] = [...packages.values()].map((n) => hashString(n)).join(' ');
+
+    if (reportLowerCase) {
+        te.Properties[`${key}PackagesLowerCase`] = [...packages.values()]
+            .map((n) => hashString(n.toLowerCase()))
+            .join(' ');
+    }
 }
 
 export function hashString(strValue: string): string {
