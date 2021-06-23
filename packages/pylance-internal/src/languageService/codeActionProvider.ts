@@ -132,7 +132,7 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, Commands.extractMethod, filePath, range),
+                                Command.create(title, Commands.extractMethodWithRename, filePath, range),
                                 CodeActionKind.RefactorExtract
                             )
                         );
@@ -144,7 +144,7 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, Commands.extractVariable, filePath, range),
+                                Command.create(title, Commands.extractVariableWithRename, filePath, range),
                                 CodeActionKind.RefactorExtract
                             )
                         );

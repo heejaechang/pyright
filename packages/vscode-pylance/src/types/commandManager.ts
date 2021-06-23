@@ -5,6 +5,8 @@ export enum Command {
     InstallExtension = 'workbench.extensions.installExtension',
     TriggerParameterHints = 'editor.action.triggerParameterHints',
     ReportIssue = 'pylance.reportIssue',
+    extractMethod = 'pylance.extractMethod',
+    extractVariable = 'pylance.extractVariable',
 }
 
 export interface CommandManager {

@@ -45,6 +45,11 @@ import { KeywordType, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { formatCode, splitCodeLines } from '../common/formatter';
 
+export interface ExtractResults {
+    newSymbolName: string;
+    actions: FileEditAction[];
+}
+
 enum StepDirection {
     Backward = 0,
     Forward,
@@ -91,14 +96,14 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         range: Range,
         token: CancellationToken
-    ): FileEditAction[] {
+    ): ExtractResults | undefined {
         if (parseResults === undefined || filePath === undefined) {
-            return [];
+            return;
         }
 
         const textRange = convertRangeToTextRange(range, parseResults.tokenizerOutput.lines);
         if (!textRange) {
-            return [];
+            return;
         }
 
         const selectionInfo = this.canExtractVariable(parseResults, textRange);
@@ -107,12 +112,15 @@ export class ExtractMethodProvider {
         }
 
         if (token.isCancellationRequested) {
-            return [];
+            return;
         }
 
-        const editActions: FileEditAction[] = this._extractVariableGenerator(filePath, selectionInfo, parseResults);
+        const results = this._extractVariableGenerator(filePath, selectionInfo, parseResults);
+        if (!results) {
+            return;
+        }
 
-        return editActions;
+        return { newSymbolName: results.newSymbolName, actions: results.actions };
     }
 
     private static _extractVariableGenerator(
@@ -125,7 +133,7 @@ export class ExtractMethodProvider {
             selectionInfo.bodyNodes === undefined ||
             selectionInfo.range === undefined
         ) {
-            return [];
+            return;
         }
 
         let generatedName: string;
@@ -174,7 +182,8 @@ export class ExtractMethodProvider {
                 range: convertOffsetsToRange(insertOffset, insertOffset, parseResults.tokenizerOutput.lines),
             });
         }
-        return editActions;
+
+        return { actions: editActions, newSymbolName: generatedName };
     }
 
     static extractMethod(
@@ -183,14 +192,14 @@ export class ExtractMethodProvider {
         range: Range,
         evaluator: TypeEvaluator,
         token: CancellationToken
-    ): FileEditAction[] {
+    ): ExtractResults | undefined {
         if (parseResults === undefined || evaluator === undefined || filePath === undefined) {
-            return [];
+            return;
         }
 
         const textRange = convertRangeToTextRange(range, parseResults.tokenizerOutput.lines);
         if (!textRange) {
-            return [];
+            return;
         }
 
         const selectionInfo = this.canExtractMethod(parseResults, textRange, evaluator);
@@ -199,7 +208,7 @@ export class ExtractMethodProvider {
         }
 
         if (token.isCancellationRequested) {
-            return [];
+            return;
         }
 
         if (
@@ -233,10 +242,10 @@ export class ExtractMethodProvider {
         const outputSymbols = this._findOutputSymbols(symbolReferences, selectionInfo.range, parseResults, token);
 
         if (token.isCancellationRequested) {
-            return [];
+            return;
         }
 
-        const editActions = this._extractMethodGenerator(
+        const results = this._extractMethodGenerator(
             signatureSymbols,
             outputSymbols,
             selectionInfo,
@@ -245,7 +254,11 @@ export class ExtractMethodProvider {
             filePath
         );
 
-        return editActions;
+        if (!results) {
+            return;
+        }
+
+        return { newSymbolName: results.newSymbolName, actions: results.actions };
     }
 
     private static _findSymbolsReferences(
@@ -506,13 +519,13 @@ export class ExtractMethodProvider {
         parseResults: ParseResults,
         evaluator: TypeEvaluator,
         filepath: string
-    ): FileEditAction[] {
+    ) {
         if (
             selectionInfo.parentNode === undefined ||
             selectionInfo.bodyNodes === undefined ||
             selectionInfo.range === undefined
         ) {
-            return [];
+            return;
         }
 
         let insertFuncDefAheadOfSelection = false;
@@ -619,7 +632,8 @@ export class ExtractMethodProvider {
             editActions.push(callReplacementEdit);
             editActions.push(funcDefinitionEdit);
         }
-        return editActions;
+
+        return { actions: editActions, newSymbolName: newFuncName };
     }
 
     private static _getEnclosingFunctionInfo(

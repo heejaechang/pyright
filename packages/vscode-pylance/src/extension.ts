@@ -3,12 +3,16 @@ import './extensions';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { commands, Range } from 'vscode';
+
+import { CommandResult } from 'pyright-internal/commands/commandResult';
 
 import { Commands } from 'pylance-internal/commands/commands';
 
 import { LSExtensionApi } from './api';
 import { registerAutoClosing } from './autoClosing';
 import { ActivatePylanceBanner } from './banners';
+import { renameEdit } from './commands/extractRename';
 import reportIssue from './commands/reportIssue';
 import { ApplicationShellImpl } from './common/appShell';
 import { licenseErrorText } from './common/license';
@@ -74,6 +78,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         if (hintsEnabled.get<boolean | undefined>('enabled')) {
             commandManager.executeCommand(Command.TriggerParameterHints);
         }
+    });
+
+    registerCommand(context, Commands.extractMethodWithRename, (filePath: string, range: Range) => {
+        commands.executeCommand<CommandResult>(Command.extractMethod, filePath, range).then((extractResult) => {
+            if (extractResult) {
+                renameEdit(extractResult);
+            }
+        });
+    });
+
+    registerCommand(context, Commands.extractVariableWithRename, (filePath: string, range: Range) => {
+        commands.executeCommand<CommandResult>(Command.extractVariable, filePath, range).then((extractResult) => {
+            if (extractResult) {
+                renameEdit(extractResult);
+            }
+        });
     });
 
     registerCommand(context, Command.ReportIssue, () => {

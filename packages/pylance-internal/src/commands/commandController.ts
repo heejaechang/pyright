@@ -16,8 +16,7 @@ import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/
 import { Commands } from './commands';
 import { CompletionAcceptedCommand } from './completionAcceptedCommand';
 import { DumpFileDebugInfoCommand } from './dumpFileDebugInfoCommand';
-import { ExtractMethodCommand } from './extractMethodCommand';
-import { ExtractVariableCommand } from './extractVariableCommand';
+import { ExtractMethodCommand, ExtractVariableCommand } from './extractCommands';
 import { QuickActionCommand } from './quickActionCommand';
 
 export interface ServerCommand {

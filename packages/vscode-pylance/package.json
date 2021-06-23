@@ -829,6 +829,7 @@
         "webpack-obfuscator": "^3.3.2"
     },
     "dependencies": {
+        "vscode-languageserver-types": "3.16.0",
         "@azure/storage-blob": "^12.6.0",
         "semver": "^7.3.5"
     }
