@@ -1385,7 +1385,7 @@ export class CompletionProvider {
         );
         collector.collect();
 
-        const keys: string[] = [];
+        const keys: Set<string> = new Set<string>();
         for (const nameNode of results) {
             const node = nameNode.parent?.nodeType === ParseNodeType.TypeAnnotation ? nameNode.parent : nameNode;
 
@@ -1401,7 +1401,7 @@ export class CompletionProvider {
                         const key = this._parseResults.text
                             .substr(entry.keyExpression.start, entry.keyExpression.length)
                             .trim();
-                        if (key.length > 0) keys.push(key);
+                        if (key.length > 0) keys.add(key);
                     }
                 }
 
@@ -1416,7 +1416,7 @@ export class CompletionProvider {
                         const key = arg.name?.value.trim() ?? '';
                         const quote = this._parseResults.tokenizerOutput.predominantSingleQuoteCharacter;
                         if (key.length > 0) {
-                            keys.push(`${quote}${key}${quote}`);
+                            keys.add(`${quote}${key}${quote}`);
                         }
                     }
                 }
@@ -1432,11 +1432,11 @@ export class CompletionProvider {
                 const key = this._parseResults.text
                     .substr(indexArgument.valueExpression.start, indexArgument.valueExpression.length)
                     .trim();
-                if (key.length > 0) keys.push(key);
+                if (key.length > 0) keys.add(key);
             }
         }
 
-        return keys;
+        return [...keys];
     }
 
     private _getStringLiteralCompletions(
@@ -1467,7 +1467,7 @@ export class CompletionProvider {
         if (parentNode.nodeType === ParseNodeType.Argument && parentNode.parent?.nodeType === ParseNodeType.Index) {
             if (!this._tryAddTypedDictStringLiteral(parentNode.parent, priorText, postText, completionList)) {
                 const keys = this._getDictionaryKeys(parentNode.parent, parseNode)
-                    .filter((k) => /["|']\w+["|']/.test(k))
+                    .filter((k) => /^["|'].*["|']$/.test(k))
                     .map((k) => k.substr(1, k.length - 2));
                 if (keys.length === 0) {
                     return undefined;
