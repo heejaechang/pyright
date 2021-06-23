@@ -1465,7 +1465,14 @@ export class CompletionProvider {
         const completionList = CompletionList.create();
 
         if (parentNode.nodeType === ParseNodeType.Argument && parentNode.parent?.nodeType === ParseNodeType.Index) {
-            if (!this._tryAddTypedDictStringLiteral(parentNode.parent, priorText, postText, completionList)) {
+            if (
+                !this._tryAddTypedDictStringLiteral(
+                    parentNode.parent,
+                    parseNode.nodeType === ParseNodeType.String ? priorText : '',
+                    postText,
+                    completionList
+                )
+            ) {
                 const keys = this._getDictionaryKeys(parentNode.parent, parseNode)
                     .filter((k) => /^["|'].*["|']$/.test(k))
                     .map((k) => k.substr(1, k.length - 2));

@@ -770,10 +770,22 @@ test('Operators5', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Operators6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Optional1', () => {
     const configOptions = new ConfigOptions('.');
 
-    // By default, optional diagnostics are ignored.
+    // Disable diagnostics.
+    configOptions.diagnosticRuleSet.reportOptionalSubscript = 'none';
+    configOptions.diagnosticRuleSet.reportOptionalMemberAccess = 'none';
+    configOptions.diagnosticRuleSet.reportOptionalCall = 'none';
+    configOptions.diagnosticRuleSet.reportOptionalIterable = 'none';
+    configOptions.diagnosticRuleSet.reportOptionalContextManager = 'none';
+    configOptions.diagnosticRuleSet.reportOptionalOperand = 'none';
     let analysisResults = TestUtils.typeAnalyzeSampleFiles(['optional1.py'], configOptions);
     TestUtils.validateResults(analysisResults, 0);
 

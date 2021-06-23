@@ -49,6 +49,7 @@ import {
     TypeBase,
     TypeCategory,
     TypeCondition,
+    TypeFlags,
     TypeVarScopeId,
     TypeVarType,
     UnionType,
@@ -220,6 +221,23 @@ export function areTypesSame(types: Type[], ignorePseudoGeneric: boolean): boole
     }
 
     return true;
+}
+
+// Determines whether the specified type is a type that can be
+// combined with other types for a union.
+export function isUnionableType(subtypes: Type[]): boolean {
+    let typeFlags = TypeFlags.Instance | TypeFlags.Instantiable;
+
+    for (let subtype of subtypes) {
+        subtype = transformTypeObjectToClass(subtype);
+        typeFlags &= subtype.flags;
+    }
+
+    // All subtypes need to be instantiable. Some types (like Any
+    // and None) are both instances and instantiable. It's OK to
+    // include some of these, but at least one subtype needs to
+    // be definitively instantiable (not an instance).
+    return (typeFlags & TypeFlags.Instantiable) !== 0 && (typeFlags & TypeFlags.Instance) === 0;
 }
 
 export function derivesFromAnyOrUnknown(type: Type): boolean {
@@ -667,8 +685,11 @@ export function applySolvedTypeVars(
             // If the type variable is unrelated to the scopes we're solving,
             // don't transform that type variable.
             if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId)) {
-                const replacement = typeVarMap.getTypeVarType(typeVar, useNarrowBoundOnly);
+                let replacement = typeVarMap.getTypeVarType(typeVar, useNarrowBoundOnly);
                 if (replacement) {
+                    if (TypeBase.isInstantiable(typeVar)) {
+                        replacement = convertToInstantiable(replacement);
+                    }
                     return replacement;
                 }
 
@@ -1755,15 +1776,6 @@ export function _transformTypeVars(
         const typeVarName = TypeVarType.getNameWithScope(type);
         if (!recursionMap.has(typeVarName)) {
             replacementType = callbacks.transformTypeVar(type);
-
-            // If we're replacing a TypeVar with another type and the
-            // original is not an instance, convert the replacement so it's also
-            // not an instance. This happens in the case where a type alias refers
-            // to a union that includes a TypeVar.
-            if (TypeBase.isInstantiable(type) && !TypeBase.isInstantiable(replacementType)) {
-                replacementType = convertToInstantiable(replacementType);
-            }
-
             recursionMap.set(typeVarName, type);
             replacementType = _transformTypeVars(replacementType, callbacks, recursionMap, recursionLevel + 1);
 
@@ -1812,13 +1824,17 @@ export function _transformTypeVars(
             const typeArgs = type.classType.typeArguments;
             if (typeArgs && typeArgs.length >= 1) {
                 if (isObject(typeArgs[0])) {
-                    const transformedObj = _transformTypeVars(
+                    let transformedObj = _transformTypeVars(
                         typeArgs[0].classType,
                         callbacks,
                         recursionMap,
                         recursionLevel + 1
                     );
                     if (transformedObj !== typeArgs[0]) {
+                        if (!TypeBase.isInstance(transformedObj)) {
+                            transformedObj = convertToInstance(transformedObj);
+                        }
+
                         classType = ClassType.cloneForSpecialization(
                             type.classType,
                             [transformedObj],
@@ -2201,7 +2217,6 @@ export function requiresTypeArguments(classType: ClassType) {
             'Type',
             'Optional',
             'Union',
-            'Final',
             'Literal',
             'Annotated',
             'TypeGuard',
