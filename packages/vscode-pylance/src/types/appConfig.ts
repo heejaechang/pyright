@@ -1,4 +1,4 @@
-import { ConfigurationTarget, workspace } from 'vscode';
+import { ConfigurationScope, ConfigurationTarget, workspace, WorkspaceConfiguration } from 'vscode';
 
 export interface SettingInspection<T> {
     key: string;
@@ -16,22 +16,26 @@ export interface SettingInspection<T> {
     languageIds?: string[];
 }
 
-export type Section = 'python' | 'pylance';
-
 export interface AppConfiguration {
-    getSetting<T = undefined>(section: Section, name: string): T | undefined;
-    updateSetting(section: Section, name: string, value: any, target?: ConfigurationTarget): Promise<void>;
-    inspect<T = undefined>(section: Section, key: string): SettingInspection<T | undefined> | undefined;
+    getSetting<T = unknown>(section: string, name: string, scope?: ConfigurationScope | null): T | undefined;
+    updateSetting(section: string, name: string, value: any, target?: ConfigurationTarget): Promise<void>;
+    inspect<T = unknown>(section: string, key: string): SettingInspection<T | undefined> | undefined;
+
+    // WorkspaceConfiguration remembers the scope it was produced from, for future update calls.
+    getConfiguration(section: string, scope?: ConfigurationScope | null): WorkspaceConfiguration;
 }
 
 export class AppConfigurationImpl implements AppConfiguration {
-    getSetting<T = undefined>(section: Section, name: string): T | undefined {
+    getSetting<T = unknown>(section: string, name: string): T | undefined {
         return workspace.getConfiguration(section).get<T>(name);
     }
-    async updateSetting(section: Section, name: string, value: any, target?: ConfigurationTarget): Promise<void> {
+    async updateSetting(section: string, name: string, value: any, target?: ConfigurationTarget): Promise<void> {
         await workspace.getConfiguration(section).update(name, value, target);
     }
-    inspect<T = undefined>(section: Section, key: string): SettingInspection<T | undefined> | undefined {
+    inspect<T = unknown>(section: string, key: string): SettingInspection<T | undefined> | undefined {
         return workspace.getConfiguration(section).inspect<T>(key);
+    }
+    getConfiguration(section: string, scope?: ConfigurationScope | null): WorkspaceConfiguration {
+        return workspace.getConfiguration(section, scope);
     }
 }

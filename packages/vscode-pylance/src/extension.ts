@@ -7,11 +7,12 @@ import { commands, Range } from 'vscode';
 
 import { CommandResult } from 'pyright-internal/commands/commandResult';
 
-import { Commands } from 'pylance-internal/commands/commands';
+import { ClientCommands, Commands } from 'pylance-internal/commands/commands';
 
 import { LSExtensionApi } from './api';
 import { registerAutoClosing } from './autoClosing';
 import { ActivatePylanceBanner } from './banners';
+import { addToExtraPaths } from './commands/addToExtraPaths';
 import { renameEdit } from './commands/extractRename';
 import reportIssue from './commands/reportIssue';
 import { ApplicationShellImpl } from './common/appShell';
@@ -24,7 +25,7 @@ import { BlobStorageImpl } from './insiders/blobStorage';
 import { migrateV1Settings } from './settingsMigration';
 import { AppConfigurationImpl } from './types/appConfig';
 import { BrowserServiceImpl } from './types/browser';
-import { Command, CommandManagerImpl } from './types/commandManager';
+import { CommandManager, CommandManagerImpl, EditorCommand } from './types/commandManager';
 
 export async function activate(context: vscode.ExtensionContext): Promise<LSExtensionApi> {
     const appShell = new ApplicationShellImpl();
@@ -63,41 +64,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         context.subscriptions
     );
 
-    registerCommand(context, Commands.runCommands, (...args: vscode.Command[]) => {
+    registerCommand(context, commandManager, ClientCommands.runCommands, (...args: vscode.Command[]) => {
         args.forEach((c) => {
             commandManager.executeCommand(c.command as any, ...(c.arguments ?? []));
         });
     });
 
-    registerCommand(context, Commands.triggerParameterHints, (scope: string) => {
+    registerCommand(context, commandManager, ClientCommands.triggerParameterHints, (scope: string) => {
         const hintsEnabled = vscode.workspace.getConfiguration('editor.parameterHints', {
             uri: vscode.Uri.parse(scope),
             languageId: 'python',
         });
 
         if (hintsEnabled.get<boolean | undefined>('enabled')) {
-            commandManager.executeCommand(Command.TriggerParameterHints);
+            commandManager.executeCommand(EditorCommand.TriggerParameterHints);
         }
     });
 
-    registerCommand(context, Commands.extractMethodWithRename, (filePath: string, range: Range) => {
-        commands.executeCommand<CommandResult>(Command.extractMethod, filePath, range).then((extractResult) => {
-            if (extractResult) {
-                renameEdit(extractResult);
-            }
-        });
-    });
+    registerCommand(
+        context,
+        commandManager,
+        ClientCommands.extractMethodWithRename,
+        (filePath: string, range: Range) => {
+            commands.executeCommand<CommandResult>(Commands.extractMethod, filePath, range).then((extractResult) => {
+                if (extractResult) {
+                    renameEdit(extractResult);
+                }
+            });
+        }
+    );
 
-    registerCommand(context, Commands.extractVariableWithRename, (filePath: string, range: Range) => {
-        commands.executeCommand<CommandResult>(Command.extractVariable, filePath, range).then((extractResult) => {
-            if (extractResult) {
-                renameEdit(extractResult);
-            }
-        });
-    });
+    registerCommand(
+        context,
+        commandManager,
+        ClientCommands.extractVariableWithRename,
+        (filePath: string, range: Range) => {
+            commands.executeCommand<CommandResult>(Commands.extractVariable, filePath, range).then((extractResult) => {
+                if (extractResult) {
+                    renameEdit(extractResult);
+                }
+            });
+        }
+    );
 
-    registerCommand(context, Command.ReportIssue, () => {
+    registerCommand(context, commandManager, ClientCommands.reportIssue, () => {
         reportIssue(browser, version);
+    });
+
+    registerCommand(context, commandManager, ClientCommands.addToExtraPaths, (filePath: string, toAdd: string) => {
+        addToExtraPaths(config, filePath, toAdd);
     });
 
     registerAutoClosing();
@@ -139,9 +154,10 @@ async function showActivatePylanceBanner(context: vscode.ExtensionContext, versi
 
 function registerCommand(
     context: vscode.ExtensionContext,
-    command: string,
+    commandManager: CommandManager,
+    command: ClientCommands,
     callback: (...args: any[]) => any,
     thisArg?: any
 ) {
-    context.subscriptions.push(vscode.commands.registerCommand(command, callback, thisArg));
+    context.subscriptions.push(commandManager.registerCommand(command, callback, thisArg));
 }

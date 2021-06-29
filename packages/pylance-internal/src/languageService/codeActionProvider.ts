@@ -9,15 +9,16 @@ import { CancellationToken, CodeAction, CodeActionKind, Command } from 'vscode-l
 
 import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
-import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
+import { Diagnostic, DiagnosticCategory } from 'pyright-internal/common/diagnostic';
 import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
+import { getRelativePath, normalizeSlashes } from 'pyright-internal/common/pathUtils';
 import { convertRangeToTextRange } from 'pyright-internal/common/positionUtils';
 import { getCharacterCount } from 'pyright-internal/common/stringUtils';
 import { Range } from 'pyright-internal/common/textRange';
 import { getAutoImportText } from 'pyright-internal/languageService/tooltipUtils';
 
 import { PylanceWorkspaceServiceInstance } from '../../src/server';
-import { Commands } from '../commands/commands';
+import { ClientCommands, Commands } from '../commands/commands';
 import { addImportSimilarityLimit, wellKnownAbbreviationMap } from '../common/importUtils';
 import { CannotExtractReason, ExtractMethodProvider } from './refactoringProvider';
 
@@ -132,7 +133,7 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, Commands.extractMethodWithRename, filePath, range),
+                                Command.create(title, ClientCommands.extractMethodWithRename, filePath, range),
                                 CodeActionKind.RefactorExtract
                             )
                         );
@@ -144,7 +145,7 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, Commands.extractVariableWithRename, filePath, range),
+                                Command.create(title, ClientCommands.extractVariableWithRename, filePath, range),
                                 CodeActionKind.RefactorExtract
                             )
                         );
@@ -152,6 +153,8 @@ export class CodeActionProvider {
                 }
             }
         }
+
+        addExtraPathCodeActions(workspace, filePath, diags, codeActions);
 
         return codeActions;
     }
@@ -184,4 +187,83 @@ function addImportCompare(left: CodeAction, right: CodeAction) {
     }
 
     return comp;
+}
+
+function addExtraPathCodeActions(
+    workspace: PylanceWorkspaceServiceInstance,
+    filePath: string,
+    diags: Diagnostic[],
+    codeActions: CodeAction[]
+) {
+    if (!workspace.rootPath) {
+        // No root, so extraPaths wouldn't work.
+        return;
+    }
+
+    // Only consider fully missing imports; "reportMissingModuleSource" isn't fixable via extraPaths.
+    const unresolvedImportDiags = diags.filter((d) => d.getRule() === DiagnosticRule.reportMissingImports);
+
+    if (unresolvedImportDiags.length === 0) {
+        return;
+    }
+
+    const parseResults = workspace.serviceInstance.getParseResult(filePath);
+    if (!parseResults) {
+        return;
+    }
+
+    const diagRange = unresolvedImportDiags[0].range;
+    const textRange = convertRangeToTextRange(diagRange, parseResults.tokenizerOutput.lines);
+    if (!textRange) {
+        return;
+    }
+
+    const moduleName = parseResults.text.slice(textRange.start, textRange.start + textRange.length);
+
+    if (moduleName[0] === '.' || moduleName.includes('__')) {
+        // Ignore relative imports and bad imports like __init__.
+        return;
+    }
+
+    const modulePath = moduleName.split('.').join('/');
+
+    const potentialSuffixes = [
+        `/${modulePath}.py`,
+        `/${modulePath}.pyi`,
+        `/${modulePath}/__init__.py`,
+        `/${modulePath}/__init__.pyi`,
+    ].map(normalizeSlashes);
+
+    const candidates: string[] = [];
+
+    const trackedFiles = workspace.serviceInstance.backgroundAnalysisProgram.program.getTracked();
+    for (const f of trackedFiles) {
+        const filePath = f.sourceFile.getFilePath();
+
+        for (const suffix of potentialSuffixes) {
+            if (filePath.endsWith(suffix)) {
+                const withoutSuffix = filePath.slice(0, -suffix.length);
+                const relativeToRoot = getRelativePath(withoutSuffix, workspace.rootPath);
+                if (!relativeToRoot) {
+                    continue;
+                }
+
+                // Use forward slashes, which works cross-platform and matches our troubleshooting.
+                candidates.push(relativeToRoot.replace(/\\/g, '/'));
+            }
+        }
+    }
+
+    candidates.sort((a, b) => a.length - b.length);
+
+    for (const c of candidates) {
+        const title = `Add "${c}" to extraPaths`;
+        codeActions.push(
+            CodeAction.create(
+                title,
+                Command.create(title, ClientCommands.addToExtraPaths, filePath, c),
+                CodeActionKind.QuickFix
+            )
+        );
+    }
 }

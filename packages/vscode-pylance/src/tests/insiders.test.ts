@@ -15,7 +15,7 @@ import {
 import { BlobStorage, DownloadProgress, VersionedBlob } from '../insiders/blobStorage';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
-import { Command, CommandManager } from '../types/commandManager';
+import { CommandManager, EditorCommand, ExecutableCommand } from '../types/commandManager';
 
 describe('Insiders', () => {
     const downloadDir = path.resolve('downloadDir');
@@ -47,8 +47,8 @@ describe('Insiders', () => {
     });
 
     function verifyNoCommands() {
-        verify(commandManager.executeCommand(Command.ReloadWindow)).never();
-        verify(commandManager.executeCommand(Command.InstallExtension, anything())).never();
+        verify(commandManager.executeCommand(EditorCommand.ReloadWindow)).never();
+        verify(commandManager.executeCommand(EditorCommand.InstallExtension, anything())).never();
     }
 
     async function verifyUpdate(
@@ -99,16 +99,16 @@ describe('Insiders', () => {
         expect(installReport.increment).toBeUndefined();
         expect(installReport.message).toBe(localize.Insiders.installingInsiders());
 
-        const [installCommand, vsixUri] = capture<Command, Uri>(commandManager.executeCommand).first();
-        expect(installCommand).toEqual(Command.InstallExtension);
+        const [installCommand, vsixUri] = capture<ExecutableCommand, Uri>(commandManager.executeCommand).first();
+        expect(installCommand).toEqual(EditorCommand.InstallExtension);
         expect(vsixUri).toEqual(Uri.file(vsixPath));
 
         if (downgrade) {
-            verify(commandManager.executeCommand(Command.ReloadWindow)).once();
+            verify(commandManager.executeCommand(EditorCommand.ReloadWindow)).once();
         } else if (reloadPrompt) {
-            verify(commandManager.executeCommand(Command.ReloadWindow)).once();
+            verify(commandManager.executeCommand(EditorCommand.ReloadWindow)).once();
         } else {
-            verify(commandManager.executeCommand(Command.ReloadWindow)).never();
+            verify(commandManager.executeCommand(EditorCommand.ReloadWindow)).never();
         }
     }
 

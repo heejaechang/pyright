@@ -8,12 +8,13 @@ import { CancellationToken, ExecuteCommandParams, TextEdit } from 'vscode-langua
 
 import { CommandController as PyrightCommandController } from 'pyright-internal/commands/commandController';
 import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
+import { assert } from 'pyright-internal/common/debug';
 import { convertUriToPath } from 'pyright-internal/common/pathUtils';
 import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
 
 import { TelemetryEvent, TelemetryEventName, TelemetryService } from '../common/telemetry';
-import { Commands } from './commands';
+import { ClientCommands, Commands } from './commands';
 import { CompletionAcceptedCommand } from './completionAcceptedCommand';
 import { DumpFileDebugInfoCommand } from './dumpFileDebugInfoCommand';
 import { ExtractMethodCommand, ExtractVariableCommand } from './extractCommands';
@@ -34,6 +35,7 @@ const _userInitiatedTelemetryCommands: Set<string> = new Set([
     Commands.addImport,
     Commands.extractMethod,
     Commands.extractVariable,
+    Commands.executedClientCommand,
 ]);
 
 export class CommandController extends PyrightCommandController {
@@ -138,7 +140,16 @@ export class CommandController extends PyrightCommandController {
     private _sendUserInitiatedCommandTelemetry(cmdParams: ExecuteCommandParams) {
         if (this._telemetry && _userInitiatedTelemetryCommands.has(cmdParams.command)) {
             const te = new TelemetryEvent(TelemetryEventName.EXECUTE_COMMAND);
-            te.Properties['name'] = cmdParams.command;
+
+            if (cmdParams.command === Commands.executedClientCommand) {
+                const name = cmdParams.arguments ? cmdParams.arguments[0] : undefined;
+                assert(typeof name === 'string');
+                assert(Object.values(ClientCommands).includes(name as any));
+                te.Properties['name'] = name;
+            } else {
+                te.Properties['name'] = cmdParams.command;
+            }
+
             this._telemetry.sendTelemetry(te);
         }
     }

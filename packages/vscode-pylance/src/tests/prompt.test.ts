@@ -5,7 +5,7 @@ import { ActivatePylanceBanner } from '../banners';
 import { DefaultName, PylanceName } from '../common/utils';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
-import { Command, CommandManager } from '../types/commandManager';
+import { CommandManager, EditorCommand } from '../types/commandManager';
 import { TestMemento } from './testUtil';
 
 let appShellMock: ApplicationShell;
@@ -118,7 +118,7 @@ describe('Prompt to use Pylance', () => {
             expect(setting).toEqual('languageServer');
             expect(value).toEqual(PylanceName);
             expect(target).toEqual(s.expectedTarget);
-            verify(cmdMock.executeCommand(Command.ReloadWindow)).once();
+            verify(cmdMock.executeCommand(EditorCommand.ReloadWindow)).once();
         });
     });
 

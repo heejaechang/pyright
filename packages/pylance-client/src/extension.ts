@@ -13,7 +13,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 
-import { Commands } from 'pylance-internal/commands/commands';
+import { ClientCommands, Commands } from 'pylance-internal/commands/commands';
 
 import { FileBasedCancellationStrategy } from './cancellationUtils';
 import { ProgressReporting } from './progress';
@@ -21,13 +21,13 @@ import { ProgressReporting } from './progress';
 let cancellationStrategy: FileBasedCancellationStrategy | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-    registerCommand(context, Commands.runCommands, (...args: vscode.Command[]) => {
+    registerCommand(context, ClientCommands.runCommands, (...args: vscode.Command[]) => {
         args.forEach((c) => {
             vscode.commands.executeCommand(c.command, ...(c.arguments ?? []));
         });
     });
 
-    registerCommand(context, Commands.triggerParameterHints, (scope: string) => {
+    registerCommand(context, ClientCommands.triggerParameterHints, (scope: string) => {
         const hintsEnabled = vscode.workspace.getConfiguration('editor.parameterHints', {
             uri: vscode.Uri.parse(scope),
             languageId: 'python',

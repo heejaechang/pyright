@@ -12,7 +12,7 @@ import {
 } from './common/utils';
 import { AppConfiguration } from './types/appConfig';
 import { ApplicationShell } from './types/appShell';
-import { Command, CommandManager } from './types/commandManager';
+import { CommandManager, EditorCommand } from './types/commandManager';
 
 abstract class BannerBase {
     protected disabledInCurrentSession = false;
@@ -111,6 +111,6 @@ export class ActivatePylanceBanner extends BannerBase {
                 ConfigurationTarget.Global
             );
         }
-        await this.cmdManager.executeCommand(Command.ReloadWindow);
+        await this.cmdManager.executeCommand(EditorCommand.ReloadWindow);
     }
 }

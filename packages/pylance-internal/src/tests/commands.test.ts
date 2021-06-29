@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { Command } from 'vscode-languageserver';
 
-import { Commands } from '../commands/commands';
+import { ClientCommands } from '../commands/commands';
 import { mergeCommands } from '../commands/multiCommand';
 
 describe('mergeCommands', () => {
@@ -47,7 +47,7 @@ describe('mergeCommands', () => {
         const got = mergeCommands(commandA, commandB);
         assert.deepStrictEqual<Command>(got, {
             title: '',
-            command: Commands.runCommands,
+            command: ClientCommands.runCommands,
             arguments: [commandA, commandB],
         });
     });
@@ -56,7 +56,7 @@ describe('mergeCommands', () => {
         const got = mergeCommands(commandA, commandB, commandC);
         assert.deepStrictEqual<Command>(got, {
             title: '',
-            command: Commands.runCommands,
+            command: ClientCommands.runCommands,
             arguments: [commandA, commandB, commandC],
         });
     });
@@ -65,7 +65,7 @@ describe('mergeCommands', () => {
         const got = mergeCommands(mergeCommands(commandA, commandB), commandC);
         assert.deepStrictEqual<Command>(got, {
             title: '',
-            command: Commands.runCommands,
+            command: ClientCommands.runCommands,
             arguments: [commandA, commandB, commandC],
         });
     });
@@ -74,7 +74,7 @@ describe('mergeCommands', () => {
         const got = mergeCommands(commandA, mergeCommands(commandB, commandC));
         assert.deepStrictEqual<Command>(got, {
             title: '',
-            command: Commands.runCommands,
+            command: ClientCommands.runCommands,
             arguments: [commandA, commandB, commandC],
         });
     });

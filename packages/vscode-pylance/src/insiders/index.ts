@@ -7,7 +7,7 @@ import * as localize from '../common/localize';
 import { PersistentState, PersistentStateFactory, StateKey } from '../common/persistentState';
 import { AppConfiguration } from '../types/appConfig';
 import { ApplicationShell } from '../types/appShell';
-import { Command, CommandManager } from '../types/commandManager';
+import { CommandManager, EditorCommand } from '../types/commandManager';
 import { BlobStorage } from './blobStorage';
 
 export type DownloadChannel = 'off' | 'daily';
@@ -162,17 +162,17 @@ export class InsidersImpl {
 
         await this.appShell.withProgressCustomIcon(Octicons.Installing, async (progress) => {
             progress.report({ message: localize.Insiders.installingInsiders() });
-            return this.cmdManager.executeCommand(Command.InstallExtension, Uri.file(vsixPath));
+            return this.cmdManager.executeCommand(EditorCommand.InstallExtension, Uri.file(vsixPath));
         });
 
         if (!downgradeToStable) {
             const response = await this.appShell.showInformationMessage(this.Installed, this.LabelReload);
             if (response === this.LabelReload) {
-                await this.cmdManager.executeCommand(Command.ReloadWindow);
+                await this.cmdManager.executeCommand(EditorCommand.ReloadWindow);
             }
         } else {
             // Don't ask on downgrade; the user has already been prompted.
-            await this.cmdManager.executeCommand(Command.ReloadWindow);
+            await this.cmdManager.executeCommand(EditorCommand.ReloadWindow);
         }
     }
 }

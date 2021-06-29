@@ -59,7 +59,7 @@ import {
 
 import { BackgroundAnalysis, ExperimentOptions, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
-import { Commands } from './commands/commands';
+import { ClientCommands, Commands } from './commands/commands';
 import {
     autoImportAcceptedCommand,
     dictKeyAcceptedCommand,
@@ -826,7 +826,7 @@ export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, text
         item.insertTextFormat = InsertTextFormat.Snippet;
         item.command = mergeCommands(item.command, {
             title: '',
-            command: Commands.triggerParameterHints,
+            command: ClientCommands.triggerParameterHints,
             arguments: [textDocumentUri],
         });
     }

@@ -1,14 +1,14 @@
 import { Command } from 'vscode-languageserver';
 
-import { Commands } from './commands';
+import { ClientCommands } from './commands';
 
 interface MultiCommand extends Command {
-    command: Commands.runCommands;
+    command: ClientCommands.runCommands;
     arguments: Command[];
 }
 
 function isMultiCommand(c: Command): c is MultiCommand {
-    return c.command === Commands.runCommands;
+    return c.command === ClientCommands.runCommands;
 }
 
 export function mergeCommands(...commands: (Command | undefined)[]): Command | undefined {
@@ -34,7 +34,7 @@ export function mergeCommands(...commands: (Command | undefined)[]): Command | u
 
     return {
         title: '',
-        command: Commands.runCommands,
+        command: ClientCommands.runCommands,
         arguments: args,
     };
 }
