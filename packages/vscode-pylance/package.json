@@ -29,7 +29,7 @@
     "main": "./dist/extension.bundle.js",
     "activationEvents": [
         "onLanguage:python",
-        "workspaceContains:mspythonconfig.json"
+        "workspaceContains:pyrightconfig.json"
     ],
     "extensionDependencies": [
         "ms-python.python"
