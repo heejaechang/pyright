@@ -45,7 +45,7 @@ test('duplicated stubPath', () => {
         stubPath: normalizeSlashes('/stubs'),
     };
 
-    fs.writeFileSync(normalizeSlashes('/mspythonconfig.json'), '{ "typingsPath": "/typing" }');
+    fs.writeFileSync(normalizeSlashes('/pyrightconfig.json'), '{ "typingsPath": "/typing" }');
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, serverSettings);
     assert(normalizeSlashes('/typing'), workspace.serviceInstance.getConfigOptions().stubPath);
@@ -81,7 +81,7 @@ test('mspythonconfig information support', () => {
     const fs = new TestFileSystem(false, { cwd: normalizeSlashes('/') });
     const workspace = createWorkspaceInstance(fs);
 
-    fs.writeFileSync(normalizeSlashes('/mspythonconfig.json'), '{ "reportGeneralTypeIssues": "information" }');
+    fs.writeFileSync(normalizeSlashes('/pyrightconfig.json'), '{ "reportGeneralTypeIssues": "information" }');
 
     AnalyzerServiceExecutor.runWithOptions(rootPath, workspace, {});
     assert('information', workspace.serviceInstance.getConfigOptions().diagnosticRuleSet.reportGeneralTypeIssues);

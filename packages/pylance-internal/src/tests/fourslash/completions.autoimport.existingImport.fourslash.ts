@@ -1,7 +1,7 @@
 /// <reference path="fourslash.ts" />
 // @indexerwithoutstdlib: true
 
-// @filename: mspythonconfig.json
+// @filename: pyrightconfig.json
 //// {
 ////   "completeFunctionParens": true
 //// }
