@@ -64,7 +64,7 @@ import { MaxAnalysisTime } from './program';
 import { findPythonSearchPaths } from './pythonPathUtils';
 import { TypeEvaluator } from './typeEvaluator';
 
-export const configFileNames = ['pyrightconfig.json', 'mspythonconfig.json'];
+export const configFileNames = ['pyrightconfig.json'];
 export const pyprojectTomlName = 'pyproject.toml';
 
 // How long since the last user activity should we wait until running
@@ -1074,9 +1074,9 @@ export class AnalyzerService {
         };
 
         include.forEach((includeSpec) => {
-            let foundFileSpec = false;
-
             if (!this._isInExcludePath(includeSpec.wildcardRoot, exclude)) {
+                let foundFileSpec = false;
+
                 const stat = tryStat(this._fs, includeSpec.wildcardRoot);
                 if (stat?.isFile()) {
                     if (includeFileRegex.test(includeSpec.wildcardRoot)) {
@@ -1087,10 +1087,10 @@ export class AnalyzerService {
                     visitDirectory(includeSpec.wildcardRoot, includeSpec.regExp);
                     foundFileSpec = true;
                 }
-            }
 
-            if (!foundFileSpec) {
-                this._console.error(`File or directory "${includeSpec.wildcardRoot}" does not exist.`);
+                if (!foundFileSpec) {
+                    this._console.error(`File or directory "${includeSpec.wildcardRoot}" does not exist.`);
+                }
             }
         });
 

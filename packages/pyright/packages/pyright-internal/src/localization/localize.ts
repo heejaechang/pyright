@@ -605,6 +605,10 @@ export namespace Localizer {
         export const starPatternInOrPattern = () => getRawString('Diagnostic.starPatternInOrPattern');
         export const singleOverload = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.singleOverload'));
+        export const slotsAttributeError = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.slotsAttributeError'));
+        export const slotsClassVarConflict = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.slotsClassVarConflict'));
         export const starStarWildcardNotAllowed = () => getRawString('Diagnostic.starStarWildcardNotAllowed');
         export const staticClsSelfParam = () => getRawString('Diagnostic.staticClsSelfParam');
         export const stringNonAsciiBytes = () => getRawString('Diagnostic.stringNonAsciiBytes');
@@ -753,10 +757,6 @@ export namespace Localizer {
         export const unionSyntaxIllegal = () => getRawString('Diagnostic.unionSyntaxIllegal');
         export const unnecessaryCast = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.unnecessaryCast'));
-        export const unnecessaryIsInstanceNever = () =>
-            new ParameterizedString<{ testType: string; classType: string }>(
-                getRawString('Diagnostic.unnecessaryIsInstanceNever')
-            );
         export const unnecessaryIsInstanceAlways = () =>
             new ParameterizedString<{ testType: string; classType: string }>(
                 getRawString('Diagnostic.unnecessaryIsInstanceAlways')
@@ -764,10 +764,6 @@ export namespace Localizer {
         export const unnecessaryIsSubclassAlways = () =>
             new ParameterizedString<{ testType: string; classType: string }>(
                 getRawString('Diagnostic.unnecessaryIsSubclassAlways')
-            );
-        export const unnecessaryIsSubclassNever = () =>
-            new ParameterizedString<{ testType: string; classType: string }>(
-                getRawString('Diagnostic.unnecessaryIsSubclassNever')
             );
         export const unpackArgCount = () => getRawString('Diagnostic.unpackArgCount');
         export const unpackedArgInTypeArgument = () => getRawString('Diagnostic.unpackedArgInTypeArgument');

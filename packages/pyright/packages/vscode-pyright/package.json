@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.152",
+    "version": "1.1.155",
     "private": true,
     "license": "MIT",
     "author": {
@@ -24,8 +24,7 @@
     ],
     "activationEvents": [
         "onLanguage:python",
-        "workspaceContains:pyrightconfig.json",
-        "workspaceContains:mspythonconfig.json"
+        "workspaceContains:pyrightconfig.json"
     ],
     "icon": "images/pyright-icon.png",
     "main": "./dist/extension.js",
@@ -534,7 +533,7 @@
                         },
                         "reportUnnecessaryIsInstance": {
                             "type": "string",
-                            "description": "Diagnostics for 'isinstance' or 'issubclass' calls where the result is statically determined to be always true or always false. Such calls are often indicative of a programming error.",
+                            "description": "Diagnostics for 'isinstance' or 'issubclass' calls where the result is statically determined to be always true. Such calls are often indicative of a programming error.",
                             "default": "none",
                             "enum": [
                                 "none",
@@ -743,10 +742,6 @@
         "jsonValidation": [
             {
                 "fileMatch": "pyrightconfig.json",
-                "url": "./schemas/pyrightconfig.schema.json"
-            },
-            {
-                "fileMatch": "mspythonconfig.json",
                 "url": "./schemas/pyrightconfig.schema.json"
             }
         ]

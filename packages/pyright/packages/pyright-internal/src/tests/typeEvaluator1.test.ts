@@ -352,6 +352,12 @@ test('TypeNarrowing22', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowing23', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowing23.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
+});
+
 test('ReturnTypes1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['returnTypes1.py']);
 
@@ -910,4 +916,16 @@ test('NamedTuples3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples3.py']);
 
     TestUtils.validateResults(analysisResults, 2);
+});
+
+test('Slots1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['slots1.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
+});
+
+test('Slots2', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['slots2.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
 });
