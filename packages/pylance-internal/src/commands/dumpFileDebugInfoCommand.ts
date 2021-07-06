@@ -16,6 +16,7 @@ import {
     FunctionType,
     FunctionTypeFlags,
     ParamSpecEntry,
+    TypeBase,
     TypeCategory,
     TypeFlags,
     TypeVarDetails,
@@ -259,7 +260,7 @@ function getTypeEvaluatorString(evaluator: TypeEvaluator, results: ParseResults,
         }
 
         if (isTypeBase(this) && key === 'category') {
-            return getTypeCategoryString(value);
+            return getTypeCategoryString(value, this);
         }
 
         if (isTypeBase(this) && key === 'flags') {
@@ -527,8 +528,8 @@ function getTypeFlagsString(flags: TypeFlags) {
     return str.join(',');
 }
 
-function getTypeCategoryString(type: TypeCategory) {
-    switch (type) {
+function getTypeCategoryString(typeCategory: TypeCategory, type: any) {
+    switch (typeCategory) {
         case TypeCategory.Unbound:
             return 'Unbound';
         case TypeCategory.Unknown:
@@ -544,9 +545,11 @@ function getTypeCategoryString(type: TypeCategory) {
         case TypeCategory.OverloadedFunction:
             return 'OverloadedFunction';
         case TypeCategory.Class:
-            return 'Class';
-        case TypeCategory.Object:
-            return 'Object';
+            if (TypeBase.isInstantiable(type)) {
+                return 'Class';
+            } else {
+                return 'Object';
+            }
         case TypeCategory.Module:
             return 'Module';
         case TypeCategory.Union:
@@ -554,7 +557,7 @@ function getTypeCategoryString(type: TypeCategory) {
         case TypeCategory.TypeVar:
             return 'TypeVar';
         default:
-            return `Unknown Value!! (${type})`;
+            return `Unknown Value!! (${typeCategory})`;
     }
 }
 

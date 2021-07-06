@@ -1,6 +1,6 @@
 /// <reference path="fourslash.ts" />
 
-// @filename: mspythonconfig.json
+// @filename: pyrightconfig.json
 //// {
 ////   "reportUnusedImport": true,
 ////   "reportWildcardImportFromLibrary": false

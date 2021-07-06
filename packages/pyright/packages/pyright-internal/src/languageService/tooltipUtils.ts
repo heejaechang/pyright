@@ -22,14 +22,13 @@ import {
 import { TypeEvaluator } from '../analyzer/typeEvaluator';
 import {
     FunctionType,
-    isClass,
     isFunction,
+    isInstantiableClass,
     isModule,
     isOverloadedFunction,
     OverloadedFunctionType,
     Type,
 } from '../analyzer/types';
-import { transformTypeObjectToClass } from '../analyzer/typeUtils';
 
 // 70 is vscode's default hover width size.
 export function getOverloadedFunctionTooltip(
@@ -38,7 +37,9 @@ export function getOverloadedFunctionTooltip(
     columnThreshold = 70
 ) {
     let content = '';
-    const overloads = type.overloads.map((o) => o.details.name + evaluator.printType(o, /* expandTypeAlias */ false));
+    const overloads = type.overloads
+        .filter((o) => FunctionType.isOverloaded(o))
+        .map((o) => o.details.name + evaluator.printType(o, /* expandTypeAlias */ false));
 
     for (let i = 0; i < overloads.length; i++) {
         if (i !== 0 && overloads[i].length > columnThreshold && overloads[i - 1].length <= columnThreshold) {
@@ -72,14 +73,12 @@ export function getDocumentationPartsForTypeAndDecl(
     resolvedDecl: Declaration | undefined,
     evaluator: TypeEvaluator
 ): string[] {
-    type = transformTypeObjectToClass(type);
-
     if (isModule(type)) {
         const doc = getModuleDocString(type, resolvedDecl, sourceMapper);
         if (doc) {
             return [doc];
         }
-    } else if (isClass(type)) {
+    } else if (isInstantiableClass(type)) {
         const doc = getClassDocString(type, resolvedDecl, sourceMapper);
         if (doc) {
             return [doc];

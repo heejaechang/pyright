@@ -168,7 +168,7 @@ test('isInstance3', () => {
 test('isInstance4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['isinstance4.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('isInstance5', () => {
@@ -639,6 +639,12 @@ test('GenericTypes59', () => {
 
 test('GenericTypes60', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes60.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes61', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes61.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

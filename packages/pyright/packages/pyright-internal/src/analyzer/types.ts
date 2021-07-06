@@ -43,9 +43,6 @@ export const enum TypeCategory {
     // class methods, static methods, properties, and variables.
     Class,
 
-    // Class instance.
-    Object,
-
     // Module instance.
     Module,
 
@@ -81,7 +78,6 @@ export type UnionableType =
     | FunctionType
     | OverloadedFunctionType
     | ClassType
-    | ObjectType
     | ModuleType
     | TypeVarType;
 
@@ -365,7 +361,7 @@ export const enum ClassTypeFlags {
     // The class is a protocol that defines only a __call__ method.
     CallbackProtocolClass = 1 << 22,
 
-    // Class is declared within a type stub fille
+    // Class is declared within a type stub file.
     DefinedInStub = 1 << 23,
 }
 
@@ -394,6 +390,8 @@ interface ClassDetails {
     dataClassEntries?: DataClassEntry[] | undefined;
     dataClassBehaviors?: DataClassBehaviors | undefined;
     typedDictEntries?: Map<string, TypedDictEntry> | undefined;
+    inheritedSlotsNames?: string[];
+    localSlotsNames?: string[];
 
     // Transforms to apply if this class is used as a metaclass.
     metaclassDataClassTransform?: DataClassBehaviors | undefined;
@@ -436,7 +434,11 @@ export interface ClassType extends TypeBase {
     // provided explicitly in the code)?
     isTypeArgumentExplicit?: boolean | undefined;
 
-    skipAbstractClassTest: boolean;
+    // This class type represents the class and any classes that
+    // derive from it, as opposed to the original class only. This
+    // distinction is important in certain scenarios like instantiation
+    // of abstract or protocol classes.
+    includeSubclasses?: boolean;
 
     // Some types can be further constrained to have
     // literal types (e.g. true or 'string' or 3).
@@ -454,7 +456,7 @@ export interface ClassType extends TypeBase {
 }
 
 export namespace ClassType {
-    export function create(
+    export function createInstantiable(
         name: string,
         fullName: string,
         moduleName: string,
@@ -482,18 +484,32 @@ export namespace ClassType {
                 typeParameters: [],
                 docString,
             },
-            skipAbstractClassTest: false,
             flags: TypeFlags.Instantiable,
         };
 
         return newClass;
     }
 
+    export function cloneAsInstance(classType: ClassType) {
+        const objectType = { ...classType };
+        objectType.flags &= ~(TypeFlags.Instantiable | TypeFlags.NonCallable);
+        objectType.flags |= TypeFlags.Instance;
+        objectType.includeSubclasses = true;
+        return objectType;
+    }
+
+    export function cloneAsInstantiable(objectType: ClassType) {
+        const classType = { ...objectType };
+        classType.flags &= ~TypeFlags.Instance;
+        classType.flags |= TypeFlags.Instantiable;
+        return classType;
+    }
+
     export function cloneForSpecialization(
         classType: ClassType,
         typeArguments: Type[] | undefined,
         isTypeArgumentExplicit: boolean,
-        skipAbstractClassTest = false,
+        includeSubclasses = false,
         tupleTypeArguments?: Type[],
         isEmptyContainer?: boolean
     ): ClassType {
@@ -505,7 +521,9 @@ export namespace ClassType {
             : undefined;
 
         newClassType.isTypeArgumentExplicit = isTypeArgumentExplicit;
-        newClassType.skipAbstractClassTest = skipAbstractClassTest;
+        if (includeSubclasses) {
+            newClassType.includeSubclasses = true;
+        }
         newClassType.tupleTypeArguments = tupleTypeArguments
             ? tupleTypeArguments.map((t) => (isNever(t) ? UnknownType.create() : t))
             : undefined;
@@ -599,7 +617,7 @@ export namespace ClassType {
     }
 
     export function hasAbstractMethods(classType: ClassType) {
-        return !!(classType.details.flags & ClassTypeFlags.HasAbstractMethods) && !classType.skipAbstractClassTest;
+        return !!(classType.details.flags & ClassTypeFlags.HasAbstractMethods);
     }
 
     export function supportsAbstractMethods(classType: ClassType) {
@@ -813,7 +831,7 @@ export namespace ClassType {
         }
 
         for (const baseClass of subclassType.details.baseClasses) {
-            if (isClass(baseClass)) {
+            if (isInstantiableClass(baseClass)) {
                 if (isDerivedFrom(baseClass, parentClassType, inheritanceChain)) {
                     if (inheritanceChain) {
                         inheritanceChain.push(subclassType);
@@ -829,23 +847,6 @@ export namespace ClassType {
         }
 
         return false;
-    }
-}
-
-export interface ObjectType extends TypeBase {
-    category: TypeCategory.Object;
-
-    classType: ClassType;
-}
-
-export namespace ObjectType {
-    export function create(classType: ClassType) {
-        const newObjectType: ObjectType = {
-            category: TypeCategory.Object,
-            classType,
-            flags: TypeFlags.Instance,
-        };
-        return newObjectType;
     }
 }
 
@@ -972,7 +973,7 @@ export interface FunctionType extends TypeBase {
     // If this is a bound function where the first parameter
     // was stripped from the original unbound function,
     // the class or object to which the function was bound.
-    boundToType?: ClassType | ObjectType | undefined;
+    boundToType?: ClassType | undefined;
 
     // The type var scope for the class that the function was bound to
     boundTypeVarScopeId?: TypeVarScopeId | undefined;
@@ -1045,7 +1046,7 @@ export namespace FunctionType {
     export function clone(
         type: FunctionType,
         stripFirstParam = false,
-        boundToType?: ClassType | ObjectType,
+        boundToType?: ClassType,
         boundTypeVarScopeId?: TypeVarScopeId
     ): FunctionType {
         const newFunction = create(
@@ -1554,25 +1555,25 @@ export namespace UnionType {
         // literal string map to speed up some operations. It's not
         // uncommon for unions to contain hundreds of string literals.
         if (
-            isObject(newType) &&
-            ClassType.isBuiltIn(newType.classType, 'str') &&
-            newType.classType.literalValue !== undefined &&
-            newType.classType.condition === undefined
+            isClassInstance(newType) &&
+            ClassType.isBuiltIn(newType, 'str') &&
+            newType.literalValue !== undefined &&
+            newType.condition === undefined
         ) {
             if (unionType.literalStrMap === undefined) {
                 unionType.literalStrMap = new Map<string, UnionableType>();
             }
-            unionType.literalStrMap.set(newType.classType.literalValue as string, newType);
+            unionType.literalStrMap.set(newType.literalValue as string, newType);
         } else if (
-            isObject(newType) &&
-            ClassType.isBuiltIn(newType.classType, 'int') &&
-            newType.classType.literalValue !== undefined &&
-            newType.classType.condition === undefined
+            isClassInstance(newType) &&
+            ClassType.isBuiltIn(newType, 'int') &&
+            newType.literalValue !== undefined &&
+            newType.condition === undefined
         ) {
             if (unionType.literalIntMap === undefined) {
                 unionType.literalIntMap = new Map<number, UnionableType>();
             }
-            unionType.literalIntMap.set(newType.classType.literalValue as number, newType);
+            unionType.literalIntMap.set(newType.literalValue as number, newType);
         }
 
         unionType.flags &= newType.flags;
@@ -1582,19 +1583,19 @@ export namespace UnionType {
     export function containsType(unionType: UnionType, subtype: Type, recursionCount = 0): boolean {
         // Handle string literals as a special case because unions can sometimes
         // contain hundreds of string literal types.
-        if (isObject(subtype) && subtype.classType.condition === undefined) {
+        if (isClassInstance(subtype) && subtype.condition === undefined) {
             if (
-                ClassType.isBuiltIn(subtype.classType, 'str') &&
-                subtype.classType.literalValue !== undefined &&
+                ClassType.isBuiltIn(subtype, 'str') &&
+                subtype.literalValue !== undefined &&
                 unionType.literalStrMap !== undefined
             ) {
-                return unionType.literalStrMap.has(subtype.classType.literalValue as string);
+                return unionType.literalStrMap.has(subtype.literalValue as string);
             } else if (
-                ClassType.isBuiltIn(subtype.classType, 'int') &&
-                subtype.classType.literalValue !== undefined &&
+                ClassType.isBuiltIn(subtype, 'int') &&
+                subtype.literalValue !== undefined &&
                 unionType.literalIntMap !== undefined
             ) {
-                return unionType.literalIntMap.has(subtype.classType.literalValue as number);
+                return unionType.literalIntMap.has(subtype.literalValue as number);
             }
         }
 
@@ -1817,8 +1818,12 @@ export function isClass(type: Type): type is ClassType {
     return type.category === TypeCategory.Class;
 }
 
-export function isObject(type: Type): type is ObjectType {
-    return type.category === TypeCategory.Object;
+export function isInstantiableClass(type: Type): type is ClassType {
+    return type.category === TypeCategory.Class && TypeBase.isInstantiable(type);
+}
+
+export function isClassInstance(type: Type): type is ClassType {
+    return type.category === TypeCategory.Class && TypeBase.isInstance(type);
 }
 
 export function isModule(type: Type): type is ModuleType {
@@ -1873,12 +1878,20 @@ export function getTypeAliasInfo(type: Type) {
 // type arguments for "pseudo-generic" classes (non-generic classes whose init
 // methods are not annotated and are therefore treated as generic) are ignored.
 export function isTypeSame(type1: Type, type2: Type, ignorePseudoGeneric = false, recursionCount = 0): boolean {
+    if (type1 === type2) {
+        return true;
+    }
+
     if (type1.category !== type2.category) {
         return false;
     }
 
     if (recursionCount > maxTypeRecursionCount) {
         return true;
+    }
+
+    if (type1.flags !== type2.flags) {
+        return false;
     }
 
     switch (type1.category) {
@@ -1937,12 +1950,6 @@ export function isTypeSame(type1: Type, type2: Type, ignorePseudoGeneric = false
             }
 
             return true;
-        }
-
-        case TypeCategory.Object: {
-            const objType2 = type2 as ObjectType;
-
-            return isTypeSame(type1.classType, objType2.classType, ignorePseudoGeneric, recursionCount + 1);
         }
 
         case TypeCategory.Function: {
@@ -2199,20 +2206,20 @@ export function combineTypes(subtypes: Type[], maxSubtypeCount?: number): Type {
     // Sort all of the literal and empty types to the end.
     expandedTypes = expandedTypes.sort((type1, type2) => {
         if (
-            (isObject(type1) && type1.classType.literalValue !== undefined) ||
-            (isClass(type1) && type1.literalValue !== undefined)
+            (isClassInstance(type1) && type1.literalValue !== undefined) ||
+            (isInstantiableClass(type1) && type1.literalValue !== undefined)
         ) {
             return 1;
         } else if (
-            (isObject(type2) && type2.classType.literalValue !== undefined) ||
-            (isClass(type2) && type2.literalValue !== undefined)
+            (isClassInstance(type2) && type2.literalValue !== undefined) ||
+            (isInstantiableClass(type2) && type2.literalValue !== undefined)
         ) {
             return -1;
         }
 
-        if (isObject(type1) && type1.classType.isEmptyContainer) {
+        if (isClassInstance(type1) && type1.isEmptyContainer) {
             return 1;
-        } else if (isObject(type2) && type2.classType.isEmptyContainer) {
+        } else if (isClassInstance(type2) && type2.isEmptyContainer) {
             return -1;
         }
 
@@ -2261,15 +2268,15 @@ export function isSameWithoutLiteralValue(destType: Type, srcType: Type): boolea
         return true;
     }
 
-    if (isClass(srcType) && srcType.literalValue !== undefined) {
+    if (isInstantiableClass(srcType) && srcType.literalValue !== undefined) {
         // Strip the literal.
         srcType = ClassType.cloneWithLiteral(srcType, undefined);
         return isTypeSame(destType, srcType);
     }
 
-    if (isObject(srcType) && srcType.classType.literalValue !== undefined) {
+    if (isClassInstance(srcType) && srcType.literalValue !== undefined) {
         // Strip the literal.
-        srcType = ObjectType.create(ClassType.cloneWithLiteral(srcType.classType, undefined));
+        srcType = ClassType.cloneWithLiteral(srcType, undefined);
         return isTypeSame(destType, srcType);
     }
 
@@ -2280,22 +2287,22 @@ function _addTypeIfUnique(unionType: UnionType, typeToAdd: UnionableType) {
     // Handle the addition of a string literal in a special manner to
     // avoid n^2 behavior in unions that contain hundreds of string
     // literal types. Skip this for constrained types.
-    if (isObject(typeToAdd) && typeToAdd.classType.condition === undefined) {
+    if (isClassInstance(typeToAdd) && typeToAdd.condition === undefined) {
         if (
-            ClassType.isBuiltIn(typeToAdd.classType, 'str') &&
-            typeToAdd.classType.literalValue !== undefined &&
+            ClassType.isBuiltIn(typeToAdd, 'str') &&
+            typeToAdd.literalValue !== undefined &&
             unionType.literalStrMap !== undefined
         ) {
-            if (!unionType.literalStrMap.has(typeToAdd.classType.literalValue as string)) {
+            if (!unionType.literalStrMap.has(typeToAdd.literalValue as string)) {
                 UnionType.addType(unionType, typeToAdd);
             }
             return;
         } else if (
-            ClassType.isBuiltIn(typeToAdd.classType, 'int') &&
-            typeToAdd.classType.literalValue !== undefined &&
+            ClassType.isBuiltIn(typeToAdd, 'int') &&
+            typeToAdd.literalValue !== undefined &&
             unionType.literalIntMap !== undefined
         ) {
-            if (!unionType.literalIntMap.has(typeToAdd.classType.literalValue as number)) {
+            if (!unionType.literalIntMap.has(typeToAdd.literalValue as number)) {
                 UnionType.addType(unionType, typeToAdd);
             }
             return;
@@ -2312,21 +2319,18 @@ function _addTypeIfUnique(unionType: UnionType, typeToAdd: UnionableType) {
 
         // If the typeToAdd is a literal value and there's already
         // a non-literal type that matches, don't add the literal value.
-        if (isObject(type) && isObject(typeToAdd)) {
+        if (isClassInstance(type) && isClassInstance(typeToAdd)) {
             if (isSameWithoutLiteralValue(type, typeToAdd)) {
-                if (type.classType.literalValue === undefined) {
+                if (type.literalValue === undefined) {
                     return;
                 }
             }
 
             // If we're adding Literal[False] or Literal[True] to its
             // opposite, combine them into a non-literal 'bool' type.
-            if (ClassType.isBuiltIn(type.classType, 'bool') && ClassType.isBuiltIn(typeToAdd.classType, 'bool')) {
-                if (
-                    typeToAdd.classType.literalValue !== undefined &&
-                    !typeToAdd.classType.literalValue === type.classType.literalValue
-                ) {
-                    unionType.subtypes[i] = ObjectType.create(ClassType.cloneWithLiteral(type.classType, undefined));
+            if (ClassType.isBuiltIn(type, 'bool') && ClassType.isBuiltIn(typeToAdd, 'bool')) {
+                if (typeToAdd.literalValue !== undefined && !typeToAdd.literalValue === type.literalValue) {
+                    unionType.subtypes[i] = ClassType.cloneWithLiteral(type, undefined);
                     return;
                 }
             }
@@ -2334,8 +2338,8 @@ function _addTypeIfUnique(unionType: UnionType, typeToAdd: UnionableType) {
 
         // If the typeToAdd is an empty container and there's already
         // non-empty container of the same type, don't add the empty container.
-        if (isObject(typeToAdd) && typeToAdd.classType.isEmptyContainer) {
-            if (isObject(type) && ClassType.isSameGenericClass(type.classType, typeToAdd.classType)) {
+        if (isClassInstance(typeToAdd) && typeToAdd.isEmptyContainer) {
+            if (isClassInstance(type) && ClassType.isSameGenericClass(type, typeToAdd)) {
                 return;
             }
         }
