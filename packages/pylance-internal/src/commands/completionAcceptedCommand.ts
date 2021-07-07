@@ -39,17 +39,17 @@ export class CompletionAcceptedCommand implements ServerCommand {
     constructor(private _telemetry: TelemetryService | undefined) {}
 
     async execute(cmdParams: ExecuteCommandParams, _token: CancellationToken): Promise<any> {
-        if (!this._telemetry || cmdParams.arguments?.length !== 1) {
+        if (!this._telemetry) {
             return;
         }
 
-        const args: CompletionAcceptedArgs = cmdParams.arguments[0];
+        const args: CompletionAcceptedArgs | undefined = cmdParams.arguments?.[0];
 
         const te = new TelemetryEvent(TelemetryEventName.COMPLETION_ACCEPTED);
-        if (args.autoImport) {
+        if (args?.autoImport) {
             te.Properties['autoImport'] = `${args.autoImport}`;
         }
-        if (args.dictionaryKey) {
+        if (args?.dictionaryKey) {
             te.Properties['dictionaryKey'] = `${args.dictionaryKey}`;
         }
 
