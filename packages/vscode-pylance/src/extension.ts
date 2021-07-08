@@ -1,6 +1,5 @@
 import './extensions';
 
-import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { commands, Range } from 'vscode';
@@ -37,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     setExtensionRoot(context.extensionPath);
     loadLocalizedStrings();
 
-    const version = getExtensionVersion(context);
+    const version = getExtensionVersion();
     const config = new AppConfigurationImpl();
     const persistentState = new PersistentStateFactoryImpl(context.globalState, context.workspaceState);
     const blobStorage = new BlobStorageImpl();
@@ -125,10 +124,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     };
 }
 
-function getExtensionVersion(context: vscode.ExtensionContext): string {
-    const packageJsonPath = path.join(context.extensionPath, 'package.json');
-    const packageJson = fs.readFileSync(packageJsonPath, 'utf8');
-    return JSON.parse(packageJson).version;
+function getExtensionVersion(): string {
+    const ext = vscode.extensions.getExtension('ms-python.vscode-pylance');
+    return ext?.packageJSON.version ?? '9999.0.0-dev';
 }
 
 function checkHostApp(): boolean {
