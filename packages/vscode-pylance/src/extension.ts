@@ -111,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
     });
 
     registerCommand(context, commandManager, ClientCommands.addToExtraPaths, (filePath: string, toAdd: string) => {
-        addToExtraPaths(config, filePath, toAdd);
+        addToExtraPaths(config, commandManager, filePath, toAdd);
     });
 
     registerAutoClosing();

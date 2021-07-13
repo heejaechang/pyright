@@ -1,8 +1,16 @@
 import { Uri } from 'vscode';
 
-import { AppConfiguration } from '../types/appConfig';
+import { ClientCommands, Commands } from 'pylance-internal/commands/commands';
 
-export async function addToExtraPaths(appConfig: AppConfiguration, filePath: string, toAdd: string) {
+import { AppConfiguration } from '../types/appConfig';
+import { CommandManager } from '../types/commandManager';
+
+export async function addToExtraPaths(
+    appConfig: AppConfiguration,
+    commandManager: CommandManager,
+    filePath: string,
+    toAdd: string
+) {
     const config = appConfig.getConfiguration('python.analysis', Uri.file(filePath));
     const extraPaths = config.get('extraPaths');
 
@@ -10,4 +18,6 @@ export async function addToExtraPaths(appConfig: AppConfiguration, filePath: str
     newExtraPaths.push(toAdd);
 
     await config.update('extraPaths', newExtraPaths);
+
+    await commandManager.executeCommand(Commands.executedClientCommand, ClientCommands.addToExtraPaths);
 }
