@@ -113,3 +113,4 @@ from .util._tester import test as test
 
 import pandas.testing as testing
 
+__version__ : str
