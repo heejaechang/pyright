@@ -8,8 +8,13 @@
 import * as child_process from 'child_process';
 import leven from 'leven';
 
-import { ImportedModuleDescriptor, ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import {
+    ImportedModuleDescriptor,
+    ImportResolver,
+    supportedFileExtensions,
+} from 'pyright-internal/analyzer/importResolver';
 import { ImportResult, ImportType } from 'pyright-internal/analyzer/importResult';
+import * as PythonPathUtils from 'pyright-internal/analyzer/pythonPathUtils';
 import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface } from 'pyright-internal/common/console';
@@ -20,7 +25,9 @@ import {
     containsPath,
     ensureTrailingDirectorySeparator,
     getDirectoryPath,
+    getFileExtension,
     getFileName,
+    getFileSystemEntriesFromDirEntries,
     normalizePath,
     normalizePathCase,
     resolvePaths,
@@ -32,6 +39,7 @@ import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
 import {
     addMeasurementsToEvent,
     hashModuleNamesAndAddToEvent,
+    hashString,
     TelemetryEvent,
     TelemetryEventName,
     TelemetryInterface,
@@ -182,13 +190,16 @@ export class ImportMetrics {
 export class PylanceImportResolver extends ImportResolver {
     private _scrapedTmpFiles = new Map<string, string | false>(); // stubFilePath -> scraped temp file
 
+    private _installedPackagesReported = false;
     private _lastUnresolvedImportName: string | undefined;
+
     // resolvedPath -> importName
     private _countedAbsolute = new Map<string, Set<string>>();
     private _countedRelative = new Map<string, Set<string>>();
 
     private readonly _cachedHeuristicResults: ImportHeuristicCache;
     private readonly _importMetrics: ImportMetrics;
+    private readonly _resolverId: string;
 
     constructor(
         fs: FileSystem,
@@ -199,12 +210,14 @@ export class PylanceImportResolver extends ImportResolver {
     ) {
         super(fs, configOptions);
 
+        this._resolverId = resolverId?.toString() ?? 'N/A';
+
         this._cachedHeuristicResults = new ImportHeuristicCache(
-            resolverId?.toString() ?? 'N/A',
+            this._resolverId,
             (e) => this.getPythonSearchPaths(e, []),
             this._console
         );
-        this._importMetrics = new ImportMetrics(resolverId?.toString() ?? 'N/A');
+        this._importMetrics = new ImportMetrics(this._resolverId);
     }
 
     useImportHeuristic(useImportHeuristic: boolean) {
@@ -420,6 +433,7 @@ export class PylanceImportResolver extends ImportResolver {
         this.sendTelemetry();
         this._importMetrics.reset();
         this._cachedHeuristicResults.reset();
+        this._installedPackagesReported = false;
 
         for (const tmpfile of this._scrapedTmpFiles.values()) {
             if (tmpfile) {
@@ -444,8 +458,78 @@ export class PylanceImportResolver extends ImportResolver {
             return;
         }
 
+        this._sendInstalledPackagesTelemetry(this._telemetry);
         this._importMetrics.report(this._telemetry);
         this._cachedHeuristicResults.report(this._telemetry);
+    }
+
+    private _sendInstalledPackagesTelemetry(telemetry: TelemetryInterface) {
+        if (this._installedPackagesReported || !(IS_INSIDERS || IS_DEV || IS_PR)) {
+            return;
+        }
+
+        const typeshedRoot = PythonPathUtils.getTypeShedFallbackPath(this.fileSystem);
+        const bundledRoot = getBundledTypeStubsPath(this.fileSystem.getModulePath());
+
+        // report installed packages.
+        const packages = new Set<string>();
+        for (const execEnv of this._configOptions.getExecutionEnvironments()) {
+            for (const root of this.getImportRoots(execEnv)) {
+                try {
+                    if (
+                        (typeshedRoot && root.startsWith(typeshedRoot)) ||
+                        (bundledRoot && root.startsWith(bundledRoot))
+                    ) {
+                        // we only care actual installed libraries not stub packages.
+                        continue;
+                    }
+
+                    const entries = getFileSystemEntriesFromDirEntries(
+                        this.readdirEntriesCached(root),
+                        this.fileSystem,
+                        root
+                    );
+
+                    for (const file of entries.files) {
+                        const fileExtension = getFileExtension(file, /* multiDotExtension */ false).toLowerCase();
+                        if (supportedFileExtensions.some((ext) => ext === fileExtension)) {
+                            const packageName = this.getModuleNameFromPath(root, combinePaths(root, file));
+                            if (packageName) {
+                                packages.add(packageName);
+                            }
+                        }
+                    }
+
+                    for (const dir of entries.directories) {
+                        if (dir === '__pycache__') {
+                            continue;
+                        }
+
+                        const packageName = this.getModuleNameFromPath(
+                            root,
+                            combinePaths(root, combinePaths(root, dir))
+                        );
+                        if (packageName) {
+                            packages.add(packageName);
+                        }
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+        }
+
+        const installedPackageEvent = new TelemetryEvent(TelemetryEventName.INSTALLED_PACKAGES);
+
+        installedPackageEvent.Properties['Packages'] = [...packages.values()].map((n) => hashString(n)).join(' ');
+        installedPackageEvent.Properties['PackagesLowerCase'] = [...packages.values()]
+            .map((n) => hashString(n.toLowerCase()))
+            .join(' ');
+
+        installedPackageEvent.Properties['resolverId'] = this._resolverId;
+        telemetry.sendTelemetry(installedPackageEvent);
+
+        this._installedPackagesReported = true;
     }
 
     override getSourceFilesFromStub(

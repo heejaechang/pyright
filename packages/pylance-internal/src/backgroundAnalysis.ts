@@ -168,7 +168,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     constructor() {
         super();
         this._startupDuration = new Duration();
-        this._startupTelemetry = this.initialStartupTelemetry();
+        this._startupTelemetry = this._initialStartupTelemetry();
         this._telemetry = {
             sendTelemetry(event: TelemetryEventInterface) {
                 parentPort?.postMessage({ requestType: 'telemetry', data: event });
@@ -237,7 +237,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             }
 
             case 'restart': {
-                this.resetStartupTelemetry();
+                this._resetStartupTelemetry();
                 super.onMessage(msg);
                 break;
             }
@@ -249,7 +249,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             }
 
             case 'setConfigOptions': {
-                this.resetStartupTelemetry();
+                this._resetStartupTelemetry();
                 super.onMessage(msg);
                 break;
             }
@@ -293,18 +293,18 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             this._telemetry.sendTelemetry(event);
             this._startupDuration = undefined;
             this._analysisDuration = undefined;
-            this._startupTelemetry = this.initialStartupTelemetry();
+            this._startupTelemetry = this._initialStartupTelemetry();
         }
     }
 
-    private resetStartupTelemetry() {
+    private _resetStartupTelemetry() {
         this._startupDuration = new Duration();
         this._analysisDuration = undefined;
         this._hasOpenedFile = false;
-        this._startupTelemetry = this.initialStartupTelemetry();
+        this._startupTelemetry = this._initialStartupTelemetry();
     }
 
-    private initialStartupTelemetry() {
+    private _initialStartupTelemetry() {
         return {
             preSetFileOpenMs: 0,
             tokenRangeMs: 0,
