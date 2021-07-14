@@ -6766,7 +6766,11 @@ export function createTypeEvaluator(
             // the expectedType. We'll use this to determine whether we need to do
             // union expansion.
             contextFreeArgTypes = argList.map((arg) =>
-                arg.valueExpression ? getTypeOfExpression(arg.valueExpression).type : AnyType.create()
+                arg.type
+                    ? arg.type
+                    : arg.valueExpression
+                    ? getTypeOfExpression(arg.valueExpression).type
+                    : AnyType.create()
             );
         });
 
@@ -7696,12 +7700,16 @@ export function createTypeEvaluator(
                                 return functionResult.returnType || UnknownType.create();
                             }
 
-                            addDiagnostic(
-                                getFileInfo(errorNode).diagnosticRuleSet.reportGeneralTypeIssues,
-                                DiagnosticRule.reportGeneralTypeIssues,
-                                Localizer.Diagnostic.objectNotCallable().format({ type: printType(expandedSubtype) }),
-                                errorNode
-                            );
+                            if (!memberType || !isAnyOrUnknown(memberType)) {
+                                addDiagnostic(
+                                    getFileInfo(errorNode).diagnosticRuleSet.reportGeneralTypeIssues,
+                                    DiagnosticRule.reportGeneralTypeIssues,
+                                    Localizer.Diagnostic.objectNotCallable().format({
+                                        type: printType(expandedSubtype),
+                                    }),
+                                    errorNode
+                                );
+                            }
                             return UnknownType.create();
                         }
                     }
@@ -8961,7 +8969,12 @@ export function createTypeEvaluator(
                 writeTypeCache(argParam.argument.name, expectedType || argType, isTypeIncomplete);
             }
         } else {
-            argType = getTypeForArgument(argParam.argument);
+            // was the argument's type precomputed by the caller?
+            if (argParam.argType) {
+                argType = argParam.argType;
+            } else {
+                argType = getTypeForArgument(argParam.argument);
+            }
         }
 
         // If we're assigning to a var arg dictionary with a TypeVar type,
@@ -10523,6 +10536,28 @@ export function createTypeEvaluator(
                                 } else {
                                     return AnyType.create();
                                 }
+                            }
+
+                            // Special-case __add__ for tuples when the types for both tuples are known.
+                            if (
+                                operator === OperatorType.Add &&
+                                isClassInstance(leftSubtypeExpanded) &&
+                                isTupleClass(leftSubtypeExpanded) &&
+                                leftSubtypeExpanded.tupleTypeArguments &&
+                                !isOpenEndedTupleClass(leftSubtypeExpanded) &&
+                                isClassInstance(rightSubtypeExpanded) &&
+                                isTupleClass(rightSubtypeExpanded) &&
+                                rightSubtypeExpanded.tupleTypeArguments &&
+                                !isOpenEndedTupleClass(rightSubtypeExpanded) &&
+                                tupleClassType &&
+                                isInstantiableClass(tupleClassType)
+                            ) {
+                                return ClassType.cloneAsInstance(
+                                    specializeTupleClass(tupleClassType, [
+                                        ...leftSubtypeExpanded.tupleTypeArguments,
+                                        ...rightSubtypeExpanded.tupleTypeArguments,
+                                    ])
+                                );
                             }
 
                             const magicMethodName = binaryOperatorMap[operator][0];
@@ -17940,7 +17975,23 @@ export function createTypeEvaluator(
                     const arg0Expr = testExpression.arguments[0].valueExpression;
                     if (ParseTreeUtils.isMatchingExpression(reference, arg0Expr)) {
                         return (type: Type) => {
-                            return narrowTypeForCallable(type, isPositiveTest, testExpression);
+                            let narrowedType = narrowTypeForCallable(
+                                type,
+                                isPositiveTest,
+                                testExpression,
+                                /* allowIntersections */ false
+                            );
+                            if (isPositiveTest && isNever(narrowedType)) {
+                                // Try again with intersections allowed.
+                                narrowedType = narrowTypeForCallable(
+                                    type,
+                                    isPositiveTest,
+                                    testExpression,
+                                    /* allowIntersections */ true
+                                );
+                            }
+
+                            return narrowedType;
                         };
                     }
                 }
@@ -18067,7 +18118,7 @@ export function createTypeEvaluator(
         // Filters the varType by the parameters of the isinstance
         // and returns the list of types the varType could be after
         // applying the filter.
-        const filterType = (
+        const filterClassType = (
             varType: ClassType,
             unexpandedType: Type,
             constraints: TypeCondition[] | undefined,
@@ -18209,6 +18260,24 @@ export function createTypeEvaluator(
             return filteredTypes.map((t) => convertToInstance(t));
         };
 
+        const filterFunctionType = (varType: FunctionType | OverloadedFunctionType, unexpandedType: Type): Type[] => {
+            const filteredTypes: Type[] = [];
+
+            if (isPositiveTest) {
+                for (const filterType of classTypeList) {
+                    const concreteFilterType = makeTopLevelTypeVarsConcrete(filterType);
+
+                    if (canAssignType(varType, convertToInstance(concreteFilterType), new DiagnosticAddendum())) {
+                        filteredTypes.push(convertToInstance(filterType));
+                    }
+                }
+            } else {
+                filteredTypes.push(unexpandedType);
+            }
+
+            return filteredTypes;
+        };
+
         const anyOrUnknownSubstitutions: Type[] = [];
         const anyOrUnknown: Type[] = [];
 
@@ -18270,13 +18339,17 @@ export function createTypeEvaluator(
 
                     if (isClassInstance(subtype) && !isSubtypeTypeObject) {
                         return combineTypes(
-                            filterType(
+                            filterClassType(
                                 ClassType.cloneAsInstantiable(subtype),
                                 convertToInstance(unexpandedSubtype),
                                 getTypeCondition(subtype),
                                 negativeFallback
                             )
                         );
+                    }
+
+                    if ((isFunction(subtype) || isOverloadedFunction(subtype)) && isInstanceCheck) {
+                        return combineTypes(filterFunctionType(subtype, convertToInstance(unexpandedSubtype)));
                     }
 
                     if (isInstantiableClass(subtype) || isSubtypeTypeObject) {
@@ -18293,14 +18366,14 @@ export function createTypeEvaluator(
                 } else {
                     if (isInstantiableClass(subtype)) {
                         return combineTypes(
-                            filterType(subtype, unexpandedSubtype, getTypeCondition(subtype), negativeFallback)
+                            filterClassType(subtype, unexpandedSubtype, getTypeCondition(subtype), negativeFallback)
                         );
                     }
 
                     if (isSubtypeTypeObject) {
                         if (objectType && isClassInstance(objectType)) {
                             return combineTypes(
-                                filterType(
+                                filterClassType(
                                     ClassType.cloneAsInstantiable(objectType),
                                     convertToInstantiable(unexpandedSubtype),
                                     getTypeCondition(subtype),
@@ -18575,11 +18648,14 @@ export function createTypeEvaluator(
     // call to "callable". For example, if the original type of expression "x" is
     // Union[Callable[..., Any], Type[int], int], it would remove the "int" because
     // it's not callable.
-    function narrowTypeForCallable(type: Type, isPositiveTest: boolean, errorNode: ExpressionNode): Type {
-        return mapSubtypes(type, (subtype) => {
-            const concreteSubtype = makeTopLevelTypeVarsConcrete(subtype);
-
-            switch (concreteSubtype.category) {
+    function narrowTypeForCallable(
+        type: Type,
+        isPositiveTest: boolean,
+        errorNode: ExpressionNode,
+        allowIntersections: boolean
+    ): Type {
+        return mapSubtypesExpandTypeVars(type, /* conditionFilter */ undefined, (subtype) => {
+            switch (subtype.category) {
                 case TypeCategory.Function:
                 case TypeCategory.OverloadedFunction: {
                     return isPositiveTest ? subtype : undefined;
@@ -18591,14 +18667,62 @@ export function createTypeEvaluator(
                 }
 
                 case TypeCategory.Class: {
-                    if (TypeBase.isInstantiable(concreteSubtype)) {
+                    if (TypeBase.isInstantiable(subtype)) {
                         return isPositiveTest ? subtype : undefined;
                     }
 
                     // See if the object is callable.
-                    const callMemberType = getTypeFromObjectMember(errorNode, concreteSubtype, '__call__');
+                    const callMemberType = getTypeFromObjectMember(errorNode, subtype, '__call__');
                     if (!callMemberType) {
-                        return isPositiveTest ? undefined : subtype;
+                        if (!isPositiveTest) {
+                            return subtype;
+                        }
+
+                        if (allowIntersections) {
+                            // The type appears to not be callable. It's possible that the
+                            // two type is a subclass that is callable. We'll synthesize a
+                            // new intersection type.
+                            const className = `<callable subtype of ${subtype.details.name}>`;
+                            const fileInfo = getFileInfo(errorNode);
+                            const newClassType = ClassType.createInstantiable(
+                                className,
+                                getClassFullName(errorNode, fileInfo.moduleName, className),
+                                fileInfo.moduleName,
+                                fileInfo.filePath,
+                                ClassTypeFlags.None,
+                                getTypeSourceId(errorNode),
+                                /* declaredMetaclass */ undefined,
+                                subtype.details.effectiveMetaclass,
+                                subtype.details.docString
+                            );
+                            newClassType.details.baseClasses = [ClassType.cloneAsInstantiable(subtype)];
+                            computeMroLinearization(newClassType);
+
+                            // Add a __call__ method to the new class.
+                            const callMethod = FunctionType.createInstance(
+                                '__call__',
+                                '',
+                                '',
+                                FunctionTypeFlags.SynthesizedMethod
+                            );
+                            const selfParam: FunctionParameter = {
+                                category: ParameterCategory.Simple,
+                                name: 'self',
+                                type: ClassType.cloneAsInstance(newClassType),
+                                hasDeclaredType: true,
+                            };
+                            FunctionType.addParameter(callMethod, selfParam);
+                            FunctionType.addDefaultParameters(callMethod);
+                            callMethod.details.declaredReturnType = UnknownType.create();
+                            newClassType.details.fields.set(
+                                '__call__',
+                                Symbol.createWithType(SymbolFlags.ClassMember, callMethod)
+                            );
+
+                            return ClassType.cloneAsInstance(newClassType);
+                        }
+
+                        return undefined;
                     } else {
                         return isPositiveTest ? subtype : undefined;
                     }
@@ -18649,7 +18773,12 @@ export function createTypeEvaluator(
                 }
 
                 case 'Protocol': {
-                    return createSpecialType(classType, typeArgs, /* paramLimit */ undefined);
+                    return createSpecialType(
+                        classType,
+                        typeArgs,
+                        /* paramLimit */ undefined,
+                        /* allowParamSpec */ true
+                    );
                 }
 
                 case 'Tuple': {
@@ -20441,17 +20570,19 @@ export function createTypeEvaluator(
                         ) {
                             isAssignable = false;
                         }
-                    } else if (
-                        !canAssignType(
-                            destMemberType,
-                            srcMemberType,
-                            diag,
-                            typeVarMap,
-                            CanAssignFlags.Default,
-                            recursionCount + 1
-                        )
-                    ) {
-                        isAssignable = false;
+                    } else {
+                        const primaryDecl = symbol.getDeclarations()[0];
+                        // Class and instance variables that are mutable need to
+                        // enforce invariance.
+                        const flags =
+                            primaryDecl?.type === DeclarationType.Variable && !primaryDecl.isFinal
+                                ? CanAssignFlags.EnforceInvariance
+                                : CanAssignFlags.Default;
+                        if (
+                            !canAssignType(destMemberType, srcMemberType, diag, typeVarMap, flags, recursionCount + 1)
+                        ) {
+                            isAssignable = false;
+                        }
                     }
                 }
             }
@@ -21421,6 +21552,7 @@ export function createTypeEvaluator(
             // Make sure we don't exceed the wide type bound.
             if (curWideTypeBound) {
                 if (
+                    !isTypeSame(curWideTypeBound, newNarrowTypeBound!) &&
                     !canAssignType(
                         makeTopLevelTypeVarsConcrete(curWideTypeBound),
                         newNarrowTypeBound!,
@@ -21626,6 +21758,18 @@ export function createTypeEvaluator(
                     );
                 }
             }
+
+            if ((flags & CanAssignFlags.EnforceInvariance) !== 0) {
+                if (!isAnyOrUnknown(destType)) {
+                    diag.addMessage(
+                        Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                            sourceType: printType(srcType),
+                            destType: printType(destType),
+                        })
+                    );
+                    return false;
+                }
+            }
         }
 
         if (isAnyOrUnknown(destType)) {
@@ -21660,45 +21804,88 @@ export function createTypeEvaluator(
             }
 
             // Handle the case where the source and dest are both unions and
-            // invariance is being enforced and the dest contains a type variable.
-            // In this case, the non-matched subtypes in the source will get assigned
-            // to the remaining type variable.
+            // invariance is being enforced and the dest contains type variables.
             if (flags & CanAssignFlags.EnforceInvariance) {
-                if (
-                    isUnion(destType) &&
-                    destType.subtypes.some((t) => isTypeVar(t) && !t.details.recursiveTypeAliasName)
-                ) {
-                    const remainingDestSubtypes: Type[] = [...destType.subtypes];
-                    const remainingSrcSubtypes: Type[] = [];
+                if (isUnion(destType)) {
+                    const remainingDestSubtypes: Type[] = [];
+                    let remainingSrcSubtypes: Type[] = [...srcType.subtypes];
+                    let isIncompatible = false;
 
-                    srcType.subtypes.forEach((srcSubtype) => {
-                        const destIndex = remainingDestSubtypes.findIndex((t) => isTypeSame(t, srcSubtype));
-                        if (destIndex >= 0) {
-                            remainingDestSubtypes.splice(destIndex, 1);
+                    // First attempt to match all of the non-generic types in the dest
+                    // to non-generic types in the source.
+                    destType.subtypes.forEach((destSubtype) => {
+                        if (requiresSpecialization(destSubtype)) {
+                            remainingDestSubtypes.push(destSubtype);
                         } else {
-                            remainingSrcSubtypes.push(srcSubtype);
+                            const srcTypeIndex = remainingSrcSubtypes.findIndex((srcSubtype) =>
+                                isTypeSame(srcSubtype, destSubtype)
+                            );
+                            if (srcTypeIndex >= 0) {
+                                remainingSrcSubtypes.splice(srcTypeIndex, 1);
+                            } else {
+                                isIncompatible = true;
+                            }
                         }
                     });
 
-                    if (remainingDestSubtypes.length === 1) {
-                        const remainingDestType = remainingDestSubtypes[0];
-                        if (isTypeVar(remainingDestType) && !remainingDestType.details.recursiveTypeAliasName) {
-                            return canAssignType(
+                    // For all remaining source subtypes, attempt to find a dest subtype
+                    // whose primary type matches.
+                    if (!isIncompatible) {
+                        [...remainingSrcSubtypes].forEach((srcSubtype) => {
+                            const destTypeIndex = remainingDestSubtypes.findIndex(
+                                (destSubtype) =>
+                                    isClass(srcSubtype) &&
+                                    isClass(destSubtype) &&
+                                    TypeBase.isInstance(srcSubtype) === TypeBase.isInstance(destSubtype) &&
+                                    ClassType.isSameGenericClass(srcSubtype, destSubtype)
+                            );
+                            if (destTypeIndex >= 0) {
+                                if (
+                                    !canAssignType(
+                                        remainingDestSubtypes[destTypeIndex],
+                                        srcSubtype,
+                                        diag.createAddendum(),
+                                        typeVarMap,
+                                        flags,
+                                        recursionCount + 1
+                                    )
+                                ) {
+                                    isIncompatible = true;
+                                }
+
+                                remainingDestSubtypes.splice(destTypeIndex, 1);
+                                remainingSrcSubtypes = remainingSrcSubtypes.filter((t) => t !== srcSubtype);
+                            }
+                        });
+                    }
+
+                    // If there is a remaining dest subtype and it's a type variable, attempt
+                    // to assign the remaining source subtypes to it.
+                    if (!isIncompatible && (remainingDestSubtypes.length !== 0 || remainingSrcSubtypes.length !== 0)) {
+                        if (
+                            remainingDestSubtypes.length !== 1 ||
+                            !isTypeVar(remainingDestSubtypes[0]) ||
+                            !canAssignType(
                                 remainingDestSubtypes[0],
                                 combineTypes(remainingSrcSubtypes),
                                 diag.createAddendum(),
                                 typeVarMap,
                                 flags,
                                 recursionCount + 1
-                            );
+                            )
+                        ) {
+                            isIncompatible = true;
                         }
+                    }
+
+                    if (!isIncompatible) {
+                        return true;
                     }
                 }
             }
 
-            let isIncompatible = false;
-
             // For union sources, all of the types need to be assignable to the dest.
+            let isIncompatible = false;
             doForEachSubtype(srcType, (subtype) => {
                 if (
                     !canAssignType(destType, subtype, new DiagnosticAddendum(), typeVarMap, flags, recursionCount + 1)

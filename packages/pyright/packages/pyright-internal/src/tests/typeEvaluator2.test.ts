@@ -634,7 +634,7 @@ test('GenericTypes58', () => {
 test('GenericTypes59', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes59.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('GenericTypes60', () => {
@@ -645,6 +645,12 @@ test('GenericTypes60', () => {
 
 test('GenericTypes61', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes61.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes62', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes62.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });
