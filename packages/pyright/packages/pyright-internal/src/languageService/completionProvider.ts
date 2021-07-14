@@ -1367,12 +1367,26 @@ export class CompletionProvider {
             return [];
         }
 
+        let startingNode: ParseNode = indexNode.baseExpression;
+        if (declaration.node) {
+            const scopeRoot = ParseTreeUtils.getEvaluationScopeNode(declaration.node);
+
+            // Find the lowest tree to search the symbol.
+            if (
+                ParseTreeUtils.getFileInfoFromNode(startingNode)?.filePath ===
+                ParseTreeUtils.getFileInfoFromNode(scopeRoot)?.filePath
+            ) {
+                startingNode = scopeRoot;
+            }
+        }
+
         const results: NameNode[] = [];
         const collector = new DocumentSymbolCollector(
             indexNode.baseExpression,
             this._evaluator,
             results,
-            this._cancellationToken
+            this._cancellationToken,
+            startingNode
         );
         collector.collect();
 
