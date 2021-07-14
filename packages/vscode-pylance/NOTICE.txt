@@ -4135,7 +4135,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.155 - MIT
+pyright 1.1.156 - MIT
 https://github.com/Microsoft/pyright#readme
 
 Copyright (c) Microsoft Corporation.
