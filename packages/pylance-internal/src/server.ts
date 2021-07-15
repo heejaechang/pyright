@@ -15,6 +15,7 @@ import {
     CompletionItemKind,
     CompletionList,
     CompletionParams,
+    Connection,
     ExecuteCommandParams,
     InitializeParams,
     InitializeResult,
@@ -27,8 +28,7 @@ import {
     SemanticTokensRangeParams,
     SemanticTokensRefreshRequest,
     WorkspaceFolder,
-} from 'vscode-languageserver/node';
-import { isMainThread } from 'worker_threads';
+} from 'vscode-languageserver';
 
 import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
 import { BackgroundAnalysisProgram } from 'pyright-internal/analyzer/backgroundAnalysisProgram';
@@ -57,7 +57,7 @@ import {
     dictionaryKeyDetail,
 } from 'pyright-internal/languageService/completionProvider';
 
-import { BackgroundAnalysis, ExperimentOptions, runBackgroundThread } from './backgroundAnalysis';
+import { BackgroundAnalysis, ExperimentOptions } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { ClientCommands, Commands } from './commands/commands';
 import {
@@ -100,7 +100,7 @@ export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstanc
     enableExtractCodeAction?: boolean;
 }
 
-class PylanceServer extends LanguageServerBase {
+export class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
     private _completionCoverage: CompletionCoverage.CompletionTelemetry;
@@ -117,19 +117,22 @@ class PylanceServer extends LanguageServerBase {
     private _inExperimentCache: Map<string, boolean>;
     private _getExperimentValueCache: Map<string, any>;
 
-    constructor() {
+    constructor(connection: Connection) {
         const rootDirectory = __dirname;
         // IntelliCode needs to be passed down as extension to the language server
         // but it cannot be initialized here as super() was not called yet.
         const intelliCode = new IntelliCodeExtension();
-        super({
-            productName: 'Pylance',
-            rootDirectory,
-            version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
-            extension: intelliCode,
-            supportedCommands: CommandController.supportedCommands(),
-            supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
-        });
+        super(
+            {
+                productName: 'Pylance',
+                rootDirectory,
+                version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
+                extension: intelliCode,
+                supportedCommands: CommandController.supportedCommands(),
+                supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
+            },
+            connection
+        );
 
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
@@ -829,18 +832,5 @@ export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, text
             command: ClientCommands.triggerParameterHints,
             arguments: [textDocumentUri],
         });
-    }
-}
-
-export function main() {
-    if (process.env.NODE_ENV === 'production') {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('source-map-support').install();
-    }
-
-    if (isMainThread) {
-        new PylanceServer();
-    } else {
-        runBackgroundThread();
     }
 }

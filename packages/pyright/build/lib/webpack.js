@@ -58,8 +58,9 @@ function managedPaths(workspaceRoot) {
  * Builds a webpack caching config, given the calling module's __dirname and __filename.
  * @param {string} dirname __dirname
  * @param {string} filename __filename
+ * @param {string | undefined} name name of the webpack instance, if using multiple configs
  */
-function cacheConfig(dirname, filename) {
+function cacheConfig(dirname, filename, name = undefined) {
     return {
         type: /** @type {'filesystem'} */ ('filesystem'),
         cacheDirectory: path.resolve(dirname, '.webpack_cache'),
@@ -67,6 +68,7 @@ function cacheConfig(dirname, filename) {
             config: [filename],
         },
         managedPaths: managedPaths(path.resolve(dirname, '..', '..')),
+        name,
     };
 }
 

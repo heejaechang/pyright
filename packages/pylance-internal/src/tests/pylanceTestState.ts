@@ -8,7 +8,7 @@ import {
     SemanticTokensLegend,
     TokenFormat,
     WorkspaceEdit,
-} from 'vscode-languageserver/node';
+} from 'vscode-languageserver';
 
 import { Range as PositionRange } from 'pyright-internal/common/textRange';
 import { FourSlashData, Range } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';

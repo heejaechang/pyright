@@ -4,7 +4,7 @@ import {
     SemanticTokensBuilder,
     SemanticTokensClientCapabilities,
     SemanticTokensLegend,
-} from 'vscode-languageserver/node';
+} from 'vscode-languageserver';
 
 import { DeclarationType, FunctionDeclaration, ParameterDeclaration } from 'pyright-internal/analyzer/declaration';
 import {

@@ -9,7 +9,7 @@
  */
 
 import { Progress, ProgressLocation, window } from 'vscode';
-import { Disposable, LanguageClient } from 'vscode-languageclient/node';
+import { CommonLanguageClient, Disposable } from 'vscode-languageclient';
 
 const AnalysisTimeoutInMs = 60000;
 
@@ -18,7 +18,7 @@ export class ProgressReporting implements Disposable {
     private _progressTimeout: NodeJS.Timer | undefined;
     private _resolveProgress?: (value?: void | PromiseLike<void>) => void;
 
-    constructor(languageClient: LanguageClient) {
+    constructor(languageClient: CommonLanguageClient) {
         languageClient.onReady().then(() => {
             languageClient.onNotification('python/beginProgress', async () => {
                 const progressPromise = new Promise<void>((resolve) => {

@@ -71,6 +71,6 @@ if (!isInVSCode()) {
     process.exit(1);
 }
 
-import { main } from 'pylance-internal/server';
+import { main } from 'pylance-internal/nodeMain';
 
 main();

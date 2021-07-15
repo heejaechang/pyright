@@ -6,7 +6,7 @@
 
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
-import { Connection } from 'vscode-languageserver/node';
+import { Connection } from 'vscode-languageserver';
 
 import { isString, isThenable } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';

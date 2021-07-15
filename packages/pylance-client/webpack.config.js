@@ -14,7 +14,7 @@ const onnxLoader = path.resolve(packages, 'vscode-pylance', 'build', 'onnxLoader
 const { binDir: onnxBin } = require('../pylance-internal/build/findonnx');
 
 /**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
-module.exports = (_, { mode }) => {
+const nodeConfig = (_, { mode }) => {
     return {
         context: __dirname,
         entry: {
@@ -27,11 +27,11 @@ module.exports = (_, { mode }) => {
             path: outPath,
             libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate:
-                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('vscode-pyright'),
-            clean: true,
+                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('pylance-client'),
+            // clean: true,
         },
         devtool: 'source-map',
-        cache: mode === 'development' ? cacheConfig(__dirname, __filename) : undefined,
+        cache: mode === 'development' ? cacheConfig(__dirname, __filename, `node-${mode}`) : undefined,
         stats: {
             all: false,
             errors: true,
@@ -73,3 +73,73 @@ module.exports = (_, { mode }) => {
         ],
     };
 };
+
+/**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
+const browserConfig = (_, { mode }) => {
+    return {
+        context: __dirname,
+        entry: {
+            extension: './src/browser/extension.ts',
+            server: './src/browser/server.ts',
+        },
+        target: 'webworker',
+        output: {
+            filename: 'browser.[name].js',
+            path: outPath,
+            libraryTarget: 'commonjs2',
+            devtoolModuleFilenameTemplate:
+                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('pylance-client'),
+            // TODO: figure out cleaning when we output two webpacks to the same folder
+            // clean: true,
+        },
+        devtool: 'source-map',
+        cache: mode === 'development' ? cacheConfig(__dirname, __filename, `browser-${mode}`) : undefined,
+        stats: {
+            all: false,
+            errors: true,
+            warnings: true,
+        },
+        resolve: {
+            extensions: ['.ts', '.js'],
+            alias: tsconfigResolveAliases('tsconfig.json'),
+            fallback: {
+                crypto: require.resolve('crypto-browserify'),
+                path: require.resolve('path-browserify'),
+                os: require.resolve('os-browserify'),
+                zlib: require.resolve('browserify-zlib'),
+                querystring: require.resolve('querystring-es3'),
+                stream: require.resolve('stream-browserify'),
+                events: require.resolve('events/'),
+                url: require.resolve('url/'),
+                buffer: require.resolve('buffer/'),
+                console: require.resolve('console-browserify'),
+                util: require.resolve('util/'),
+                assert: require.resolve('assert/'),
+                fs: false,
+                worker_threads: false,
+                child_process: false,
+                fsevents: false,
+            },
+        },
+        externals: {
+            vscode: 'commonjs vscode',
+        },
+        module: {
+            rules: [
+                {
+                    test: /onnxruntime[/\\]lib[/\\]binding.js$/,
+                    loader: onnxLoader,
+                },
+                {
+                    test: /\.ts$/,
+                    loader: 'ts-loader',
+                    options: {
+                        configFile: 'tsconfig.json',
+                    },
+                },
+            ],
+        },
+    };
+};
+
+module.exports = [nodeConfig, browserConfig];

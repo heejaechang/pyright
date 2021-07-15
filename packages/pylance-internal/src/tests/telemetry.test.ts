@@ -6,7 +6,7 @@
 
 import assert from 'assert';
 import { capture, instance, mock, verify, when } from 'ts-mockito';
-import { Connection, Telemetry } from 'vscode-languageserver/node';
+import { Connection, Telemetry } from 'vscode-languageserver';
 
 import {
     formatEventName,

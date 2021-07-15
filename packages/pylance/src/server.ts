@@ -4,7 +4,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 import { VERSION } from 'pylance-internal/common/constants';
-import { main } from 'pylance-internal/server';
+import { main } from 'pylance-internal/nodeMain';
 
 if (process.argv.some((arg) => arg === '--version')) {
     console.log(`pylance ${VERSION}`);
