@@ -7,6 +7,7 @@
 // Command IntelliCode uses to track completion commit in telemetry. Not user-facing.
 export const IntelliCodeCompletionCommandPrefix = 'python.intellicode.';
 
+// Server commands; ensure these are returned by CommandController.supportedCommands.
 export enum Commands {
     createTypeStub = 'python.createTypeStub',
     orderImports = 'python.orderImports',
