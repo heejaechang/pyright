@@ -80,6 +80,7 @@ export class CommandController extends PyrightCommandController {
             Commands.extractVariable,
             Commands.dumpFileDebugInfo,
             Commands.completionAccepted,
+            Commands.executedClientCommand,
         ];
     }
 
