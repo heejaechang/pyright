@@ -40,6 +40,11 @@
     "Pylance debug client attach server" and hit the play button to attach to the server process.
     At this point, you should be able to set breakpoints anywhere in the server code.
 
+### Using Pylance web extension
+
+-   see [here](https://github.com/microsoft/vscode-internalbacklog/wiki/Web-Extensions#try-your-web-extension-in-a-browser) for more detail.
+-   run `npx vscode-test-web --browserType=chromium --extensionDevelopmentPath=[path to "pylance-client"]` to test the extension.
+
 ### Debugging IntelliCode in Pylance test extension
 
 -   Open VS Code extensions folder

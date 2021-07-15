@@ -129,3 +129,6 @@ realModel.zip
 # OS files
 .DS_Store
 Thumbs.db
+
+# vscode-test-web
+.vscode-test-web
