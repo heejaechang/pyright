@@ -1,3 +1,4 @@
+const webpack = require('webpack');
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const { cacheConfig, monorepoResourceNameMapper, tsconfigResolveAliases } = require('../pyright/build/lib/webpack');
@@ -88,7 +89,8 @@ const browserConfig = (_, { mode }) => {
             path: outPath,
             libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate:
-                mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('pylance-client'),
+                // Use absolute paths, as when run in vscode.dev, we're not running inside of the pyrx repo.
+                mode === 'development' ? '[absolute-resource-path]' : monorepoResourceNameMapper('pylance-client'),
             // TODO: figure out cleaning when we output two webpacks to the same folder
             // clean: true,
         },
@@ -115,12 +117,18 @@ const browserConfig = (_, { mode }) => {
                 console: require.resolve('console-browserify'),
                 util: require.resolve('util/'),
                 assert: require.resolve('assert/'),
+                process: require.resolve('process/browser'),
                 fs: false,
                 worker_threads: false,
                 child_process: false,
                 fsevents: false,
             },
         },
+        plugins: [
+            new webpack.ProvidePlugin({
+                process: require.resolve('process/browser'),
+            }),
+        ],
         externals: {
             vscode: 'commonjs vscode',
         },
