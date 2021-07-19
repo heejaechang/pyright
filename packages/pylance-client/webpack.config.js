@@ -80,14 +80,22 @@ const browserConfig = (_, { mode }) => {
     return {
         context: __dirname,
         entry: {
-            extension: './src/browser/extension.ts',
-            server: './src/browser/server.ts',
+            extension: {
+                import: './src/browser/extension.ts',
+                library: {
+                    type: 'commonjs2',
+                },
+            },
+            server: {
+                import: './src/browser/server.ts',
+                // The server is loaded in a Worker and is not a library. Attempting
+                // to export (e.g. via commonjs exports) will crash.
+            },
         },
         target: 'webworker',
         output: {
             filename: 'browser.[name].js',
             path: outPath,
-            libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate:
                 // Use absolute paths, as when run in vscode.dev, we're not running inside of the pyrx repo.
                 mode === 'development' ? '[absolute-resource-path]' : monorepoResourceNameMapper('pylance-client'),
