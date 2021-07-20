@@ -80,7 +80,7 @@ import {
     trackPerf,
 } from './common/telemetry';
 import { CustomLSP } from './customLSP';
-import { IntelliCodeExtension } from './intelliCode/extension';
+import type { IntelliCodeExtension } from './intelliCode/extension';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
 import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
@@ -107,7 +107,7 @@ export class PylanceServer extends LanguageServerBase {
     private _telemetry: TelemetryService;
     private _logger: LogService;
     private _platform: Platform;
-    private _intelliCode: IntelliCodeExtension;
+    private _intelliCode?: IntelliCodeExtension;
     // TODO: the following settings are cached in getSettings() while they may be
     // set per workspace or folder. Figure out how can we maintain cache per resource.
     private _progressBarEnabled?: boolean;
@@ -117,11 +117,8 @@ export class PylanceServer extends LanguageServerBase {
     private _inExperimentCache: Map<string, boolean>;
     private _getExperimentValueCache: Map<string, any>;
 
-    constructor(connection: Connection) {
+    constructor(connection: Connection, intelliCode?: IntelliCodeExtension) {
         const rootDirectory = __dirname;
-        // IntelliCode needs to be passed down as extension to the language server
-        // but it cannot be initialized here as super() was not called yet.
-        const intelliCode = new IntelliCodeExtension();
         super(
             {
                 productName: 'Pylance',
@@ -153,7 +150,7 @@ export class PylanceServer extends LanguageServerBase {
         this._intelliCode = intelliCode;
         // Initialize IntelliCode. This does not start it since it needs path
         // to the model which will come later from the IntelliCode extension.
-        this._intelliCode.initialize(this._logger, this._telemetry, this._platform);
+        this._intelliCode?.initialize(this._logger, this._telemetry, this._platform);
 
         this._inExperimentCache = new Map();
         this._getExperimentValueCache = new Map();
@@ -492,7 +489,7 @@ export class PylanceServer extends LanguageServerBase {
     }
 
     protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
-        if (params.command.startsWith(this._intelliCode.completionListExtension.commandPrefix)) {
+        if (this._intelliCode && params.command.startsWith(this._intelliCode.completionListExtension.commandPrefix)) {
             return this._intelliCode.completionListExtension.executeCommand(params.command, params.arguments, token);
         }
         return this._controller.execute(params, token);
@@ -707,7 +704,7 @@ export class PylanceServer extends LanguageServerBase {
 
     private async _updateGlobalSettings(): Promise<void> {
         const pythonAnalysis = await this.getConfiguration(undefined, pythonAnalysisSectionName);
-        this._intelliCode.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
+        this._intelliCode?.updateSettings(pythonAnalysis?.intelliCodeEnabled ?? true);
     }
 
     private sendTelemetry(results: AnalysisResults): void {
