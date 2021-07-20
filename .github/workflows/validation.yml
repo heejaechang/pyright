@@ -152,6 +152,43 @@ jobs:
         working-directory: ${{ matrix.package.path }}
         if: ${{ ! contains(matrix.package.path, 'vscode') }}
 
+  pyright_build:
+    if: github.repository == 'microsoft/pyrx'
+    runs-on: ubuntu-18.04
+    name: Pyright build
+    needs: typecheck
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - run: npm install
+        working-directory: packages/pyright
+
+      - name: Pyright VSIX
+        working-directory: packages/pyright/packages/vscode-pyright
+        run: npm run package
+
+      - name: Pyright NPM package
+        working-directory: packages/pyright/packages/pyright
+        run: npm pack
+
   required:
     runs-on: ubuntu-18.04
     name: Required
@@ -159,6 +196,7 @@ jobs:
       - typecheck
       - hygiene
       - test
+      - pyright_build
 
     steps:
       - run: echo All required jobs succeeded.
