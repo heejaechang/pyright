@@ -4,7 +4,6 @@
  * Definitions of services available.
  */
 
-import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { Connection } from 'vscode-languageserver';
 
@@ -14,6 +13,7 @@ import { Duration, timingStats } from 'pyright-internal/common/timing';
 import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
 
 import { VERSION } from './constants';
+import { sha256 } from './crypto';
 
 export enum TelemetryEventName {
     IMPORT_METRICS = 'import_metrics',
@@ -219,7 +219,7 @@ export function hashModuleNamesAndAddToEvent(
 }
 
 export function hashString(strValue: string): string {
-    return createHash('sha256').update(strValue).digest('hex');
+    return sha256(strValue);
 }
 
 export function getExceptionMessage(e: any): string {

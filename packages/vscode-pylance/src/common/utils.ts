@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 import * as path from 'path';
 
 import { AppConfiguration } from '../types/appConfig';
@@ -23,21 +22,6 @@ export function getExtensionRoot(): string {
             return path.join(__dirname, '..');
     }
     throw new Error('Unable to determine extension root.');
-}
-
-function getRandom(): number {
-    let num = 0;
-
-    const buf: Buffer = crypto.randomBytes(2);
-    num = (buf.readUInt8(0) << 8) + buf.readUInt8(1);
-
-    const maxValue: number = Math.pow(16, 4) - 1;
-    return num / maxValue;
-}
-
-export function getRandomBetween(min = 0, max = 10): number {
-    const randomVal: number = getRandom();
-    return min + randomVal * (max - min);
 }
 
 export const PylanceName = 'Pylance';
