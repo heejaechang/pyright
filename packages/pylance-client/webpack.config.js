@@ -113,24 +113,15 @@ const browserConfig = (_, { mode }) => {
             extensions: ['.ts', '.js'],
             alias: tsconfigResolveAliases('tsconfig.json'),
             fallback: {
-                // TODO: Once we de-nodify the bundle (FS, chokidar, IntelliCode), try removing each of these.
-                path: require.resolve('path-browserify'),
-                os: require.resolve('os-browserify'),
-                zlib: require.resolve('browserify-zlib'),
+                buffer: require.resolve('buffer/'), // Used by stream
+                events: require.resolve('events/'), // Used by stream
                 stream: require.resolve('stream-browserify'),
-                events: require.resolve('events/'),
-                url: require.resolve('url/'),
-                buffer: require.resolve('buffer/'),
-                console: require.resolve('console-browserify'),
-                util: require.resolve('util/'),
-                assert: require.resolve('assert/'),
+                path: require.resolve('path-browserify'),
                 process: require.resolve('process/browser'),
                 // Note: this will make these imports empty objects, not make them fail to resolve.
                 crypto: false,
-                fs: false,
                 worker_threads: false,
                 child_process: false,
-                fsevents: false,
             },
         },
         plugins: [
@@ -143,10 +134,6 @@ const browserConfig = (_, { mode }) => {
         },
         module: {
             rules: [
-                {
-                    test: /onnxruntime[/\\]lib[/\\]binding.js$/,
-                    loader: onnxLoader,
-                },
                 {
                     test: /\.ts$/,
                     loader: 'ts-loader',
