@@ -191,6 +191,24 @@ test('DunderAll1', () => {
     TestUtils.validateResults(analysisResults, 0, 0);
 });
 
+test('DunderAll2', () => {
+    const configOptions = new ConfigOptions('.');
+
+    // By default, reportUnsupportedDunderAll is a warning.
+    let analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll2.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0, 3);
+
+    // Turn on error.
+    configOptions.diagnosticRuleSet.reportUnsupportedDunderAll = 'error';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll2.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 3, 0);
+
+    // Turn off diagnostic.
+    configOptions.diagnosticRuleSet.reportUnsupportedDunderAll = 'none';
+    analysisResults = TestUtils.typeAnalyzeSampleFiles(['dunderAll2.py'], configOptions);
+    TestUtils.validateResults(analysisResults, 0, 0);
+});
+
 test('Overload1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload1.py']);
     TestUtils.validateResults(analysisResults, 2);
@@ -618,6 +636,14 @@ test('ParamSpec15', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec15.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec16', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec16.py'], configOptions);
     TestUtils.validateResults(results, 0);
 });
 
