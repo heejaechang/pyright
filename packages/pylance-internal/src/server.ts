@@ -8,7 +8,6 @@ import * as path from 'path';
 import {
     CancellationToken,
     CodeAction,
-    CodeActionKind,
     CodeActionParams,
     Command,
     CompletionItem,
@@ -35,7 +34,7 @@ import { BackgroundAnalysisProgram } from 'pyright-internal/analyzer/backgroundA
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { MaxAnalysisTime } from 'pyright-internal/analyzer/program';
 import { isPythonBinary } from 'pyright-internal/analyzer/pythonPathUtils';
-import { BackgroundAnalysisBase } from 'pyright-internal/backgroundAnalysisBase';
+import type { BackgroundAnalysisBase } from 'pyright-internal/backgroundAnalysisBase';
 import { Commands as PyRightCommands } from 'pyright-internal/commands/commands';
 import { getCancellationFolderName } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
@@ -48,7 +47,12 @@ import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
 import { Range } from 'pyright-internal/common/textRange';
-import { LanguageServerBase, ServerSettings, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
+import {
+    LanguageServerBase,
+    ServerOptions,
+    ServerSettings,
+    WorkspaceServiceInstance,
+} from 'pyright-internal/languageServerBase';
 import { CodeActionProvider as PyrightCodeActionProvider } from 'pyright-internal/languageService/codeActionProvider';
 import {
     autoImportDetail,
@@ -57,7 +61,7 @@ import {
     dictionaryKeyDetail,
 } from 'pyright-internal/languageService/completionProvider';
 
-import { BackgroundAnalysis, ExperimentOptions } from './backgroundAnalysis';
+import type { BackgroundAnalysis, ExperimentOptions } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { ClientCommands, Commands } from './commands/commands';
 import {
@@ -66,7 +70,7 @@ import {
     normalCompletionAcceptedCommand,
 } from './commands/completionAcceptedCommand';
 import { mergeCommands } from './commands/multiCommand';
-import { IS_DEV, IS_INSIDERS, IS_PR, PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -76,6 +80,7 @@ import {
     StubTelemetry,
     TelemetryEvent,
     TelemetryEventName,
+    TelemetryInterface,
     TelemetryService,
     trackPerf,
 } from './common/telemetry';
@@ -100,6 +105,11 @@ export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstanc
     enableExtractCodeAction?: boolean;
 }
 
+type BackgroundAnalysisFactory = (
+    telemetry: TelemetryInterface,
+    console: ConsoleInterface
+) => BackgroundAnalysisBase | undefined;
+
 export class PylanceServer extends LanguageServerBase {
     private _controller: CommandController;
     private _analysisTracker: AnalysisTracker;
@@ -117,27 +127,25 @@ export class PylanceServer extends LanguageServerBase {
     private _inExperimentCache: Map<string, boolean>;
     private _getExperimentValueCache: Map<string, any>;
 
-    constructor(connection: Connection, intelliCode?: IntelliCodeExtension) {
-        const rootDirectory = __dirname;
-        super(
-            {
-                productName: 'Pylance',
-                rootDirectory,
-                version: `${VERSION} (pyright ${PYRIGHT_COMMIT.substring(0, 8)})`,
-                extension: intelliCode,
-                supportedCommands: CommandController.supportedCommands(),
-                supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
-            },
-            connection
-        );
+    private _backgroundThreadFactory: BackgroundAnalysisFactory;
+
+    constructor(
+        serverOptions: ServerOptions,
+        connection: Connection,
+        backgroundThreadFactory: BackgroundAnalysisFactory
+    ) {
+        super(serverOptions, connection);
+
+        this._backgroundThreadFactory = backgroundThreadFactory;
 
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
         // 2. to set "cwd" to run python to find search path.
         debug.assert(
-            this.fs.existsSync(path.join(rootDirectory, consts.typeshedFallback)),
-            `Unable to locate typeshed fallback folder at '${rootDirectory}'`
+            this.fs.existsSync(path.join(serverOptions.rootDirectory, consts.typeshedFallback)),
+            `Unable to locate typeshed fallback folder at '${serverOptions.rootDirectory}'`
         );
+
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
         this._controller = new CommandController(this, this._telemetry);
@@ -147,7 +155,8 @@ export class PylanceServer extends LanguageServerBase {
 
         // IntelliCode may be enabled or disabled depending on user settings.
         // We don't know the state here since settings haven't been accessed yet.
-        this._intelliCode = intelliCode;
+        this._intelliCode = serverOptions.extension as IntelliCodeExtension;
+
         // Initialize IntelliCode. This does not start it since it needs path
         // to the model which will come later from the IntelliCode extension.
         this._intelliCode?.initialize(this._logger, this._telemetry, this._platform);
@@ -353,7 +362,7 @@ export class PylanceServer extends LanguageServerBase {
             return undefined;
         }
 
-        return new BackgroundAnalysis(this._telemetry, this.console);
+        return this._backgroundThreadFactory(this._telemetry, this.console);
     }
 
     override updateSettingsForAllWorkspaces(): void {

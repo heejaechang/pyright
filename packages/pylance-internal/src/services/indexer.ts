@@ -15,10 +15,7 @@ import * as PythonPathUtils from 'pyright-internal/analyzer/pythonPathUtils';
 import { InitializationData } from 'pyright-internal/backgroundAnalysisBase';
 import { BackgroundThreadBase, createConfigOptionsFrom, LogData } from 'pyright-internal/backgroundThreadBase';
 import {
-    createBackgroundThreadCancellationTokenSource,
     getCancellationFolderName,
-    getCancellationTokenFromId,
-    getCancellationTokenId,
     OperationCanceledException,
     throwIfCancellationRequested,
 } from 'pyright-internal/common/cancellationUtils';
@@ -26,6 +23,11 @@ import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, log, LogLevel } from 'pyright-internal/common/console';
 import * as debug from 'pyright-internal/common/debug';
+import {
+    FileBasedCancellationProvider,
+    getCancellationTokenFromId,
+    getCancellationTokenId,
+} from 'pyright-internal/common/fileBasedCancellationUtils';
 import { LogTracker } from 'pyright-internal/common/logTracker';
 import {
     combinePaths,
@@ -58,7 +60,9 @@ export class Indexer {
         Indexer.cancelIndexingRequest(configOptions);
 
         // Get cancellation token source for current indexing request.
-        const source = createBackgroundThreadCancellationTokenSource();
+        const cancellationProvider = new FileBasedCancellationProvider('indexer');
+        const source = cancellationProvider.createCancellationTokenSource();
+
         Indexer._cancellationSourcePerWorkspace.set(configOptions.projectRoot, source);
 
         const worker = Indexer._getWorker(telemetry, console, configOptions);

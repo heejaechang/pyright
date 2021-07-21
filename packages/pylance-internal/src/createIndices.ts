@@ -9,7 +9,7 @@ import * as path from 'path';
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { StandardConsole } from 'pyright-internal/common/console';
-import { createFromRealFileSystem } from 'pyright-internal/common/fileSystem';
+import { createFromRealFileSystem } from 'pyright-internal/common/realFileSystem';
 
 import { Indexer } from './services/indexer';
 

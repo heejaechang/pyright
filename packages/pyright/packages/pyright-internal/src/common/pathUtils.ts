@@ -7,7 +7,7 @@
  * Pathname utility functions.
  */
 
-import { Dirent } from 'fs';
+import type { Dirent } from 'fs';
 import * as path from 'path';
 import Char from 'typescript-char';
 import { URI } from 'vscode-uri';

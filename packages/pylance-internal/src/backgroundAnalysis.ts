@@ -21,14 +21,13 @@ import {
 import { getBackgroundWaiter, run } from 'pyright-internal/backgroundThreadBase';
 import {
     getCancellationFolderName,
-    getCancellationTokenFromId,
-    getCancellationTokenId,
     OperationCanceledException,
     throwIfCancellationRequested,
 } from 'pyright-internal/common/cancellationUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
 import { isString } from 'pyright-internal/common/core';
+import { getCancellationTokenFromId, getCancellationTokenId } from 'pyright-internal/common/fileBasedCancellationUtils';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Range } from 'pyright-internal/common/textRange';
 import { Duration } from 'pyright-internal/common/timing';
