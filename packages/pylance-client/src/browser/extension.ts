@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { LanguageClientOptions } from 'vscode-languageclient';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
+import { BrowserConfig } from 'pylance-internal/browserMain';
+
 declare const Worker: {
     new (stringUrl: string): any;
 };
@@ -10,6 +12,16 @@ export function activate(context: vscode.ExtensionContext) {
     const serverMain = vscode.Uri.joinPath(context.extensionUri, 'dist/browser.server.js');
     try {
         const worker = new Worker(serverMain.toString());
+
+        // Pass the configuration as the first message to the worker so it can
+        // have info like the URL of the dist folder early enough.
+        //
+        // This is the same method used by the TS worker:
+        // https://github.com/microsoft/vscode/blob/90aa979bb75a795fd8c33d38aee263ea655270d0/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts#L55
+        const config: BrowserConfig = {
+            distUrl: vscode.Uri.joinPath(context.extensionUri, 'dist').toString(),
+        };
+        worker.postMessage(config);
 
         const clientOptions: LanguageClientOptions = {
             // Register the server for python source files.
