@@ -14,6 +14,34 @@ const onnxLoader = path.resolve(packages, 'vscode-pylance', 'build', 'onnxLoader
 
 const { binDir: onnxBin } = require('../pylance-internal/build/findonnx');
 
+class PylanceManifestPlugin {
+    /**
+     * @param {webpack.Compiler} compiler
+     */
+    apply(compiler) {
+        const hookOptions = {
+            name: 'PylanceManifestPlugin',
+            stage: Infinity,
+        };
+
+        compiler.hooks.thisCompilation.tap(hookOptions, (compilation) => {
+            compilation.hooks.processAssets.tap(hookOptions, (assets) => {
+                const files = Object.keys(assets);
+
+                // Manually add files added by browserConfig; keep synced.
+                files.push('browser.server.js', 'browser.extension.js');
+
+                // TODO: Include sizes? Get sizes for browser assets?
+                const manifest = {
+                    files,
+                };
+
+                compilation.emitAsset('manifest.json', new webpack.sources.RawSource(JSON.stringify(manifest)));
+            });
+        });
+    }
+}
+
 /**@type {(env: any, argv: { mode: 'production' | 'development' | 'none' }) => import('webpack').Configuration}*/
 const nodeConfig = (_, { mode }) => {
     return {
@@ -71,6 +99,7 @@ const nodeConfig = (_, { mode }) => {
                     { from: scripts, to: 'scripts' },
                 ],
             }),
+            new PylanceManifestPlugin(),
         ],
     };
 };
