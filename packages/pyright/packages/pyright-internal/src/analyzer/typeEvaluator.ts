@@ -2319,9 +2319,15 @@ export function createTypeEvaluator(
                         // Don't include class vars. PEP 557 indicates that they shouldn't
                         // be considered data class entries.
                         const variableSymbol = classType.details.fields.get(variableName);
-                        if (variableSymbol?.isClassVar()) {
+                        const isFinal = variableSymbol
+                            ?.getDeclarations()
+                            .some((decl) => decl.type === DeclarationType.Variable && decl.isFinal);
+
+                        if (variableSymbol?.isClassVar() && !isFinal) {
                             // If an ancestor class declared an instance variable but this dataclass
                             // declares a ClassVar, delete the older one from the full data class entries.
+                            // We exclude final variables here because a Final type annotation is implicitly
+                            // considered a ClassVar by the binder, but dataclass rules are different.
                             const index = fullDataClassEntries.findIndex((p) => p.name === variableName);
                             if (index >= 0) {
                                 fullDataClassEntries.splice(index, 1);
@@ -3963,42 +3969,8 @@ export function createTypeEvaluator(
                 }
             }
 
-            if ((flags & EvaluatorFlags.DoNotSpecialize) === 0) {
-                if (isInstantiableClass(type)) {
-                    if ((flags & EvaluatorFlags.ExpectingType) !== 0) {
-                        if (requiresTypeArguments(type) && !type.typeArguments) {
-                            addDiagnostic(
-                                fileInfo.diagnosticRuleSet.reportMissingTypeArgument,
-                                DiagnosticRule.reportMissingTypeArgument,
-                                Localizer.Diagnostic.typeArgsMissingForClass().format({
-                                    name: type.aliasName || type.details.name,
-                                }),
-                                node
-                            );
-                        }
-                    }
-                    if (!type.typeArguments) {
-                        type = createSpecializedClassType(type, undefined, flags, node);
-                    }
-                }
-
-                if (
-                    (flags & EvaluatorFlags.ExpectingType) !== 0 &&
-                    type.typeAliasInfo &&
-                    type.typeAliasInfo.typeParameters &&
-                    type.typeAliasInfo.typeParameters.length > 0 &&
-                    !type.typeAliasInfo.typeArguments
-                ) {
-                    addDiagnostic(
-                        fileInfo.diagnosticRuleSet.reportMissingTypeArgument,
-                        DiagnosticRule.reportMissingTypeArgument,
-                        Localizer.Diagnostic.typeArgsMissingForAlias().format({
-                            name: type.typeAliasInfo.name,
-                        }),
-                        node
-                    );
-                }
-            }
+            // Detect, report, and fill in missing type arguments if appropriate.
+            type = reportMissingTypeArguments(node, type, flags);
 
             // If there is a resolution cycle, don't report it as an unbound symbol
             // at this time. It will be re-evaluated as the call stack unwinds, and
@@ -4199,6 +4171,59 @@ export function createTypeEvaluator(
         return type;
     }
 
+    // Determines if the type is a generic class or type alias with missing
+    // type arguments. If so, it fills in these type arguments with Unknown
+    // and optionally reports an error.
+    function reportMissingTypeArguments(node: ExpressionNode, type: Type, flags: EvaluatorFlags): Type {
+        if ((flags & EvaluatorFlags.DoNotSpecialize) === 0) {
+            if (isInstantiableClass(type)) {
+                if ((flags & EvaluatorFlags.ExpectingType) !== 0) {
+                    if (requiresTypeArguments(type) && !type.typeArguments) {
+                        addDiagnostic(
+                            getFileInfo(node).diagnosticRuleSet.reportMissingTypeArgument,
+                            DiagnosticRule.reportMissingTypeArgument,
+                            Localizer.Diagnostic.typeArgsMissingForClass().format({
+                                name: type.aliasName || type.details.name,
+                            }),
+                            node
+                        );
+                    }
+                }
+                if (!type.typeArguments) {
+                    type = createSpecializedClassType(type, undefined, flags, node);
+                }
+            }
+
+            if (
+                (flags & EvaluatorFlags.ExpectingType) !== 0 &&
+                type.typeAliasInfo &&
+                type.typeAliasInfo.typeParameters &&
+                type.typeAliasInfo.typeParameters.length > 0 &&
+                !type.typeAliasInfo.typeArguments
+            ) {
+                addDiagnostic(
+                    getFileInfo(node).diagnosticRuleSet.reportMissingTypeArgument,
+                    DiagnosticRule.reportMissingTypeArgument,
+                    Localizer.Diagnostic.typeArgsMissingForAlias().format({
+                        name: type.typeAliasInfo.name,
+                    }),
+                    node
+                );
+
+                type = TypeBase.cloneForTypeAlias(
+                    type,
+                    type.typeAliasInfo.name,
+                    type.typeAliasInfo.fullName,
+                    type.typeAliasInfo.typeVarScopeId,
+                    type.typeAliasInfo.typeParameters,
+                    type.typeAliasInfo.typeParameters.map((param) => UnknownType.create())
+                );
+            }
+        }
+
+        return type;
+    }
+
     // Creates an ID that identifies this parse node in a way that will
     // not change each time the file is parsed (unless, of course, the
     // file contents change).
@@ -4392,6 +4417,9 @@ export function createTypeEvaluator(
             if (codeFlowTypeResult.isIncomplete) {
                 memberTypeResult.isIncomplete = true;
             }
+
+            // Detect, report, and fill in missing type arguments if appropriate.
+            memberTypeResult.type = reportMissingTypeArguments(node, memberTypeResult.type, flags);
 
             deleteTypeCacheEntry(node);
             deleteTypeCacheEntry(node.memberName);
@@ -21431,7 +21459,17 @@ export function createTypeEvaluator(
         let adjSrcType = retainLiterals ? srcType : stripLiteralValue(srcType);
 
         if (TypeBase.isInstantiable(destType)) {
-            adjSrcType = convertToInstance(adjSrcType);
+            if (TypeBase.isInstantiable(adjSrcType)) {
+                adjSrcType = convertToInstance(adjSrcType);
+            } else {
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.typeAssignmentMismatch().format({
+                        sourceType: printType(adjSrcType),
+                        destType: printType(destType),
+                    })
+                );
+                return false;
+            }
         }
 
         if (isContravariant || (flags & CanAssignFlags.AllowTypeVarNarrowing) !== 0) {
@@ -22720,6 +22758,11 @@ export function createTypeEvaluator(
 
         const destPositionalOnlyIndex = destParams.findIndex((p) => p.category === ParameterCategory.Simple && !p.name);
 
+        const isParamSpecInvolved =
+            (flags & CanAssignFlags.ReverseTypeVarMatching) !== 0
+                ? !!srcType.details.paramSpec
+                : !!destType.details.paramSpec;
+
         if (!FunctionType.shouldSkipParamCompatibilityCheck(destType)) {
             // Match positional parameters.
             for (let paramIndex = 0; paramIndex < positionalsToMatch; paramIndex++) {
@@ -22845,7 +22888,7 @@ export function createTypeEvaluator(
             } else if (destPositionals.length < srcPositionals.length) {
                 // If the dest type includes a ParamSpec, the additional parameters
                 // can be assigned to it, so no need to report an error here.
-                if (!destType.details.paramSpec) {
+                if (!isParamSpecInvolved) {
                     const nonDefaultSrcParamCount = srcParams.filter(
                         (p) => !!p.name && !p.hasDefault && p.category === ParameterCategory.Simple
                     ).length;
@@ -22965,7 +23008,7 @@ export function createTypeEvaluator(
             }
 
             // Handle matching of named (keyword) parameters.
-            if (!destType.details.paramSpec) {
+            if (!isParamSpecInvolved) {
                 // Build a dictionary of named parameters in the dest.
                 const destParamMap = new Map<string, FunctionParameter>();
                 let destHasKwargsParam = false;
@@ -23139,23 +23182,31 @@ export function createTypeEvaluator(
             });
 
             // Are we assigning to a function with a ParamSpec?
-            if (destType.details.paramSpec) {
-                typeVarMap.setParamSpec(destType.details.paramSpec, {
-                    concrete: {
-                        parameters: srcType.details.parameters
-                            .map((p, index) => {
-                                const paramSpecEntry: ParamSpecEntry = {
-                                    category: p.category,
-                                    name: p.name,
-                                    hasDefault: !!p.hasDefault,
-                                    type: FunctionType.getEffectiveParameterType(srcType, index),
-                                };
-                                return paramSpecEntry;
-                            })
-                            .slice(destType.details.parameters.length, srcType.details.parameters.length),
-                        flags: srcType.details.flags,
-                    },
-                });
+            if (isParamSpecInvolved) {
+                const effectiveDestType = (flags & CanAssignFlags.ReverseTypeVarMatching) === 0 ? destType : srcType;
+                const effectiveSrcType = (flags & CanAssignFlags.ReverseTypeVarMatching) === 0 ? srcType : destType;
+
+                if (effectiveDestType.details.paramSpec) {
+                    typeVarMap.setParamSpec(effectiveDestType.details.paramSpec, {
+                        concrete: {
+                            parameters: effectiveSrcType.details.parameters
+                                .map((p, index) => {
+                                    const paramSpecEntry: ParamSpecEntry = {
+                                        category: p.category,
+                                        name: p.name,
+                                        hasDefault: !!p.hasDefault,
+                                        type: FunctionType.getEffectiveParameterType(effectiveSrcType, index),
+                                    };
+                                    return paramSpecEntry;
+                                })
+                                .slice(
+                                    effectiveDestType.details.parameters.length,
+                                    effectiveSrcType.details.parameters.length
+                                ),
+                            flags: effectiveSrcType.details.flags,
+                        },
+                    });
+                }
             }
         }
 
