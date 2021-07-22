@@ -29,7 +29,7 @@ class _iLocIndexerSeries(_iLocIndexer, Generic[S1]):
     @overload
     def __getitem__(self, idx: int) -> S1: ...
     @overload
-    def __getitem__(self, idx: Index) -> Series[S1]: ...
+    def __getitem__(self, idx: Union[Index, slice]) -> Series[S1]: ...
     # set item
     @overload
     def __setitem__(self, idx: int, value: S1) -> None: ...
@@ -39,7 +39,7 @@ class _iLocIndexerSeries(_iLocIndexer, Generic[S1]):
 
 class _LocIndexerSeries(_LocIndexer, Generic[S1]):
     @overload
-    def __getitem__(self, idx: Union[MaskType, Sequence[str]],) -> Series[S1]: ...
+    def __getitem__(self, idx: Union[MaskType, Index, Sequence[str], slice],) -> Series[S1]: ...
     @overload
     def __getitem__(self, idx: Union[int, str],) -> S1: ...
     @overload
@@ -833,7 +833,7 @@ Returns
     @overload
     def fillna(
         self,
-        value: Union[S1, Dict, Series[S1], DataFrame],
+        value: Union[Scalar, Dict, Series[S1], DataFrame],
         method: Optional[Union[_str, Literal["backfill", "bfill", "pad", "ffill"]]] = ...,
         axis: SeriesAxisType = ...,
         limit: Optional[int] = ...,
@@ -940,7 +940,7 @@ Only replace the first NaN element.
     @overload
     def fillna(
         self,
-        value: Union[S1, Dict, Series[S1], DataFrame],
+        value: Union[Scalar, Dict, Series[S1], DataFrame],
         method: Optional[Union[_str, Literal["backfill", "bfill", "pad", "ffill"]]] = ...,
         axis: SeriesAxisType = ...,
         *,
@@ -950,7 +950,7 @@ Only replace the first NaN element.
     @overload
     def fillna(
         self,
-        value: Union[S1, Dict, Series[S1], DataFrame],
+        value: Union[Scalar, Dict, Series[S1], DataFrame],
         method: Optional[Union[_str, Literal["backfill", "bfill", "pad", "ffill"]]] = ...,
         axis: SeriesAxisType = ...,
         inplace: _bool = ...,
