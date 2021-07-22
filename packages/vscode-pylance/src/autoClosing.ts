@@ -62,7 +62,7 @@ function handleChange(doc: vscode.TextDocument, event: vscode.TextDocumentConten
         return;
     }
 
-    closeTripleQuote(editor, doc, quotes, token, docContents);
+    closeTripleQuote(editor, doc, quotes, token, docContents, endPlusOne);
 
     // TODO: f-string brace closing, auto-"f" insertion.
 }
@@ -72,7 +72,8 @@ function closeTripleQuote(
     doc: vscode.TextDocument,
     quotes: string,
     token: StringToken,
-    docContents: string
+    docContents: string,
+    pos: vscode.Position
 ) {
     const isTripleQuote = (token.flags & StringTokenFlags.Triplicate) !== 0;
     const isUnterminated = (token.flags & StringTokenFlags.Unterminated) !== 0;
@@ -86,7 +87,7 @@ function closeTripleQuote(
         return;
     }
 
-    insertAfterCursor(editor, quotes);
+    insertAfter(editor, quotes, pos);
 }
 
 function shouldAutoCloseQuotes(uri: vscode.Uri, docContents: string, token: StringToken): boolean {
@@ -106,12 +107,11 @@ function shouldAutoCloseQuotes(uri: vscode.Uri, docContents: string, token: Stri
     return false;
 }
 
-function insertAfterCursor(editor: vscode.TextEditor, text: string) {
+function insertAfter(editor: vscode.TextEditor, text: string, pos: vscode.Position) {
     const snippet = new vscode.SnippetString();
     snippet.appendPlaceholder('', 0);
     snippet.appendText(text);
 
-    const pos = editor.selection.start.translate(0, 1);
     editor.insertSnippet(snippet, pos);
 }
 
