@@ -4,6 +4,7 @@ import { DefaultCancellationProvider } from 'pyright-internal/common/cancellatio
 import { nullFileWatcherProvider } from 'pyright-internal/common/fileSystem';
 import { WorkspaceMap } from 'pyright-internal/workspaceMap';
 
+import { Commands } from './commands/commands';
 import { BrowserFileSystem } from './common/browserFileSystem';
 import { PYRIGHT_COMMIT, VERSION } from './common/constants';
 import { PylanceServer } from './server';
@@ -46,6 +47,7 @@ async function runServer(
                 fileSystem: new BrowserFileSystem(rootDirectory, config.distUrl),
                 fileWatcherProvider: nullFileWatcherProvider,
                 cancellationProvider: new DefaultCancellationProvider(),
+                supportedCommands: [Commands.completionAccepted],
             },
             createConnection(messageReader, messageWriter),
             (_1, _2) => undefined
