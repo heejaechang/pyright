@@ -146,18 +146,12 @@ const browserConfig = (_, { mode }) => {
                 events: require.resolve('events/'), // Used by stream
                 stream: require.resolve('stream-browserify'),
                 path: require.resolve('path-browserify'),
-                process: require.resolve('process/browser'),
                 // Note: this will make these imports empty objects, not make them fail to resolve.
                 crypto: false,
                 worker_threads: false,
                 child_process: false,
             },
         },
-        plugins: [
-            new webpack.ProvidePlugin({
-                process: require.resolve('process/browser'),
-            }),
-        ],
         externals: {
             vscode: 'commonjs vscode',
         },
