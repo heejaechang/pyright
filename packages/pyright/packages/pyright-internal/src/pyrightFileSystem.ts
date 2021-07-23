@@ -20,6 +20,7 @@ import {
     MkDirOptions,
     Stats,
     TmpfileOptions,
+    VirtualDirent,
 } from './common/fileSystem';
 import { stubsSuffix } from './common/pathConsts';
 import {
@@ -82,7 +83,7 @@ export class PyrightFileSystem implements FileSystem {
             return entries;
         }
 
-        return entries.concat(partialStubs.map((f) => new FakeFile(f)));
+        return entries.concat(partialStubs.map((f) => new VirtualDirent(f, /* file */ true)));
     }
 
     readdirSync(path: string): string[] {
@@ -350,41 +351,5 @@ export class PyrightFileSystem implements FileSystem {
 
     private _isVirtualEntry(path: string) {
         return this._partialStubPackagePaths.has(path) || this._reverseFileMap.has(path);
-    }
-}
-
-class FakeFile {
-    name: string;
-
-    constructor(name: string) {
-        this.name = name;
-    }
-
-    isFile(): boolean {
-        return true;
-    }
-
-    isDirectory(): boolean {
-        return false;
-    }
-
-    isBlockDevice(): boolean {
-        return false;
-    }
-
-    isCharacterDevice(): boolean {
-        return false;
-    }
-
-    isSymbolicLink(): boolean {
-        return false;
-    }
-
-    isFIFO(): boolean {
-        return false;
-    }
-
-    isSocket(): boolean {
-        return false;
     }
 }

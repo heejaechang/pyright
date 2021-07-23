@@ -36,7 +36,7 @@ class PylanceManifestPlugin {
                     files,
                 };
 
-                compilation.emitAsset('manifest.json', new webpack.sources.RawSource(JSON.stringify(manifest)));
+                compilation.emitAsset('folderIndex.json', new webpack.sources.RawSource(JSON.stringify(manifest)));
             });
         });
     }
