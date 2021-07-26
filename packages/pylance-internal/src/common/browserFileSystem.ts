@@ -14,6 +14,7 @@ import {
 import {
     combinePaths,
     ensureTrailingDirectorySeparator,
+    extractPathFromUri,
     getDirectoryPath,
     getFileName,
     getPathComponents,
@@ -39,14 +40,17 @@ const dotSlash = normalizeSlashes('./');
 export class BrowserFileSystem implements FileSystem {
     private readonly _root: string;
     private _baseUri: string;
+    private _baseUriPath: string;
 
     private readonly _map: Map<string, Entry>;
-
     private readonly _cache: Map<string, Dirent[]> = new Map<string, Dirent[]>();
 
     constructor(root: string, baseUri: string) {
         this._root = normalizeSlashes(root);
-        this._baseUri = normalizeWebSlashes(ensureTrailingDirectorySeparator(baseUri));
+
+        const uriPath = extractPathFromUri(baseUri);
+        this._baseUri = normalizeWebSlashes(baseUri.substr(0, baseUri.length - uriPath.length));
+        this._baseUriPath = normalizeSlashes(ensureTrailingDirectorySeparator(uriPath));
 
         const folderIndexContent = this._getText(`folderIndex.json`);
         this._map = this._createFolderMap(folderIndexContent);
@@ -82,14 +86,9 @@ export class BrowserFileSystem implements FileSystem {
     readFileSync(path: string, encoding: BufferEncoding): string;
     readFileSync(path: string, encoding?: BufferEncoding | null): string | Buffer;
     readFileSync(path: any, encoding?: any): string | Buffer {
-        // we only supports utf8
-        let relativePath = getRelativePath(path, this._root);
+        const relativePath = this._getRelativePath(path);
         if (!relativePath) {
             return '';
-        }
-
-        if (relativePath.startsWith(dotSlash)) {
-            relativePath = relativePath.substr(2);
         }
 
         return this._getText(relativePath) ?? '';
@@ -129,6 +128,48 @@ export class BrowserFileSystem implements FileSystem {
 
     realCasePath(path: string): string {
         return path;
+    }
+
+    isMappedFilePath(filepath: string): boolean {
+        // stdLib file is mapped. We need to use http locations for them
+        // which is different than file path we use internally.
+        return !!this._getEntry(filepath);
+    }
+
+    getOriginalFilePath(mappedFilePath: string) {
+        if (this.isMappedFilePath(mappedFilePath)) {
+            const relativePath = this._getRelativePath(mappedFilePath);
+            if (!relativePath) {
+                return mappedFilePath;
+            }
+
+            return combinePaths(this._baseUriPath, relativePath);
+        }
+
+        return mappedFilePath;
+    }
+
+    getMappedFilePath(originalFilepath: string) {
+        if (originalFilepath.startsWith(this._baseUriPath)) {
+            return combinePaths('/', originalFilepath.substr(this._baseUriPath.length));
+        }
+
+        return originalFilepath;
+    }
+
+    getUri(path: string): string {
+        const mappedFile = this.getMappedFilePath(path);
+        const entry = this._getEntry(mappedFile);
+        if (entry) {
+            const relativePath = this._getRelativePath(mappedFile);
+            if (!relativePath) {
+                return `memfs:${normalizeWebSlashes(mappedFile)}`;
+            }
+
+            return this._createBundledFileUri(relativePath);
+        }
+
+        return `memfs:${normalizeWebSlashes(path)}`;
     }
 
     chdir(path: string): void {
@@ -176,13 +217,32 @@ export class BrowserFileSystem implements FileSystem {
     }
 
     private _getText(relativeWebPath: string) {
-        const normalized = normalizeWebSlashes(relativeWebPath);
-        const request = new XMLHttpRequest();
-        const url = `${this._baseUri}${normalized}`;
+        const url = this._createBundledFileUri(relativeWebPath);
 
+        const request = new XMLHttpRequest();
         request.open('GET', url, /* async */ false);
         request.send();
         return request.status === 200 ? request.responseText : undefined;
+    }
+
+    private _createBundledFileUri(relativeWebPath: string) {
+        const normalized = normalizeWebSlashes(relativeWebPath);
+        const url = `${this._baseUri}${normalizeWebSlashes(this._baseUriPath)}${normalized}`;
+        return url;
+    }
+
+    private _getRelativePath(path: string) {
+        // we only supports utf8
+        let relativePath = getRelativePath(path, this._root);
+        if (!relativePath) {
+            return undefined;
+        }
+
+        if (relativePath.startsWith(dotSlash)) {
+            relativePath = relativePath.substr(2);
+        }
+
+        return relativePath;
     }
 
     private _createFolderMap(folderIndexContent: string | undefined): Map<string, Entry> {

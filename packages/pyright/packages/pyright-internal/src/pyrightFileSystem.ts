@@ -61,7 +61,7 @@ export class PyrightFileSystem implements FileSystem {
             return false;
         }
 
-        return this._realFS.existsSync(this.getOriginalFilePath(path));
+        return this._realFS.existsSync(this._getPartialStubOriginalPath(path));
     }
 
     mkdirSync(path: string, options?: MkDirOptions): void {
@@ -103,19 +103,19 @@ export class PyrightFileSystem implements FileSystem {
     readFileSync(path: string, encoding?: null): Buffer;
     readFileSync(path: string, encoding: BufferEncoding): string;
     readFileSync(path: string, encoding?: BufferEncoding | null): string | Buffer {
-        return this._realFS.readFileSync(this.getOriginalFilePath(path), encoding);
+        return this._realFS.readFileSync(this._getPartialStubOriginalPath(path), encoding);
     }
 
     writeFileSync(path: string, data: string | Buffer, encoding: BufferEncoding | null): void {
-        this._realFS.writeFileSync(this.getOriginalFilePath(path), data, encoding);
+        this._realFS.writeFileSync(this._getPartialStubOriginalPath(path), data, encoding);
     }
 
     statSync(path: string): Stats {
-        return this._realFS.statSync(this.getOriginalFilePath(path));
+        return this._realFS.statSync(this._getPartialStubOriginalPath(path));
     }
 
     unlinkSync(path: string): void {
-        this._realFS.unlinkSync(this.getOriginalFilePath(path));
+        this._realFS.unlinkSync(this._getPartialStubOriginalPath(path));
     }
 
     realpathSync(path: string): string {
@@ -131,24 +131,24 @@ export class PyrightFileSystem implements FileSystem {
     }
 
     createReadStream(path: string): fs.ReadStream {
-        return this._realFS.createReadStream(this.getOriginalFilePath(path));
+        return this._realFS.createReadStream(this._getPartialStubOriginalPath(path));
     }
 
     createWriteStream(path: string): fs.WriteStream {
-        return this._realFS.createWriteStream(this.getOriginalFilePath(path));
+        return this._realFS.createWriteStream(this._getPartialStubOriginalPath(path));
     }
 
     copyFileSync(src: string, dst: string): void {
-        this._realFS.copyFileSync(this.getOriginalFilePath(src), this.getOriginalFilePath(dst));
+        this._realFS.copyFileSync(this._getPartialStubOriginalPath(src), this._getPartialStubOriginalPath(dst));
     }
 
     // Async I/O
     readFile(path: string): Promise<Buffer> {
-        return this._realFS.readFile(this.getOriginalFilePath(path));
+        return this._realFS.readFile(this._getPartialStubOriginalPath(path));
     }
 
     readFileText(path: string, encoding?: BufferEncoding): Promise<string> {
-        return this._realFS.readFileText(this.getOriginalFilePath(path), encoding);
+        return this._realFS.readFileText(this._getPartialStubOriginalPath(path), encoding);
     }
 
     // The directory returned by tmpdir must exist and be the same each time tmpdir is called.
@@ -162,6 +162,10 @@ export class PyrightFileSystem implements FileSystem {
 
     realCasePath(path: string): string {
         return this._realFS.realCasePath(path);
+    }
+
+    getUri(path: string): string {
+        return this._realFS.getUri(path);
     }
 
     isPartialStubPackagesScanned(execEnv: ExecutionEnvironment): boolean {
@@ -275,17 +279,18 @@ export class PyrightFileSystem implements FileSystem {
 
     // See whether the file is mapped to another location.
     isMappedFilePath(filepath: string): boolean {
-        return this._fileMap.has(filepath);
+        return this._fileMap.has(filepath) || this._realFS.isMappedFilePath(filepath);
     }
 
     // Get original filepath if the given filepath is mapped.
-    getOriginalFilePath(mappedFilepath: string) {
-        return this._fileMap.get(mappedFilepath) ?? mappedFilepath;
+    getOriginalFilePath(mappedFilePath: string) {
+        return this._realFS.getOriginalFilePath(this._getPartialStubOriginalPath(mappedFilePath));
     }
 
     // Get mapped filepath if the given filepath is mapped.
     getMappedFilePath(originalFilepath: string) {
-        return this._reverseFileMap.get(originalFilepath) ?? originalFilepath;
+        const mappedFilePath = this._realFS.getMappedFilePath(originalFilepath);
+        return this._reverseFileMap.get(mappedFilePath) ?? mappedFilePath;
     }
 
     // If we have a conflict file from the partial stub packages for the given file path,
@@ -312,6 +317,10 @@ export class PyrightFileSystem implements FileSystem {
         if (!folderInfo.some((entry) => entry === fileName)) {
             folderInfo.push(fileName);
         }
+    }
+
+    private _getPartialStubOriginalPath(mappedFilePath: string) {
+        return this._fileMap.get(mappedFilePath) ?? mappedFilePath;
     }
 
     private _getRelativePathPartialStubs(path: string) {

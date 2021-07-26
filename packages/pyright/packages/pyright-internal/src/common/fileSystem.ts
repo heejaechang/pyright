@@ -73,6 +73,17 @@ export interface FileSystem {
 
     // Return path in casing on OS.
     realCasePath(path: string): string;
+
+    // See whether the file is mapped to another location.
+    isMappedFilePath(filepath: string): boolean;
+
+    // Get original filepath if the given filepath is mapped.
+    getOriginalFilePath(mappedFilePath: string): string;
+
+    // Get mapped filepath if the given filepath is mapped.
+    getMappedFilePath(originalFilepath: string): string;
+
+    getUri(path: string): string;
 }
 
 // File watchers can give "changed" event even for a file open. but for those cases,
