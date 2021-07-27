@@ -3,7 +3,6 @@
     "Common.No": "No",
     "Common.remindMeLater": "Remind me later",
     "Common.reload": "Reload",
-    "LanguageServer.installedButInactive": "Would you like to make Pylance your default language server for Python?",
     "LanguageServer.turnItOn": "Yes, and reload",
     "LanguageServer.noThanks": "No thanks",
     "LanguageServer.settingsMigratedMessage": "Settings applicable to Microsoft Language Server were copied to Pylance settings. Please check settings.json file(s) for details.",

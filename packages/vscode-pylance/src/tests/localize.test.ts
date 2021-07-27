@@ -44,12 +44,8 @@ describe('Localization', () => {
     }
 
     test('keys', () => {
-        const val = localize.LanguageServer.installedButInactive();
-        assert.equal(
-            val,
-            'Would you like to make Pylance your default language server for Python?',
-            'LanguageServer string does not match'
-        );
+        const val = localize.LanguageServer.noThanks();
+        assert.equal(val, 'No thanks', 'LanguageServer string does not match');
     });
 
     test('keys (Russian)', () => {

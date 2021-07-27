@@ -11,10 +11,6 @@ export namespace Common {
 }
 
 export namespace LanguageServer {
-    export const installedButInactive = localize(
-        'LanguageServer.installedButInactive',
-        'Would you like to make Pylance your default language server for Python?'
-    );
     export const turnItOn = localize('LanguageServer.turnItOn', 'Yes, and reload');
     export const noThanks = localize('LanguageServer.noThanks', 'No thanks');
     export const settingsMigratedMessage = localize(

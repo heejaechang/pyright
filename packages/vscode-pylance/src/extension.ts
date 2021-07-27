@@ -10,7 +10,6 @@ import { ClientCommands, Commands } from 'pylance-internal/commands/commands';
 
 import { LSExtensionApi } from './api';
 import { registerAutoClosing } from './autoClosing';
-import { ActivatePylanceBanner } from './banners';
 import { addToExtraPaths } from './commands/addToExtraPaths';
 import { renameEdit } from './commands/extractRename';
 import reportIssue from './commands/reportIssue';
@@ -51,8 +50,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<LSExte
         commandManager
     );
     const browser = new BrowserServiceImpl();
-
-    showActivatePylanceBanner(context, version).ignoreErrors();
 
     migrateV1Settings(config, appShell).ignoreErrors();
 
@@ -138,17 +135,6 @@ function checkHostApp(): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivate() {}
-
-async function showActivatePylanceBanner(context: vscode.ExtensionContext, version: string): Promise<void> {
-    const switchToPylance = new ActivatePylanceBanner(
-        new ApplicationShellImpl(),
-        new AppConfigurationImpl(),
-        new CommandManagerImpl(),
-        context.globalState,
-        version
-    );
-    return switchToPylance.show();
-}
 
 function registerCommand(
     context: vscode.ExtensionContext,

@@ -33,8 +33,3 @@ export function isPylanceDefaultLanguageServer(appConfig: AppConfiguration): boo
     const ls = appConfig.getSetting<string>('python', LanguageServerSettingName);
     return ls === PylanceName || ls === DefaultName;
 }
-
-export function hasDefaultLanguageServer(appConfig: AppConfiguration): boolean {
-    const setting = appConfig.inspect('python', LanguageServerSettingName);
-    return setting?.defaultValue === DefaultName;
-}
