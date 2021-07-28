@@ -707,14 +707,18 @@ export function getTypeVarScopeNode(node: ParseNode, allowInFunctionSignature = 
         switch (curNode.nodeType) {
             case ParseNodeType.Function: {
                 if (prevNode === curNode.suite || allowInFunctionSignature) {
-                    return curNode;
+                    if (!curNode.decorators.some((decorator) => decorator === prevNode)) {
+                        return curNode;
+                    }
                 }
                 break;
             }
 
             case ParseNodeType.Class: {
                 if (prevNode === curNode.suite) {
-                    return curNode;
+                    if (!curNode.decorators.some((decorator) => decorator === prevNode)) {
+                        return curNode;
+                    }
                 }
                 break;
             }
@@ -1174,13 +1178,13 @@ export function isAssignmentToDefaultsFollowingNamedTuple(callNode: ParseNode): 
             break;
         }
 
-        if (nextStatement.statements[0].nodeType === ParseNodeType.StringList) {
+        if (nextStatement.statements[0]?.nodeType === ParseNodeType.StringList) {
             // Skip over comments
             statementIndex++;
             continue;
         }
 
-        if (nextStatement.statements[0].nodeType === ParseNodeType.Assignment) {
+        if (nextStatement.statements[0]?.nodeType === ParseNodeType.Assignment) {
             const assignNode = nextStatement.statements[0];
             if (
                 assignNode.leftExpression.nodeType === ParseNodeType.MemberAccess &&
