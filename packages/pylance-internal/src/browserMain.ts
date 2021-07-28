@@ -1,13 +1,16 @@
 import { BrowserMessageReader, BrowserMessageWriter, createConnection } from 'vscode-languageserver/browser';
 
 import { DefaultCancellationProvider } from 'pyright-internal/common/cancellationUtils';
+import { DiagnosticSeverityOverrides } from 'pyright-internal/common/commandLineOptions';
+import { LogLevel } from 'pyright-internal/common/console';
+import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
 import { nullFileWatcherProvider } from 'pyright-internal/common/fileSystem';
 import { WorkspaceMap } from 'pyright-internal/workspaceMap';
 
 import { Commands } from './commands/commands';
 import { BrowserFileSystem } from './common/browserFileSystem';
 import { PYRIGHT_COMMIT, VERSION } from './common/constants';
-import { PylanceServer } from './server';
+import { PylanceServer, PylanceServerSettings } from './server';
 
 export interface BrowserConfig {
     distUrl: string; // URL to Pylance's dist folder.
@@ -36,6 +39,26 @@ async function runServer(
     messageWriter: BrowserMessageWriter
 ) {
     const rootDirectory = __dirname;
+    const serverSettings: PylanceServerSettings = {
+        autoSearchPaths: false,
+        disableLanguageServices: false,
+        openFilesOnly: true,
+        useLibraryCodeForTypes: false,
+        watchForSourceChanges: false,
+        watchForLibraryChanges: false,
+        watchForConfigChanges: false,
+        typeCheckingMode: 'off',
+        diagnosticSeverityOverrides: {
+            [DiagnosticRule.reportMissingImports]: DiagnosticSeverityOverrides.None,
+            [DiagnosticRule.reportMissingModuleSource]: DiagnosticSeverityOverrides.None,
+        },
+        logLevel: LogLevel.Info,
+        autoImportCompletions: true,
+        indexing: false,
+        completeFunctionParens: false,
+        enableExtractCodeAction: false,
+        useImportHeuristic: false,
+    };
 
     try {
         new PylanceServer(
@@ -47,9 +70,11 @@ async function runServer(
                 fileSystem: new BrowserFileSystem(rootDirectory, config.distUrl),
                 fileWatcherProvider: nullFileWatcherProvider,
                 cancellationProvider: new DefaultCancellationProvider(),
+                disableChecker: true,
                 supportedCommands: [Commands.completionAccepted],
             },
             createConnection(messageReader, messageWriter),
+            serverSettings,
             (_1, _2) => undefined
         );
     } catch (e: any) {

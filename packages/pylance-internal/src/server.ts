@@ -127,16 +127,13 @@ export class PylanceServer extends LanguageServerBase {
     private _inExperimentCache: Map<string, boolean>;
     private _getExperimentValueCache: Map<string, any>;
 
-    private _backgroundThreadFactory: BackgroundAnalysisFactory;
-
     constructor(
         serverOptions: ServerOptions,
         connection: Connection,
-        backgroundThreadFactory: BackgroundAnalysisFactory
+        private _defaultSettings: PylanceServerSettings,
+        private _backgroundThreadFactory: BackgroundAnalysisFactory
     ) {
         super(serverOptions, connection);
-
-        this._backgroundThreadFactory = backgroundThreadFactory;
 
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.
@@ -166,23 +163,9 @@ export class PylanceServer extends LanguageServerBase {
     }
 
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
-        const serverSettings: PylanceServerSettings = {
-            autoSearchPaths: true,
-            disableLanguageServices: false,
-            openFilesOnly: true,
-            useLibraryCodeForTypes: true,
-            watchForSourceChanges: true,
-            watchForLibraryChanges: true,
-            watchForConfigChanges: true,
-            typeCheckingMode: 'off',
-            diagnosticSeverityOverrides: {},
-            logLevel: LogLevel.Info,
-            autoImportCompletions: true,
-            indexing: false,
-            completeFunctionParens: false,
-            enableExtractCodeAction: true,
-            useImportHeuristic: false,
-        };
+        // Clone default settings to local server settings. It is safe to clone settings
+        // using JSON since it is a pure record type (no circular reference nor function)
+        const serverSettings = JSON.parse(JSON.stringify(this._defaultSettings));
 
         if (IS_INSIDERS) {
             serverSettings.indexing = true;
@@ -481,7 +464,8 @@ export class PylanceServer extends LanguageServerBase {
             importResolver,
             extension,
             backgroundAnalysis,
-            maxAnalysisTime
+            maxAnalysisTime,
+            this._serverOptions.disableChecker
         );
     }
 
@@ -787,9 +771,10 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
         importResolver: ImportResolver,
         extension?: LanguageServiceExtension,
         backgroundAnalysis?: BackgroundAnalysisBase,
-        maxAnalysisTime?: MaxAnalysisTime
+        maxAnalysisTime?: MaxAnalysisTime,
+        disableChecker?: boolean
     ) {
-        super(console, configOptions, importResolver, extension, backgroundAnalysis, maxAnalysisTime);
+        super(console, configOptions, importResolver, extension, backgroundAnalysis, maxAnalysisTime, disableChecker);
     }
 
     async getSemanticTokens(
