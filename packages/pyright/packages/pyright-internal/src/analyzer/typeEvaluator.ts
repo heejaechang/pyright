@@ -4071,7 +4071,7 @@ export function createTypeEvaluator(
             }
         }
 
-        if (isTypeVar(type)) {
+        if (isTypeVar(type) && !type.details.isSynthesized) {
             type = validateTypeVarUsage(node, type, flags);
         }
 
@@ -8606,9 +8606,11 @@ export function createTypeEvaluator(
             ) {
                 const typeParams = type.strippedFirstParamType.details.typeParameters;
                 type.strippedFirstParamType.typeArguments.forEach((typeArg, index) => {
-                    const typeParam = typeParams[index];
-                    if (!isTypeSame(typeParam, typeArg, /* ignorePseudoGeneric */ true)) {
-                        typeVarMap.setTypeVarType(typeParams[index], typeArg);
+                    if (index < typeParams.length) {
+                        const typeParam = typeParams[index];
+                        if (!isTypeSame(typeParam, typeArg, /* ignorePseudoGeneric */ true)) {
+                            typeVarMap.setTypeVarType(typeParams[index], typeArg);
+                        }
                     }
                 });
             }
@@ -18655,8 +18657,10 @@ export function createTypeEvaluator(
                         );
                     }
                 }
-            } else if (isIsOperator && isPositiveTest) {
-                return undefined;
+            } else if (isPositiveTest) {
+                if (isIsOperator || isNone(subtype)) {
+                    return undefined;
+                }
             }
 
             return subtype;
@@ -21860,10 +21864,11 @@ export function createTypeEvaluator(
             return true;
         }
 
-        if (isUnion(srcType)) {
+        const expandedSrcType = makeTopLevelTypeVarsConcrete(srcType);
+        if (isUnion(expandedSrcType)) {
             // Start by checking for an exact match. This is needed to handle unions
             // that contain recursive type aliases.
-            if (isTypeSame(srcType, destType)) {
+            if (isTypeSame(expandedSrcType, destType)) {
                 return true;
             }
 
@@ -21872,7 +21877,7 @@ export function createTypeEvaluator(
             if (flags & CanAssignFlags.EnforceInvariance) {
                 if (isUnion(destType)) {
                     const remainingDestSubtypes: Type[] = [];
-                    let remainingSrcSubtypes: Type[] = [...srcType.subtypes];
+                    let remainingSrcSubtypes: Type[] = [...expandedSrcType.subtypes];
                     let isIncompatible = false;
 
                     // First attempt to match all of the non-generic types in the dest
@@ -21950,7 +21955,7 @@ export function createTypeEvaluator(
 
             // For union sources, all of the types need to be assignable to the dest.
             let isIncompatible = false;
-            doForEachSubtype(srcType, (subtype) => {
+            doForEachSubtype(expandedSrcType, (subtype) => {
                 if (
                     !canAssignType(destType, subtype, new DiagnosticAddendum(), typeVarMap, flags, recursionCount + 1)
                 ) {
