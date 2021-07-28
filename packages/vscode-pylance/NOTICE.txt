@@ -3292,15 +3292,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.157 - MIT
+pyright 1.1.158 - MIT
 https://github.com/Microsoft/pyright#readme
 
+copyright_holder Any project
 Copyright (c) Microsoft Corporation.
-Copyright (c) 2014-2016, Jon Schlinkert.
-Copyright (c) 2014-2017, Jon Schlinkert.
-Copyright (c) 2014-2018, Jon Schlinkert.
-Copyright (c) 2014-present, Jon Schlinkert.
-Copyright (c) 2015-present, Jon Schlinkert.
 Copyright (c) 2015 Jukka Lehtosalo and contributors
 Copyright (c) 2011-2017 KARASZI Istvan <github@spam.raszi.hu>
 
