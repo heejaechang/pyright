@@ -42,8 +42,11 @@
 
 ### Using Pylance web extension
 
--   see [here](https://github.com/microsoft/vscode-internalbacklog/wiki/Web-Extensions#try-your-web-extension-in-a-browser) for more detail.
--   run `npx vscode-test-web --browserType=chromium --extensionDevelopmentPath=[path to "pylance-client"]` to test the extension.
+-   Apply [this commit](https://github.com/jakebailey/vscode/commit/be6b419abcb0e1f6bf89b631f93814ba1eb1ea32) to the VS Code repo.
+-   Modify `tasks.json`'s `yarn web` task to point to the extension you want to debug.
+-   With the vscode repo open, run the main build task to build all of VS Code, including the web bits.
+-   Build the extension.
+-   Run the "Web, Edge" launch task in the VS Code repo, which launches a browser with VS Code attached.
 
 ### Debugging IntelliCode in Pylance test extension
 

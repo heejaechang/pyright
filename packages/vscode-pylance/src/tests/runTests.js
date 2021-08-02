@@ -1,5 +1,5 @@
 const path = require('path');
-const vsct = require('vscode-test');
+const vsct = require('@vscode/test-electron');
 const extRoot = path.resolve(__dirname, '..', '..');
 
 function start() {
