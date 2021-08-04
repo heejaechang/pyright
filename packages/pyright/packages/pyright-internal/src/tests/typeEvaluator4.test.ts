@@ -119,7 +119,7 @@ test('Import2', () => {
 
 test('Import4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['import4.py']);
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('Import6', () => {
@@ -657,6 +657,12 @@ test('ClassVar2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar2.py']);
 
     TestUtils.validateResults(analysisResults, 1);
+});
+
+test('ClassVar3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar3.py']);
+
+    TestUtils.validateResults(analysisResults, 7);
 });
 
 test('TypeVar1', () => {

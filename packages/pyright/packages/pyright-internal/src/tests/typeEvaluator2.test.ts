@@ -676,7 +676,7 @@ test('GenericTypes64', () => {
 test('Protocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol1.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Protocol2', () => {
@@ -779,6 +779,12 @@ test('Protocol17', () => {
 
 test('Protocol18', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol18.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('Protocol19', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['protocol19.py']);
 
     TestUtils.validateResults(analysisResults, 2);
 });
