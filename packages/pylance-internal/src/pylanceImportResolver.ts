@@ -28,6 +28,7 @@ import {
     getFileExtension,
     getFileName,
     getFileSystemEntriesFromDirEntries,
+    isDiskPathRoot,
     normalizePath,
     normalizePathCase,
     resolvePaths,
@@ -304,9 +305,11 @@ export class PylanceImportResolver extends ImportResolver {
                     };
                 }
 
-                current = ensureTrailingDirectorySeparator(
-                    normalizePathCase(this.fileSystem, normalizePath(combinePaths(current, '..')))
-                );
+                let success;
+                [success, current] = this._tryWalkUp(current);
+                if (!success) {
+                    break;
+                }
                 level++;
             }
 
@@ -323,6 +326,19 @@ export class PylanceImportResolver extends ImportResolver {
         });
 
         return importResult;
+    }
+
+    private _tryWalkUp(current: string): [success: boolean, path: string] {
+        if (isDiskPathRoot(current)) {
+            return [false, ''];
+        }
+
+        return [
+            true,
+            ensureTrailingDirectorySeparator(
+                normalizePathCase(this.fileSystem, normalizePath(combinePaths(current, '..')))
+            ),
+        ];
     }
 
     override getCompletionSuggestions(
@@ -342,9 +358,11 @@ export class PylanceImportResolver extends ImportResolver {
             while (this._shouldWalkUp(current, root, execEnv)) {
                 this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, similarityLimit);
 
-                current = ensureTrailingDirectorySeparator(
-                    normalizePathCase(this.fileSystem, normalizePath(combinePaths(current, '..')))
-                );
+                let success;
+                [success, current] = this._tryWalkUp(current);
+                if (!success) {
+                    break;
+                }
             }
         }
 

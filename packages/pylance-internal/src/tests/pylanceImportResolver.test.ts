@@ -104,6 +104,18 @@ test('import side by side file sub under lib folder', () => {
     assert(!importResult.isImportFound);
 });
 
+test('dont walk up the root', () => {
+    const files = [
+        {
+            path: combinePaths('/', 'file1.py'),
+            content: 'def test1(): ...',
+        },
+    ];
+
+    const importResult = getImportResult(files, ['notExist'], (c) => (c.projectRoot = ''));
+    assert(!importResult.isImportFound);
+});
+
 function getImportResult(
     files: { path: string; content: string }[],
     nameParts: string[],
