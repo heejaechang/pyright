@@ -150,7 +150,7 @@ interface StartupTelemetry {
     analysisMs: number;
     userIndexMs: number; // user file indexing
     totalMs: number;
-    peakRssMB: number;
+    peakRss?: number | undefined;
 }
 
 class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
@@ -260,7 +260,9 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
 
         // track peak memory usage
         const usage = process.memoryUsage();
-        this._startupTelemetry.peakRssMB = Math.max(usage.rss, this._startupTelemetry.peakRssMB);
+        if (usage.rss !== 0) {
+            this._startupTelemetry.peakRss = Math.max(usage.rss, this._startupTelemetry.peakRss ?? 0);
+        }
     }
 
     protected override analysisDone(port: MessagePort, cancellationId: string) {
@@ -286,8 +288,11 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             event.Measurements['analysisMs'] = this._startupTelemetry.analysisMs;
             event.Measurements['userIndexMs'] = this._startupTelemetry.userIndexMs;
             event.Measurements['totalMs'] = this._startupTelemetry.totalMs;
-            event.Measurements['peakRssMB'] = this._startupTelemetry.peakRssMB / 1024 / 1024;
             event.Measurements['preSetFileOpenMs'] = this._startupTelemetry.preSetFileOpenMs;
+
+            if (this._startupTelemetry.peakRss !== undefined) {
+                event.Measurements['peakRssMB'] = this._startupTelemetry.peakRss / 1024 / 1024;
+            }
 
             this._telemetry.sendTelemetry(event);
             this._startupDuration = undefined;
@@ -312,7 +317,6 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             analysisMs: 0,
             userIndexMs: 0,
             totalMs: 0,
-            peakRssMB: 0,
         };
     }
 

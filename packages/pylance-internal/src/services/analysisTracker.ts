@@ -33,33 +33,36 @@ export class AnalysisTracker {
                 return undefined;
             }
 
-            const usage = process.memoryUsage();
-            this._peakRss = Math.max(usage.rss, this._peakRss);
+            // Update peakRss.
+            this._getMemoryUsage();
 
             return undefined;
         }
 
-        const usage = process.memoryUsage();
-        this._peakRss = Math.max(usage.rss, this._peakRss);
+        const usage = this._getMemoryUsage();
 
         if (!isComplete) {
             return undefined;
         }
 
-        const peakRss = this._peakRss;
         const elapsedMs = this._elapsedSum * 1000;
 
         this._elapsedSum = 0;
         this._telemetryLimiter = new Duration();
-        this._peakRss = 0;
 
         const te = new TelemetryEvent(TelemetryEventName.ANALYSIS_COMPLETE);
 
-        te.Measurements['peakRssMB'] = peakRss / 1024 / 1024;
-        te.Measurements['rssMB'] = usage.rss / 1024 / 1024;
-        te.Measurements['heapTotalMB'] = usage.heapTotal / 1024 / 1024;
-        te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
-        te.Measurements['externalMB'] = usage.external / 1024 / 1024;
+        if (usage) {
+            const peakRss = this._peakRss;
+            this._peakRss = 0;
+
+            te.Measurements['peakRssMB'] = peakRss / 1024 / 1024;
+            te.Measurements['rssMB'] = usage.rss / 1024 / 1024;
+            te.Measurements['heapTotalMB'] = usage.heapTotal / 1024 / 1024;
+            te.Measurements['heapUsedMB'] = usage.heapUsed / 1024 / 1024;
+            te.Measurements['externalMB'] = usage.external / 1024 / 1024;
+        }
+
         te.Measurements['elapsedMs'] = elapsedMs;
         te.Measurements['numFilesAnalyzed'] = -1; // TODO: Figure out how to actually calculate this.
         te.Measurements['numFilesInProgram'] = results.filesInProgram;
@@ -67,5 +70,15 @@ export class AnalysisTracker {
         te.Measurements['isFirstRun'] = isFirstRun ? 1 : 0;
 
         return te;
+    }
+
+    private _getMemoryUsage(): NodeJS.MemoryUsage | undefined {
+        const usage = process.memoryUsage();
+        if (usage.rss === 0) {
+            return undefined;
+        }
+
+        this._peakRss = Math.max(usage.rss, this._peakRss);
+        return usage;
     }
 }
