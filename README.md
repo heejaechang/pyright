@@ -106,17 +106,19 @@ Pyright is included as a [git subrepo](https://github.com/ingydotnet/git-subrepo
 Subrepos are implemented via `git worktree`, which allows custom git trees to exist as regular branches,
 and a `.gitrepo` file which stores the subrepo's metadata (no magic strings in commits to preserve).
 
-Use the `.\subrepo.ps1` script to manage the subrepo. Example commands include:
+Use the `subrepo.py` script to manage the subrepo. Example commands include:
 
 ```ps1
 # Pull from upstream pyright into packages/pyright
-.\subrepo.ps1 pull
+python subrepo.py pull
 # Create a squashed commit on a temporary branch to push back to pyright
-.\subrepo.ps1 branch -m "commit message"
+python subrepo.py branch -m "commit message"
 # Push the squashed comment created by "subrepo branch" to your fork ("pyright-fork" remote, see below)
-.\subrepo.ps1 push-to-fork -forkBranch some-branch-name
+python subrepo.py push-to-fork --fork-branch some-branch-name
 # Push the squashed comment created by "subrepo branch" to a specific remote.
-.\subrepo.ps1 push-to-fork -forkRemote my-custom-remote -forkBranch some-branch-name
+python subrepo.py push-to-fork --fork-remote my-custom-remote --fork-branch some-branch-name
+# After fixing a merge conflict, commit the changes to continue pulling (instead of "git subrepo commit")
+python subrepo.py commit
 ```
 
 The script contain comments which explain each of the steps. If the `git subrepo` fails, it will
@@ -138,15 +140,15 @@ Instead, follow the steps below to manually split out changes to a branch and pu
 
 ### Installing git-subrepo
 
+This repo vendors `git-subrepo`, and the `subrepo.py` script uses that installation.
+In the event that you need to use `git-subrepo` directly, you can install the vendored
+by either doing `source ./build/git-subrepo/.rc` in bash, or on Windows (assuming `E:\pyrx`):
+
 `git-subrepo` is not included with the main git installation. To install on Windows:
 
-1. Clone `git-subrepo` somewhere. For the rest of these instructions, assume a clone in `E:\git-subrepo`
-1. Check out the latest release tag -- `git checkout 0.4.1`
-1. Set the environment variable `GIT_SUBREPO_ROOT` to `E:\git-subrepo`
-1. Prepend the `PATH` environment variable with `E:\git-subrepo;E:\git-subrepo\lib`
+1. Set the environment variable `GIT_SUBREPO_ROOT` to `E:\pyrx\build\git-subrepo`
+1. Prepend the `PATH` environment variable with `E:\pyrx\build\git-subrepo\lib`
 1. Close and reopen all terminals to ensure the variables are picked up.
-
-On other OSs, follow `git-subrepo`'s README.
 
 ## Updating all dependencies
 
