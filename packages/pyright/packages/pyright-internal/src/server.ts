@@ -21,7 +21,7 @@ import { BackgroundAnalysis } from './backgroundAnalysis';
 import { BackgroundAnalysisBase } from './backgroundAnalysisBase';
 import { CommandController } from './commands/commandController';
 import { getCancellationFolderName } from './common/cancellationUtils';
-import { LogLevel } from './common/console';
+import { ConsoleWithLogLevel, LogLevel } from './common/console';
 import { isDebugMode, isString } from './common/core';
 import { FileBasedCancellationProvider } from './common/fileBasedCancellationUtils';
 import { convertUriToPath, resolvePaths } from './common/pathUtils';
@@ -45,9 +45,10 @@ export class PyrightServer extends LanguageServerBase {
         // be __dirname.
         const rootDirectory = (global as any).__rootDirectory || __dirname;
 
+        const console = new ConsoleWithLogLevel(connection.console);
         const workspaceMap = new WorkspaceMap();
-        const fileWatcherProvider = new WorkspaceFileWatcherProvider(workspaceMap);
-        const fileSystem = createFromRealFileSystem(connection.console, fileWatcherProvider);
+        const fileWatcherProvider = new WorkspaceFileWatcherProvider(workspaceMap, console);
+        const fileSystem = createFromRealFileSystem(console, fileWatcherProvider);
 
         super(
             {
@@ -61,7 +62,8 @@ export class PyrightServer extends LanguageServerBase {
                 maxAnalysisTimeInForeground,
                 supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.SourceOrganizeImports],
             },
-            connection
+            connection,
+            console
         );
 
         this._controller = new CommandController(this);

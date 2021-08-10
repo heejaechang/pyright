@@ -1,6 +1,6 @@
 import { CodeActionKind } from 'vscode-languageserver';
 
-import { LogLevel } from 'pyright-internal/common/console';
+import { ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
 import { FileBasedCancellationProvider } from 'pyright-internal/common/fileBasedCancellationUtils';
 import { createFromRealFileSystem, WorkspaceFileWatcherProvider } from 'pyright-internal/common/realFileSystem';
 import { run } from 'pyright-internal/nodeServer';
@@ -34,9 +34,10 @@ export function main() {
             useImportHeuristic: false,
         };
 
+        const console = new ConsoleWithLogLevel(conn.console);
         const workspaceMap = new WorkspaceMap();
-        const fileWatcherProvider = new WorkspaceFileWatcherProvider(workspaceMap);
-        const fileSystem = createFromRealFileSystem(conn.console, fileWatcherProvider);
+        const fileWatcherProvider = new WorkspaceFileWatcherProvider(workspaceMap, console);
+        const fileSystem = createFromRealFileSystem(console, fileWatcherProvider);
         const intelliCode = new IntelliCodeExtension();
 
         new PylanceServer(
@@ -53,6 +54,7 @@ export function main() {
                 supportedCodeActions: [CodeActionKind.QuickFix, CodeActionKind.RefactorExtract],
             },
             conn,
+            console,
             serverSettings,
             (t, c) => new BackgroundAnalysis(t, c)
         );

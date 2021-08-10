@@ -130,10 +130,11 @@ export class PylanceServer extends LanguageServerBase {
     constructor(
         serverOptions: ServerOptions,
         connection: Connection,
+        console: ConsoleInterface,
         private _defaultSettings: PylanceServerSettings,
         private _backgroundThreadFactory: BackgroundAnalysisFactory
     ) {
-        super(serverOptions, connection);
+        super(serverOptions, connection, console);
 
         // root directory will be used for 2 different purpose.
         // 1. to find "typeshed-fallback" folder.

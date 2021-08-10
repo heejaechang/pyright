@@ -2,7 +2,7 @@ import { BrowserMessageReader, BrowserMessageWriter, createConnection } from 'vs
 
 import { DefaultCancellationProvider } from 'pyright-internal/common/cancellationUtils';
 import { DiagnosticSeverityOverrides } from 'pyright-internal/common/commandLineOptions';
-import { LogLevel } from 'pyright-internal/common/console';
+import { ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
 import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
 import { nullFileWatcherProvider } from 'pyright-internal/common/fileSystem';
 import { WorkspaceMap } from 'pyright-internal/workspaceMap';
@@ -61,6 +61,8 @@ async function runServer(
     };
 
     try {
+        const conn = createConnection(messageReader, messageWriter);
+        const console = new ConsoleWithLogLevel(conn.console);
         new PylanceServer(
             {
                 productName: 'Pylance',
@@ -73,7 +75,8 @@ async function runServer(
                 disableChecker: true,
                 supportedCommands: [Commands.completionAccepted],
             },
-            createConnection(messageReader, messageWriter),
+            conn,
+            console,
             serverSettings,
             (_1, _2) => undefined
         );
