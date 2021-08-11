@@ -16,14 +16,19 @@ import {
 } from 'vscode-languageserver';
 
 import { AnalysisResults } from './analyzer/analysis';
+import { ImportResolver } from './analyzer/importResolver';
 import { isPythonBinary } from './analyzer/pythonPathUtils';
 import { BackgroundAnalysis } from './backgroundAnalysis';
 import { BackgroundAnalysisBase } from './backgroundAnalysisBase';
 import { CommandController } from './commands/commandController';
 import { getCancellationFolderName } from './common/cancellationUtils';
+import { ConfigOptions } from './common/configOptions';
 import { ConsoleWithLogLevel, LogLevel } from './common/console';
 import { isDebugMode, isString } from './common/core';
 import { FileBasedCancellationProvider } from './common/fileBasedCancellationUtils';
+import { FileSystem } from './common/fileSystem';
+import { FullAccessHost } from './common/fullAccessHost';
+import { Host } from './common/host';
 import { convertUriToPath, resolvePaths } from './common/pathUtils';
 import { ProgressReporter } from './common/progressReporter';
 import { createFromRealFileSystem, WorkspaceFileWatcherProvider } from './common/realFileSystem';
@@ -211,6 +216,14 @@ export class PyrightServer extends LanguageServerBase {
         }
 
         return new BackgroundAnalysis(this.console);
+    }
+
+    protected override createHost() {
+        return new FullAccessHost(this.fs);
+    }
+
+    protected override createImportResolver(fs: FileSystem, options: ConfigOptions, host: Host): ImportResolver {
+        return new ImportResolver(fs, options, host);
     }
 
     protected executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {

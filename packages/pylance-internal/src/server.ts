@@ -43,6 +43,7 @@ import { isBoolean, isNumber, isString } from 'pyright-internal/common/core';
 import * as debug from 'pyright-internal/common/debug';
 import { LanguageServiceExtension } from 'pyright-internal/common/extensibility';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { Host, HostKind } from 'pyright-internal/common/host';
 import * as consts from 'pyright-internal/common/pathConsts';
 import { convertUriToPath, resolvePaths } from 'pyright-internal/common/pathUtils';
 import { ProgressReporter } from 'pyright-internal/common/progressReporter';
@@ -127,12 +128,16 @@ export class PylanceServer extends LanguageServerBase {
     private _inExperimentCache: Map<string, boolean>;
     private _getExperimentValueCache: Map<string, any>;
 
+    private _hasTrustedWorkspaceSupport?: boolean;
+    private _hostKind: HostKind = HostKind.LimitedAccess;
+
     constructor(
         serverOptions: ServerOptions,
         connection: Connection,
         console: ConsoleInterface,
         private _defaultSettings: PylanceServerSettings,
-        private _backgroundThreadFactory: BackgroundAnalysisFactory
+        private _backgroundThreadFactory: BackgroundAnalysisFactory,
+        private _hostFactory: (kind: HostKind, fs: FileSystem) => Host
     ) {
         super(serverOptions, connection, console);
 
@@ -181,6 +186,8 @@ export class PylanceServer extends LanguageServerBase {
             const useImportHeuristicExperiment = await this._inExperiment('useImportHeuristic');
             serverSettings.useImportHeuristic = useImportHeuristicExperiment ?? false;
         }
+
+        this._hostKind = await this._getHostKind();
 
         let forceProgressBar = false;
 
@@ -380,6 +387,7 @@ export class PylanceServer extends LanguageServerBase {
         }
 
         this._hasExperimentationSupport = params.initializationOptions?.experimentationSupport;
+        this._hasTrustedWorkspaceSupport = params.initializationOptions?.trustedWorkspaceSupport;
 
         return result;
     }
@@ -449,6 +457,15 @@ export class PylanceServer extends LanguageServerBase {
                 return tokens;
             }
         );
+
+        this._connection.onNotification(CustomLSP.Notifications.WorkspaceTrusted, async (params) => {
+            this._hostKind = params.isTrusted ? HostKind.FullAccess : HostKind.LimitedAccess;
+            this.restart();
+        });
+    }
+
+    protected override createHost() {
+        return this._hostFactory(this._hostKind, this.fs);
     }
 
     protected override createBackgroundAnalysisProgram(
@@ -489,8 +506,8 @@ export class PylanceServer extends LanguageServerBase {
         return this._controller.execute(params, token);
     }
 
-    protected override createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        return createPylanceImportResolver(fs, options);
+    protected override createImportResolver(fs: FileSystem, options: ConfigOptions, host: Host): ImportResolver {
+        return createPylanceImportResolver(fs, options, host);
     }
 
     protected async executeCodeAction(
@@ -724,6 +741,21 @@ export class PylanceServer extends LanguageServerBase {
         });
         this._inExperimentCache.set(experimentName, inExperiment);
         return inExperiment;
+    }
+
+    private async _getHostKind(): Promise<HostKind> {
+        if (!this._hasTrustedWorkspaceSupport) {
+            // if TrustedWorkspace is not supported, for backward compatibility, we assume HostKind.FullAccess workspace.
+            return HostKind.FullAccess;
+        }
+
+        const { isTrusted } = await CustomLSP.sendRequest(
+            this._connection,
+            CustomLSP.Requests.IsTrustedWorkspace,
+            undefined
+        );
+
+        return isTrusted ? HostKind.FullAccess : HostKind.LimitedAccess;
     }
 
     private async _getExperimentValue<T extends boolean | number | string>(

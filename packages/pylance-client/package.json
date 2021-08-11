@@ -26,6 +26,15 @@
         "onLanguage:python",
         "workspaceContains:pyrightconfig.json"
     ],
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "Any feature that requires running python interpreter to function will be disabled. [Add more description]",
+            "restrictedConfigurations": [
+                "python.pythonPath"
+            ]
+        }
+    },
     "icon": "images/icon.png",
     "main": "./dist/extension.js",
     "browser": "./dist/browser.extension.js",

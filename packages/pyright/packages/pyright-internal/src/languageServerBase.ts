@@ -68,6 +68,7 @@ import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/d
 import { DiagnosticRule } from './common/diagnosticRules';
 import { LanguageServiceExtension } from './common/extensibility';
 import { FileSystem, FileWatcherEventType, FileWatcherProvider, isInZipOrEgg } from './common/fileSystem';
+import { Host } from './common/host';
 import { convertPathToUri, convertUriToPath } from './common/pathUtils';
 import { ProgressReporter, ProgressReportTracker } from './common/progressReporter';
 import { DocumentRange, Position } from './common/textRange';
@@ -304,9 +305,8 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         return undefined;
     }
 
-    protected createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        return new ImportResolver(fs, options);
-    }
+    protected abstract createHost(): Host;
+    protected abstract createImportResolver(fs: FileSystem, options: ConfigOptions, host: Host): ImportResolver;
 
     protected createBackgroundAnalysisProgram(
         console: ConsoleInterface,
@@ -343,6 +343,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             name,
             this.fs,
             this.console,
+            this.createHost.bind(this),
             this.createImportResolver.bind(this),
             undefined,
             this._serverOptions.extension,

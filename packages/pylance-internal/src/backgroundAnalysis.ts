@@ -16,9 +16,8 @@ import {
     AnalysisResponse,
     BackgroundAnalysisBase,
     BackgroundAnalysisRunnerBase,
-    InitializationData,
 } from 'pyright-internal/backgroundAnalysisBase';
-import { getBackgroundWaiter, run } from 'pyright-internal/backgroundThreadBase';
+import { getBackgroundWaiter, InitializationData, run } from 'pyright-internal/backgroundThreadBase';
 import {
     getCancellationFolderName,
     OperationCanceledException,
@@ -29,10 +28,12 @@ import { ConsoleInterface, LogLevel } from 'pyright-internal/common/console';
 import { isString } from 'pyright-internal/common/core';
 import { getCancellationTokenFromId, getCancellationTokenId } from 'pyright-internal/common/fileBasedCancellationUtils';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { Host, HostKind } from 'pyright-internal/common/host';
 import { Range } from 'pyright-internal/common/textRange';
 import { Duration } from 'pyright-internal/common/timing';
 
 import { mainFilename } from './common/mainModuleFileName';
+import { PylanceFullAccessHost } from './common/pylanceFullAccessHost';
 import {
     TelemetryEvent,
     TelemetryEventInterface,
@@ -78,16 +79,16 @@ export class BackgroundAnalysis extends BackgroundAnalysisBase {
         }
     }
 
-    override startIndexing(configOptions: ConfigOptions, indices: Indices) {
-        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
+    override startIndexing(configOptions: ConfigOptions, kind: HostKind, indices: Indices) {
+        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, kind, indices);
     }
 
-    override refreshIndexing(configOptions: ConfigOptions, indices?: Indices) {
+    override refreshIndexing(configOptions: ConfigOptions, kind: HostKind, indices?: Indices) {
         if (!indices) {
             return;
         }
 
-        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, indices);
+        Indexer.requestIndexingFromBackgroundThread(this._telemetry, this.console, configOptions, kind, indices);
     }
 
     override cancelIndexing(configOptions: ConfigOptions) {
@@ -163,9 +164,11 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     private _analysisDuration?: Duration;
     private _startupDuration?: Duration;
     private _hasOpenedFile = false;
+    private _hostKind: HostKind | undefined;
 
     constructor() {
         super();
+
         this._startupDuration = new Duration();
         this._startupTelemetry = this._initialStartupTelemetry();
         this._telemetry = {
@@ -212,6 +215,12 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
 
                     return tokens;
                 }, msg.port!);
+                break;
+            }
+
+            case 'setImportResolver': {
+                this._hostKind = msg.data;
+                super.onMessage(msg);
                 break;
             }
 
@@ -320,8 +329,13 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
         };
     }
 
-    protected override createImportResolver(fs: FileSystem, options: ConfigOptions): ImportResolver {
-        return createPylanceImportResolver(fs, options, this._resolverId++, this.getConsole(), this._telemetry);
+    protected override createHost(): Host {
+        // It is called inside of the base ctor, so field can't be initialized.
+        return PylanceFullAccessHost.createHost(this._hostKind ?? HostKind.LimitedAccess, this.fs);
+    }
+
+    protected override createImportResolver(fs: FileSystem, options: ConfigOptions, host: Host): ImportResolver {
+        return createPylanceImportResolver(fs, options, host, this._resolverId++, this.getConsole(), this._telemetry);
     }
 
     protected override processIndexing(port: MessagePort, token: CancellationToken) {

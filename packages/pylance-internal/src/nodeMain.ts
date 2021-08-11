@@ -9,6 +9,7 @@ import { WorkspaceMap } from 'pyright-internal/workspaceMap';
 import { BackgroundAnalysis, runBackgroundThread } from './backgroundAnalysis';
 import { CommandController } from './commands/commandController';
 import { PYRIGHT_COMMIT, VERSION } from './common/constants';
+import { PylanceFullAccessHost } from './common/pylanceFullAccessHost';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { PylanceServer, PylanceServerSettings } from './server';
 
@@ -56,7 +57,8 @@ export function main() {
             conn,
             console,
             serverSettings,
-            (t, c) => new BackgroundAnalysis(t, c)
+            (t, c) => new BackgroundAnalysis(t, c),
+            (t, f) => PylanceFullAccessHost.createHost(t, f)
         );
     }, runBackgroundThread);
 }

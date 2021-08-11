@@ -5,6 +5,7 @@ import { DiagnosticSeverityOverrides } from 'pyright-internal/common/commandLine
 import { ConsoleWithLogLevel, LogLevel } from 'pyright-internal/common/console';
 import { DiagnosticRule } from 'pyright-internal/common/diagnosticRules';
 import { nullFileWatcherProvider } from 'pyright-internal/common/fileSystem';
+import { NoAccessHost } from 'pyright-internal/common/host';
 import { WorkspaceMap } from 'pyright-internal/workspaceMap';
 
 import { Commands } from './commands/commands';
@@ -78,7 +79,8 @@ async function runServer(
             conn,
             console,
             serverSettings,
-            (_1, _2) => undefined
+            () => undefined,
+            () => new NoAccessHost()
         );
     } catch (e: any) {
         console.error(e?.message);

@@ -5,7 +5,6 @@
  * resolution of additional type stub paths.
  */
 
-import * as child_process from 'child_process';
 import leven from 'leven';
 
 import {
@@ -20,6 +19,7 @@ import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/con
 import { ConsoleInterface } from 'pyright-internal/common/console';
 import { assertNever } from 'pyright-internal/common/debug';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { Host, HostKind } from 'pyright-internal/common/host';
 import {
     combinePaths,
     containsPath,
@@ -31,12 +31,12 @@ import {
     isDiskPathRoot,
     normalizePath,
     normalizePathCase,
-    resolvePaths,
 } from 'pyright-internal/common/pathUtils';
 import { Duration } from 'pyright-internal/common/timing';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
 import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
+import type { PylanceFullAccessHost } from './common/pylanceFullAccessHost';
 import {
     addMeasurementsToEvent,
     hashModuleNamesAndAddToEvent,
@@ -205,11 +205,12 @@ export class PylanceImportResolver extends ImportResolver {
     constructor(
         fs: FileSystem,
         configOptions: ConfigOptions,
+        host: Host,
         resolverId?: number,
         private _console?: ConsoleInterface,
         private _telemetry?: TelemetryInterface
     ) {
-        super(fs, configOptions);
+        super(fs, configOptions, host);
 
         this._resolverId = resolverId?.toString() ?? 'N/A';
 
@@ -726,21 +727,14 @@ export class PylanceImportResolver extends ImportResolver {
         const { moduleName } = this.getModuleNameForImport(stubFilePath, execEnv);
 
         try {
-            const commandLineArgs: string[] = [
-                '-W',
-                'ignore', // Don't print warnings to stderr.
-                '-B', // Disable generating .pyc caches.
-                '-S', // Disable the site module.
-                '-I', // Enable "isolated mode", which disables PYTHON* variables, ensures the cwd isn't in sys.path, etc. Python 3.4+
-                resolvePaths(this.fileSystem.getModulePath(), 'scripts', 'scrape_module.py'),
-                moduleName,
-            ];
+            if (this.host.kind !== HostKind.FullAccess) {
+                return false;
+            }
 
-            const output = child_process.execFileSync(this._configOptions.pythonPath!, commandLineArgs, {
-                encoding: 'utf8',
-                stdio: ['ignore', 'pipe', 'ignore'],
-                timeout: 10000,
-            });
+            const output = (this.host as PylanceFullAccessHost).scrapeModuleFromPython(
+                moduleName,
+                this._configOptions.pythonPath!
+            );
 
             if (!output) {
                 return false;
@@ -782,11 +776,12 @@ export class PylanceImportResolver extends ImportResolver {
 export function createPylanceImportResolver(
     fs: FileSystem,
     options: ConfigOptions,
+    host: Host,
     resolverId?: number,
     console?: ConsoleInterface,
     telemetry?: TelemetryInterface
 ): PylanceImportResolver {
-    return new PylanceImportResolver(fs, options, resolverId, console, telemetry);
+    return new PylanceImportResolver(fs, options, host, resolverId, console, telemetry);
 }
 
 interface ScanResult {

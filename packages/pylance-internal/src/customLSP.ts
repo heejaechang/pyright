@@ -13,25 +13,30 @@ export namespace CustomLSP {
     export enum Requests {
         InExperiment = 'python/inExperiment',
         GetExperimentValue = 'python/getExperimentValue',
+        IsTrustedWorkspace = 'python/isTrustedWorkspace',
     }
 
     export enum Notifications {
         BeginProgress = 'python/beginProgress',
         ReportProgress = 'python/reportProgress',
         EndProgress = 'python/endProgress',
+        WorkspaceTrusted = 'python/workspaceTrusted',
     }
 
     interface Params {
         [Requests.InExperiment]: { experimentName: string };
         [Requests.GetExperimentValue]: { experimentName: string };
+        [Requests.IsTrustedWorkspace]: undefined;
         [Notifications.BeginProgress]: undefined;
         [Notifications.ReportProgress]: string;
         [Notifications.EndProgress]: undefined;
+        [Notifications.WorkspaceTrusted]: { isTrusted: boolean };
     }
 
     interface Response {
         [Requests.InExperiment]: { inExperiment: boolean };
         [Requests.GetExperimentValue]: { value: any }; // Really "T extends boolean | number | string | undefined", but then Response would need to be generic.
+        [Requests.IsTrustedWorkspace]: { isTrusted: boolean };
     }
 
     export function sendRequest<P extends Params, R extends Response, M extends Requests & keyof P & keyof R & string>(

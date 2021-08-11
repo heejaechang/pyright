@@ -11,6 +11,8 @@
 import { Progress, ProgressLocation, window } from 'vscode';
 import { CommonLanguageClient, Disposable } from 'vscode-languageclient';
 
+import { CustomLSP } from 'pylance-internal/customLSP';
+
 const AnalysisTimeoutInMs = 60000;
 
 export class ProgressReporting implements Disposable {
@@ -20,7 +22,7 @@ export class ProgressReporting implements Disposable {
 
     constructor(languageClient: CommonLanguageClient) {
         languageClient.onReady().then(() => {
-            languageClient.onNotification('python/beginProgress', async () => {
+            languageClient.onNotification(CustomLSP.Notifications.BeginProgress, async () => {
                 const progressPromise = new Promise<void>((resolve) => {
                     this._resolveProgress = resolve;
                 });
@@ -39,14 +41,14 @@ export class ProgressReporting implements Disposable {
                 this._primeTimeoutTimer();
             });
 
-            languageClient.onNotification('python/reportProgress', (message: string) => {
+            languageClient.onNotification(CustomLSP.Notifications.ReportProgress, (message: string) => {
                 if (this._progress) {
                     this._progress.report({ message });
                     this._primeTimeoutTimer();
                 }
             });
 
-            languageClient.onNotification('python/endProgress', () => {
+            languageClient.onNotification(CustomLSP.Notifications.EndProgress, () => {
                 this._clearProgress();
             });
         });

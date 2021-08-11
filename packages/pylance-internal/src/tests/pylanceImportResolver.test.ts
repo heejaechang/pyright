@@ -9,6 +9,7 @@ import assert from 'assert';
 import { combinePaths, getDirectoryPath, normalizeSlashes } from 'pyright-internal//common/pathUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
+import { FullAccessHost } from 'pyright-internal/common/fullAccessHost';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 import { TestFileSystem } from 'pyright-internal/tests/harness/vfs/filesystem';
 
@@ -132,7 +133,7 @@ function getImportResult(
     setup(configOptions);
 
     const file = files[files.length - 1].path;
-    const importResolver = new PylanceImportResolver(fs, configOptions);
+    const importResolver = new PylanceImportResolver(fs, configOptions, new FullAccessHost(fs));
     importResolver.useImportHeuristic(true);
 
     const importResult = importResolver.resolveImport(file, configOptions.findExecEnvironment(file), {

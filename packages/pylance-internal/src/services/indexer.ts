@@ -12,8 +12,12 @@ import { MessageChannel, parentPort, threadId, Worker, workerData } from 'worker
 import { ImportResolver, ModuleNameAndType } from 'pyright-internal/analyzer/importResolver';
 import { Indices, Program } from 'pyright-internal/analyzer/program';
 import * as PythonPathUtils from 'pyright-internal/analyzer/pythonPathUtils';
-import { InitializationData } from 'pyright-internal/backgroundAnalysisBase';
-import { BackgroundThreadBase, createConfigOptionsFrom, LogData } from 'pyright-internal/backgroundThreadBase';
+import {
+    BackgroundThreadBase,
+    createConfigOptionsFrom,
+    InitializationData,
+    LogData,
+} from 'pyright-internal/backgroundThreadBase';
 import {
     getCancellationFolderName,
     OperationCanceledException,
@@ -28,6 +32,7 @@ import {
     getCancellationTokenFromId,
     getCancellationTokenId,
 } from 'pyright-internal/common/fileBasedCancellationUtils';
+import { HostKind } from 'pyright-internal/common/host';
 import { LogTracker } from 'pyright-internal/common/logTracker';
 import {
     combinePaths,
@@ -41,6 +46,7 @@ import { IndexResults, IndexSymbolData } from 'pyright-internal/languageService/
 
 import { deleteElement } from '../common/collectionUtils';
 import { mainFilename } from '../common/mainModuleFileName';
+import { PylanceFullAccessHost } from '../common/pylanceFullAccessHost';
 import { TelemetryEventInterface, TelemetryEventName, TelemetryInterface, trackPerf } from '../common/telemetry';
 import { PackageScanner } from '../packageScanner';
 import { createPylanceImportResolver } from '../pylanceImportResolver';
@@ -54,6 +60,7 @@ export class Indexer {
         telemetry: TelemetryInterface,
         console: ConsoleInterface,
         configOptions: ConfigOptions,
+        hostKind: HostKind,
         indices: Indices
     ) {
         // If previous indexing for this project is not done yet, cancel it now.
@@ -107,7 +114,9 @@ export class Indexer {
         });
 
         const cancellationId = getCancellationTokenId(source.token);
-        worker.postMessage({ requestType: 'index', data: { configOptions, cancellationId, port: port2 } }, [port2]);
+        worker.postMessage({ requestType: 'index', data: { configOptions, hostKind, cancellationId, port: port2 } }, [
+            port2,
+        ]);
     }
 
     static cancelIndexingRequest(configOptions: ConfigOptions) {
@@ -446,8 +455,13 @@ export class BackgroundIndexRunner extends BackgroundThreadBase {
                         const token = getCancellationTokenFromId(msg.data.cancellationId);
                         throwIfCancellationRequested(token);
 
+                        const console = this.getConsole();
                         const configOptions = createConfigOptionsFrom(msg.data.configOptions);
-                        const importResolver = createPylanceImportResolver(this.fs, configOptions);
+                        const importResolver = createPylanceImportResolver(
+                            this.fs,
+                            configOptions,
+                            PylanceFullAccessHost.createHost(msg.data.hostKind, this.fs)
+                        );
                         const map = trackPerf(
                             this._telemetry,
                             TelemetryEventName.INDEX_SLOW,
@@ -455,7 +469,7 @@ export class BackgroundIndexRunner extends BackgroundThreadBase {
                                 const result = Indexer.indexLibraries(
                                     importResolver,
                                     configOptions,
-                                    this.getConsole(),
+                                    console,
                                     `IDX(${threadId})`,
                                     [],
                                     token

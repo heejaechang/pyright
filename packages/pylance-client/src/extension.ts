@@ -11,9 +11,10 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
+import { LanguageClient, LanguageClientOptions, ServerOptions, State, TransportKind } from 'vscode-languageclient/node';
 
 import { ClientCommands, Commands } from 'pylance-internal/commands/commands';
+import { CustomLSP } from 'pylance-internal/customLSP';
 
 import { FileBasedCancellationStrategy } from './cancellationUtils';
 import { ProgressReporting } from './progress';
@@ -97,31 +98,66 @@ export function activate(context: vscode.ExtensionContext) {
             configurationSection: ['python', 'pyright'],
         },
         connectionOptions: { cancellationStrategy: cancellationStrategy },
+        initializationOptions: {
+            trustedWorkspaceSupport: true,
+        },
     };
 
     // Create the language client and start the client.
     const languageClient = new LanguageClient('python', 'Pylance', serverOptions, clientOptions);
-    const disposable = languageClient.start();
-
-    // Push the disposable to the context's subscriptions so that the
-    // client can be deactivated on extension deactivation.
-    context.subscriptions.push(disposable);
 
     // Allocate a progress reporting object.
     const progressReporting = new ProgressReporting(languageClient);
     context.subscriptions.push(progressReporting);
 
-    languageClient.onTelemetry((eventInfo) => {
-        console.log(`onTelemetry EventName: ${eventInfo.EventName}`);
+    context.subscriptions.push(
+        languageClient.onDidChangeState((e) => {
+            // The client's on* methods must be called after the client has started, but if called too
+            // late the server may have already sent a message (which leads to failures). Register
+            // these on the state change to running to ensure they are ready soon enough.
+            if (e.newState !== State.Running) {
+                return;
+            }
 
-        for (const [prop, value] of Object.entries(eventInfo.Properties)) {
-            console.log(`               Property: ${prop} : ${value}`);
-        }
+            // For now, Ignore case where client is stopped and re-started.
+            context.subscriptions.push(
+                languageClient.onTelemetry((eventInfo) => {
+                    console.log(`onTelemetry EventName: ${eventInfo.EventName}`);
 
-        for (const [measure, value] of Object.entries(eventInfo.Measurements)) {
-            console.log(`               Measurement: ${measure} : ${value}`);
-        }
-    });
+                    for (const [prop, value] of Object.entries(eventInfo.Properties)) {
+                        console.log(`               Property: ${prop} : ${value}`);
+                    }
+
+                    for (const [measure, value] of Object.entries(eventInfo.Measurements)) {
+                        console.log(`               Measurement: ${measure} : ${value}`);
+                    }
+                })
+            );
+
+            context.subscriptions.push(
+                languageClient.onRequest(CustomLSP.Requests.IsTrustedWorkspace, async () => {
+                    return {
+                        isTrusted: vscode.workspace.isTrusted,
+                    };
+                })
+            );
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidGrantWorkspaceTrust(() => {
+            languageClient.onReady().then(() => {
+                languageClient.sendNotification(CustomLSP.Notifications.WorkspaceTrusted, { isTrusted: true });
+            });
+        })
+    );
+
+    // Start the client once everything has set up.
+    const disposable = languageClient.start();
+
+    // Push the disposable to the context's subscriptions so that the
+    // client can be deactivated on extension deactivation.
+    context.subscriptions.push(disposable);
 }
 
 export function deactivate() {

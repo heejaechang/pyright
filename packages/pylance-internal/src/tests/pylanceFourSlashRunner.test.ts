@@ -20,7 +20,7 @@ import { IndexResults } from 'pyright-internal/languageService/documentSymbolPro
 import { FourSlashData } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
 import { runFourSlashTest } from 'pyright-internal/tests/harness/fourslash/runner';
 import { HostSpecificFeatures } from 'pyright-internal/tests/harness/fourslash/testState';
-import * as host from 'pyright-internal/tests/harness/host';
+import * as host from 'pyright-internal/tests/harness/testHost';
 import { typeshedFolder } from 'pyright-internal/tests/harness/vfs/factory';
 import { MODULE_PATH } from 'pyright-internal/tests/harness/vfs/filesystem';
 

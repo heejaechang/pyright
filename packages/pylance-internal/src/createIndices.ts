@@ -9,13 +9,14 @@ import * as path from 'path';
 import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { StandardConsole } from 'pyright-internal/common/console';
+import { FullAccessHost } from 'pyright-internal/common/fullAccessHost';
 import { createFromRealFileSystem } from 'pyright-internal/common/realFileSystem';
 
 import { Indexer } from './services/indexer';
 
 const fs = createFromRealFileSystem();
 const configOptions = new ConfigOptions('.');
-const importResolver = new ImportResolver(fs, configOptions);
+const importResolver = new ImportResolver(fs, configOptions, new FullAccessHost(fs));
 const console = new StandardConsole();
 
 const stdlibPath = path.resolve(__dirname, '..', 'bundled', 'indices', 'stdlib.json');
