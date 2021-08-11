@@ -248,7 +248,7 @@ test('Overload6', () => {
 
 test('Overload7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['overload7.py']);
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Overload8', () => {
@@ -268,7 +268,7 @@ test('Final1', () => {
 
 test('Final2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final2.py']);
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Final3', () => {
@@ -370,6 +370,16 @@ test('MemberAccess9', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('MemberAccess10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess10.py']);
+    TestUtils.validateResults(analysisResults, 2);
+});
+
+test('MemberAccess11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess11.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('DataClass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass1.py']);
 
@@ -444,6 +454,14 @@ test('DataClass13', () => {
 
 test('DataClass14', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass14.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
+});
+
+test('DataClass15', () => {
+    const configOptions = new ConfigOptions('.');
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass15.py'], configOptions);
 
     TestUtils.validateResults(analysisResults, 3);
 });
@@ -698,13 +716,13 @@ test('TypeVar5', () => {
 test('TypeVar6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar6.py']);
 
-    TestUtils.validateResults(analysisResults, 19);
+    TestUtils.validateResults(analysisResults, 20);
 });
 
 test('TypeVar7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar7.py']);
 
-    TestUtils.validateResults(analysisResults, 22);
+    TestUtils.validateResults(analysisResults, 26);
 });
 
 test('TypeVar8', () => {

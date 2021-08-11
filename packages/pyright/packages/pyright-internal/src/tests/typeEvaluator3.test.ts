@@ -111,7 +111,7 @@ test('Generators13', () => {
 test('Coroutines1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['coroutines1.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Coroutines2', () => {
@@ -333,6 +333,12 @@ test('TypeAlias14', () => {
     TestUtils.validateResults(analysisResults, 6);
 });
 
+test('TypeAlias15', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeAlias15.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Dictionary1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dictionary1.py']);
 
@@ -361,13 +367,13 @@ test('Classes2', () => {
     // Turn on errors.
     configOptions.diagnosticRuleSet.reportIncompatibleMethodOverride = 'error';
     analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes2.py'], configOptions);
-    TestUtils.validateResults(analysisResults, 19);
+    TestUtils.validateResults(analysisResults, 21);
 });
 
 test('Classes3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes3.py']);
 
-    TestUtils.validateResults(analysisResults, 3);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('Classes4', () => {
