@@ -1173,7 +1173,14 @@ export class CompletionProvider {
         }
 
         // Add call argument completions.
-        this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
+        this._addCallArgumentCompletions(
+            parseNode,
+            priorWord,
+            priorText,
+            postText,
+            /*atArgument*/ false,
+            completionList
+        );
 
         // Add symbols that are in scope.
         this._addSymbols(parseNode, priorWord, completionList);
@@ -1211,7 +1218,13 @@ export class CompletionProvider {
                     );
 
                     if (declaredTypeOfTarget) {
-                        this._addLiteralValuesForTargetType(declaredTypeOfTarget, priorText, postText, completionList);
+                        this._addLiteralValuesForTargetType(
+                            declaredTypeOfTarget,
+                            priorText,
+                            priorWord,
+                            postText,
+                            completionList
+                        );
                     }
                 }
             }
@@ -1259,6 +1272,7 @@ export class CompletionProvider {
         priorWord: string,
         priorText: string,
         postText: string,
+        atArgument: boolean,
         completionList: CompletionList
     ) {
         // If we're within the argument list of a call, add parameter names.
@@ -1287,10 +1301,12 @@ export class CompletionProvider {
             );
 
             if (comparePositions(this._position, callNameEnd) > 0) {
-                this._addNamedParameters(signatureInfo, priorWord, completionList);
+                if (!atArgument) {
+                    this._addNamedParameters(signatureInfo, priorWord, completionList);
+                }
 
                 // Add literals that apply to this parameter.
-                this._addLiteralValuesForArgument(signatureInfo, priorText, postText, completionList);
+                this._addLiteralValuesForArgument(signatureInfo, priorText, priorWord, postText, completionList);
             }
         }
     }
@@ -1298,6 +1314,7 @@ export class CompletionProvider {
     private _addLiteralValuesForArgument(
         signatureInfo: CallSignatureInfo,
         priorText: string,
+        priorWord: string,
         postText: string,
         completionList: CompletionList
     ) {
@@ -1314,7 +1331,7 @@ export class CompletionProvider {
             }
 
             const paramType = type.details.parameters[paramIndex].type;
-            this._addLiteralValuesForTargetType(paramType, priorText, postText, completionList);
+            this._addLiteralValuesForTargetType(paramType, priorText, priorWord, postText, completionList);
             return undefined;
         });
     }
@@ -1322,19 +1339,27 @@ export class CompletionProvider {
     private _addLiteralValuesForTargetType(
         type: Type,
         priorText: string,
+        priorWord: string,
         postText: string,
         completionList: CompletionList
     ) {
         const quoteValue = this._getQuoteValueFromPriorText(priorText);
         this._getSubTypesWithLiteralValues(type).forEach((v) => {
             if (ClassType.isBuiltIn(v, 'str')) {
-                this._addStringLiteralToCompletionList(
-                    v.literalValue as string,
-                    quoteValue.stringValue,
-                    postText,
-                    quoteValue.quoteCharacter,
-                    completionList
-                );
+                const value = printLiteralValue(v, quoteValue.quoteCharacter);
+                if (quoteValue.stringValue === undefined) {
+                    this._addNameToCompletionList(value, CompletionItemKind.Constant, priorWord, completionList, {
+                        sortText: this._makeSortText(SortCategory.LiteralValue, v.literalValue as string),
+                    });
+                } else {
+                    this._addStringLiteralToCompletionList(
+                        value.substr(1, value.length - 2),
+                        quoteValue.stringValue,
+                        postText,
+                        quoteValue.quoteCharacter,
+                        completionList
+                    );
+                }
             }
         });
     }
@@ -1383,7 +1408,7 @@ export class CompletionProvider {
                     return;
                 }
 
-                keys.push(printLiteralValue(v));
+                keys.push(printLiteralValue(v, this._parseResults.tokenizerOutput.predominantSingleQuoteCharacter));
             });
 
             if (keys.length > 0) {
@@ -1551,16 +1576,20 @@ export class CompletionProvider {
             const declaredTypeOfTarget = this._evaluator.getDeclaredTypeForExpression(parentNode.leftExpression);
 
             if (declaredTypeOfTarget) {
-                this._addLiteralValuesForTargetType(declaredTypeOfTarget, priorText, postText, completionList);
+                this._addLiteralValuesForTargetType(
+                    declaredTypeOfTarget,
+                    priorText,
+                    priorWord,
+                    postText,
+                    completionList
+                );
             }
         } else {
-            // Make sure we are not inside of the string literal.
             debug.assert(parseNode.nodeType === ParseNodeType.String);
 
             const offset = convertPositionToOffset(this._position, this._parseResults.tokenizerOutput.lines)!;
-            if (offset <= parentNode.start || TextRange.getEnd(parseNode) <= offset) {
-                this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, completionList);
-            }
+            const atArgument = parentNode.start < offset && offset < TextRange.getEnd(parseNode);
+            this._addCallArgumentCompletions(parseNode, priorWord, priorText, postText, atArgument, completionList);
         }
 
         return { completionList };

@@ -146,12 +146,12 @@
         marker7: {
             completions: [
                 {
-                    label: "b'key'",
+                    label: 'b"key"',
                     kind: Consts.CompletionItemKind.Constant,
                     detail: 'Dictionary key',
                 },
                 {
-                    label: "b'key2'",
+                    label: 'b"key2"',
                     kind: Consts.CompletionItemKind.Constant,
                     detail: 'Dictionary key',
                 },
