@@ -16,7 +16,6 @@ import { ImportResult, ImportType } from 'pyright-internal/analyzer/importResult
 import * as PythonPathUtils from 'pyright-internal/analyzer/pythonPathUtils';
 import { getOrAdd } from 'pyright-internal/common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from 'pyright-internal/common/configOptions';
-import { ConsoleInterface } from 'pyright-internal/common/console';
 import { assertNever } from 'pyright-internal/common/debug';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import { Host, HostKind } from 'pyright-internal/common/host';
@@ -32,7 +31,6 @@ import {
     normalizePath,
     normalizePathCase,
 } from 'pyright-internal/common/pathUtils';
-import { Duration } from 'pyright-internal/common/timing';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
 import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
@@ -207,24 +205,14 @@ export class PylanceImportResolver extends ImportResolver {
         configOptions: ConfigOptions,
         host: Host,
         resolverId?: number,
-        private _console?: ConsoleInterface,
         private _telemetry?: TelemetryInterface
     ) {
         super(fs, configOptions, host);
 
         this._resolverId = resolverId?.toString() ?? 'N/A';
 
-        this._cachedHeuristicResults = new ImportHeuristicCache(
-            this._resolverId,
-            (e) => this.getPythonSearchPaths(e, []),
-            this._console
-        );
+        this._cachedHeuristicResults = new ImportHeuristicCache((e) => this.getPythonSearchPaths(e, []));
         this._importMetrics = new ImportMetrics(this._resolverId);
-    }
-
-    useImportHeuristic(useImportHeuristic: boolean) {
-        // InvalidateCache will be called when this is changed.
-        this._cachedHeuristicResults.useImportHeuristic = useImportHeuristic;
     }
 
     override resolveImport(
@@ -242,7 +230,7 @@ export class PylanceImportResolver extends ImportResolver {
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor
     ) {
-        let importResult = super.resolveImport(sourceFilePath, execEnv, moduleDescriptor);
+        const importResult = super.resolveImport(sourceFilePath, execEnv, moduleDescriptor);
         if (importResult.isImportFound || moduleDescriptor.leadingDots > 0) {
             return importResult;
         }
@@ -264,68 +252,46 @@ export class PylanceImportResolver extends ImportResolver {
             return importResult;
         }
 
-        this._cachedHeuristicResults.failed(importResult.importFailureInfo);
-
         const importPath: ImportPath = { importPath: undefined };
-        this._cachedHeuristicResults.record(() => {
-            // Going up the given folder one by one until we can resolve the import.
-            let level = 0;
-            let current = origin;
-            while (this._shouldWalkUp(current, root, execEnv)) {
-                const result = this.resolveAbsoluteImport(
-                    current,
-                    execEnv,
-                    moduleDescriptor,
-                    importName,
-                    [],
-                    /* allowPartial */ undefined,
-                    /* allowNativeLib */ undefined,
-                    /* useStubPackage */ false,
-                    /* allowPyi */ true
-                );
 
-                this._cachedHeuristicResults.checked(current, importName, importPath);
-
-                if (result.isImportFound) {
-                    // This will make cache to point to actual path that contains the module we found
-                    importPath.importPath = current;
-
-                    if (this._cachedHeuristicResults.useImportHeuristic) {
-                        // reset the result only if we are using heuristic. otherwise, just send telemetry
-                        importResult = this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
-                    }
-
-                    return {
-                        importResult: result,
-                        scanResult: {
-                            success: true,
-                            path: current,
-                            importName,
-                            level,
-                        },
-                    };
-                }
-
-                let success;
-                [success, current] = this._tryWalkUp(current);
-                if (!success) {
-                    break;
-                }
-                level++;
-            }
+        // Going up the given folder one by one until we can resolve the import.
+        let current = origin;
+        while (this._shouldWalkUp(current, root, execEnv)) {
+            const result = this.resolveAbsoluteImport(
+                current,
+                execEnv,
+                moduleDescriptor,
+                importName,
+                [],
+                /* allowPartial */ undefined,
+                /* allowNativeLib */ undefined,
+                /* useStubPackage */ false,
+                /* allowPyi */ true
+            );
 
             this._cachedHeuristicResults.checked(current, importName, importPath);
-            return {
-                importResult: undefined,
-                scanResult: {
-                    success: false,
+
+            if (result.isImportFound) {
+                // This will make cache to point to actual path that contains the module we found
+                importPath.importPath = current;
+
+                this._cachedHeuristicResults.add({
+                    importResult: result,
                     path: current,
                     importName,
-                    level,
-                },
-            };
-        });
+                });
 
+                return this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
+            }
+
+            let success;
+            [success, current] = this._tryWalkUp(current);
+            if (!success) {
+                break;
+            }
+        }
+
+        this._cachedHeuristicResults.checked(current, importName, importPath);
         return importResult;
     }
 
@@ -349,21 +315,20 @@ export class PylanceImportResolver extends ImportResolver {
         similarityLimit: number
     ) {
         const suggestions = super.getCompletionSuggestions(sourceFilePath, execEnv, moduleDescriptor, similarityLimit);
-        if (this._cachedHeuristicResults.useImportHeuristic) {
-            const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-            const origin = ensureTrailingDirectorySeparator(
-                getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
-            );
 
-            let current = origin;
-            while (this._shouldWalkUp(current, root, execEnv)) {
-                this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, similarityLimit);
+        const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
+        const origin = ensureTrailingDirectorySeparator(
+            getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
+        );
 
-                let success;
-                [success, current] = this._tryWalkUp(current);
-                if (!success) {
-                    break;
-                }
+        let current = origin;
+        while (this._shouldWalkUp(current, root, execEnv)) {
+            this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, similarityLimit);
+
+            let success;
+            [success, current] = this._tryWalkUp(current);
+            if (!success) {
+                break;
             }
         }
 
@@ -479,7 +444,6 @@ export class PylanceImportResolver extends ImportResolver {
 
         this._sendInstalledPackagesTelemetry(this._telemetry);
         this._importMetrics.report(this._telemetry);
-        this._cachedHeuristicResults.report(this._telemetry);
     }
 
     private _sendInstalledPackagesTelemetry(telemetry: TelemetryInterface) {
@@ -778,51 +742,30 @@ export function createPylanceImportResolver(
     options: ConfigOptions,
     host: Host,
     resolverId?: number,
-    console?: ConsoleInterface,
     telemetry?: TelemetryInterface
 ): PylanceImportResolver {
-    return new PylanceImportResolver(fs, options, host, resolverId, console, telemetry);
-}
-
-interface ScanResult {
-    success: boolean;
-    path: string;
-    importName: string;
-    level: number;
-    durationInMS?: number;
+    return new PylanceImportResolver(fs, options, host, resolverId, telemetry);
 }
 
 type ImportPath = { importPath: string | undefined };
-type CacheEntry = { importResult: ImportResult | undefined; scanResult: ScanResult };
+type CacheEntry = { importResult: ImportResult; path: string; importName: string };
 
 class ImportHeuristicCache {
-    private readonly _duration = new Duration();
-
     private readonly _importChecked = new Map<string, Map<string, ImportPath>>();
-    private readonly _cachedHeuristicResults = new Map<string, Map<string, CacheEntry>>();
-    private readonly _failureReasons = new Map<string, number>();
+    private readonly _cachedHeuristicResults = new Map<string, Map<string, ImportResult>>();
 
-    private _lastData: ScanResult | undefined;
     private _libPathCache: string[] | undefined = undefined;
 
-    private _changed = false;
-
-    useImportHeuristic = false;
-
-    constructor(
-        private _resolverId: string,
-        private _importRootGetter: (exec: ExecutionEnvironment) => string[],
-        private _console?: ConsoleInterface
-    ) {
+    constructor(private _importRootGetter: (exec: ExecutionEnvironment) => string[]) {
         // empty
     }
 
     getImportResult(path: string, importName: string, importResult: ImportResult): ImportResult | undefined {
-        const entry = this._cachedHeuristicResults.get(importName)?.get(path);
-        if (entry) {
+        const result = this._cachedHeuristicResults.get(importName)?.get(path);
+        if (result) {
             // We already checked for the importName at the path.
             // Return the result if succeeded otherwise, return regular import result given.
-            return (this.useImportHeuristic ? entry.importResult : importResult) ?? importResult;
+            return result ?? importResult;
         }
 
         const checked = this._importChecked.get(importName)?.get(path);
@@ -832,11 +775,7 @@ class ImportHeuristicCache {
                 return importResult;
             }
 
-            return (
-                (this.useImportHeuristic
-                    ? this._cachedHeuristicResults.get(importName)?.get(checked.importPath)?.importResult
-                    : importResult) ?? importResult
-            );
+            return this._cachedHeuristicResults.get(importName)?.get(checked.importPath) ?? importResult;
         }
 
         return undefined;
@@ -864,127 +803,21 @@ class ImportHeuristicCache {
         return true;
     }
 
-    failed(reasons?: string[]) {
-        if (!reasons) {
-            return;
-        }
-
-        this._setFailureReasons(reasons, 'Did not find file');
-        this._setFailureReasons(reasons, 'No python interpreter search path');
-        this._setFailureReasons(reasons, 'Typeshed path not found');
-        this._setFailureReasons(reasons, 'Invalid relative path');
-        this._setFailureReasons(reasons, 'because it is not a valid directory');
-        this._setFailureReasons(reasons, 'Found no valid directories');
-        this._setFailureReasons(reasons, 'Could not parse output');
-    }
-
     checked(path: string, importName: string, importPath: ImportPath) {
         getOrAdd(this._importChecked, importName, () => new Map<string, ImportPath>()).set(path, importPath);
     }
 
-    record(callback: () => CacheEntry) {
-        const start = this._duration.getDurationInMilliseconds();
-        const result = callback();
-        const scanResult = result.scanResult;
-
-        scanResult.durationInMS = this._duration.getDurationInMilliseconds() - start;
-        if (this._lastData && !this._lastData.success) {
-            const editDistance = importNameEditDistance(this._lastData.importName, scanResult.importName);
-            if (editDistance < 2) {
-                // Remove old one.
-                const importName = this._lastData.importName;
-                const map = this._cachedHeuristicResults.get(importName);
-                if (map) {
-                    const path = this._lastData.path;
-                    const entry = map.get(path);
-                    if (entry) {
-                        map.delete(path);
-                    }
-
-                    if (map.size === 0) {
-                        this._cachedHeuristicResults.delete(importName);
-                    }
-                }
-            }
-        }
-
-        getOrAdd(this._cachedHeuristicResults, scanResult.importName, () => new Map<string, CacheEntry>()).set(
-            scanResult.path,
-            result
+    add(result: CacheEntry) {
+        getOrAdd(this._cachedHeuristicResults, result.importName, () => new Map<string, ImportResult>()).set(
+            result.path,
+            result.importResult
         );
-
-        this._changed = true;
-        this._lastData = scanResult;
-
-        if (scanResult.success && !this.useImportHeuristic) {
-            this._console?.log(
-                `Failed absolute import '${scanResult.importName}' potentially resolved in parent directory '${scanResult.path}'.`
-            );
-        }
-    }
-
-    report(telemetry: TelemetryInterface) {
-        if (!this._changed || (this._cachedHeuristicResults.size === 0 && this._failureReasons.size === 0)) {
-            return;
-        }
-
-        this._changed = false;
-
-        let succeeded = 0;
-        let failed = 0;
-        let conflicts = 0;
-
-        let totalDuration = 0;
-        let totalLevel = 0;
-
-        for (const map of this._cachedHeuristicResults.values()) {
-            if (map.size > 1) {
-                conflicts++;
-            }
-
-            for (const value of map.values()) {
-                totalDuration += value.scanResult.durationInMS ?? 0;
-
-                if (value.scanResult.success) {
-                    succeeded++;
-                    totalLevel += value.scanResult.level;
-                } else {
-                    failed++;
-                }
-            }
-        }
-
-        const total = succeeded + failed;
-        const event = new TelemetryEvent(TelemetryEventName.IMPORT_HEURISTIC);
-
-        event.Measurements['total'] = total;
-        event.Measurements['success'] = succeeded;
-        event.Measurements['conflicts'] = conflicts;
-        event.Measurements['avgCost'] = total === 0 ? 0 : totalDuration / total;
-        event.Measurements['avgLevel'] = succeeded === 0 ? 0 : totalLevel / succeeded;
-
-        for (const [key, value] of this._failureReasons) {
-            const measureKey = 'reason_' + key.replace(/ /gi, '_');
-            event.Measurements[measureKey] = value;
-        }
-
-        event.Properties['resolverId'] = this._resolverId;
-        telemetry.sendTelemetry(event);
     }
 
     reset() {
         this._importChecked.clear();
         this._cachedHeuristicResults.clear();
-        this._failureReasons.clear();
-
         this._libPathCache = undefined;
-        this._lastData = undefined;
-    }
-
-    private _setFailureReasons(reasons: string[], reason: string) {
-        if (reasons.some((r) => r.indexOf(reason) >= 0)) {
-            this._failureReasons.set(reason, (this._failureReasons.get(reason) ?? 0) + 1);
-        }
     }
 }
 

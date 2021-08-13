@@ -89,7 +89,7 @@ import { CustomLSP } from './customLSP';
 import type { IntelliCodeExtension } from './intelliCode/extension';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
 import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
-import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
+import { createPylanceImportResolver } from './pylanceImportResolver';
 import { AnalysisTracker } from './services/analysisTracker';
 
 const pythonSectionName = 'python';
@@ -98,7 +98,6 @@ const pythonAnalysisSectionName = 'python.analysis';
 export interface PylanceServerSettings extends ServerSettings {
     completeFunctionParens?: boolean;
     enableExtractCodeAction?: boolean;
-    useImportHeuristic?: boolean;
 }
 
 export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstance {
@@ -180,11 +179,6 @@ export class PylanceServer extends LanguageServerBase {
         } else {
             const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
             serverSettings.indexing = indexingExperiment ?? false;
-        }
-
-        if (!IS_DEV && !IS_PR) {
-            const useImportHeuristicExperiment = await this._inExperiment('useImportHeuristic');
-            serverSettings.useImportHeuristic = useImportHeuristicExperiment ?? false;
         }
 
         this._hostKind = await this._getHostKind();
@@ -307,15 +301,10 @@ export class PylanceServer extends LanguageServerBase {
                     serverSettings.enableExtractCodeAction = pythonAnalysisSection.enableExtractCodeAction;
                 }
 
-                if (isBoolean(pythonAnalysisSection.useImportHeuristic)) {
-                    serverSettings.useImportHeuristic = pythonAnalysisSection.useImportHeuristic;
-                }
-
                 if (!workspace.rootPath) {
-                    // useImportHeuristic is on by default and indexing is off by default
+                    // indexing is off by default
                     // for the default workspace.
                     serverSettings.indexing = false;
-                    serverSettings.useImportHeuristic = true;
                 }
 
                 forceProgressBar = !!pythonAnalysisSection._forceProgressBar;
@@ -339,7 +328,6 @@ export class PylanceServer extends LanguageServerBase {
         te.Properties['indexing'] = `${serverSettings.indexing}`;
         te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
         te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
-        te.Properties['useImportHeuristic'] = `${serverSettings.useImportHeuristic}`;
         te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
         te.Measurements['workspaceCount'] = this._workspaceMap.getNonDefaultWorkspaces().length;
         this._telemetry.sendTelemetry(te);
@@ -698,9 +686,7 @@ export class PylanceServer extends LanguageServerBase {
         pylanceWorkspace.completeFunctionParens = !!pylanceSettings.completeFunctionParens;
         pylanceWorkspace.enableExtractCodeAction = !!pylanceSettings.enableExtractCodeAction;
 
-        this._getBackgroundAnalysisProgram(workspace).setExperimentOptions({
-            useImportHeuristic: !!pylanceSettings.useImportHeuristic,
-        });
+        this._getBackgroundAnalysisProgram(workspace).setExperimentOptions({});
 
         if (workspace.disableLanguageServices) {
             return;
@@ -833,7 +819,7 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
             (this.backgroundAnalysis as BackgroundAnalysis).setExperimentOptions(options);
         }
 
-        (this.importResolver as PylanceImportResolver).useImportHeuristic(options.useImportHeuristic);
+        // Set experiment options on FG if there is any
     }
 }
 

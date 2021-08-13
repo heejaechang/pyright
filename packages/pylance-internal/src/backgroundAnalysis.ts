@@ -46,9 +46,7 @@ import { getSemanticTokens } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver, PylanceImportResolver } from './pylanceImportResolver';
 import { BackgroundIndexRunner, Indexer } from './services/indexer';
 
-export interface ExperimentOptions {
-    useImportHeuristic: boolean;
-}
+export interface ExperimentOptions {}
 
 export class BackgroundAnalysis extends BackgroundAnalysisBase {
     constructor(private _telemetry: TelemetryInterface, console: ConsoleInterface) {
@@ -225,8 +223,8 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             }
 
             case 'setExperimentOptions': {
-                const flags = msg.data;
-                (this._importResolver as PylanceImportResolver).useImportHeuristic(flags.useImportHeuristic);
+                // const options = msg.data as ExperimentOptions;
+                // set experiement on BG if there is any
                 break;
             }
 
@@ -335,7 +333,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
     }
 
     protected override createImportResolver(fs: FileSystem, options: ConfigOptions, host: Host): ImportResolver {
-        return createPylanceImportResolver(fs, options, host, this._resolverId++, this.getConsole(), this._telemetry);
+        return createPylanceImportResolver(fs, options, host, this._resolverId++, this._telemetry);
     }
 
     protected override processIndexing(port: MessagePort, token: CancellationToken) {

@@ -58,7 +58,6 @@ async function runServer(
         indexing: false,
         completeFunctionParens: false,
         enableExtractCodeAction: false,
-        useImportHeuristic: false,
     };
 
     try {

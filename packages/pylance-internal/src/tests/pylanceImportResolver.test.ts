@@ -134,8 +134,6 @@ function getImportResult(
 
     const file = files[files.length - 1].path;
     const importResolver = new PylanceImportResolver(fs, configOptions, new FullAccessHost(fs));
-    importResolver.useImportHeuristic(true);
-
     const importResult = importResolver.resolveImport(file, configOptions.findExecEnvironment(file), {
         leadingDots: 0,
         nameParts: nameParts,

@@ -32,7 +32,6 @@ export function main() {
             indexing: false,
             completeFunctionParens: false,
             enableExtractCodeAction: true,
-            useImportHeuristic: false,
         };
 
         const console = new ConsoleWithLogLevel(conn.console);
