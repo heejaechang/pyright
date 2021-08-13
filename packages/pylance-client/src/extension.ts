@@ -89,7 +89,6 @@ export function activate(context: vscode.ExtensionContext) {
         // Register the server for python source files.
         documentSelector: [
             {
-                scheme: 'file',
                 language: 'python',
             },
         ],

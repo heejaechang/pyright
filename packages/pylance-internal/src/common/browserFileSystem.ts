@@ -149,12 +149,12 @@ export class BrowserFileSystem implements FileSystem {
         return mappedFilePath;
     }
 
-    getMappedFilePath(originalFilepath: string) {
-        if (originalFilepath.startsWith(this._baseUriPath)) {
-            return combinePaths('/', originalFilepath.substr(this._baseUriPath.length));
+    getMappedFilePath(originalFilePath: string) {
+        if (originalFilePath.startsWith(this._baseUriPath)) {
+            return combinePaths('/', originalFilePath.substr(this._baseUriPath.length));
         }
 
-        return originalFilepath;
+        return originalFilePath;
     }
 
     getUri(path: string): string {
