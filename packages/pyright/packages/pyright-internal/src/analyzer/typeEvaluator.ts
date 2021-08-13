@@ -1833,7 +1833,7 @@ export function createTypeEvaluator(
 
     // Determines whether the specified expression is a symbol with a declared type
     // (either a simple name or a member variable). If so, the type is returned.
-    function getDeclaredTypeForExpression(expression: ExpressionNode): Type | undefined {
+    function getDeclaredTypeForExpression(expression: ExpressionNode, usage?: EvaluatorUsage): Type | undefined {
         let symbol: Symbol | undefined;
         let classOrObjectBase: ClassType | undefined;
         let memberAccessClass: Type | undefined;
@@ -1928,7 +1928,11 @@ export function createTypeEvaluator(
                             }
                         }
                     } else if (ClassType.isTypedDictClass(baseType)) {
-                        const typeFromTypedDict = getTypeFromIndexedTypedDict(expression, baseType, { method: 'get' });
+                        const typeFromTypedDict = getTypeFromIndexedTypedDict(
+                            expression,
+                            baseType,
+                            usage || { method: 'get' }
+                        );
                         if (typeFromTypedDict) {
                             return typeFromTypedDict.type;
                         }
@@ -4540,7 +4544,7 @@ export function createTypeEvaluator(
                             addError(Localizer.Diagnostic.paramSpecArgsUsage(), node);
                             return { type: UnknownType.create(), node };
                         }
-                        return { type: baseType, node };
+                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'args'), node };
                     }
 
                     if (memberName === 'kwargs') {
@@ -4549,7 +4553,7 @@ export function createTypeEvaluator(
                             addError(Localizer.Diagnostic.paramSpecKwargsUsage(), node);
                             return { type: UnknownType.create(), node };
                         }
-                        return { type: baseType, node };
+                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'kwargs'), node };
                     }
 
                     addDiagnostic(
@@ -4960,12 +4964,12 @@ export function createTypeEvaluator(
             }
             type = objectAccessType;
 
-            if (usage.method === 'set') {
+            if (usage.method === 'set' && usage.setType) {
                 // Verify that the assigned type is compatible.
-                if (!canAssignType(type, usage.setType!, diag.createAddendum())) {
+                if (!canAssignType(type, usage.setType, diag.createAddendum())) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.memberAssignment().format({
-                            type: printType(usage.setType!),
+                            type: printType(usage.setType),
                             name: memberName,
                             classType: printObjectTypeForClass(classType),
                         })
@@ -5056,6 +5060,7 @@ export function createTypeEvaluator(
                 // If it's an object, use its class to lookup the descriptor. If it's a class,
                 // use its metaclass instead.
                 let lookupClass = subtype;
+                let isAccessedThroughMetaclass = false;
                 if (TypeBase.isInstantiable(subtype)) {
                     if (
                         !subtype.details.effectiveMetaclass ||
@@ -5064,6 +5069,7 @@ export function createTypeEvaluator(
                         return undefined;
                     }
                     lookupClass = convertToInstance(subtype.details.effectiveMetaclass) as ClassType;
+                    isAccessedThroughMetaclass = true;
                 }
 
                 let accessMethodName: string;
@@ -5106,11 +5112,6 @@ export function createTypeEvaluator(
                 if (accessMethod) {
                     let accessMethodType = getTypeOfMember(accessMethod);
                     const argList: FunctionArgument[] = [
-                        {
-                            // Provide "self" argument.
-                            argumentCategory: ArgumentCategory.Simple,
-                            type: lookupClass,
-                        },
                         {
                             // Provide "instance" argument.
                             argumentCategory: ArgumentCategory.Simple,
@@ -5180,7 +5181,10 @@ export function createTypeEvaluator(
                                 lookupClass,
                                 methodType,
                                 bindToClass,
-                                errorNode
+                                errorNode,
+                                /* recursionCount */ undefined,
+                                /* treatConstructorAsClassMember */ undefined,
+                                isAccessedThroughMetaclass ? subtype : undefined
                             );
 
                             if (
@@ -5189,7 +5193,7 @@ export function createTypeEvaluator(
                             ) {
                                 const callResult = validateCallArguments(
                                     errorNode,
-                                    argList.slice(1),
+                                    argList,
                                     boundMethodType,
                                     /* typeVarMap */ undefined,
                                     /* skipUnknownArgCheck */ true
@@ -6057,7 +6061,7 @@ export function createTypeEvaluator(
                 }
 
                 if (usage.method === 'set') {
-                    canAssignType(entry.valueType, usage.setType!, diag);
+                    canAssignType(entry.valueType, usage.setType || AnyType.create(), diag);
                 } else if (usage.method === 'del' && entry.isRequired) {
                     diag.addMessage(
                         Localizer.DiagnosticAddendum.keyRequiredDeleted().format({
@@ -8081,7 +8085,7 @@ export function createTypeEvaluator(
                     typeParams[paramIndex].category === ParameterCategory.VarArgList && isVariadicTypeVar(paramType);
                 let isArgCompatibleWithVariadic = false;
                 const argType = getTypeForArgument(argList[argIndex]);
-                let listElementType: Type;
+                let listElementType: Type | undefined;
                 let advanceToNextArg = false;
 
                 // Handle the case where *args is being passed to a function defined
@@ -8133,21 +8137,20 @@ export function createTypeEvaluator(
                     // unpacked variadic type variable.
                     listElementType = argType;
                     isArgCompatibleWithVariadic = true;
+                } else if (isParamSpec(argType) && argType.paramSpecAccess === 'args') {
+                    listElementType = undefined;
                 } else {
                     listElementType =
                         getTypeFromIterator(argType, /* isAsync */ false, argList[argIndex].valueExpression!) ||
                         UnknownType.create();
-
-                    if (isParamSpec(listElementType)) {
-                        // Handle the case where the arg came from *P.args parameter.
-                        listElementType = AnyType.create();
-                    }
                 }
 
-                const funcArg: FunctionArgument = {
-                    argumentCategory: ArgumentCategory.Simple,
-                    type: listElementType,
-                };
+                const funcArg: FunctionArgument | undefined = listElementType
+                    ? {
+                          argumentCategory: ArgumentCategory.Simple,
+                          type: listElementType,
+                      }
+                    : undefined;
 
                 const paramName = typeParams[paramIndex].name;
 
@@ -8161,7 +8164,7 @@ export function createTypeEvaluator(
                         argList[argIndex].valueExpression || errorNode
                     );
                     reportedArgError = true;
-                } else {
+                } else if (funcArg) {
                     validateArgTypeParams.push({
                         paramCategory: typeParams[paramIndex].category,
                         paramType,
@@ -8374,6 +8377,8 @@ export function createTypeEvaluator(
                             );
                             reportedArgError = true;
                         }
+                    } else if (isParamSpec(argType) && argType.paramSpecAccess === 'kwargs') {
+                        unpackedDictionaryArgType = AnyType.create();
                     } else {
                         const mappingType = getTypingType(errorNode, 'Mapping');
                         const strObjType = getBuiltInObject(errorNode, 'str');
@@ -9071,7 +9076,7 @@ export function createTypeEvaluator(
                 expectedType = undefined;
             }
 
-            // was the argument's type precomputed by the caller?
+            // Was the argument's type precomputed by the caller?
             if (argParam.argType) {
                 argType = argParam.argType;
             } else {
@@ -9094,7 +9099,7 @@ export function createTypeEvaluator(
                 writeTypeCache(argParam.argument.name, expectedType || argType, isTypeIncomplete);
             }
         } else {
-            // was the argument's type precomputed by the caller?
+            // Was the argument's type precomputed by the caller?
             if (argParam.argType) {
                 argType = argParam.argType;
             } else {
@@ -12664,7 +12669,7 @@ export function createTypeEvaluator(
 
             if (!rightHandType) {
                 // Determine whether there is a declared type.
-                const declaredType = getDeclaredTypeForExpression(node.leftExpression);
+                const declaredType = getDeclaredTypeForExpression(node.leftExpression, { method: 'set' });
 
                 let flags: EvaluatorFlags = EvaluatorFlags.DoNotSpecialize;
                 if (fileInfo.isStubFile) {
@@ -14199,6 +14204,10 @@ export function createTypeEvaluator(
             }
 
             case ParameterCategory.VarArgList: {
+                if (isTypeVar(type) && type.paramSpecAccess) {
+                    return type;
+                }
+
                 if (tupleClassType && isInstantiableClass(tupleClassType)) {
                     let tupleTypeArgs: Type[];
                     let isForVariadic = false;
@@ -14227,6 +14236,10 @@ export function createTypeEvaluator(
             }
 
             case ParameterCategory.VarArgDictionary: {
+                if (isTypeVar(type) && type.paramSpecAccess) {
+                    return type;
+                }
+
                 const dictType = getBuiltInType(node, 'dict');
                 const strType = getBuiltInObject(node, 'str');
 
@@ -20797,8 +20810,20 @@ export function createTypeEvaluator(
                     return;
                 }
 
-                const boundDestAccessType = bindFunctionToClassOrObject(objectToBind, destAccessType);
-                const boundSrcAccessType = bindFunctionToClassOrObject(objectToBind, srcAccessType);
+                const boundDestAccessType = bindFunctionToClassOrObject(
+                    objectToBind,
+                    destAccessType,
+                    /* memberClass */ undefined,
+                    /* errorNode */ undefined,
+                    recursionCount + 1
+                );
+                const boundSrcAccessType = bindFunctionToClassOrObject(
+                    objectToBind,
+                    srcAccessType,
+                    /* memberClass */ undefined,
+                    /* errorNode */ undefined,
+                    recursionCount + 1
+                );
 
                 if (
                     !boundDestAccessType ||
@@ -20989,15 +21014,27 @@ export function createTypeEvaluator(
         // derive from the source. We also need to use this path if we're
         // testing to see if the metaclass matches the protocol.
         if (ClassType.isProtocolClass(destType) && (!isDerivedFrom || allowMetaclassForProtocols)) {
-            return canAssignClassToProtocol(
-                destType,
-                srcType,
-                diag,
-                typeVarMap,
-                flags,
-                allowMetaclassForProtocols,
-                recursionCount + 1
-            );
+            if (
+                !canAssignClassToProtocol(
+                    destType,
+                    srcType,
+                    diag.createAddendum(),
+                    typeVarMap,
+                    flags,
+                    allowMetaclassForProtocols,
+                    recursionCount + 1
+                )
+            ) {
+                diag.addMessage(
+                    Localizer.DiagnosticAddendum.protocolIncompatible().format({
+                        sourceType: printType(convertToInstance(srcType)),
+                        destType: printType(convertToInstance(destType)),
+                    })
+                );
+                return false;
+            }
+
+            return true;
         }
 
         if ((flags & CanAssignFlags.EnforceInvariance) === 0 || ClassType.isSameGenericClass(srcType, destType)) {
@@ -22307,7 +22344,16 @@ export function createTypeEvaluator(
                     // Make a temporary clone of the typeVarMap. We don't want to modify
                     // the original typeVarMap until we find the "optimal" typeVar mapping.
                     const typeVarMapClone = typeVarMap?.clone();
-                    if (canAssignType(subtype, srcType, diagAddendum, typeVarMapClone, flags, recursionCount + 1)) {
+                    if (
+                        canAssignType(
+                            subtype,
+                            srcType,
+                            diagAddendum.createAddendum(),
+                            typeVarMapClone,
+                            flags,
+                            recursionCount + 1
+                        )
+                    ) {
                         foundMatch = true;
 
                         if (typeVarMapClone) {
@@ -22336,7 +22382,7 @@ export function createTypeEvaluator(
                     foundMatch = canAssignType(
                         destType,
                         makeTopLevelTypeVarsConcrete(srcType),
-                        diagAddendum,
+                        diagAddendum.createAddendum(),
                         typeVarMap,
                         flags,
                         recursionCount + 1
@@ -24156,17 +24202,19 @@ export function createTypeEvaluator(
         } else if (isOverloadedFunction(memberType)) {
             const newOverloadType = OverloadedFunctionType.create();
             memberType.overloads.forEach((overload) => {
-                const boundMethod = bindFunctionToClassOrObject(
-                    baseType,
-                    overload,
-                    memberClass,
-                    /* errorNode */ undefined,
-                    recursionCount + 1,
-                    treatConstructorAsClassMember,
-                    firstParamType
-                );
-                if (boundMethod) {
-                    OverloadedFunctionType.addOverload(newOverloadType, boundMethod as FunctionType);
+                if (FunctionType.isOverloaded(overload)) {
+                    const boundMethod = bindFunctionToClassOrObject(
+                        baseType,
+                        overload,
+                        memberClass,
+                        /* errorNode */ undefined,
+                        recursionCount + 1,
+                        treatConstructorAsClassMember,
+                        firstParamType
+                    );
+                    if (boundMethod) {
+                        OverloadedFunctionType.addOverload(newOverloadType, boundMethod as FunctionType);
+                    }
                 }
             });
 
