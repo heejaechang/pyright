@@ -21,5 +21,5 @@ import shajs from 'sha.js';
 const createHash = nodeCrypto?.createHash || shajs;
 
 export function sha256(s: string) {
-    return createHash('sha256').update(s).digest('base64');
+    return createHash('sha256').update(s).digest('hex');
 }
