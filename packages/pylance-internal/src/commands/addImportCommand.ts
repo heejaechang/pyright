@@ -1,8 +1,8 @@
 /*
- * removeUnusedImportCommand.ts
+ * addImportCommand.ts
  * Copyright (c) Microsoft Corporation.
  *
- * Implements remove unused import command
+ * Implements add import command
  */
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
