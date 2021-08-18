@@ -1,5 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { TextDecoder } from 'util';
+import * as vscode from 'vscode';
+
+import { assertDefined } from 'pyright-internal/common/debug';
 
 import { getExtensionRoot } from './utils';
 
@@ -62,40 +64,34 @@ export function localize(key: string, defValue?: string) {
     };
 }
 
-// Return the effective set of all localization strings, by key.
-// This should not be used for direct lookup.
-export function getCollectionJSON(): string {
-    // Load the current collection
-    if (!loadedCollection || parseLocale() !== loadedLocale) {
-        loadLocalizedStrings();
-    }
-
-    // Combine the default and loaded collections
-    return JSON.stringify({ ...defaultCollection, ...loadedCollection });
-}
-
 // This is exported only for testing purposes.
 export function _getAskedForCollection() {
     return askedForCollection;
 }
 
+declare let navigator: { language: string } | undefined;
+
 function parseLocale(): string {
+    try {
+        if (navigator?.language) {
+            return navigator.language.toLowerCase();
+        }
+    } catch {
+        // Fall through
+    }
+
     // Attempt to load from the vscode locale. If not there, use english
     const vscodeConfigString = process.env.VSCODE_NLS_CONFIG;
     return vscodeConfigString ? JSON.parse(vscodeConfigString).locale : 'en-us';
 }
 
 function getString(key: string, defValue?: string) {
-    // Load the current collection
-    if (!loadedCollection || parseLocale() !== loadedLocale) {
-        loadLocalizedStrings();
-    }
-
     // The default collection (package.nls.json) is the fallback.
     // Note that we are guaranteed the following (during shipping)
     //  1. defaultCollection was initialized by the load() call above
     //  2. defaultCollection has the key (see the "keys exist" test)
-    let collection = defaultCollection!;
+    let collection = defaultCollection;
+    assertDefined(collection);
 
     // Use the current locale if the key is defined there.
     if (loadedCollection && hasOwnProperty.call(loadedCollection, key)) {
@@ -112,28 +108,25 @@ function getString(key: string, defValue?: string) {
     return result;
 }
 
-export function loadLocalizedStrings() {
+// MUST be called before any user of the locale.
+export async function loadLocalizedStrings() {
     // Figure out our current locale.
     loadedLocale = parseLocale();
 
-    // Find the nls file that matches (if there is one)
-    const nlsFile = path.join(getExtensionRoot(), `package.nls.${loadedLocale}.json`);
-    if (fs.existsSync(nlsFile)) {
-        const contents = fs.readFileSync(nlsFile, 'utf8');
-        loadedCollection = JSON.parse(contents);
-    } else {
-        // If there isn't one, at least remember that we looked so we don't try to load a second time
-        loadedCollection = {};
-    }
-
-    // Get the default collection if necessary. Strings may be in the default or the locale json
+    loadedCollection = await parseNLS(loadedLocale);
     if (!defaultCollection) {
-        const defaultNlsFile = path.join(getExtensionRoot(), 'package.nls.json');
-        if (fs.existsSync(defaultNlsFile)) {
-            const contents = fs.readFileSync(defaultNlsFile, 'utf8');
-            defaultCollection = JSON.parse(contents);
-        } else {
-            defaultCollection = {};
-        }
+        defaultCollection = await parseNLS();
+    }
+}
+
+async function parseNLS(locale?: string) {
+    try {
+        const filename = locale ? `package.nls.${locale}.json` : `package.nls.json`;
+        const nlsFile = vscode.Uri.joinPath(getExtensionRoot(), filename);
+        const buffer = await vscode.workspace.fs.readFile(nlsFile);
+        const contents = new TextDecoder().decode(buffer);
+        return JSON.parse(contents);
+    } catch {
+        return {};
     }
 }

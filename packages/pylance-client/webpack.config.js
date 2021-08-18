@@ -11,6 +11,7 @@ const bundled = path.resolve(packages, 'pylance-internal', 'bundled');
 const schemas = path.resolve(packages, 'pyright', 'packages', 'vscode-pyright', 'schemas');
 const scripts = path.resolve(packages, 'pylance-internal', 'scripts');
 const onnxLoader = path.resolve(packages, 'vscode-pylance', 'build', 'onnxLoader.js');
+const browserProcess = path.resolve(packages, 'pylance-internal', 'src', 'common', 'browserProcess.ts');
 
 const { binDir: onnxBin } = require('../pylance-internal/build/findonnx');
 
@@ -57,7 +58,9 @@ const nodeConfig = (_, { mode }) => {
             libraryTarget: 'commonjs2',
             devtoolModuleFilenameTemplate:
                 mode === 'development' ? '../[resource-path]' : monorepoResourceNameMapper('pylance-client'),
-            // clean: true,
+            clean: {
+                keep: /^browser/, // Ignore the output of the browser config below.
+            },
         },
         devtool: 'source-map',
         cache: mode === 'development' ? cacheConfig(__dirname, __filename, `node-${mode}`) : undefined,
@@ -128,8 +131,9 @@ const browserConfig = (_, { mode }) => {
             devtoolModuleFilenameTemplate:
                 // Use absolute paths, as when run in vscode.dev, we're not running inside of the pyrx repo.
                 mode === 'development' ? '[absolute-resource-path]' : monorepoResourceNameMapper('pylance-client'),
-            // TODO: figure out cleaning when we output two webpacks to the same folder
-            // clean: true,
+            clean: {
+                keep: /^(?!browser)/, // Ignore non-browser files.
+            },
         },
         devtool: 'source-map',
         cache: mode === 'development' ? cacheConfig(__dirname, __filename, `browser-${mode}`) : undefined,
@@ -146,6 +150,7 @@ const browserConfig = (_, { mode }) => {
                 events: require.resolve('events/'), // Used by stream
                 stream: require.resolve('stream-browserify'),
                 path: require.resolve('path-browserify'),
+                process: browserProcess,
                 // Note: this will make these imports empty objects, not make them fail to resolve.
                 crypto: false,
                 worker_threads: false,
@@ -166,6 +171,11 @@ const browserConfig = (_, { mode }) => {
                 },
             ],
         },
+        plugins: [
+            new webpack.ProvidePlugin({
+                process: browserProcess,
+            }),
+        ],
     };
 };
 

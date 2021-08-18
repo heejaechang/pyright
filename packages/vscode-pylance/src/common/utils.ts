@@ -1,25 +1,26 @@
 import * as path from 'path';
+import * as vscode from 'vscode';
 
 import { AppConfiguration } from '../types/appConfig';
 
-let extensionRootFolder: string;
+let extensionRoot: vscode.Uri;
 
-export function setExtensionRoot(extensionRoot: string): void {
-    extensionRootFolder = extensionRoot;
+export function setExtensionRoot(uri: vscode.Uri): void {
+    extensionRoot = uri;
 }
 
-export function getExtensionRoot(): string {
-    if (extensionRootFolder) {
-        return extensionRootFolder;
+export function getExtensionRoot(): vscode.Uri {
+    if (extensionRoot) {
+        return extensionRoot;
     }
     // Possible case in tests. Use heuristics.
     const folderName = path.basename(__dirname);
     switch (folderName) {
         case 'tests':
         case 'common':
-            return path.join(__dirname, '..', '..');
+            return vscode.Uri.file(path.join(__dirname, '..', '..'));
         case 'src':
-            return path.join(__dirname, '..');
+            return vscode.Uri.file(path.join(__dirname, '..'));
     }
     throw new Error('Unable to determine extension root.');
 }

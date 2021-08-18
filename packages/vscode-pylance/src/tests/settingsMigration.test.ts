@@ -3,7 +3,7 @@ import * as path from 'path';
 import { anyString, anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { ConfigurationTarget, OutputChannel } from 'vscode';
 
-import { LanguageServer } from '../common/localize';
+import * as localize from '../common/localize';
 import { LanguageServerSettingName, PylanceName } from '../common/utils';
 import { migrateSetting, migrateV1Settings, settingsMigrationMap } from '../settingsMigration';
 import { AppConfiguration } from '../types/appConfig';
@@ -15,11 +15,13 @@ describe('Settings migration', () => {
     let outputChannel: OutputChannel;
     const value = 'value';
 
-    beforeEach(() => {
+    beforeEach(async () => {
         appConfigMock = mock<AppConfiguration>();
         appShell = mock<ApplicationShell>();
         outputChannel = mock<OutputChannel>();
         when(appShell.createOutputChannel(anyString())).thenReturn(instance(outputChannel));
+
+        await localize.loadLocalizedStrings();
     });
 
     test(`Verify target settings are in package.json`, async () => {
@@ -138,7 +140,7 @@ describe('Settings migration', () => {
                     expect(call).toEqual(Array.from(settingsMigrationMap.entries()).length * 2);
 
                     if (globalValue || workspaceValue || workspaceFolderValue) {
-                        verify(outputChannel.appendLine(LanguageServer.settingsMigratedMessage())).once();
+                        verify(outputChannel.appendLine(localize.LanguageServer.settingsMigratedMessage())).once();
                     } else {
                         verify(outputChannel.appendLine(anyString())).never();
                     }
@@ -167,7 +169,7 @@ describe('Settings migration', () => {
         });
 
         await migrateV1Settings(instance(appConfigMock), instance(appShell));
-        verify(outputChannel.appendLine(LanguageServer.settingsMigrationError())).once();
+        verify(outputChannel.appendLine(localize.LanguageServer.settingsMigrationError())).once();
 
         const errors = tos.map((to) => `${to} (message)`);
         const message = `    ${errors.join()}`;

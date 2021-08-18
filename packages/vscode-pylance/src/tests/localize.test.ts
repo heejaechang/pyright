@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as localize from '../common/localize';
 import { getExtensionRoot } from '../common/utils';
 
-const defaultNLSFile = path.join(getExtensionRoot(), 'package.nls.json');
+const defaultNLSFile = path.join(getExtensionRoot().fsPath, 'package.nls.json');
 
 // Defines a Mocha test suite to group tests of similar kind together
 describe('Localization', () => {
@@ -16,12 +16,13 @@ describe('Localization', () => {
     let localeFiles: string[];
     let nls_orig: string | undefined;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         localeFiles = [];
         nls_orig = process.env.VSCODE_NLS_CONFIG;
         setLocale('en-us');
         // Ensure each test starts fresh.
         localize._resetCollections();
+        await localize.loadLocalizedStrings();
     });
 
     afterEach(() => {
@@ -48,29 +49,32 @@ describe('Localization', () => {
         assert.equal(val, 'No thanks', 'LanguageServer string does not match');
     });
 
-    test('keys (Russian)', () => {
+    test('keys (Russian)', async () => {
         // Force a config change
         setLocale('ru');
+        await localize.loadLocalizedStrings();
 
         const val = localize.LanguageServer.turnItOn();
         assert.equal(val, 'Да, и перезагрузить окно', 'turnItOn is not being translated');
     });
 
-    test('key found for locale', () => {
+    test('key found for locale', async () => {
         addLocale('spam', {
             'Common.remindMeLater': '???',
         });
         setLocale('spam');
+        await localize.loadLocalizedStrings();
 
         const msg = localize.Common.remindMeLater();
         assert.equal(msg, '???', `key not found for locale, found '${msg}' instead`);
     });
 
-    test('key not found for locale (default used)', () => {
+    test('key not found for locale (default used)', async () => {
         addLocale('spam', {
             'Common.remindMeLater': '???',
         });
         setLocale('spam');
+        await localize.loadLocalizedStrings();
 
         const msg = localize.LanguageServer.noThanks();
         assert.equal(msg, 'No thanks', `default not used (found '${msg}')`);
@@ -106,7 +110,7 @@ describe('Localization', () => {
 });
 
 function addLocaleFile(locale: string, nls: Record<string, string>) {
-    const filename = path.join(getExtensionRoot(), `package.nls.${locale}.json`);
+    const filename = path.join(getExtensionRoot().fsPath, `package.nls.${locale}.json`);
     if (fs.existsSync(filename)) {
         throw Error(`NLS file ${filename} already exists`);
     }

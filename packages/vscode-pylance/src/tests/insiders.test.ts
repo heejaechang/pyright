@@ -28,7 +28,7 @@ describe('Insiders', () => {
     let blobStorage: BlobStorage;
     let commandManager: CommandManager;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         appConfig = mock();
         appShell = mock();
 
@@ -44,6 +44,8 @@ describe('Insiders', () => {
 
         blobStorage = mock<BlobStorage>();
         commandManager = mock<CommandManager>();
+
+        await localize.loadLocalizedStrings();
     });
 
     function verifyNoCommands() {

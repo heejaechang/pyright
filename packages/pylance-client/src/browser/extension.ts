@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { LanguageClientOptions } from 'vscode-languageclient';
 import { LanguageClient } from 'vscode-languageclient/browser';
 
-import { BrowserConfig } from 'pylance-internal/browserMain';
+import type { BrowserConfig } from 'pylance-internal/browserServer';
 
 declare const Worker: {
     new (stringUrl: string): any;
