@@ -11,4 +11,4 @@ if (process.argv.some((arg) => arg === '--version')) {
     process.exit(0);
 }
 
-main();
+main(/* hasVSCodeExtension */ false);

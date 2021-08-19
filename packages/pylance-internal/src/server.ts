@@ -136,7 +136,8 @@ export class PylanceServer extends LanguageServerBase {
         console: ConsoleInterface,
         private _defaultSettings: PylanceServerSettings,
         private _backgroundThreadFactory: BackgroundAnalysisFactory,
-        private _hostFactory: (kind: HostKind, fs: FileSystem) => Host
+        private _hostFactory: (kind: HostKind, fs: FileSystem) => Host,
+        private _hasVSCodeExtension: boolean
     ) {
         super(serverOptions, connection, console);
 
@@ -517,6 +518,7 @@ export class PylanceServer extends LanguageServerBase {
             workspace,
             filePath,
             params.range,
+            this._hasVSCodeExtension,
             token
         );
 
@@ -659,7 +661,7 @@ export class PylanceServer extends LanguageServerBase {
 
         if (completionList && workspace.completeFunctionParens && !token.isCancellationRequested) {
             for (const c of completionList.items) {
-                updateInsertTextForAutoParensIfNeeded(c, params.textDocument.uri);
+                updateInsertTextForAutoParensIfNeeded(c, params.textDocument.uri, this._hasVSCodeExtension);
             }
         }
         return completionList;
@@ -823,7 +825,11 @@ class PylanceBackgroundAnalysisProgram extends BackgroundAnalysisProgram {
     }
 }
 
-export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, textDocumentUri: string) {
+export function updateInsertTextForAutoParensIfNeeded(
+    item: CompletionItem,
+    textDocumentUri: string,
+    hasVSCodeExtension: boolean
+) {
     const autoParenDisabledContext = (item.data as CompletionItemData)?.funcParensDisabled;
     if (autoParenDisabledContext) {
         return;
@@ -837,10 +843,13 @@ export function updateInsertTextForAutoParensIfNeeded(item: CompletionItem, text
         }
 
         item.insertTextFormat = InsertTextFormat.Snippet;
-        item.command = mergeCommands(item.command, {
-            title: '',
-            command: ClientCommands.triggerParameterHints,
-            arguments: [textDocumentUri],
-        });
+
+        if (hasVSCodeExtension) {
+            item.command = mergeCommands(item.command, {
+                title: '',
+                command: ClientCommands.triggerParameterHints,
+                arguments: [textDocumentUri],
+            });
+        }
     }
 }

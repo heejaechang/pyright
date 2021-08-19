@@ -272,7 +272,7 @@ export class PylanceTestState extends TestState {
 
     protected override verifyCompletionItem(expected: _.FourSlashCompletionItem, actual: CompletionItem) {
         if (this.rawConfigJson?.completeFunctionParens) {
-            updateInsertTextForAutoParensIfNeeded(actual, '');
+            updateInsertTextForAutoParensIfNeeded(actual, '', /* hasVSCodeExtension */ true);
         }
 
         super.verifyCompletionItem(expected, actual);

@@ -13,7 +13,7 @@ import { PylanceFullAccessHost } from './common/pylanceFullAccessHost';
 import { IntelliCodeExtension } from './intelliCode/extension';
 import { PylanceServer, PylanceServerSettings } from './server';
 
-export function main() {
+export function main(hasVSCodeExtension: boolean) {
     const rootDirectory = __dirname;
 
     run((conn) => {
@@ -57,7 +57,8 @@ export function main() {
             console,
             serverSettings,
             (t, c) => new BackgroundAnalysis(t, c),
-            (t, f) => PylanceFullAccessHost.createHost(t, f)
+            (t, f) => PylanceFullAccessHost.createHost(t, f),
+            /* hasVSCodeExtension */ hasVSCodeExtension
         );
     }, runBackgroundThread);
 }

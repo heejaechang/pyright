@@ -68,6 +68,7 @@ class PylanceFeatures implements HostSpecificFeatures {
             workspace as PylanceWorkspaceServiceInstance,
             filePath,
             range,
+            /* hasVSCodeExtension */ true,
             token
         );
     }

@@ -73,4 +73,4 @@ if (!isInVSCode()) {
 
 import { main } from 'pylance-internal/nodeMain';
 
-main();
+main(/* hasVSCodeExtension */ true);

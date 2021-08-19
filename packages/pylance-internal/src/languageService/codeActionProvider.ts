@@ -27,6 +27,7 @@ export class CodeActionProvider {
         workspace: PylanceWorkspaceServiceInstance,
         filePath: string,
         range: Range,
+        hasVSCodeExtension: boolean,
         token: CancellationToken
     ) {
         throwIfCancellationRequested(token);
@@ -133,7 +134,14 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, ClientCommands.extractMethodWithRename, filePath, range),
+                                Command.create(
+                                    title,
+                                    hasVSCodeExtension
+                                        ? ClientCommands.extractMethodWithRename
+                                        : Commands.extractMethod,
+                                    filePath,
+                                    range
+                                ),
                                 CodeActionKind.RefactorExtract
                             )
                         );
@@ -145,7 +153,14 @@ export class CodeActionProvider {
                         codeActions.push(
                             CodeAction.create(
                                 title,
-                                Command.create(title, ClientCommands.extractVariableWithRename, filePath, range),
+                                Command.create(
+                                    title,
+                                    hasVSCodeExtension
+                                        ? ClientCommands.extractVariableWithRename
+                                        : Commands.extractVariable,
+                                    filePath,
+                                    range
+                                ),
                                 CodeActionKind.RefactorExtract
                             )
                         );
@@ -154,7 +169,9 @@ export class CodeActionProvider {
             }
         }
 
-        addExtraPathCodeActions(workspace, filePath, diags, codeActions);
+        if (hasVSCodeExtension) {
+            addExtraPathCodeActions(workspace, filePath, diags, codeActions);
+        }
 
         return codeActions;
     }

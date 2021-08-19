@@ -79,7 +79,8 @@ async function runServer(
             console,
             serverSettings,
             () => undefined,
-            () => new NoAccessHost()
+            () => new NoAccessHost(),
+            /* hasVSCodeExtension */ true
         );
     } catch (e: any) {
         console.error(e?.message);
