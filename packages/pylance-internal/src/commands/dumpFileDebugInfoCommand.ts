@@ -463,10 +463,6 @@ function getClassTypeFlagsString(flags: ClassTypeFlags) {
         str.push('SupportsAbstractMethods');
     }
 
-    if (flags & ClassTypeFlags.HasAbstractMethods) {
-        str.push('HasAbstractMethods');
-    }
-
     if (flags & ClassTypeFlags.PropertyClass) {
         str.push('PropertyClass');
     }
