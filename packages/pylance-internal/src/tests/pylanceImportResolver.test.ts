@@ -9,8 +9,8 @@ import assert from 'assert';
 import { combinePaths, getDirectoryPath, normalizeSlashes } from 'pyright-internal//common/pathUtils';
 import { ConfigOptions } from 'pyright-internal/common/configOptions';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
-import { FullAccessHost } from 'pyright-internal/common/fullAccessHost';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
+import { TestAccessHost } from 'pyright-internal/tests/harness/testAccessHost';
 import { TestFileSystem } from 'pyright-internal/tests/harness/vfs/filesystem';
 
 import { PylanceImportResolver } from './../pylanceImportResolver';
@@ -129,11 +129,15 @@ function getImportResult(
         });
 
     const fs = createFileSystem(files);
-    const configOptions = getConfigOption(fs);
+    const configOptions = new ConfigOptions(normalizeSlashes('/'));
     setup(configOptions);
 
     const file = files[files.length - 1].path;
-    const importResolver = new PylanceImportResolver(fs, configOptions, new FullAccessHost(fs));
+    const importResolver = new PylanceImportResolver(
+        fs,
+        configOptions,
+        new TestAccessHost(fs.getModulePath(), ['/lib/site-packages'])
+    );
     const importResult = importResolver.resolveImport(file, configOptions.findExecEnvironment(file), {
         leadingDots: 0,
         nameParts: nameParts,
@@ -141,14 +145,6 @@ function getImportResult(
     });
 
     return importResult;
-}
-
-function getConfigOption(fs: FileSystem) {
-    const configOptions = new ConfigOptions(normalizeSlashes('/'));
-    configOptions.venvPath = fs.getModulePath();
-    configOptions.venv = fs.getModulePath();
-
-    return configOptions;
 }
 
 function createFileSystem(files: { path: string; content: string }[]): FileSystem {
