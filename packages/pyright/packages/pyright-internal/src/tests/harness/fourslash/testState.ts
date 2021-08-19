@@ -57,7 +57,7 @@ import { PyrightFileSystem } from '../../../pyrightFileSystem';
 import { TestAccessHost } from '../testAccessHost';
 import * as host from '../testHost';
 import { stringify } from '../utils';
-import { createFromFileSystem, libFolder } from '../vfs/factory';
+import { createFromFileSystem, distlibFolder, libFolder } from '../vfs/factory';
 import * as vfs from '../vfs/filesystem';
 import {
     CompilerSettings,
@@ -91,7 +91,7 @@ export interface HostSpecificFeatures {
     execute(ls: LanguageServerInterface, params: ExecuteCommandParams, token: CancellationToken): Promise<any>;
 }
 
-const testAccessHost = new TestAccessHost(vfs.MODULE_PATH, [libFolder]);
+const testAccessHost = new TestAccessHost(vfs.MODULE_PATH, [libFolder, distlibFolder]);
 
 export class TestState {
     private readonly _cancellationToken: TestCancellationToken;

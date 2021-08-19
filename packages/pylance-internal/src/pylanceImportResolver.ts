@@ -46,7 +46,8 @@ import {
 
 // Limit native module stub resolution to 'site-packages'
 // for both performance and possible PII reasons.
-const nativeModulesRoot = 'site-packages';
+const sitePackagesRoot = 'site-packages';
+const distPackagesRoot = 'dist-packages';
 
 function getBundledTypeStubsPath(moduleDirectory: string) {
     return getStubsPath(moduleDirectory, 'stubs');
@@ -393,9 +394,11 @@ export class PylanceImportResolver extends ImportResolver {
         importName: string,
         importFailureInfo: string[] = []
     ): string | undefined {
-        // We limit resolution to site-packages only.
-        if (libraryFilePath.indexOf(nativeModulesRoot) < 0) {
-            return;
+        // We limit resolution to site-packages and dist-packages only.
+        // numpy/core/_multiarray_umath.cp36-win_amd64.pyd
+        const pathUnderNativeRoot = getPathUnderPackagesRoot(libraryFilePath);
+        if (!pathUnderNativeRoot) {
+            return undefined;
         }
 
         if (this._telemetry) {
@@ -403,7 +406,7 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         const nativeStubsPath = getBundledNativeStubsPath(this.fileSystem.getModulePath());
-        const stub = this.findNativeStub(libraryFilePath, nativeStubsPath);
+        const stub = this.findNativeStub(pathUnderNativeRoot, nativeStubsPath);
         if (stub) {
             return stub;
         }
@@ -713,16 +716,10 @@ export class PylanceImportResolver extends ImportResolver {
         }
     }
 
-    private findNativeStub(libraryFilePath: string, nativeStubsPath: string): string | undefined {
+    private findNativeStub(pathUnderNativeRoot: string, nativeStubsPath: string): string | undefined {
         // Maps native module path under nativeModulesRoot to pre-scraped stubs.
-        // libraryFilePath: .../site-packages/numpy/core/_multiarray_umath.cp36-win_amd64.pyd
+        // pathUnderNativeRoot: numpy/core/_multiarray_umath.cp36-win_amd64.pyd
         // stubPath: bundled/native-stubs/numpy/core/_multiarray_umath.pyi
-        const nativeRootIndex = libraryFilePath.indexOf(nativeModulesRoot);
-        if (nativeRootIndex < 0) {
-            return;
-        }
-        // numpy/core/_multiarray_umath.cp36-win_amd64.pyd
-        const pathUnderNativeRoot = libraryFilePath.substr(nativeRootIndex + nativeModulesRoot.length + 1);
         // _multiarray_umath.cp36-win_amd64.pyd
         const fileName = getFileName(pathUnderNativeRoot);
         // _multiarray_umath
@@ -831,4 +828,20 @@ function importNameEditDistance(word1: string, word2: string, checkDottedPrefix 
     }
 
     return leven(word2, word1);
+}
+
+function getPathUnderPackagesRoot(libraryFilePath: string) {
+    let nativeRootIndex = libraryFilePath.indexOf(sitePackagesRoot);
+    let rootLength = sitePackagesRoot.length;
+    if (nativeRootIndex < 0) {
+        nativeRootIndex = libraryFilePath.indexOf(distPackagesRoot);
+        rootLength = distPackagesRoot.length;
+    }
+
+    if (nativeRootIndex < 0) {
+        return undefined;
+    }
+
+    const pathUnderNativeRoot = libraryFilePath.substr(nativeRootIndex + rootLength + 1);
+    return pathUnderNativeRoot;
 }
