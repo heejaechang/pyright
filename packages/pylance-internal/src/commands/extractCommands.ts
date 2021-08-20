@@ -19,7 +19,7 @@ export interface ExtractCommandData {
 }
 
 export class ExtractMethodCommand implements ServerCommand {
-    constructor(private _ls: LanguageServerInterface) {}
+    constructor(private _ls: LanguageServerInterface, private _hasVSCodeExtension: boolean) {}
 
     async execute(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         throwIfCancellationRequested(token);
@@ -48,13 +48,17 @@ export class ExtractMethodCommand implements ServerCommand {
             return;
         }
 
+        if (!this._hasVSCodeExtension) {
+            return convertWorkspaceEdits(this._ls.fs, extractResults.actions);
+        }
+
         const commandResult: CommandResult = _convertToCommandResults(this._ls, extractResults);
         return commandResult;
     }
 }
 
 export class ExtractVariableCommand implements ServerCommand {
-    constructor(private _ls: LanguageServerInterface) {}
+    constructor(private _ls: LanguageServerInterface, private _hasVSCodeExtension: boolean) {}
 
     async execute(params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
         throwIfCancellationRequested(token);
@@ -76,6 +80,10 @@ export class ExtractVariableCommand implements ServerCommand {
         const extractResults = ExtractMethodProvider.extractVariable(filePath, parseResults, range, token);
         if (!extractResults) {
             return;
+        }
+
+        if (!this._hasVSCodeExtension) {
+            return convertWorkspaceEdits(this._ls.fs, extractResults.actions);
         }
 
         const commandResult: CommandResult = _convertToCommandResults(this._ls, extractResults);

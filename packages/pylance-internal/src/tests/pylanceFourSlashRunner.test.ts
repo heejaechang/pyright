@@ -73,7 +73,7 @@ class PylanceFeatures implements HostSpecificFeatures {
         );
     }
     execute(ls: LanguageServerInterface, params: ExecuteCommandParams, token: CancellationToken): Promise<any> {
-        const controller = new CommandController(ls, undefined);
+        const controller = new CommandController(ls, undefined, /* hasVSCodeExtension */ true);
         return controller.execute(params, token);
     }
 }

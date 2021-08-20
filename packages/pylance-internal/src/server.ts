@@ -151,7 +151,7 @@ export class PylanceServer extends LanguageServerBase {
 
         this._analysisTracker = new AnalysisTracker();
         this._telemetry = new TelemetryService(this._connection as any);
-        this._controller = new CommandController(this, this._telemetry);
+        this._controller = new CommandController(this, this._telemetry, this._hasVSCodeExtension);
         this._completionCoverage = new CompletionCoverage.CompletionTelemetry(this._telemetry);
         this._logger = new LogService(this.console as ConsoleWithLogLevel);
         this._platform = new Platform();
@@ -476,7 +476,7 @@ export class PylanceServer extends LanguageServerBase {
         );
     }
 
-    protected override isLongRunningCommand(command: string): boolean {
+    protected isLongRunningCommand(command: string): boolean {
         // We should determine which commands are actually slow
         // rather assuming they are all slow wholesale.
         switch (command) {

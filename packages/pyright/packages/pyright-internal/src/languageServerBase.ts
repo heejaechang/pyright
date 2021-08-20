@@ -255,13 +255,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
     protected abstract executeCommand(params: ExecuteCommandParams, token: CancellationToken): Promise<any>;
 
-    protected isLongRunningCommand(command: string): boolean {
-        // By default, all commands are considered "long-running" and should
-        // display a cancelable progress dialog. Servers can override this
-        // to avoid showing the progress dialog for commands that are
-        // guaranteed to be quick.
-        return true;
-    }
+    protected abstract isLongRunningCommand(command: string): boolean;
 
     protected abstract executeCodeAction(
         params: CodeActionParams,
@@ -885,11 +879,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 const result = await this.executeCommand(params, token);
                 if (WorkspaceEdit.is(result)) {
                     // Tell client to apply edits.
-                    await this._connection.workspace.applyEdit(result);
+                    // Do not await; the client isn't expecting a result.
+                    this._connection.workspace.applyEdit(result);
                 }
 
                 if (CommandResult.is(result)) {
                     // Tell client to apply edits.
+                    // Await so that we return after the edit is complete.
                     await this._connection.workspace.applyEdit(result.edits);
                 }
 

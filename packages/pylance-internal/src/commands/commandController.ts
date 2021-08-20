@@ -54,12 +54,16 @@ export class CommandController extends PyrightCommandController {
         [PyrightCommands.addMissingOptionalToParam, PyrightCommands.addMissingOptionalToParam],
     ]);
 
-    constructor(private _ls: LanguageServerInterface, private _telemetry: TelemetryService | undefined) {
+    constructor(
+        private _ls: LanguageServerInterface,
+        private _telemetry: TelemetryService | undefined,
+        hasVSCodeExtension: boolean
+    ) {
         super(_ls);
 
         this._pylanceQuickAction = new QuickActionCommand(_ls);
-        this._extractMethod = new ExtractMethodCommand(_ls);
-        this._extractVariable = new ExtractVariableCommand(_ls);
+        this._extractMethod = new ExtractMethodCommand(_ls, hasVSCodeExtension);
+        this._extractVariable = new ExtractVariableCommand(_ls, hasVSCodeExtension);
         this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(_ls);
         this._completionAccepted = new CompletionAcceptedCommand(_telemetry);
     }
