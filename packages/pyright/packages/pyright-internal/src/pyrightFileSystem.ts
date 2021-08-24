@@ -360,6 +360,10 @@ export class PyrightFileSystem implements FileSystem, SupportsCustomUri {
         return this._conflictMap.get(filepath);
     }
 
+    isInZipOrEgg(path: string): boolean {
+        return this._realFS.isInZipOrEgg(path);
+    }
+
     private _recordVirtualFile(mappedFile: string, originalFile: string, reversible = true) {
         this._fileMap.set(mappedFile, originalFile);
 

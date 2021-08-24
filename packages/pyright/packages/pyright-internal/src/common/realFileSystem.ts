@@ -359,6 +359,10 @@ class RealFileSystem implements FileSystem {
     getUri(path: string): string {
         return URI.file(path).toString();
     }
+
+    isInZipOrEgg(path: string): boolean {
+        return /[^\\/]\.(?:egg|zip)[\\/]/.test(path) && yarnFS.isZip(path);
+    }
 }
 
 interface WorkspaceFileWatcher extends FileWatcher {

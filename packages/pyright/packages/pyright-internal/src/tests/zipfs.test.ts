@@ -84,6 +84,11 @@ function runTests(p: string): void {
             fs.unlinkSync(combinePaths(zipRoot, 'EGG-INFO', 'top_level.txt'));
         }).toThrow(/read-only filesystem/);
     });
+
+    test('isInZipOrEgg', () => {
+        assert.strictEqual(fs.isInZipOrEgg(combinePaths(zipRoot, 'EGG-INFO', 'top_level.txt')), true);
+        assert.strictEqual(fs.isInZipOrEgg(module.filename), false);
+    });
 }
 
 describe('zip', () => runTests('./samples/zipfs/basic.zip'));
@@ -97,6 +102,10 @@ function runBadTests(p: string): void {
         const stats = fs.statSync(zipRoot);
         assert.strictEqual(stats.isDirectory(), false);
         assert.strictEqual(stats.isFile(), true);
+    });
+
+    test('isInZipOrEgg', () => {
+        assert.strictEqual(fs.isInZipOrEgg(combinePaths(zipRoot, 'EGG-INFO', 'top_level.txt')), false);
     });
 }
 

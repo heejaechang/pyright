@@ -216,6 +216,10 @@ export class BrowserFileSystem implements FileSystem {
         throw new Error('Method not supported');
     }
 
+    isInZipOrEgg(path: string): boolean {
+        return false;
+    }
+
     private _getText(relativeWebPath: string) {
         const url = this._createBundledFileUri(relativeWebPath);
 

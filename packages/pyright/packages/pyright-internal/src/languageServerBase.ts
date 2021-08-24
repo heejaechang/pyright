@@ -67,13 +67,7 @@ import { createDeferred, Deferred } from './common/deferred';
 import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/diagnostic';
 import { DiagnosticRule } from './common/diagnosticRules';
 import { LanguageServiceExtension } from './common/extensibility';
-import {
-    FileSystem,
-    FileWatcherEventType,
-    FileWatcherProvider,
-    isInZipOrEgg,
-    SupportsCustomUri,
-} from './common/fileSystem';
+import { FileSystem, FileWatcherEventType, FileWatcherProvider, SupportsCustomUri } from './common/fileSystem';
 import { Host } from './common/host';
 import { convertPathToUri, convertUriToPath } from './common/pathUtils';
 import { ProgressReporter, ProgressReportTracker } from './common/progressReporter';
@@ -415,7 +409,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return undefined;
             }
             return locations
-                .filter((loc) => !isInZipOrEgg(loc.path))
+                .filter((loc) => !this.fs.isInZipOrEgg(loc.path))
                 .map((loc) => Location.create(convertPathToUri(this.fs, loc.path), loc.range));
         };
 
@@ -467,7 +461,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
                 const convert = (locs: DocumentRange[]): Location[] => {
                     return locs
-                        .filter((loc) => !isInZipOrEgg(loc.path))
+                        .filter((loc) => !this.fs.isInZipOrEgg(loc.path))
                         .map((loc) => Location.create(convertPathToUri(this.fs, loc.path), loc.range));
                 };
 
@@ -726,7 +720,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return null;
             }
 
-            if (isInZipOrEgg(callItem.uri)) {
+            if (this.fs.isInZipOrEgg(callItem.uri)) {
                 return null;
             }
 
@@ -754,7 +748,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return null;
             }
 
-            callItems = callItems.filter((item) => !isInZipOrEgg(item.from.uri));
+            callItems = callItems.filter((item) => !this.fs.isInZipOrEgg(item.from.uri));
 
             // Convert the file paths in the items to proper URIs.
             callItems.forEach((item) => {
@@ -782,7 +776,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 return null;
             }
 
-            callItems = callItems.filter((item) => !isInZipOrEgg(item.to.uri));
+            callItems = callItems.filter((item) => !this.fs.isInZipOrEgg(item.to.uri));
 
             // Convert the file paths in the items to proper URIs.
             callItems.forEach((item) => {
@@ -1056,7 +1050,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
     protected onAnalysisCompletedHandler(results: AnalysisResults): void {
         // Send the computed diagnostics to the client.
         results.diagnostics.forEach((fileDiag) => {
-            if (isInZipOrEgg(fileDiag.filePath)) {
+            if (this.fs.isInZipOrEgg(fileDiag.filePath)) {
                 return;
             }
 
@@ -1247,7 +1241,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             const relatedInfo = diag.getRelatedInfo();
             if (relatedInfo.length > 0) {
                 vsDiag.relatedInformation = relatedInfo
-                    .filter((info) => !isInZipOrEgg(info.filePath))
+                    .filter((info) => !this.fs.isInZipOrEgg(info.filePath))
                     .map((info) =>
                         DiagnosticRelatedInformation.create(
                             Location.create(convertPathToUri(this.fs, info.filePath), info.range),
