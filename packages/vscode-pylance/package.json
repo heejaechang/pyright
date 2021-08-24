@@ -70,7 +70,10 @@
                         "Do not check for insiders updates.",
                         "Automatically check for and install insiders updates daily."
                     ],
-                    "scope": "application"
+                    "scope": "application",
+                    "tags": [
+                        "usesOnlineServices "
+                    ]
                 },
                 "python.analysis.completeFunctionParens": {
                     "type": "boolean",
