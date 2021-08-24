@@ -29,6 +29,13 @@ function handleChange(doc: vscode.TextDocument, event: vscode.TextDocumentConten
         return;
     }
 
+    if (editor.selections.length > 1 || !editor.selection.isEmpty) {
+        // Don't auto-close when in multi-select mode (we'll only only be able to correctly
+        // insert it for the first selection) or when the selection has more than one character
+        // (and VS Code will auto-close for us).
+        return;
+    }
+
     const endPos = event.range.end;
     const endPlusOne = endPos.translate(0, 1);
     const quotes = event.text[0].repeat(3);
