@@ -171,7 +171,7 @@ export class PylanceServer extends LanguageServerBase {
     async getSettings(workspace: WorkspaceServiceInstance): Promise<ServerSettings> {
         // Clone default settings to local server settings. It is safe to clone settings
         // using JSON since it is a pure record type (no circular reference nor function)
-        const serverSettings = JSON.parse(JSON.stringify(this._defaultSettings));
+        const serverSettings: PylanceServerSettings = JSON.parse(JSON.stringify(this._defaultSettings));
 
         if (IS_INSIDERS) {
             serverSettings.indexing = true;
