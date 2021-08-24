@@ -109,5 +109,8 @@ function runBadTests(p: string): void {
     });
 }
 
-describe('zip', () => runBadTests('./samples/zipfs/bad.zip'));
-describe('egg', () => runBadTests('./samples/zipfs/bad.egg'));
+describe('corrupt zip', () => runBadTests('./samples/zipfs/bad.zip'));
+describe('corrupt egg', () => runBadTests('./samples/zipfs/bad.egg'));
+
+describe('corrupt zip with magic', () => runBadTests('./samples/zipfs/corrupt.zip'));
+describe('corrupt egg with magic', () => runBadTests('./samples/zipfs/corrupt.egg'));
