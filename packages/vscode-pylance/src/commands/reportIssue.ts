@@ -18,8 +18,8 @@ export default function reportIssue(browser: BrowserService, extensionVersion: s
 }
 
 function _reportIssue(browser: BrowserService, extensionVersion: string) {
-    const platform = process.platform;
-    const arch = process.arch;
+    const platform = process.platform || 'web';
+    const arch = process.arch || '';
     const pythonConfig = vscode.workspace.getConfiguration('python');
     const indexing = pythonConfig.get('analysis.indexing');
     const typeCheckingMode = pythonConfig.get('analysis.typeCheckingMode');
