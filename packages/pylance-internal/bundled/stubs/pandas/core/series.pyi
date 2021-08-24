@@ -2009,7 +2009,7 @@ See the :ref:`user guide <basics.reindexing>` for more.
     ) -> Series[S1]: ...
     def mask(
         self,
-        cond: Union[Series[S1], np.ndarray, Callable],
+        cond: MaskType,
         other: Union[Scalar, Series[S1], DataFrame, Callable] = ...,
         inplace: _bool = ...,
         axis: Optional[SeriesAxisType] = ...,
