@@ -74,6 +74,9 @@ async function runServer(
                 cancellationProvider: new DefaultCancellationProvider(),
                 disableChecker: true,
                 supportedCommands: [Commands.completionAccepted],
+                // Useless as we only handle open files, and causes vscode.dev
+                // to spam file watcher events for the output window itself.
+                disableClientFileWatching: true,
             },
             conn,
             console,

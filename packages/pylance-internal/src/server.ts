@@ -105,6 +105,10 @@ export interface PylanceWorkspaceServiceInstance extends WorkspaceServiceInstanc
     enableExtractCodeAction?: boolean;
 }
 
+export interface PylanceServerOptions extends ServerOptions {
+    disableClientFileWatching?: boolean;
+}
+
 type BackgroundAnalysisFactory = (
     telemetry: TelemetryInterface,
     console: ConsoleInterface
@@ -130,8 +134,10 @@ export class PylanceServer extends LanguageServerBase {
     private _hasTrustedWorkspaceSupport?: boolean;
     private _hostKind: HostKind = HostKind.LimitedAccess;
 
+    protected override _serverOptions!: PylanceServerOptions;
+
     constructor(
-        serverOptions: ServerOptions,
+        serverOptions: PylanceServerOptions,
         connection: Connection,
         console: ConsoleInterface,
         private _defaultSettings: PylanceServerSettings,
@@ -377,6 +383,10 @@ export class PylanceServer extends LanguageServerBase {
 
         this._hasExperimentationSupport = params.initializationOptions?.experimentationSupport;
         this._hasTrustedWorkspaceSupport = params.initializationOptions?.trustedWorkspaceSupport;
+
+        if (this._serverOptions.disableClientFileWatching) {
+            this.client.hasWatchFileCapability = false;
+        }
 
         return result;
     }
