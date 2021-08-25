@@ -9128,6 +9128,7 @@ export function createTypeEvaluator(
         let argType: Type | undefined;
         let expectedTypeDiag: DiagnosticAddendum | undefined;
         let isTypeIncomplete = false;
+        let isCompatible = true;
 
         if (argParam.argument.valueExpression) {
             // If the param type is a "bare" TypeVar, don't use it as an expected
@@ -9162,7 +9163,7 @@ export function createTypeEvaluator(
                     isTypeIncomplete = true;
                 }
                 if (exprType.typeErrors) {
-                    return { isCompatible: false, isTypeIncomplete };
+                    isCompatible = false;
                 }
                 expectedTypeDiag = exprType.expectedTypeDiagAddendum;
             }
@@ -9204,7 +9205,7 @@ export function createTypeEvaluator(
         // Handle the case where we're assigning a *args or **kwargs argument
         // to a *P.args or **P.kwargs parameter.
         if (isParamSpec(argParam.paramType) && argParam.paramType.paramSpecAccess !== undefined) {
-            return { isCompatible: true, isTypeIncomplete };
+            return { isCompatible, isTypeIncomplete };
         }
 
         if (!canAssignType(argParam.paramType, argType, diag.createAddendum(), typeVarMap)) {
@@ -9265,7 +9266,9 @@ export function createTypeEvaluator(
                 );
             }
             return { isCompatible: false, isTypeIncomplete };
-        } else if (!skipUnknownCheck) {
+        }
+
+        if (!skipUnknownCheck) {
             const simplifiedType = removeUnbound(argType);
             const fileInfo = getFileInfo(argParam.errorNode);
 
@@ -9322,7 +9325,7 @@ export function createTypeEvaluator(
             }
         }
 
-        return { isCompatible: true, isTypeIncomplete };
+        return { isCompatible, isTypeIncomplete };
     }
 
     function createTypeVarType(errorNode: ExpressionNode, argList: FunctionArgument[]): Type | undefined {
@@ -11594,28 +11597,49 @@ export function createTypeEvaluator(
         // Pre-cache the newly-created function type.
         writeTypeCache(node, functionType, /* isIncomplete */ false);
 
-        let expectedFunctionType: FunctionType | undefined;
+        let expectedFunctionTypes: FunctionType[] = [];
         if (expectedType) {
-            if (isFunction(expectedType)) {
-                expectedFunctionType = expectedType;
-            } else if (isUnion(expectedType)) {
-                // It's not clear what we should do with a union type. For now,
-                // simply use the first function in the union.
-                expectedFunctionType = findSubtype(expectedType, (t) => isFunction(t)) as FunctionType;
-            } else if (isClassInstance(expectedType)) {
-                const callMember = lookUpObjectMember(expectedType, '__call__');
-                if (callMember) {
-                    const memberType = getTypeOfMember(callMember);
-                    if (memberType && isFunction(memberType)) {
-                        const boundMethod = bindFunctionToClassOrObject(expectedType, memberType);
+            mapSubtypes(expectedType, (subtype) => {
+                if (isFunction(subtype)) {
+                    expectedFunctionTypes.push(subtype);
+                }
 
-                        if (boundMethod) {
-                            expectedFunctionType = boundMethod as FunctionType;
+                if (isClassInstance(subtype)) {
+                    const callMember = lookUpObjectMember(subtype, '__call__');
+                    if (callMember) {
+                        const memberType = getTypeOfMember(callMember);
+                        if (memberType && isFunction(memberType)) {
+                            const boundMethod = bindFunctionToClassOrObject(subtype, memberType);
+
+                            if (boundMethod) {
+                                expectedFunctionTypes.push(boundMethod as FunctionType);
+                            }
                         }
                     }
                 }
-            }
+
+                return undefined;
+            });
+
+            // Determine the minimum number of parameters that are required to
+            // satisfy the lambda.
+            const lambdaParamCount = node.parameters.filter(
+                (param) => param.category === ParameterCategory.Simple && param.defaultValue === undefined
+            ).length;
+
+            // Remove any expected subtypes that don't satisfy the minimum
+            // parameter count requirement.
+            expectedFunctionTypes = expectedFunctionTypes.filter((functionType) => {
+                const functionParamCount = functionType.details.parameters.filter((param) => !!param.name).length;
+                const hasVarArgs = functionType.details.parameters.some(
+                    (param) => !!param.name && param.category !== ParameterCategory.Simple
+                );
+                return hasVarArgs || functionParamCount === lambdaParamCount;
+            });
         }
+
+        // For now, use only the first expected type.
+        const expectedFunctionType = expectedFunctionTypes.length > 0 ? expectedFunctionTypes[0] : undefined;
 
         node.parameters.forEach((param, index) => {
             let paramType: Type = UnknownType.create();
@@ -12831,7 +12855,9 @@ export function createTypeEvaluator(
 
                     if (canAssignType(declaredType, srcType, diagAddendum)) {
                         // Narrow the resulting type if possible.
-                        srcType = narrowTypeBasedOnAssignment(declaredType, srcType);
+                        if (!isAnyOrUnknown(srcType)) {
+                            srcType = narrowTypeBasedOnAssignment(declaredType, srcType);
+                        }
                     }
                 }
 
@@ -13371,32 +13397,6 @@ export function createTypeEvaluator(
         }
 
         classType.details.effectiveMetaclass = effectiveMetaclass;
-
-        // If the class is a protocol class, determine if it's a "callback protocol" (i.e.
-        // it defines only a '__call__' method).
-        if (
-            ClassType.isProtocolClass(classType) &&
-            classType.details.fields.get('__call__') &&
-            !classType.details.baseClasses.find(
-                (base) =>
-                    isInstantiableClass(base) &&
-                    !ClassType.isBuiltIn(base, 'object') &&
-                    !ClassType.isBuiltIn(base, 'Protocol')
-            )
-        ) {
-            let symbolsToMatchCount = 0;
-            classType.details.fields.forEach((symbol, name) => {
-                if (!symbol.isIgnoredForProtocolMatch()) {
-                    symbolsToMatchCount++;
-                }
-            });
-
-            // If any symbols are present other than __call__, it's not considered
-            // a callback protocol class.
-            if (symbolsToMatchCount === 1) {
-                classType.details.flags |= ClassTypeFlags.CallbackProtocolClass;
-            }
-        }
 
         // Now determine the decorated type of the class.
         let decoratedType: Type = classType;
@@ -22940,10 +22940,6 @@ export function createTypeEvaluator(
     }
 
     function getCallbackProtocolType(objType: ClassType): FunctionType | OverloadedFunctionType | undefined {
-        if (!ClassType.isCallbackProtocolClass(objType)) {
-            return undefined;
-        }
-
         const callMember = lookUpObjectMember(objType, '__call__');
         if (!callMember) {
             return undefined;
@@ -24364,7 +24360,12 @@ export function createTypeEvaluator(
                 // we attempt to call canAssignType, we'll risk infinite recursion.
                 // Instead, we'll assume it's assignable.
                 if (!typeVarMap.isLocked()) {
-                    typeVarMap.setTypeVarType(memberTypeFirstParamType, nonLiteralFirstParamType);
+                    typeVarMap.setTypeVarType(
+                        memberTypeFirstParamType,
+                        TypeBase.isInstantiable(memberTypeFirstParamType)
+                            ? convertToInstance(nonLiteralFirstParamType)
+                            : nonLiteralFirstParamType
+                    );
                 }
             } else if (
                 !canAssignType(
