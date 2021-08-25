@@ -67,7 +67,7 @@ import { createDeferred, Deferred } from './common/deferred';
 import { Diagnostic as AnalyzerDiagnostic, DiagnosticCategory } from './common/diagnostic';
 import { DiagnosticRule } from './common/diagnosticRules';
 import { LanguageServiceExtension } from './common/extensibility';
-import { FileSystem, FileWatcherEventType, FileWatcherProvider, SupportsCustomUri } from './common/fileSystem';
+import { FileSystem, FileWatcherEventType, FileWatcherProvider } from './common/fileSystem';
 import { Host } from './common/host';
 import { convertPathToUri, convertUriToPath } from './common/pathUtils';
 import { ProgressReporter, ProgressReportTracker } from './common/progressReporter';
@@ -788,8 +788,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         this._connection.onDidOpenTextDocument(async (params) => {
             const filePath = convertUriToPath(this.fs, params.textDocument.uri);
-            if (SupportsCustomUri.is(this.fs)) {
-                this.fs.addUriMap(params.textDocument.uri, filePath);
+            if (!(this.fs as PyrightFileSystem).addUriMap(params.textDocument.uri, filePath)) {
+                // We do not support opening 1 file with 2 different uri.
+                return;
             }
 
             const workspace = await this.getWorkspaceForFile(filePath);
@@ -800,6 +801,11 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             this.recordUserInteractionTime();
 
             const filePath = convertUriToPath(this.fs, params.textDocument.uri);
+            if (!(this.fs as PyrightFileSystem).hasUriMapEntry(params.textDocument.uri, filePath)) {
+                // We do not support opening 1 file with 2 different uri.
+                return;
+            }
+
             const workspace = await this.getWorkspaceForFile(filePath);
             workspace.serviceInstance.updateOpenFileContents(
                 filePath,
@@ -810,8 +816,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
 
         this._connection.onDidCloseTextDocument(async (params) => {
             const filePath = convertUriToPath(this.fs, params.textDocument.uri);
-            if (SupportsCustomUri.is(this.fs)) {
-                this.fs.removeUriMap(filePath);
+            if (!(this.fs as PyrightFileSystem).removeUriMap(params.textDocument.uri, filePath)) {
+                // We do not support opening 1 file with 2 different uri.
+                return;
             }
 
             const workspace = await this.getWorkspaceForFile(filePath);
@@ -1059,9 +1066,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 diagnostics: this._convertDiagnostics(fileDiag.diagnostics),
             });
 
-            if (SupportsCustomUri.is(this.fs)) {
-                this.fs.pendingRequest(fileDiag.filePath, fileDiag.diagnostics.length > 0);
-            }
+            (this.fs as PyrightFileSystem).pendingRequest(fileDiag.filePath, fileDiag.diagnostics.length > 0);
         });
 
         if (!this._progressReporter.isEnabled(results)) {
