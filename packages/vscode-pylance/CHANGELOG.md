@@ -4,11 +4,12 @@
 
 Notable changes:
 
--   More capability checks are added so that Pylance can be used with less capable clients.
--   Egg/zip supports are improved. ([pylance-release#1685](https://github.com/microsoft/pylance-release/issues/1685)), ([pylance-release#1692](https://github.com/microsoft/pylance-release/issues/1692))
--   Triple quote auto-closing is improved. ([pylance-release#1716](https://github.com/microsoft/pylance-release/issues/1716))
--   Bundled stubs are updated.
--   pth files are supported in extra path. ([pylance-release#1709](https://github.com/microsoft/pylance-release/issues/1709))
+-   A bug that prevented navigation to directory-based eggs has been fixed. ([pylance-release#1685](https://github.com/microsoft/pylance-release/issues/1685)))
+-   Corrupt eggs and zips will no longer cause a crash. ([pylance-release#1692](https://github.com/microsoft/pylance-release/issues/1692))
+-   Triple quote auto-close has been disabled for multi-line selections. ([pylance-release#1716](https://github.com/microsoft/pylance-release/issues/1716))
+-   The bundled stubs for django and pandas have been updated.
+-   pth files in directories in extraPaths will now be processed for additional paths. ([pylance-release#1709](https://github.com/microsoft/pylance-release/issues/1709))
+-   Pylance's copy of typeshed has been updated.
 
 In addition, Pylance's copy of Pyright has been updated from 1.1.162 to 1.1.163, including the following changes:
 
