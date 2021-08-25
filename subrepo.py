@@ -21,6 +21,7 @@ os.environ["GIT_SUBREPO_ROOT"] = _GIT_SUBREPO_ROOT
 os.environ["PATH"] = (
     os.path.join(_GIT_SUBREPO_ROOT, "lib") + os.pathsep + os.environ["PATH"]
 )
+os.environ["FILTER_BRANCH_SQUELCH_WARNING"] = "1"
 
 _GIT_URL = "https://github.com/microsoft/pyright.git"
 _COMMITS_URL = "https://api.github.com/repos/microsoft/pyright/commits/main"
