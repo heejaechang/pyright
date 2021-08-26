@@ -29,7 +29,6 @@
         "node-stream-zip": "^1.14.0",
         "process": "^0.11.10",
         "sha.js": "^2.4.11",
-        "source-map-support": "^0.5.19",
         "uuid": "^8.3.2",
         "vscode-languageserver": "7.0.0"
     },
@@ -37,8 +36,8 @@
         "onnxruntime": "1.7.0"
     },
     "devDependencies": {
-        "@types/jest": "^26.0.24",
-        "@types/node": "^12.20.19",
+        "@types/jest": "^27.0.1",
+        "@types/node": "^12.20.21",
         "@types/sha.js": "^2.4.0",
         "@types/tar": "^4.0.5",
         "@types/tmp": "^0.2.1",
@@ -50,11 +49,11 @@
         "jest-junit": "^12.2.0",
         "nyc": "^15.1.0",
         "shx": "^0.3.3",
-        "tar": "^6.1.6",
-        "ts-jest": "^27.0.4",
+        "tar": "^6.1.11",
+        "ts-jest": "^27.0.5",
         "ts-mockito": "^2.6.1",
-        "ts-node": "^10.1.0",
-        "tsconfig-paths": "^3.10.1",
+        "ts-node": "^10.2.1",
+        "tsconfig-paths": "^3.11.0",
         "typescript": "~4.3.5"
     }
 }
