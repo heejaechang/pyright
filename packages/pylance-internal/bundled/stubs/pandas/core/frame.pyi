@@ -57,7 +57,7 @@ class _iLocIndexerFrame(_iLocIndexer):
 
 class _LocIndexerFrame(_LocIndexer):
     @overload
-    def __getitem__(self, idx: Union[Union[IndexType, MaskType], Tuple[Union[IndexType, MaskType, slice], Union[List[StrLike], slice, Series[bool]]]],) -> DataFrame: ...
+    def __getitem__(self, idx: Union[Union[IndexType, MaskType], List[StrLike], Tuple[Union[IndexType, MaskType, slice, List[StrLike]], Union[List[StrLike], slice, Series[bool]]]],) -> DataFrame: ...
     @overload
     def __getitem__(self, idx: Tuple[StrLike, StrLike],) -> Scalar: ...   
     @overload
@@ -71,7 +71,7 @@ class _LocIndexerFrame(_LocIndexer):
 
     def __setitem__(
         self,
-        idx: Union[MaskType, StrLike, Tuple[Union[MaskType, Index, List[str]], Union[MaskType, List[str], str]],],
+        idx: Union[MaskType, StrLike, Tuple[Union[MaskType, Index, List[Scalar], Scalar], Union[MaskType, List[Scalar], Scalar]],],
         value: Union[Scalar, _np.ndarray, Series[Dtype], DataFrame],
     ) -> None: ...
 
