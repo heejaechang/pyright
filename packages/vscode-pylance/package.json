@@ -757,6 +757,11 @@
                 "id": "magicFunction",
                 "description": "magic aka dunder function",
                 "superType": "function"
+            },
+            {
+                "id": "builtinConstant",
+                "description": "constants like True, False, None, or __debug__",
+                "superType": "constant"
             }
         ],
         "semanticTokenModifiers": [
@@ -798,6 +803,9 @@
                     ],
                     "class.decorator": [
                         "meta.function.decorator.python"
+                    ],
+                    "builtinConstant": [
+                        "constant.language.python"
                     ]
                 }
             }

@@ -24,6 +24,7 @@ import { convertOffsetsToRange, convertOffsetToPosition } from 'pyright-internal
 import { doRangesOverlap, Range } from 'pyright-internal/common/textRange';
 import {
     CaseNode,
+    ConstantNode,
     DecoratorNode,
     MatchNode,
     ModuleNameNode,
@@ -62,7 +63,8 @@ enum TokenTypes {
     selfParameter = 18,
     clsParameter = 19,
     magicFunction = 20,
-    _ = 21,
+    builtinConstant = 21,
+    _ = 22,
 }
 
 enum TokenModifiers {
@@ -232,6 +234,12 @@ class TokenWalker extends ParseTreeWalker {
 
     override visitCase(node: CaseNode) {
         this._pushKeyword(node);
+        return true;
+    }
+
+    // Emit tokens for builtin constants so that they are colored properly in string-based annotations.
+    override visitConstant(node: ConstantNode) {
+        this._pushToken(node, TokenTypes.builtinConstant, TokenModifiers.builtin | TokenModifiers.readonly);
         return true;
     }
 
