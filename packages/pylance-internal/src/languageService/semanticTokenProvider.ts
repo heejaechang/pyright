@@ -481,6 +481,11 @@ class TokenWalker extends ParseTreeWalker {
     }
 
     private _pushToken(node: ParseNode, tokenType: TokenTypes, tokenModifiers: TokenModifiers) {
+        if (node.length === 0) {
+            // Ignore tokens that come from error recovery.
+            return;
+        }
+
         const pos = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
         this._builder.push(pos.line, pos.character, node.length, tokenType, tokenModifiers);
     }
