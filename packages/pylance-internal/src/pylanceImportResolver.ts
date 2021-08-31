@@ -533,14 +533,21 @@ export class PylanceImportResolver extends ImportResolver {
         }
 
         const files = super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
-        if (files.length > 0) {
-            return files;
-        }
-
         if (mapCompiled) {
-            const scrapedPath = this._scrapedPath(stubFilePath, execEnv);
-            if (scrapedPath) {
-                return [scrapedPath];
+            if (files.length > 0) {
+                // Special case; allow scraping of decimal, even though it's a .py file;
+                // it re-exports from compiled modules, but typeshed doesn't structure it that way.
+                if (!/stdlib[\\/]decimal\.pyi/.test(stubFilePath)) {
+                    return files;
+                }
+            }
+
+            if (this._isScrapable(stubFilePath, execEnv)) {
+                const scrapedPath = this._scrapedPath(stubFilePath, execEnv);
+                if (scrapedPath) {
+                    files.push(scrapedPath);
+                    return files;
+                }
             }
 
             if (this.fileSystem instanceof PyrightFileSystem) {
@@ -674,16 +681,20 @@ export class PylanceImportResolver extends ImportResolver {
         }
     }
 
-    private _scrapedPath(stubFilePath: string, execEnv: ExecutionEnvironment): string | undefined {
+    private _isScrapable(stubFilePath: string, execEnv: ExecutionEnvironment): boolean {
         if (!this._configOptions.pythonPath) {
-            return undefined;
+            return false;
         }
 
         const stdlib = this.getTypeshedStdLibPath(execEnv);
         if (!stdlib || !containsPath(stdlib, stubFilePath)) {
-            return undefined;
+            return false;
         }
 
+        return true;
+    }
+
+    private _scrapedPath(stubFilePath: string, execEnv: ExecutionEnvironment): string | undefined {
         return (
             getOrAdd(this._scrapedTmpFiles, stubFilePath, () => this._scrapeModuleToTmpFile(stubFilePath, execEnv)) ||
             undefined
