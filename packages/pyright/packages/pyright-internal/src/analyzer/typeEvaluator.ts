@@ -93,6 +93,7 @@ import {
     FlowExhaustedMatch,
     FlowFlags,
     FlowLabel,
+    FlowLoopLabel,
     FlowNarrowForPattern,
     FlowNode,
     FlowPostContextManagerLabel,
@@ -2066,6 +2067,15 @@ export function createTypeEvaluator(
                 let iterReturnType: Type | undefined;
 
                 if (TypeBase.isInstance(subtype)) {
+                    // Handle an empty tuple specially.
+                    if (
+                        isTupleClass(subtype) &&
+                        subtype.tupleTypeArguments &&
+                        subtype.tupleTypeArguments.length === 0
+                    ) {
+                        return NeverType.create();
+                    }
+
                     iterReturnType = getSpecializedReturnType(subtype, iterMethodName, errorNode);
                 } else if (
                     TypeBase.isInstantiable(subtype) &&
@@ -2092,38 +2102,50 @@ export function createTypeEvaluator(
 
                     diag.addMessage(Localizer.Diagnostic.methodNotDefined().format({ name: iterMethodName }));
                 } else {
-                    const concreteIterReturnType = makeTopLevelTypeVarsConcrete(iterReturnType);
+                    const iterReturnTypeDiag = new DiagnosticAddendum();
 
-                    if (isAnyOrUnknown(concreteIterReturnType)) {
-                        return concreteIterReturnType;
-                    }
-
-                    if (isClassInstance(concreteIterReturnType)) {
-                        const nextReturnType = getSpecializedReturnType(
-                            concreteIterReturnType,
-                            nextMethodName,
-                            errorNode
-                        );
-
-                        if (!nextReturnType) {
-                            diag.addMessage(
-                                Localizer.Diagnostic.methodNotDefinedOnType().format({
-                                    name: nextMethodName,
-                                    type: printType(iterReturnType),
-                                })
-                            );
-                        } else {
-                            if (!isAsync) {
-                                return nextReturnType;
+                    const returnType = mapSubtypesExpandTypeVars(
+                        iterReturnType,
+                        /* conditionFilter */ undefined,
+                        (subtype) => {
+                            if (isAnyOrUnknown(subtype)) {
+                                return subtype;
                             }
 
-                            // If it's an async iteration, there's an implicit
-                            // 'await' operator applied.
-                            return getTypeFromAwaitable(nextReturnType, errorNode);
+                            if (isClassInstance(subtype)) {
+                                const nextReturnType = getSpecializedReturnType(subtype, nextMethodName, errorNode);
+
+                                if (!nextReturnType) {
+                                    iterReturnTypeDiag.addMessage(
+                                        Localizer.Diagnostic.methodNotDefinedOnType().format({
+                                            name: nextMethodName,
+                                            type: printType(subtype!),
+                                        })
+                                    );
+                                } else {
+                                    if (!isAsync) {
+                                        return nextReturnType;
+                                    }
+
+                                    // If it's an async iteration, there's an implicit
+                                    // 'await' operator applied.
+                                    return getTypeFromAwaitable(nextReturnType, errorNode);
+                                }
+                            } else {
+                                iterReturnTypeDiag.addMessage(
+                                    Localizer.Diagnostic.methodReturnsNonObject().format({ name: iterMethodName })
+                                );
+                            }
+
+                            return undefined;
                         }
-                    } else {
-                        diag.addMessage(Localizer.Diagnostic.methodReturnsNonObject().format({ name: iterMethodName }));
+                    );
+
+                    if (iterReturnTypeDiag.isEmpty()) {
+                        return returnType;
                     }
+
+                    diag.addAddendum(iterReturnTypeDiag);
                 }
             }
 
@@ -2998,8 +3020,27 @@ export function createTypeEvaluator(
         }
 
         const declarations = symbolWithScope.symbol.getDeclarations();
-        const declaredType = getDeclaredTypeOfSymbol(symbolWithScope.symbol);
+        let declaredType = getDeclaredTypeOfSymbol(symbolWithScope.symbol);
         const fileInfo = getFileInfo(nameNode);
+
+        // If this is a class scope and there is no type declared for this class variable,
+        // see if a parent class has a type declared.
+        if (declaredType === undefined && symbolWithScope.scope.type === ScopeType.Class) {
+            const containingClass = ParseTreeUtils.getEnclosingClass(nameNode);
+            if (containingClass) {
+                const classType = getTypeOfClass(containingClass);
+                if (classType) {
+                    const memberInfo = lookUpClassMember(
+                        classType.classType,
+                        nameNode.value,
+                        ClassMemberLookupFlags.SkipOriginalClass
+                    );
+                    if (memberInfo?.isTypeDeclared) {
+                        declaredType = getTypeOfMember(memberInfo);
+                    }
+                }
+            }
+        }
 
         // We found an existing declared type. Make sure the type is assignable.
         let destType = type;
@@ -4469,8 +4510,8 @@ export function createTypeEvaluator(
 
         if (isCodeFlowSupportedForReference(node)) {
             // Before performing code flow analysis, update the cache to prevent recursion.
-            writeTypeCache(node, memberTypeResult.type, /* isIncomplete */ false);
-            writeTypeCache(node.memberName, memberTypeResult.type, /* isIncomplete */ false);
+            writeTypeCache(node, memberTypeResult.type, /* isIncomplete */ true);
+            writeTypeCache(node.memberName, memberTypeResult.type, /* isIncomplete */ true);
 
             // If the type is initially unbound, see if there's a parent class that
             // potentially initialized the value.
@@ -4540,7 +4581,7 @@ export function createTypeEvaluator(
         let diag = new DiagnosticAddendum();
         const fileInfo = getFileInfo(node);
         let type: Type | undefined;
-        let isIncomplete = false;
+        let isIncomplete = !!baseTypeResult.isIncomplete;
 
         // If the base type was incomplete and unbound, don't proceed
         // because false positive errors will be generated.
@@ -4586,38 +4627,45 @@ export function createTypeEvaluator(
                         const paramNode = ParseTreeUtils.getEnclosingParameter(node);
                         if (!paramNode || paramNode.category !== ParameterCategory.VarArgList) {
                             addError(Localizer.Diagnostic.paramSpecArgsUsage(), node);
-                            return { type: UnknownType.create(), node };
+                            return { type: UnknownType.create(), node, isIncomplete };
                         }
-                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'args'), node };
+                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'args'), node, isIncomplete };
                     }
 
                     if (memberName === 'kwargs') {
                         const paramNode = ParseTreeUtils.getEnclosingParameter(node);
                         if (!paramNode || paramNode.category !== ParameterCategory.VarArgDictionary) {
                             addError(Localizer.Diagnostic.paramSpecKwargsUsage(), node);
-                            return { type: UnknownType.create(), node };
+                            return { type: UnknownType.create(), node, isIncomplete };
                         }
-                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'kwargs'), node };
+                        return { type: TypeVarType.cloneForParamSpecAccess(baseType, 'kwargs'), node, isIncomplete };
                     }
 
-                    addDiagnostic(
-                        fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                        DiagnosticRule.reportGeneralTypeIssues,
-                        Localizer.Diagnostic.paramSpecUnknownMember().format({ name: memberName }),
-                        node
-                    );
-                    return { type: UnknownType.create(), node };
+                    if (!isIncomplete) {
+                        addDiagnostic(
+                            fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            Localizer.Diagnostic.paramSpecUnknownMember().format({ name: memberName }),
+                            node
+                        );
+                    }
+                    return { type: UnknownType.create(), node, isIncomplete };
                 }
 
                 if (flags & EvaluatorFlags.ExpectingType) {
-                    addDiagnostic(
-                        getFileInfo(node).diagnosticRuleSet.reportGeneralTypeIssues,
-                        DiagnosticRule.reportGeneralTypeIssues,
-                        Localizer.Diagnostic.typeVarNoMember().format({ type: printType(baseType), name: memberName }),
-                        node.leftExpression
-                    );
+                    if (!isIncomplete) {
+                        addDiagnostic(
+                            getFileInfo(node).diagnosticRuleSet.reportGeneralTypeIssues,
+                            DiagnosticRule.reportGeneralTypeIssues,
+                            Localizer.Diagnostic.typeVarNoMember().format({
+                                type: printType(baseType),
+                                name: memberName,
+                            }),
+                            node.leftExpression
+                        );
+                    }
 
-                    return { type: UnknownType.create(), node };
+                    return { type: UnknownType.create(), node, isIncomplete };
                 }
 
                 if (baseType.details.recursiveTypeAliasName) {
@@ -4630,6 +4678,7 @@ export function createTypeEvaluator(
                         type: makeTopLevelTypeVarsConcrete(baseType),
                         node,
                         bindToType: baseType,
+                        isIncomplete,
                     },
                     usage,
                     EvaluatorFlags.None
@@ -4664,10 +4713,11 @@ export function createTypeEvaluator(
                                         type: ClassType.cloneAsInstance(
                                             ClassType.cloneWithLiteral(strClass, literalValue.itemName)
                                         ),
+                                        isIncomplete,
                                     };
                                 }
                             } else if (memberName === 'value' || memberName === '_value_') {
-                                return { node, type: literalValue.itemType };
+                                return { node, type: literalValue.itemType, isIncomplete };
                             }
                         }
                     }
@@ -4739,12 +4789,14 @@ export function createTypeEvaluator(
                     }
 
                     if (!type) {
-                        addDiagnostic(
-                            fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                            DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.moduleUnknownMember().format({ name: memberName }),
-                            node.memberName
-                        );
+                        if (!isIncomplete) {
+                            addDiagnostic(
+                                fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                                DiagnosticRule.reportGeneralTypeIssues,
+                                Localizer.Diagnostic.moduleUnknownMember().format({ name: memberName }),
+                                node.memberName
+                            );
+                        }
                         type = UnknownType.create();
                     }
                 }
@@ -4762,12 +4814,14 @@ export function createTypeEvaluator(
                             }
                             return type;
                         } else {
-                            addDiagnostic(
-                                getFileInfo(node).diagnosticRuleSet.reportOptionalMemberAccess,
-                                DiagnosticRule.reportOptionalMemberAccess,
-                                Localizer.Diagnostic.noneUnknownMember().format({ name: memberName }),
-                                node.memberName
-                            );
+                            if (!isIncomplete) {
+                                addDiagnostic(
+                                    getFileInfo(node).diagnosticRuleSet.reportOptionalMemberAccess,
+                                    DiagnosticRule.reportOptionalMemberAccess,
+                                    Localizer.Diagnostic.noneUnknownMember().format({ name: memberName }),
+                                    node.memberName
+                                );
+                            }
                             return undefined;
                         }
                     } else if (isUnbound(subtype)) {
@@ -10466,21 +10520,13 @@ export function createTypeEvaluator(
         }
 
         // Optional checks apply to all operations except for boolean operations.
+        let isLeftOptionalType = false;
         if (booleanOperatorMap[node.operator] === undefined) {
-            if (isOptionalType(leftType)) {
-                // Skip the optional error reporting for == and !=, since
-                // None is a valid operand for these operators.
-                if (node.operator !== OperatorType.Equals && node.operator !== OperatorType.NotEquals) {
-                    addDiagnostic(
-                        getFileInfo(node).diagnosticRuleSet.reportOptionalOperand,
-                        DiagnosticRule.reportOptionalOperand,
-                        Localizer.Diagnostic.noneOperator().format({
-                            operator: ParseTreeUtils.printOperator(node.operator),
-                        }),
-                        node.leftExpression
-                    );
-                }
+            // None is a valid operand for == and != even if the type stub says otherwise.
+            if (node.operator === OperatorType.Equals || node.operator === OperatorType.NotEquals) {
                 leftType = removeNoneFromUnion(leftType);
+            } else {
+                isLeftOptionalType = isOptionalType(leftType);
             }
 
             // None is a valid operand for == and != even if the type stub says otherwise.
@@ -10495,16 +10541,32 @@ export function createTypeEvaluator(
         if (!diag.isEmpty() || !type || isNever(type)) {
             if (!isIncomplete) {
                 const fileInfo = getFileInfo(node);
-                addDiagnostic(
-                    fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
-                    DiagnosticRule.reportGeneralTypeIssues,
-                    Localizer.Diagnostic.typeNotSupportBinaryOperator().format({
-                        operator: ParseTreeUtils.printOperator(node.operator),
-                        leftType: printType(leftType),
-                        rightType: printType(rightType),
-                    }) + diag.getString(),
-                    node
-                );
+
+                if (isLeftOptionalType && diag.getMessages().length === 1) {
+                    // If the left was an optional type and there is just one diagnostic,
+                    // assume that it was due to a "None" not being supported. Report
+                    // this as a reportOptionalOperand diagnostic rather than a
+                    // reportGeneralTypeIssues diagnostic.
+                    addDiagnostic(
+                        getFileInfo(node).diagnosticRuleSet.reportOptionalOperand,
+                        DiagnosticRule.reportOptionalOperand,
+                        Localizer.Diagnostic.noneOperator().format({
+                            operator: ParseTreeUtils.printOperator(node.operator),
+                        }),
+                        node.leftExpression
+                    );
+                } else {
+                    addDiagnostic(
+                        fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.typeNotSupportBinaryOperator().format({
+                            operator: ParseTreeUtils.printOperator(node.operator),
+                            leftType: printType(leftType),
+                            rightType: printType(rightType),
+                        }) + diag.getString(),
+                        node
+                    );
+                }
             }
 
             type = UnknownType.create();
@@ -16856,7 +16918,10 @@ export function createTypeEvaluator(
                 })?.type;
             }
 
-            if (decl.type === DeclarationType.Alias) {
+            // If it is a symbol from an outer scope or an alias, it is safe to
+            // infer its type.
+            const scopeOfNode = ScopeUtils.getScopeForNode(node);
+            if (decl.type === DeclarationType.Alias || symbolWithScope.scope !== scopeOfNode) {
                 return getInferredTypeOfDeclaration(decl);
             }
 
@@ -17108,7 +17173,7 @@ export function createTypeEvaluator(
         const executionScope = ParseTreeUtils.getExecutionScopeNode(reference);
         const codeFlowExpressions = AnalyzerNodeInfo.getCodeFlowExpressions(executionScope);
 
-        if (!codeFlowExpressions || !codeFlowExpressions!.has(referenceKey)) {
+        if (!codeFlowExpressions || !codeFlowExpressions.has(referenceKey)) {
             return { type: undefined, usedOuterScopeAlias: false, isIncomplete: false };
         }
 
@@ -17184,14 +17249,15 @@ export function createTypeEvaluator(
             initialType: Type | undefined,
             isInitialTypeIncomplete: boolean
         ): FlowNodeTypeResult {
-            const referenceKey =
-                reference !== undefined && targetSymbolId !== undefined
-                    ? createKeyForReference(reference) + `.${targetSymbolId.toString()}`
+            const referenceKey = reference !== undefined ? createKeyForReference(reference) : undefined;
+            const referenceKeyWithSymbolId =
+                referenceKey !== undefined && targetSymbolId !== undefined
+                    ? referenceKey + `.${targetSymbolId.toString()}`
                     : '.';
-            let flowNodeTypeCache = flowNodeTypeCacheSet.get(referenceKey);
+            let flowNodeTypeCache = flowNodeTypeCacheSet.get(referenceKeyWithSymbolId);
             if (!flowNodeTypeCache) {
                 flowNodeTypeCache = new Map<number, CachedType | undefined>();
-                flowNodeTypeCacheSet.set(referenceKey, flowNodeTypeCache);
+                flowNodeTypeCacheSet.set(referenceKeyWithSymbolId, flowNodeTypeCache);
             }
 
             // Caches the type of the flow node in our local cache, keyed by the flow node ID.
@@ -17511,7 +17577,18 @@ export function createTypeEvaluator(
                     }
 
                     if (curFlowNode.flags & FlowFlags.LoopLabel) {
-                        const labelNode = curFlowNode as FlowLabel;
+                        const loopNode = curFlowNode as FlowLoopLabel;
+
+                        // Is the current symbol modified in any way within the
+                        // loop? If not, we can skip all processing within the loop
+                        // and assume that the type comes from the first antecedent,
+                        // which feeds the loop.
+                        if (referenceKey) {
+                            if (!loopNode.expressions || !loopNode.expressions.has(referenceKey)) {
+                                curFlowNode = loopNode.antecedents[0];
+                                continue;
+                            }
+                        }
 
                         let firstWasIncomplete = false;
                         let isFirstTimeInLoop = false;
@@ -17530,7 +17607,7 @@ export function createTypeEvaluator(
                             );
                         }
 
-                        labelNode.antecedents.forEach((antecedent, index) => {
+                        loopNode.antecedents.forEach((antecedent, index) => {
                             // Have we already been here? If so, there will be an entry
                             // for this index, and we can use the type that was already
                             // computed.
@@ -19711,6 +19788,10 @@ export function createTypeEvaluator(
                         return strType;
                     }
 
+                    if (declaration.intrinsicType === 'str | None') {
+                        return combineTypes([strType, NoneType.createInstance()]);
+                    }
+
                     if (declaration.intrinsicType === 'int') {
                         return intType;
                     }
@@ -21285,7 +21366,7 @@ export function createTypeEvaluator(
                                         srcTypeArgType,
                                         entryDiag.createAddendum(),
                                         curTypeVarMap,
-                                        effectiveFlags,
+                                        flags,
                                         recursionCount + 1
                                     )
                                 ) {

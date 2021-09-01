@@ -90,6 +90,7 @@ import {
     FlowExhaustedMatch,
     FlowFlags,
     FlowLabel,
+    FlowLoopLabel,
     FlowNarrowForPattern,
     FlowNode,
     FlowPostContextManagerLabel,
@@ -127,7 +128,7 @@ interface MemberAccessInfo {
 
 interface DeferredBindingTask {
     scope: Scope;
-    codeFlowExpressionMap: Map<string, string>;
+    codeFlowExpressions: Set<string>;
     callback: () => void;
 }
 
@@ -172,9 +173,9 @@ export class Binder extends ParseTreeWalker {
     // Flow nodes used for return statements.
     private _currentReturnTarget: FlowLabel | undefined;
 
-    // Map of symbols within the current execution scope
+    // Set of expressions within the current execution scope
     // and require code flow analysis to resolve.
-    private _currentExecutionScopeReferenceMap: Map<string, string> | undefined;
+    private _currentScopeCodeFlowExpressions: Set<string> | undefined;
 
     // Aliases of "typing" and "typing_extensions".
     private _typingImportAliases: string[] = [];
@@ -222,7 +223,7 @@ export class Binder extends ParseTreeWalker {
 
                 // Bind implicit names.
                 // List taken from https://docs.python.org/3/reference/import.html#__name__
-                this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str');
+                this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str | None');
                 this._addBuiltInSymbolToCurrentScope('__name__', node, 'str');
                 this._addBuiltInSymbolToCurrentScope('__loader__', node, 'Any');
                 this._addBuiltInSymbolToCurrentScope('__package__', node, 'str');
@@ -239,7 +240,7 @@ export class Binder extends ParseTreeWalker {
 
                 this._walkStatementsAndReportUnreachable(node.statements);
 
-                AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentExecutionScopeReferenceMap!);
+                AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentScopeCodeFlowExpressions!);
 
                 // Associate the code flow node at the end of the module with the module.
                 AnalyzerNodeInfo.setAfterFlowNode(node, this._currentFlowNode);
@@ -383,7 +384,7 @@ export class Binder extends ParseTreeWalker {
         this._createNewScope(ScopeType.Class, parentScope, () => {
             AnalyzerNodeInfo.setScope(node, this._currentScope);
 
-            this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str');
+            this._addBuiltInSymbolToCurrentScope('__doc__', node, 'str | None');
             this._addBuiltInSymbolToCurrentScope('__module__', node, 'str');
 
             if (!this._moduleSymbolOnly) {
@@ -516,7 +517,7 @@ export class Binder extends ParseTreeWalker {
                 AnalyzerNodeInfo.setAfterFlowNode(node, returnFlowNode);
             });
 
-            AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentExecutionScopeReferenceMap!);
+            AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentScopeCodeFlowExpressions!);
         });
 
         this._createAssignmentTargetFlowNodes(node.name, /* walkTargets */ false, /* unbound */ false);
@@ -569,7 +570,7 @@ export class Binder extends ParseTreeWalker {
                 // Walk the expression that make up the lambda body.
                 this.walk(node.expression);
 
-                AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentExecutionScopeReferenceMap!);
+                AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentScopeCodeFlowExpressions!);
             });
         });
 
@@ -940,7 +941,7 @@ export class Binder extends ParseTreeWalker {
         if (this._isNarrowingExpression(node.valueExpression, expressionList)) {
             expressionList.forEach((expr) => {
                 const referenceKey = createKeyForReference(expr);
-                this._currentExecutionScopeReferenceMap!.set(referenceKey, referenceKey);
+                this._currentScopeCodeFlowExpressions!.add(referenceKey);
             });
         }
 
@@ -1890,7 +1891,7 @@ export class Binder extends ParseTreeWalker {
         if (isSubjectNarrowable) {
             expressionList.forEach((expr) => {
                 const referenceKey = createKeyForReference(expr);
-                this._currentExecutionScopeReferenceMap!.set(referenceKey, referenceKey);
+                this._currentScopeCodeFlowExpressions!.add(referenceKey);
             });
         }
 
@@ -2314,10 +2315,11 @@ export class Binder extends ParseTreeWalker {
     }
 
     private _createLoopLabel() {
-        const flowNode: FlowLabel = {
+        const flowNode: FlowLoopLabel = {
             flags: FlowFlags.LoopLabel,
             id: getUniqueFlowNodeId(),
             antecedents: [],
+            expressions: undefined,
         };
         return flowNode;
     }
@@ -2459,7 +2461,7 @@ export class Binder extends ParseTreeWalker {
 
         expressionList.forEach((expr) => {
             const referenceKey = createKeyForReference(expr);
-            this._currentExecutionScopeReferenceMap!.set(referenceKey, referenceKey);
+            this._currentScopeCodeFlowExpressions!.add(referenceKey);
         });
 
         // Select the first name expression.
@@ -2819,7 +2821,7 @@ export class Binder extends ParseTreeWalker {
             };
 
             const referenceKey = createKeyForReference(node);
-            this._currentExecutionScopeReferenceMap!.set(referenceKey, referenceKey);
+            this._currentScopeCodeFlowExpressions!.add(referenceKey);
 
             if (unbound) {
                 flowNode.flags |= FlowFlags.Unbind;
@@ -2889,14 +2891,25 @@ export class Binder extends ParseTreeWalker {
         }
     }
 
-    private _bindLoopStatement(preLoopLabel: FlowLabel, postLoopLabel: FlowLabel, callback: () => void) {
+    private _bindLoopStatement(preLoopLabel: FlowLoopLabel, postLoopLabel: FlowLabel, callback: () => void) {
         const savedContinueTarget = this._currentContinueTarget;
         const savedBreakTarget = this._currentBreakTarget;
+        const savedExpressions = this._currentScopeCodeFlowExpressions;
         this._currentContinueTarget = preLoopLabel;
         this._currentBreakTarget = postLoopLabel;
+        this._currentScopeCodeFlowExpressions = new Set<string>();
 
         callback();
 
+        preLoopLabel.expressions = this._currentScopeCodeFlowExpressions;
+
+        if (savedExpressions) {
+            this._currentScopeCodeFlowExpressions.forEach((value) => {
+                savedExpressions.add(value);
+            });
+        }
+
+        this._currentScopeCodeFlowExpressions = savedExpressions;
         this._currentContinueTarget = savedContinueTarget;
         this._currentBreakTarget = savedBreakTarget;
     }
@@ -3045,15 +3058,15 @@ export class Binder extends ParseTreeWalker {
         // If this scope is an execution scope, allocate a new reference map.
         const isExecutionScope =
             scopeType === ScopeType.Builtin || scopeType === ScopeType.Module || scopeType === ScopeType.Function;
-        const prevReferenceMap = this._currentExecutionScopeReferenceMap;
+        const prevExpressions = this._currentScopeCodeFlowExpressions;
 
         if (isExecutionScope) {
-            this._currentExecutionScopeReferenceMap = new Map<string, string>();
+            this._currentScopeCodeFlowExpressions = new Set<string>();
         }
 
         callback();
 
-        this._currentExecutionScopeReferenceMap = prevReferenceMap;
+        this._currentScopeCodeFlowExpressions = prevExpressions;
         this._currentScope = prevScope;
 
         return newScope;
@@ -3645,7 +3658,7 @@ export class Binder extends ParseTreeWalker {
 
         this._deferredBindingTasks.push({
             scope: this._currentScope,
-            codeFlowExpressionMap: this._currentExecutionScopeReferenceMap!,
+            codeFlowExpressions: this._currentScopeCodeFlowExpressions!,
             callback,
         });
     }
@@ -3656,7 +3669,7 @@ export class Binder extends ParseTreeWalker {
 
             // Reset the state
             this._currentScope = nextItem.scope;
-            this._currentExecutionScopeReferenceMap = nextItem.codeFlowExpressionMap;
+            this._currentScopeCodeFlowExpressions = nextItem.codeFlowExpressions;
 
             nextItem.callback();
         }
