@@ -226,12 +226,12 @@ export class PylanceImportResolver extends ImportResolver {
         return importResult;
     }
 
-    private _resolveImport(
+    protected override _resolveImport(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor
     ) {
-        const importResult = super.resolveImport(sourceFilePath, execEnv, moduleDescriptor);
+        const importResult = super._resolveImport(sourceFilePath, execEnv, moduleDescriptor);
         if (importResult.isImportFound || moduleDescriptor.leadingDots > 0) {
             return importResult;
         }
@@ -312,10 +312,9 @@ export class PylanceImportResolver extends ImportResolver {
     override getCompletionSuggestions(
         sourceFilePath: string,
         execEnv: ExecutionEnvironment,
-        moduleDescriptor: ImportedModuleDescriptor,
-        similarityLimit: number
+        moduleDescriptor: ImportedModuleDescriptor
     ) {
-        const suggestions = super.getCompletionSuggestions(sourceFilePath, execEnv, moduleDescriptor, similarityLimit);
+        const suggestions = super.getCompletionSuggestions(sourceFilePath, execEnv, moduleDescriptor);
 
         const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
         const origin = ensureTrailingDirectorySeparator(
@@ -324,7 +323,7 @@ export class PylanceImportResolver extends ImportResolver {
 
         let current = origin;
         while (this._shouldWalkUp(current, root, execEnv)) {
-            this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, similarityLimit);
+            this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, sourceFilePath, execEnv);
 
             let success;
             [success, current] = this._tryWalkUp(current);
