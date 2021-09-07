@@ -348,7 +348,7 @@ class TokenWalker extends ParseTreeWalker {
                 const typeAnnotationModifiers = this._getTypeAnnotationModifiers(node);
                 switch (resolvedDecl.type) {
                     case DeclarationType.Intrinsic:
-                        return { type: TokenTypes.intrinsic, modifiers: TokenModifiers.none };
+                        return { type: TokenTypes.variable, modifiers: TokenModifiers.builtin };
                     case DeclarationType.Parameter: {
                         const declarationModifiers =
                             node.parent?.nodeType === ParseNodeType.Parameter
