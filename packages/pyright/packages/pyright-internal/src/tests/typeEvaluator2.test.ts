@@ -132,6 +132,12 @@ test('Super4', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Super5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super5.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('NewType1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['newType1.py']);
 
@@ -493,7 +499,7 @@ test('GenericTypes33', () => {
 test('GenericTypes34', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes34.py']);
 
-    TestUtils.validateResults(analysisResults, 0);
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 // This test is intentionally commented out for now. The functionality
@@ -683,6 +689,12 @@ test('GenericTypes65', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes65.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('GenericTypes66', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['genericTypes66.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
 });
 
 test('Protocol1', () => {
