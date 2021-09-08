@@ -21,7 +21,6 @@ import {
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
 import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
-import { isDebugMode } from '../common/core';
 import { assert } from '../common/debug';
 import { Diagnostic } from '../common/diagnostic';
 import { FileDiagnostics } from '../common/diagnosticSink';
@@ -1821,9 +1820,7 @@ export class Program {
     // any other unexpected exceptions.
     private _runEvaluatorWithCancellationToken<T>(token: CancellationToken | undefined, callback: () => T): T {
         try {
-            // Don't support cancellation in debug mode because cancellation
-            // checks and exceptions interfere with debugging.
-            if (token && !isDebugMode()) {
+            if (token) {
                 return this._evaluator!.runWithCancellationToken(token, callback);
             } else {
                 return callback();

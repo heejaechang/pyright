@@ -354,6 +354,9 @@ export const enum ClassTypeFlags {
     // with keyword-only parameters?
     DataClassKeywordOnlyParams = 1 << 21,
 
+    // Properties that are defined using the @classmethod decorator.
+    ClassProperty = 1 << 22,
+
     // Class is declared within a type stub file.
     DefinedInStub = 1 << 23,
 }
@@ -484,6 +487,10 @@ export namespace ClassType {
     }
 
     export function cloneAsInstance(classType: ClassType) {
+        if (TypeBase.isInstance(classType)) {
+            return classType;
+        }
+
         const objectType = { ...classType };
         objectType.flags &= ~(TypeFlags.Instantiable | TypeFlags.NonCallable);
         objectType.flags |= TypeFlags.Instance;
@@ -492,6 +499,10 @@ export namespace ClassType {
     }
 
     export function cloneAsInstantiable(objectType: ClassType) {
+        if (TypeBase.isInstantiable(objectType)) {
+            return objectType;
+        }
+
         const classType = { ...objectType };
         classType.flags &= ~TypeFlags.Instance;
         classType.flags |= TypeFlags.Instantiable;
@@ -651,6 +662,10 @@ export namespace ClassType {
 
     export function isPropertyClass(classType: ClassType) {
         return !!(classType.details.flags & ClassTypeFlags.PropertyClass);
+    }
+
+    export function isClassProperty(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.ClassProperty);
     }
 
     export function isFinal(classType: ClassType) {
