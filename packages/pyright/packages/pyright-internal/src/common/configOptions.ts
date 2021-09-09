@@ -41,7 +41,7 @@ export class ExecutionEnvironment {
         defaultPythonPlatform: string | undefined,
         defaultExtraPaths: string[] | undefined
     ) {
-        this.root = root;
+        this.root = root || undefined;
         this.pythonVersion = defaultPythonVersion || latestStablePythonVersion;
         this.pythonPlatform = defaultPythonPlatform;
         this.extraPaths = defaultExtraPaths || [];
@@ -49,7 +49,8 @@ export class ExecutionEnvironment {
 
     // Root directory for execution - absolute or relative to the
     // project root.
-    root: string;
+    // Undefined if this is a rootless environment (e.g., open file mode).
+    root?: string;
 
     // Always default to the latest stable version of the language.
     pythonVersion: PythonVersion;

@@ -171,7 +171,7 @@ export class Indexer {
             // environment. so we can just cache index results as they are since they will be always same.
             const cache = new Map<string, IndexResults>();
 
-            const result = new Map<string, Map<string, IndexResults>>();
+            const result = new Map<string | undefined, Map<string, IndexResults>>();
             const program = new Program(importResolver, configOptions, console, undefined, logTracker);
             for (const [execEnvRoot, packageInfo] of moduleFilesMap) {
                 logTracker.log(`index execution environment ${execEnvRoot}`, (ls) => {
@@ -228,7 +228,7 @@ export class Indexer {
             return result;
         });
 
-        function getModuleCount<T>(map: Map<string, T[]>) {
+        function getModuleCount<T>(map: Map<any, T[]>) {
             let count = 0;
             for (const modules of map.values()) {
                 count += modules.length;
@@ -237,7 +237,7 @@ export class Indexer {
             return count;
         }
 
-        function getTotalSymbolCount(map: Map<string, Map<string, IndexResults>>) {
+        function getTotalSymbolCount(map: Map<string | undefined, Map<string, IndexResults>>) {
             let count = 0;
             for (const indices of map.values()) {
                 count += getSymbolCount(indices);
@@ -260,7 +260,7 @@ export class Indexer {
         importResolver: ImportResolver,
         configOptions: ConfigOptions,
         console: ConsoleInterface
-    ): Map<string, Map<string, IndexResults>> | undefined {
+    ): Map<string | undefined, Map<string, IndexResults>> | undefined {
         const typeshedFallback = PythonPathUtils.getTypeShedFallbackPath(importResolver.fileSystem);
         if (!typeshedFallback) {
             return undefined;
@@ -268,7 +268,7 @@ export class Indexer {
 
         const stdLibFallback = PythonPathUtils.getTypeshedSubdirectory(typeshedFallback, true);
 
-        const mapByEnv = new Map<string, Map<string, IndexResults>>();
+        const mapByEnv = new Map<string | undefined, Map<string, IndexResults>>();
 
         let stdLibIndices: Map<string, IndexResults> | undefined;
         for (const execEnv of configOptions.getExecutionEnvironments()) {

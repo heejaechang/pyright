@@ -76,7 +76,7 @@ const allowPartialResolutionForThirdPartyPackages = false;
 
 export class ImportResolver {
     private _cachedPythonSearchPaths = new Map<string, string[]>();
-    private _cachedImportResults = new Map<string, CachedImportResults>();
+    private _cachedImportResults = new Map<string | undefined, CachedImportResults>();
     private _cachedModuleNameResults = new Map<string, Map<string, ModuleNameAndType>>();
     private _cachedTypeshedRoot: string | undefined;
     private _cachedTypeshedStdLibPath: string | undefined;
@@ -94,7 +94,7 @@ export class ImportResolver {
 
     invalidateCache() {
         this._cachedPythonSearchPaths = new Map<string, string[]>();
-        this._cachedImportResults = new Map<string, CachedImportResults>();
+        this._cachedImportResults = new Map<string | undefined, CachedImportResults>();
         this._cachedModuleNameResults = new Map<string, Map<string, ModuleNameAndType>>();
         this._invalidateFileSystemCache();
 
@@ -209,7 +209,15 @@ export class ImportResolver {
             }
 
             // Look for it in the root directory of the execution environment.
-            this.getCompletionSuggestionsAbsolute(execEnv.root, moduleDescriptor, suggestions, sourceFilePath, execEnv);
+            if (execEnv.root) {
+                this.getCompletionSuggestionsAbsolute(
+                    execEnv.root,
+                    moduleDescriptor,
+                    suggestions,
+                    sourceFilePath,
+                    execEnv
+                );
+            }
 
             for (const extraPath of execEnv.extraPaths) {
                 this.getCompletionSuggestionsAbsolute(
@@ -381,7 +389,9 @@ export class ImportResolver {
         }
 
         // Look for it in the root directory of the execution environment.
-        moduleName = this.getModuleNameFromPath(execEnv.root, filePath);
+        if (execEnv.root) {
+            moduleName = this.getModuleNameFromPath(execEnv.root, filePath);
+        }
 
         for (const extraPath of execEnv.extraPaths) {
             const candidateModuleName = this.getModuleNameFromPath(extraPath, filePath);
@@ -473,7 +483,11 @@ export class ImportResolver {
             roots.push(stdTypeshed);
         }
 
-        roots.push(execEnv.root);
+        // The "default" workspace has a root-less execution environment; ignore it.
+        if (execEnv.root) {
+            roots.push(execEnv.root);
+        }
+
         roots.push(...execEnv.extraPaths);
 
         if (this._configOptions.stubPath) {
@@ -1067,22 +1081,26 @@ export class ImportResolver {
         }
 
         let bestResultSoFar: ImportResult | undefined;
+        let localImport: ImportResult | undefined;
 
         // Look for it in the root directory of the execution environment.
-        importFailureInfo.push(`Looking in root directory of execution environment ` + `'${execEnv.root}'`);
-        let localImport = this.resolveAbsoluteImport(
-            execEnv.root,
-            execEnv,
-            moduleDescriptor,
-            importName,
-            importFailureInfo,
-            /* allowPartial */ undefined,
-            /* allowNativeLib */ true,
-            /* useStubPackage */ true,
-            allowPyi,
-            /* lookForPyTyped */ false
-        );
-        bestResultSoFar = localImport;
+        if (execEnv.root) {
+            importFailureInfo.push(`Looking in root directory of execution environment ` + `'${execEnv.root}'`);
+
+            localImport = this.resolveAbsoluteImport(
+                execEnv.root,
+                execEnv,
+                moduleDescriptor,
+                importName,
+                importFailureInfo,
+                /* allowPartial */ undefined,
+                /* allowNativeLib */ true,
+                /* useStubPackage */ true,
+                allowPyi,
+                /* lookForPyTyped */ false
+            );
+            bestResultSoFar = localImport;
+        }
 
         for (const extraPath of execEnv.extraPaths) {
             importFailureInfo.push(`Looking in extraPath '${extraPath}'`);

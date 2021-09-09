@@ -339,7 +339,7 @@ export class PylanceImportResolver extends ImportResolver {
         return current.length > root.length || (current === root && !execEnv.root);
     }
 
-    private _getImportHeuristicRoot(sourceFilePath: string, executionRoot: string) {
+    private _getImportHeuristicRoot(sourceFilePath: string, executionRoot: string | undefined) {
         if (executionRoot) {
             return ensureTrailingDirectorySeparator(normalizePathCase(this.fileSystem, normalizePath(executionRoot)));
         }

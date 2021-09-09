@@ -33,16 +33,16 @@ export interface PackageInfo {
 export class PackageScanner<T> {
     private _stringComparer: (a: string, b: string) => boolean;
 
-    private _indicesPerExecEnv = new Map<string, ImportsMap>();
+    private _indicesPerExecEnv = new Map<string | undefined, ImportsMap>();
     private _executionEnvironments: ExecutionEnvironment[] = [];
-    private _stdLibPaths: Map<string, string | undefined>;
+    private _stdLibPaths = new Map<string | undefined, string | undefined>();
 
     private _fs: FSCache;
 
     constructor(
         configOptions: ConfigOptions,
         importResolver: ImportResolver,
-        private _stdLibIndices: Map<string, Map<string, T>> | undefined,
+        private _stdLibIndices: Map<string | undefined, Map<string, T>> | undefined,
         private _includeThirdParty: boolean,
         private _defaultDepthLimit: number,
         private _moduleDepthLimit?: Map<string, number>
@@ -53,7 +53,6 @@ export class PackageScanner<T> {
 
         this._executionEnvironments = configOptions.getExecutionEnvironments();
 
-        this._stdLibPaths = new Map<string, string>();
         for (const execEnv of this._executionEnvironments) {
             this._stdLibPaths.set(execEnv.root, importResolver.getTypeshedStdLibPath(execEnv));
         }
@@ -64,7 +63,7 @@ export class PackageScanner<T> {
     getModuleFilesPerExecEnv() {
         // Indices is organized by module names. Regroup them
         // by module file path.
-        const packageInfoPerExecEnv = new Map<string, PackageInfo[]>();
+        const packageInfoPerExecEnv = new Map<string | undefined, PackageInfo[]>();
         const packgeInfoPerFilePath = new Map<string, PackageInfo>();
         for (const [execEnvRoot, moduleMap] of this._indicesPerExecEnv) {
             for (const [, packageInfo] of moduleMap) {
