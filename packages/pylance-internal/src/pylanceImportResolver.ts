@@ -534,9 +534,10 @@ export class PylanceImportResolver extends ImportResolver {
         const files = super.getSourceFilesFromStub(stubFilePath, execEnv, mapCompiled);
         if (mapCompiled) {
             if (files.length > 0) {
-                // Special case; allow scraping of decimal, even though it's a .py file;
-                // it re-exports from compiled modules, but typeshed doesn't structure it that way.
-                if (!/stdlib[\\/]decimal\.pyi/.test(stubFilePath)) {
+                // Special cases:
+                // - decimal: potentially re-exports from compiled modules, but isn't stubbed that way.
+                // - ntpath/posixpath: splitext.__doc__ is populated at runtime from genericpath.splittext.
+                if (!/stdlib[\\/](decimal|ntpath|posixpath)\.pyi/.test(stubFilePath)) {
                     return files;
                 }
             }
