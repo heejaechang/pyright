@@ -23,7 +23,7 @@ export async function migrateV1Settings(config: AppConfiguration, shell: Applica
             if (await migrateSetting(from, to, config)) {
                 migrated = true;
             }
-        } catch (e) {
+        } catch (e: any) {
             errors.push(`${to} (${e.message})`);
         }
     }

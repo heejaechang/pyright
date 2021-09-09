@@ -48,7 +48,7 @@ export class DeepLearning {
             try {
                 this._onnx = require('onnxruntime');
                 this._logger?.log(LogLevel.Log, 'Loaded ONNX runtime. Creating IntelliCode session...');
-            } catch (e) {
+            } catch (e: any) {
                 this.logError('Failed to load ONNX runtime', e);
             }
         }
@@ -59,7 +59,7 @@ export class DeepLearning {
                     logSeverityLevel: this.getOnnxLogLevel(),
                 });
                 this._logger?.log(LogLevel.Log, 'Created IntelliCode session.');
-            } catch (e) {
+            } catch (e: any) {
                 this.logError('Failed to create IntelliCode session', e);
             }
         }

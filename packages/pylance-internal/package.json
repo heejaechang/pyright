@@ -26,7 +26,7 @@
     },
     "dependencies": {
         "leven": "^3.1.0",
-        "node-stream-zip": "^1.14.0",
+        "node-stream-zip": "^1.15.0",
         "process": "^0.11.10",
         "sha.js": "^2.4.11",
         "uuid": "^8.3.2",
@@ -37,14 +37,14 @@
     },
     "devDependencies": {
         "@types/jest": "^27.0.1",
-        "@types/node": "^12.20.21",
+        "@types/node": "^12.20.24",
         "@types/sha.js": "^2.4.0",
         "@types/tar": "^4.0.5",
         "@types/tmp": "^0.2.1",
         "@types/uuid": "^8.3.1",
         "got": "^11.8.2",
         "hasha": "^5.2.2",
-        "jest": "^27.0.6",
+        "jest": "^27.1.1",
         "jest-extended": "^0.11.5",
         "jest-junit": "^12.2.0",
         "nyc": "^15.1.0",
@@ -54,6 +54,6 @@
         "ts-mockito": "^2.6.1",
         "ts-node": "^10.2.1",
         "tsconfig-paths": "^3.11.0",
-        "typescript": "~4.3.5"
+        "typescript": "~4.4.2"
     }
 }

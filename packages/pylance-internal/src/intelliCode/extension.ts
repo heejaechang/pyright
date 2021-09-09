@@ -169,7 +169,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 dt.getDurationInMilliseconds(),
                 memoryIncrease
             );
-        } catch (e) {
+        } catch (e: any) {
             this._logger?.log(LogLevel.Error, `Exception in IntelliCode: ${e.stack}`);
         }
     }
@@ -270,7 +270,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 }
                 await this._deepLearning.initialize();
             }
-        } catch (e) {
+        } catch (e: any) {
             const reason = 'Failed to load IntelliCode model';
             this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
             sendExceptionTelemetry(this._telemetry, TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);

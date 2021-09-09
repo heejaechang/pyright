@@ -238,7 +238,7 @@ function processPython(filePath: string, lookback: number): ExecutionResult {
 
         const tg = new TrainingLookBackTokenGenerator();
         references = tg.generateLookbackTokens(parseResults, expressionWalker, lookback);
-    } catch (e) {
+    } catch (e: any) {
         console.log(`Exception when parsing file ${filePath}: ${e.message} in ${e.stack}`);
     }
 
@@ -252,7 +252,7 @@ function processPython(filePath: string, lookback: number): ExecutionResult {
 function tryCreateFolder(folderPath: string) {
     try {
         fs.mkdirSync(folderPath, { recursive: true });
-    } catch (e) {
+    } catch (e: any) {
         if (e.code !== 'EEXIST') {
             console.log(`Can't create folder ${folderPath}.`);
             process.exit(2);

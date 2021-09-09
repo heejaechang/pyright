@@ -361,7 +361,7 @@ class BackgroundAnalysisRunner extends BackgroundAnalysisRunnerBase {
             );
 
             this._startupTelemetry.userIndexMs = indexDuration.getDurationInMilliseconds();
-        } catch (e) {
+        } catch (e: any) {
             if (OperationCanceledException.is(e)) {
                 return;
             }
