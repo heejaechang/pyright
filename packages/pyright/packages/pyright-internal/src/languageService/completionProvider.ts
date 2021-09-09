@@ -91,7 +91,6 @@ import {
     ErrorExpressionCategory,
     ErrorNode,
     ExpressionNode,
-    FunctionNode,
     ImportFromNode,
     IndexNode,
     isExpressionNode,
@@ -905,7 +904,7 @@ export class CompletionProvider {
                         return;
                     }
 
-                    const methodSignature = this._printMethodSignature(decl.node);
+                    const methodSignature = this._printMethodSignature(classResults.classType, decl);
 
                     let text: string;
                     if (isStubFile(this._filePath)) {
@@ -951,7 +950,16 @@ export class CompletionProvider {
         return TextEdit.replace(range, text);
     }
 
-    private _printMethodSignature(node: FunctionNode): string {
+    private _printMethodSignature(classType: ClassType, decl: FunctionDeclaration): string {
+        const node = decl.node;
+
+        // If we're in a stub, or the function declaration is in a different file, always use "..." as the default if needed.
+        const ellipsisForDefault = isStubFile(this._filePath) || classType.details.moduleName !== decl.moduleName;
+
+        const printFlags = isStubFile(this._filePath)
+            ? ParseTreeUtils.PrintExpressionFlags.ForwardDeclarations
+            : undefined;
+
         const paramList = node.parameters
             .map((param, index) => {
                 let paramString = '';
@@ -969,7 +977,14 @@ export class CompletionProvider {
                 // in current file.
                 const paramTypeAnnotation = this._evaluator.getTypeAnnotationForParameter(node, index);
                 if (paramTypeAnnotation) {
-                    paramString += ': ' + ParseTreeUtils.printExpression(paramTypeAnnotation);
+                    paramString += ': ' + ParseTreeUtils.printExpression(paramTypeAnnotation, printFlags);
+                }
+
+                if (param.defaultValue) {
+                    paramString += paramTypeAnnotation ? ' = ' : '=';
+                    paramString += ellipsisForDefault
+                        ? '...'
+                        : ParseTreeUtils.printExpression(param.defaultValue, printFlags);
                 }
 
                 if (!paramString && !param.name && param.category === ParameterCategory.Simple) {
@@ -983,10 +998,11 @@ export class CompletionProvider {
         let methodSignature = node.name.value + '(' + paramList + ')';
 
         if (node.returnTypeAnnotation) {
-            methodSignature += ' -> ' + ParseTreeUtils.printExpression(node.returnTypeAnnotation);
+            methodSignature += ' -> ' + ParseTreeUtils.printExpression(node.returnTypeAnnotation, printFlags);
         } else if (node.functionAnnotationComment) {
             methodSignature +=
-                ' -> ' + ParseTreeUtils.printExpression(node.functionAnnotationComment.returnTypeAnnotation);
+                ' -> ' +
+                ParseTreeUtils.printExpression(node.functionAnnotationComment.returnTypeAnnotation, printFlags);
         }
 
         return methodSignature;
