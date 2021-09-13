@@ -132,3 +132,6 @@ Thumbs.db
 
 # vscode-test-web
 .vscode-test-web
+
+# Converted npm pack zips
+packages/pylance/*.zip
