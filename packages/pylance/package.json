@@ -20,8 +20,8 @@
         "build": "webpack --mode production --progress",
         "webpack": "webpack --mode development --progress",
         "webpack-dev": "npm run clean && webpack --mode development --watch --progress",
-        "clean": "shx rm -rf ./dist ./out",
-        "prepack": "npm run clean && npm run build",
+        "clean": "shx rm -rf ./dist ./out NOTICE.txt",
+        "prepack": "npm run clean && shx cp ../../NOTICE.txt . && npm run build",
         "pack-zip": "npm pack && tar-to-zip pylance-pylance-*.tgz"
     },
     "devDependencies": {

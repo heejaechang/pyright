@@ -812,9 +812,9 @@
         ]
     },
     "scripts": {
-        "clean": "shx rm -rf ./dist ./out",
+        "clean": "shx rm -rf ./dist ./out NOTICE.txt",
         "package": "vsce package --githubBranch main",
-        "vscode:prepublish": "npm run clean && webpack --mode production --progress",
+        "vscode:prepublish": "npm run clean && shx cp ../../NOTICE.txt . && webpack --mode production --progress",
         "webpack": "webpack --mode development --progress",
         "webpack-dev": "npm run clean && webpack --mode development --watch --progress",
         "build:tests": "tsc",

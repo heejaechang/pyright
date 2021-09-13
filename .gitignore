@@ -135,3 +135,5 @@ Thumbs.db
 
 # Converted npm pack zips
 packages/pylance/*.zip
+
+packages/*/NOTICE.txt
