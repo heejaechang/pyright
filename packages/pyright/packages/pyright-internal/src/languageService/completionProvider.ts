@@ -2110,7 +2110,13 @@ export class CompletionProvider {
                                 }
                             }
 
-                            if (isModule(type)) {
+                            if (
+                                primaryDecl.type === DeclarationType.Variable &&
+                                primaryDecl.typeAliasName &&
+                                primaryDecl.docString
+                            ) {
+                                documentation = primaryDecl.docString;
+                            } else if (isModule(type)) {
                                 documentation = getModuleDocString(type, primaryDecl, this._sourceMapper);
                             } else if (isInstantiableClass(type)) {
                                 documentation = getClassDocString(type, primaryDecl, this._sourceMapper);
