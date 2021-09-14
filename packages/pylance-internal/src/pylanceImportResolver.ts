@@ -212,7 +212,7 @@ export class PylanceImportResolver extends ImportResolver {
 
         this._resolverId = resolverId?.toString() ?? 'N/A';
 
-        this._cachedHeuristicResults = new ImportHeuristicCache((e) => this.getPythonSearchPaths(e, []));
+        this._cachedHeuristicResults = new ImportHeuristicCache(() => this.getPythonSearchPaths([]));
         this._importMetrics = new ImportMetrics(this._resolverId);
     }
 
@@ -249,7 +249,7 @@ export class PylanceImportResolver extends ImportResolver {
         // Check whether the give file is something we care for the heuristic.
         // Keep in sync with _addResultToImportMetrics.
         const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-        if (!this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root, execEnv)) {
+        if (!this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root)) {
             return importResult;
         }
 
@@ -628,12 +628,7 @@ export class PylanceImportResolver extends ImportResolver {
                 sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
 
                 const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-                userUnresolved = this._cachedHeuristicResults.checkValidPath(
-                    this.fileSystem,
-                    sourceFilePath,
-                    root,
-                    execEnv
-                );
+                userUnresolved = this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root);
             }
 
             if (userUnresolved && this._telemetry) {
@@ -764,7 +759,7 @@ class ImportHeuristicCache {
 
     private _libPathCache: string[] | undefined = undefined;
 
-    constructor(private _importRootGetter: (exec: ExecutionEnvironment) => string[]) {
+    constructor(private _importRootGetter: () => string[]) {
         // empty
     }
 
@@ -789,7 +784,7 @@ class ImportHeuristicCache {
         return undefined;
     }
 
-    checkValidPath(fs: FileSystem, sourceFilePath: string, root: string, exec: ExecutionEnvironment): boolean {
+    checkValidPath(fs: FileSystem, sourceFilePath: string, root: string): boolean {
         if (!sourceFilePath.startsWith(root)) {
             // We don't search containing folders for libs.
             return false;
@@ -797,7 +792,7 @@ class ImportHeuristicCache {
 
         this._libPathCache =
             this._libPathCache ??
-            this._importRootGetter(exec)
+            this._importRootGetter()
                 .map((r) => ensureTrailingDirectorySeparator(normalizePathCase(fs, normalizePath(r))))
                 .filter((r) => r !== root)
                 .filter((r) => r.startsWith(root));
