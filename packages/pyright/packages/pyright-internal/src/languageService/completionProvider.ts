@@ -103,7 +103,7 @@ import {
     StringNode,
 } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
-import { Token } from '../parser/tokenizerTypes';
+import { StringTokenFlags, Token } from '../parser/tokenizerTypes';
 import { AbbreviationInfo, AutoImporter, AutoImportResult, ModuleSymbolMap } from './autoImporter';
 import { DocumentSymbolCollector } from './documentSymbolCollector';
 import { IndexResults } from './documentSymbolProvider';
@@ -953,8 +953,14 @@ export class CompletionProvider {
     private _printMethodSignature(classType: ClassType, decl: FunctionDeclaration): string {
         const node = decl.node;
 
-        // If we're in a stub, or the function declaration is in a different file, always use "..." as the default if needed.
-        const ellipsisForDefault = isStubFile(this._filePath) || classType.details.moduleName !== decl.moduleName;
+        let ellipsisForDefault: boolean | undefined;
+        if (isStubFile(this._filePath)) {
+            // In stubs, always use "...".
+            ellipsisForDefault = true;
+        } else if (classType.details.moduleName === decl.moduleName) {
+            // In the same file, always print the full default.
+            ellipsisForDefault = false;
+        }
 
         const printFlags = isStubFile(this._filePath)
             ? ParseTreeUtils.PrintExpressionFlags.ForwardDeclarations
@@ -982,9 +988,9 @@ export class CompletionProvider {
 
                 if (param.defaultValue) {
                     paramString += paramTypeAnnotation ? ' = ' : '=';
-                    paramString += ellipsisForDefault
-                        ? '...'
-                        : ParseTreeUtils.printExpression(param.defaultValue, printFlags);
+
+                    const useEllipsis = ellipsisForDefault ?? !isSimpleDefault(param.defaultValue);
+                    paramString += useEllipsis ? '...' : ParseTreeUtils.printExpression(param.defaultValue, printFlags);
                 }
 
                 if (!paramString && !param.name && param.category === ParameterCategory.Simple) {
@@ -1006,6 +1012,24 @@ export class CompletionProvider {
         }
 
         return methodSignature;
+
+        function isSimpleDefault(node: ExpressionNode): boolean {
+            switch (node.nodeType) {
+                case ParseNodeType.Number:
+                case ParseNodeType.Constant:
+                    return true;
+                case ParseNodeType.String:
+                    return (node.token.flags & StringTokenFlags.Format) === 0;
+                case ParseNodeType.StringList:
+                    return node.strings.every(isSimpleDefault);
+                case ParseNodeType.UnaryOperation:
+                    return isSimpleDefault(node.expression);
+                case ParseNodeType.BinaryOperation:
+                    return isSimpleDefault(node.leftExpression) && isSimpleDefault(node.rightExpression);
+                default:
+                    return false;
+            }
+        }
     }
 
     private _printOverriddenMethodBody(
