@@ -326,19 +326,6 @@ export class PylanceServer extends LanguageServerBase {
             serverSettings.typeCheckingMode !== 'off' ||
             Object.values(serverSettings.diagnosticSeverityOverrides!).some((v) => v !== 'none');
 
-        const te = new TelemetryEvent(TelemetryEventName.SETTINGS);
-        te.Properties['openFilesOnly'] = `${serverSettings.openFilesOnly}`;
-        te.Properties['typeCheckingMode'] = `${serverSettings.typeCheckingMode}`;
-        te.Properties['useLibraryCodeForTypes'] = `${serverSettings.useLibraryCodeForTypes}`;
-        te.Properties['autoSearchPaths'] = `${serverSettings.autoSearchPaths}`;
-        te.Properties['autoImportCompletions'] = `${serverSettings.autoImportCompletions}`;
-        te.Properties['indexing'] = `${serverSettings.indexing}`;
-        te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
-        te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
-        te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
-        te.Measurements['workspaceCount'] = this._workspaceMap.getNonDefaultWorkspaces().length;
-        this._telemetry.sendTelemetry(te);
-
         return serverSettings;
     }
 
@@ -686,19 +673,31 @@ export class PylanceServer extends LanguageServerBase {
     }
 
     override async updateSettingsForWorkspace(
-        workspace: WorkspaceServiceInstance,
-        serverSettings?: ServerSettings
+        workspace: PylanceWorkspaceServiceInstance,
+        serverSettings?: PylanceServerSettings
     ): Promise<void> {
         serverSettings = serverSettings ?? (await this.getSettings(workspace));
         await super.updateSettingsForWorkspace(workspace, serverSettings);
 
-        const pylanceSettings = serverSettings as PylanceServerSettings;
-        const pylanceWorkspace = workspace as PylanceWorkspaceServiceInstance;
-
-        pylanceWorkspace.completeFunctionParens = !!pylanceSettings.completeFunctionParens;
-        pylanceWorkspace.enableExtractCodeAction = !!pylanceSettings.enableExtractCodeAction;
+        workspace.completeFunctionParens = !!serverSettings.completeFunctionParens;
+        workspace.enableExtractCodeAction = !!serverSettings.enableExtractCodeAction;
 
         this._getBackgroundAnalysisProgram(workspace).setExperimentOptions({});
+
+        const configOptions = workspace.serviceInstance.getConfigOptions();
+        const te = new TelemetryEvent(TelemetryEventName.SETTINGS);
+        te.Properties['openFilesOnly'] = `${serverSettings.openFilesOnly}`;
+        te.Properties['typeCheckingMode'] = `${configOptions.typeCheckingMode}`;
+        te.Properties['useLibraryCodeForTypes'] = `${configOptions.useLibraryCodeForTypes}`;
+        te.Properties['autoSearchPaths'] = `${serverSettings.autoSearchPaths}`;
+        te.Properties['autoImportCompletions'] = `${serverSettings.autoImportCompletions}`;
+        te.Properties['indexing'] = `${serverSettings.indexing}`;
+        te.Properties['completeFunctionParens'] = `${serverSettings.completeFunctionParens}`;
+        te.Properties['enableExtractCodeAction'] = `${serverSettings.enableExtractCodeAction}`;
+        te.Properties['hasExtraPaths'] = `${!!serverSettings.extraPaths?.length}`;
+        te.Properties['hasConfigFile'] = `${configOptions.initializedFromJson}`;
+        te.Measurements['workspaceCount'] = this._workspaceMap.getNonDefaultWorkspaces().length;
+        this._telemetry.sendTelemetry(te);
 
         if (workspace.disableLanguageServices) {
             return;
