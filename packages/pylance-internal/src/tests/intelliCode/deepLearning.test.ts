@@ -60,7 +60,7 @@ s. `;
             const ew = new ExpressionWalker(aw.scopes);
             ew.walk(pr.parseTree);
 
-            const r = await deepLearning.getRecommendations(pr, ew, code.length - 1, CancellationToken.None);
+            const r = await deepLearning.getRecommendations(pr, ew, code.length - 1, [], CancellationToken.None);
             expect(r.recommendations).toContain(['format', 'join', 'replace']);
         },
         60000

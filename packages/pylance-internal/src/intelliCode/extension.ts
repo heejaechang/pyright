@@ -27,6 +27,7 @@ import {
 import { AssignmentWalker } from './assignmentWalker';
 import { DeepLearning } from './deepLearning';
 import { ExpressionWalker } from './expressionWalker';
+import { DEEP_RERANK_ANALYZER_NAME, IntelliCodeModelService } from './intelliCodeModelService';
 import { ModelLoader } from './modelLoader';
 import { PythiaModel } from './models';
 import { buildRecommendationsTelemetry, sendRecommendationsTelemetry } from './telemetry';
@@ -73,6 +74,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
     private _deepLearning: DeepLearning | undefined;
     private _enable = true;
     private _modelZipPath?: string;
+    private _pipeName?: string;
+    private _analyzerName?: string;
+    private _useModelService = false;
 
     constructor(
         private readonly _logger: LogService,
@@ -122,13 +126,11 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         token: CancellationToken
     ): Promise<void> {
         const completionList = completionResults.completionList;
-        if (
-            !this._enable ||
-            !this.model ||
-            !this._deepLearning ||
-            !completionList ||
-            completionList.items.length === 0
-        ) {
+        if (!this._enable || !this._deepLearning || !completionList || completionList.items.length === 0) {
+            return;
+        }
+
+        if (!this.model && !this._useModelService) {
             return;
         }
 
@@ -142,7 +144,9 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             const ew = new ExpressionWalker(aw.scopes);
             ew.walk(ast);
 
-            const result = await this._deepLearning.getRecommendations(parseResults, ew, position, token);
+            const candidates = completionList.items.map((item) => item.label);
+
+            const result = await this._deepLearning.getRecommendations(parseResults, ew, position, candidates, token);
             if (result.recommendations.length > 0) {
                 this._logger?.log(LogLevel.Log, `Recommendations: ${result.recommendations.join(', ')}`);
             }
@@ -165,7 +169,7 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                 result.recommendations,
                 applied,
                 result.invocation?.type,
-                this.model.metaData.Version,
+                this.model?.metaData.Version ?? 'deeprerank',
                 dt.getDurationInMilliseconds(),
                 memoryIncrease
             );
@@ -202,9 +206,22 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
                     if (typeof modelZipPath === 'string') {
                         this._logger?.log(LogLevel.Log, `IntelliCode model ${modelZipPath}`);
                         this._modelZipPath = modelZipPath;
-                        if (this.enabled) {
-                            return this.loadModel();
-                        }
+                    }
+
+                    const pipeName = args[0].pipeName;
+                    if (typeof pipeName === 'string') {
+                        this._logger?.log(LogLevel.Log, `pipe name ${pipeName}`);
+                        this._pipeName = pipeName;
+                    }
+
+                    const analyzerName = args[0].analyzerName;
+                    if (typeof analyzerName === 'string') {
+                        this._logger?.log(LogLevel.Log, `analyzerName ${analyzerName}`);
+                        this._analyzerName = analyzerName;
+                    }
+
+                    if (typeof modelZipPath === 'string' && this.enabled) {
+                        return this.loadModel();
                     }
                 }
                 break;
@@ -260,20 +277,51 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
         if (!this.enabled || this.model || !this._modelZipPath) {
             return;
         }
-        try {
-            const loader = new ModelLoader(this._zipOpener, this._logger, this._telemetry);
-            this.model = await loader.loadModel(this._modelZipPath);
 
-            if (this.model) {
-                if (!this._deepLearning) {
-                    this._deepLearning = new DeepLearning(this.model, this._platform, this._logger, this._telemetry);
-                }
-                await this._deepLearning.initialize();
+        if (this._pipeName && this._analyzerName === DEEP_RERANK_ANALYZER_NAME) {
+            try {
+                const modelService = IntelliCodeModelService.instance;
+
+                await modelService.startModelServiceAsync(this._pipeName);
+
+                this._logger.log(LogLevel.Log, `Load model with modelservice`);
+
+                await modelService.loadModelAsync('python', this._analyzerName, this._modelZipPath);
+
+                this._useModelService = true;
+
+                this._logger.log(
+                    LogLevel.Log,
+                    `Load model with modelservice succeeded. modelPath: ${this._modelZipPath}`
+                );
+            } catch (e: any) {
+                const reason = 'Failed to load IntelliCode model through ModelService';
+                this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
             }
-        } catch (e: any) {
-            const reason = 'Failed to load IntelliCode model';
+        } else {
+            try {
+                const loader = new ModelLoader(this._zipOpener, this._logger, this._telemetry);
+
+                this.model = await loader.loadModel(this._modelZipPath);
+            } catch (e: any) {
+                const reason = 'Failed to load IntelliCode model';
+                this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
+                sendExceptionTelemetry(this._telemetry, TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
+            }
+        }
+
+        // Initialize DeepLearning
+        try {
+            if (!this._deepLearning) {
+                this._deepLearning = new DeepLearning(this.model, this._platform, this._logger, this._telemetry);
+            }
+
+            await this._deepLearning.initialize();
+
+            this._logger.log(LogLevel.Log, `Initialize deeplearning succeeded`);
+        } catch (e) {
+            const reason = 'Failed to initialize deeplearning';
             this._logger.log(LogLevel.Warn, `${reason}. Exception: ${getExceptionMessage(e)}`);
-            sendExceptionTelemetry(this._telemetry, TelemetryEventName.INTELLICODE_MODEL_LOAD_FAILED, e);
         }
     }
 }

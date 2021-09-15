@@ -14,6 +14,7 @@ import { LogService } from '../common/logger';
 import { Platform } from '../common/platform';
 import { getExceptionMessage, sendExceptionTelemetry, TelemetryEventName, TelemetryService } from '../common/telemetry';
 import { ExpressionWalker } from './expressionWalker';
+import { DEEP_RERANK_ANALYZER_NAME, IntelliCodeModelService } from './intelliCodeModelService';
 import { EditorInvocation, PythiaModel } from './models';
 import { EditorLookBackTokenGenerator } from './tokens/editorTokenGenerator';
 
@@ -31,7 +32,7 @@ export class DeepLearning {
     private _session?: InferenceSession;
 
     constructor(
-        private readonly _model: PythiaModel,
+        private readonly _model: PythiaModel | undefined,
         private readonly _platform: Platform,
         private readonly _logger?: LogService,
         private readonly _telemetry?: TelemetryService
@@ -53,7 +54,7 @@ export class DeepLearning {
             }
         }
 
-        if (this._onnx) {
+        if (this._onnx && this._model) {
             try {
                 this._session = await this._onnx.InferenceSession.create(this._model.model, {
                     logSeverityLevel: this.getOnnxLogLevel(),
@@ -69,9 +70,10 @@ export class DeepLearning {
         parseResults: ParseResults,
         expressionWalker: ExpressionWalker,
         position: number,
+        candidates: string[],
         token: CancellationToken
     ): Promise<DeepLearningResult> {
-        if (!this._onnx || !this._session) {
+        if (!this._platform.isOnnxSupported()) {
             return EmptyResult; // Unsupported platform
         }
 
@@ -84,37 +86,70 @@ export class DeepLearning {
 
         // Run the inference
         const recommendations: string[] = [];
-        try {
-            const tokenIds = this.convertTokenToId(invocation.lookbackTokens);
 
-            const tensor1 = new this._onnx.Tensor('int32', tokenIds, [1, tokenIds.length]);
-            const tensor2 = new this._onnx.Tensor('int32', [LookbackTokenLength], [1]);
-            const input = {
-                ['input_batch:0']: tensor1,
-                ['lengths:0']: tensor2,
-            };
+        // try ModelService to get result first
+        if (candidates.length > 0) {
+            try {
+                const results = await IntelliCodeModelService.instance.deepLearningModelInferenceAsync(
+                    'python',
+                    DEEP_RERANK_ANALYZER_NAME,
+                    invocation.lookbackTokens,
+                    candidates
+                );
 
-            const rt = await this._session.run(input, ['top_k:1']);
-            if (token?.isCancellationRequested) {
-                return EmptyResult;
+                results?.Recommendations.forEach((recommendation) => recommendations.push(recommendation));
+
+                if (recommendations.length > 0) {
+                    this._logger?.log(
+                        LogLevel.Log,
+                        `Get recomendations from moderservice succeeded.
+                    lookback tokens: ${invocation.lookbackTokens.join(',')}
+                    candidates: ${candidates.join(',')}`
+                    );
+                }
+            } catch (e) {
+                this._logger?.log(LogLevel.Log, `IntelliCode ModelService exception: ${getExceptionMessage(e)}`);
             }
+        }
 
-            const results = rt['top_k:1'];
-            if (results) {
-                for (const r of results.data) {
-                    const n = r as number;
-                    if (n) {
-                        recommendations.push(this._model.tokens[n]);
+        // If no result from modelservice and IntelliCode session is ready, use IntelliCode session to get result
+        if (recommendations.length === 0 && this._onnx && this._session && this._model) {
+            try {
+                const tokenIds = this.convertTokenToId(invocation.lookbackTokens);
+
+                const tensor1 = new this._onnx.Tensor('int32', tokenIds, [1, tokenIds.length]);
+                const tensor2 = new this._onnx.Tensor('int32', [LookbackTokenLength], [1]);
+                const input = {
+                    ['input_batch:0']: tensor1,
+                    ['lengths:0']: tensor2,
+                };
+
+                const rt = await this._session.run(input, ['top_k:1']);
+                if (token?.isCancellationRequested) {
+                    return EmptyResult;
+                }
+
+                const results = rt['top_k:1'];
+                if (results) {
+                    for (const r of results.data) {
+                        const n = r as number;
+                        if (n) {
+                            recommendations.push(this._model.tokens[n]);
+                        }
                     }
                 }
+            } catch (e) {
+                this._logger?.log(LogLevel.Error, `IntelliCode exception: ${getExceptionMessage(e)}`);
             }
-        } catch (e) {
-            this._logger?.log(LogLevel.Error, `IntelliCode exception: ${getExceptionMessage(e)}`);
         }
         return { recommendations, invocation };
     }
 
     private convertTokenToId(lookbackTokens: string[]): number[] {
+        if (!this._model) {
+            throw new Error('no model exists');
+        }
+
         const result = new Array<number>(LookbackTokenLength);
         let i = 0;
         if (lookbackTokens.length < LookbackTokenLength) {
