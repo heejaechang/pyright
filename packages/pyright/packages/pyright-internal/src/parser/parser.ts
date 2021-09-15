@@ -3546,8 +3546,11 @@ export class Parser {
 
         const exprListResult = this._parseTestListWithComprehension();
         const tupleOrExpression = this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ true);
+        const isExpression = exprListResult.list.length === 1 && !exprListResult.trailingComma;
 
-        extendRange(tupleOrExpression, startParen);
+        if (!isExpression) {
+            extendRange(tupleOrExpression, startParen);
+        }
 
         if (this._peekTokenType() !== TokenType.CloseParenthesis) {
             return this._handleExpressionParseError(
@@ -3555,7 +3558,10 @@ export class Parser {
                 Localizer.Diagnostic.expectedCloseParen()
             );
         } else {
-            extendRange(tupleOrExpression, this._getNextToken());
+            const nextToken = this._getNextToken();
+            if (!isExpression) {
+                extendRange(tupleOrExpression, nextToken);
+            }
         }
 
         return tupleOrExpression;
