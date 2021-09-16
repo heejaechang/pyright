@@ -53,7 +53,7 @@ test('SuiteExpectedColon3', () => {
     const diagSink = new DiagnosticSink();
     TestUtils.parseSampleFile('suiteExpectedColon3.py', diagSink);
     assert.strictEqual(diagSink.getErrors().length, 1);
-
+});
 
 test('ExpressionWrappedInParens', () => {
     const diagSink = new DiagnosticSink();
