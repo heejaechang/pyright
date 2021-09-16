@@ -162,10 +162,28 @@ test('Loops7', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Loops8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops8.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Loops9', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops9.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Loops10', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops10.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('ForLoop1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['forLoop1.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('ForLoop2', () => {
@@ -177,7 +195,7 @@ test('ForLoop2', () => {
 test('ListComprehension1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['listComprehension1.py']);
 
-    TestUtils.validateResults(analysisResults, 1);
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('ListComprehension2', () => {

@@ -85,12 +85,12 @@ import {
     createKeyForReference,
     FlowAssignment,
     FlowAssignmentAlias,
+    FlowBranchLabel,
     FlowCall,
     FlowCondition,
     FlowExhaustedMatch,
     FlowFlags,
     FlowLabel,
-    FlowLoopLabel,
     FlowNarrowForPattern,
     FlowNode,
     FlowPostContextManagerLabel,
@@ -199,6 +199,10 @@ export class Binder extends ParseTreeWalker {
         id: getUniqueFlowNodeId(),
     };
 
+    // Map of symbols at the module level that may be externally
+    // hidden depending on whether they are listed in the __all__ list.
+    private _potentialHiddenSymbols = new Map<string, Symbol>();
+
     // Map of symbols at the module level that may be private depending
     // on whether they are listed in the __all__ list.
     private _potentialPrivateSymbols = new Map<string, Symbol>();
@@ -251,12 +255,20 @@ export class Binder extends ParseTreeWalker {
         this._bindDeferred();
 
         // Use the __all__ list to determine whether any potential private
-        // symbols should be made externally invisible.
-        this._potentialPrivateSymbols.forEach((symbol, name) => {
-            // If this symbol was found in the dunder all, don't mark it
-            // as externally hidden.
+        // symbols should be made externally hidden or private.
+        this._potentialHiddenSymbols.forEach((symbol, name) => {
             if (!this._dunderAllNames?.some((sym) => sym === name)) {
-                symbol.setIsExternallyHidden();
+                if (this._fileInfo.isStubFile) {
+                    symbol.setIsExternallyHidden();
+                } else {
+                    symbol.setPrivatePyTypedImport();
+                }
+            }
+        });
+
+        this._potentialPrivateSymbols.forEach((symbol, name) => {
+            if (!this._dunderAllNames?.some((sym) => sym === name)) {
+                symbol.setIsPrivateMember();
             }
         });
 
@@ -1066,39 +1078,42 @@ export class Binder extends ParseTreeWalker {
     }
 
     override visitIf(node: IfNode): boolean {
+        const preIfFlowNode = this._currentFlowNode!;
         const thenLabel = this._createBranchLabel();
         const elseLabel = this._createBranchLabel();
-        const postIfLabel = this._createBranchLabel();
+        const postIfLabel = this._createBranchLabel(preIfFlowNode);
 
-        // Determine if the test condition is always true or always false. If so,
-        // we can treat either the then or the else clause as unconditional.
-        const constExprValue = StaticExpressions.evaluateStaticBoolLikeExpression(
-            node.testExpression,
-            this._fileInfo.executionEnvironment,
-            this._typingImportAliases,
-            this._sysImportAliases
-        );
+        postIfLabel.affectedExpressions = this._trackCodeFlowExpressions(() => {
+            // Determine if the test condition is always true or always false. If so,
+            // we can treat either the then or the else clause as unconditional.
+            const constExprValue = StaticExpressions.evaluateStaticBoolLikeExpression(
+                node.testExpression,
+                this._fileInfo.executionEnvironment,
+                this._typingImportAliases,
+                this._sysImportAliases
+            );
 
-        this._bindConditional(node.testExpression, thenLabel, elseLabel);
+            this._bindConditional(node.testExpression, thenLabel, elseLabel);
 
-        // Handle the if clause.
-        this._currentFlowNode =
-            constExprValue === false ? Binder._unreachableFlowNode : this._finishFlowLabel(thenLabel);
-        this.walk(node.ifSuite);
-        this._addAntecedent(postIfLabel, this._currentFlowNode);
+            // Handle the if clause.
+            this._currentFlowNode =
+                constExprValue === false ? Binder._unreachableFlowNode : this._finishFlowLabel(thenLabel);
+            this.walk(node.ifSuite);
+            this._addAntecedent(postIfLabel, this._currentFlowNode);
 
-        // Now handle the else clause if it's present. If there
-        // are chained "else if" statements, they'll be handled
-        // recursively here.
-        this._currentFlowNode =
-            constExprValue === true ? Binder._unreachableFlowNode : this._finishFlowLabel(elseLabel);
-        if (node.elseSuite) {
-            this.walk(node.elseSuite);
-        } else {
-            this._bindNeverCondition(node.testExpression, postIfLabel, /* isPositiveTest */ false);
-        }
-        this._addAntecedent(postIfLabel, this._currentFlowNode);
-        this._currentFlowNode = this._finishFlowLabel(postIfLabel);
+            // Now handle the else clause if it's present. If there
+            // are chained "else if" statements, they'll be handled
+            // recursively here.
+            this._currentFlowNode =
+                constExprValue === true ? Binder._unreachableFlowNode : this._finishFlowLabel(elseLabel);
+            if (node.elseSuite) {
+                this.walk(node.elseSuite);
+            } else {
+                this._bindNeverCondition(node.testExpression, postIfLabel, /* isPositiveTest */ false);
+            }
+            this._addAntecedent(postIfLabel, this._currentFlowNode);
+            this._currentFlowNode = this._finishFlowLabel(postIfLabel);
+        });
 
         return false;
     }
@@ -1254,14 +1269,15 @@ export class Binder extends ParseTreeWalker {
         //                         (after finally)
 
         // Create one flow label for every except clause.
+        const preTryFlowNode = this._currentFlowNode!;
         const curExceptTargets = node.exceptClauses.map(() => this._createBranchLabel());
-        const preFinallyLabel = this._createBranchLabel();
+        const preFinallyLabel = this._createBranchLabel(preTryFlowNode);
+        let isAfterElseAndExceptsReachable = false;
 
         // Create a label for all of the return or raise labels that are
         // encountered within the try/except/else blocks. This conditionally
         // connects the return/raise statement to the finally clause.
-        const preFinallyReturnOrRaiseLabel = this._createBranchLabel();
-        let isAfterElseAndExceptsReachable = false;
+        const preFinallyReturnOrRaiseLabel = this._createBranchLabel(preTryFlowNode);
 
         const preFinallyGate: FlowPreFinallyGate = {
             flags: FlowFlags.PreFinallyGate,
@@ -1269,64 +1285,68 @@ export class Binder extends ParseTreeWalker {
             antecedent: preFinallyReturnOrRaiseLabel,
             isGateClosed: false,
         };
-        if (node.finallySuite) {
-            this._addAntecedent(preFinallyLabel, preFinallyGate);
-        }
 
-        // Add the finally target as an exception target unless there is
-        // a "bare" except clause that accepts all exception types.
-        const hasBareExceptClause = node.exceptClauses.some((except) => !except.typeExpression);
-        if (!hasBareExceptClause) {
-            curExceptTargets.push(preFinallyReturnOrRaiseLabel);
-        }
+        preFinallyLabel.affectedExpressions = this._trackCodeFlowExpressions(() => {
+            if (node.finallySuite) {
+                this._addAntecedent(preFinallyLabel, preFinallyGate);
+            }
 
-        // An exception may be generated before the first flow node
-        // added by the try block, so all of the exception targets
-        // must have the pre-try flow node as an antecedent.
-        curExceptTargets.forEach((exceptLabel) => {
-            this._addAntecedent(exceptLabel, this._currentFlowNode!);
-        });
+            // Add the finally target as an exception target unless there is
+            // a "bare" except clause that accepts all exception types.
+            const hasBareExceptClause = node.exceptClauses.some((except) => !except.typeExpression);
+            if (!hasBareExceptClause) {
+                curExceptTargets.push(preFinallyReturnOrRaiseLabel);
+            }
 
-        // We don't perfectly handle nested finally clauses, which are not
-        // possible to model fully within a static analyzer, but we do handle
-        // a single level of finally statements, and we handle most cases
-        // involving nesting. Returns or raises within the try/except/raise
-        // block will execute the finally target(s).
-        if (node.finallySuite) {
-            this._finallyTargets.push(preFinallyReturnOrRaiseLabel);
-        }
+            // An exception may be generated before the first flow node
+            // added by the try block, so all of the exception targets
+            // must have the pre-try flow node as an antecedent.
+            curExceptTargets.forEach((exceptLabel) => {
+                this._addAntecedent(exceptLabel, this._currentFlowNode!);
+            });
 
-        // Handle the try block.
-        this._useExceptTargets(curExceptTargets, () => {
-            this.walk(node.trySuite);
-        });
+            // We don't perfectly handle nested finally clauses, which are not
+            // possible to model fully within a static analyzer, but we do handle
+            // a single level of finally statements, and we handle most cases
+            // involving nesting. Returns or raises within the try/except/raise
+            // block will execute the finally target(s).
+            if (node.finallySuite) {
+                this._finallyTargets.push(preFinallyReturnOrRaiseLabel);
+            }
 
-        // Handle the else block, which is executed only if
-        // execution falls through the try block.
-        if (node.elseSuite) {
-            this.walk(node.elseSuite);
-        }
-        this._addAntecedent(preFinallyLabel, this._currentFlowNode!);
-        if (!this._isCodeUnreachable()) {
-            isAfterElseAndExceptsReachable = true;
-        }
+            // Handle the try block.
+            this._useExceptTargets(curExceptTargets, () => {
+                this.walk(node.trySuite);
+            });
 
-        // Handle the except blocks.
-        node.exceptClauses.forEach((exceptNode, index) => {
-            this._currentFlowNode = this._finishFlowLabel(curExceptTargets[index]);
-            this.walk(exceptNode);
-            this._addAntecedent(preFinallyLabel, this._currentFlowNode);
+            // Handle the else block, which is executed only if
+            // execution falls through the try block.
+            if (node.elseSuite) {
+                this.walk(node.elseSuite);
+            }
+            this._addAntecedent(preFinallyLabel, this._currentFlowNode!);
             if (!this._isCodeUnreachable()) {
                 isAfterElseAndExceptsReachable = true;
             }
+
+            // Handle the except blocks.
+            node.exceptClauses.forEach((exceptNode, index) => {
+                this._currentFlowNode = this._finishFlowLabel(curExceptTargets[index]);
+                this.walk(exceptNode);
+                this._addAntecedent(preFinallyLabel, this._currentFlowNode);
+                if (!this._isCodeUnreachable()) {
+                    isAfterElseAndExceptsReachable = true;
+                }
+            });
+
+            if (node.finallySuite) {
+                this._finallyTargets.pop();
+            }
+
+            // Handle the finally block.
+            this._currentFlowNode = this._finishFlowLabel(preFinallyLabel);
         });
 
-        if (node.finallySuite) {
-            this._finallyTargets.pop();
-        }
-
-        // Handle the finally block.
-        this._currentFlowNode = this._finishFlowLabel(preFinallyLabel);
         if (node.finallySuite) {
             this.walk(node.finallySuite);
 
@@ -1336,7 +1356,7 @@ export class Binder extends ParseTreeWalker {
                 flags: FlowFlags.PostFinally,
                 id: getUniqueFlowNodeId(),
                 finallyNode: node.finallySuite,
-                antecedent: this._currentFlowNode,
+                antecedent: this._currentFlowNode!,
                 preFinallyGate,
             };
             this._currentFlowNode = isAfterElseAndExceptsReachable ? postFinallyNode : Binder._unreachableFlowNode;
@@ -1438,18 +1458,17 @@ export class Binder extends ParseTreeWalker {
             const symbol = this._bindNameToScope(this._currentScope, symbolName);
             if (
                 symbol &&
+                (this._currentScope.type === ScopeType.Module || this._currentScope.type === ScopeType.Builtin) &&
                 (!node.alias ||
                     node.module.nameParts.length !== 1 ||
                     node.module.nameParts[0].value !== node.alias.value)
             ) {
-                if (this._fileInfo.isStubFile) {
+                if (this._fileInfo.isStubFile || this._fileInfo.isInPyTypedPackage) {
                     // PEP 484 indicates that imported symbols should not be
                     // considered "reexported" from a type stub file unless
                     // they are imported using the "as" form and the aliased
                     // name is entirely redundant.
-                    symbol.setIsExternallyHidden();
-                } else if (this._fileInfo.isInPyTypedPackage && this._currentScope.type === ScopeType.Module) {
-                    this._potentialPrivateSymbols.set(symbolName, symbol);
+                    this._potentialHiddenSymbols.set(symbolName, symbol);
                 }
             }
 
@@ -1604,21 +1623,21 @@ export class Binder extends ParseTreeWalker {
                     // All import statements of the form `from . import x` treat x
                     // as an externally-visible (not hidden) symbol.
                     if (node.module.nameParts.length > 0) {
-                        if (!importSymbolNode.alias || importSymbolNode.alias.value !== importSymbolNode.name.value) {
-                            if (this._fileInfo.isStubFile) {
-                                // PEP 484 indicates that imported symbols should not be
-                                // considered "reexported" from a type stub file unless
-                                // they are imported using the "as" form using a redundant form.
-                                symbol.setIsExternallyHidden();
-                            } else if (
-                                this._fileInfo.isInPyTypedPackage &&
-                                this._currentScope.type === ScopeType.Module
+                        if (
+                            this._currentScope.type === ScopeType.Module ||
+                            this._currentScope.type === ScopeType.Builtin
+                        ) {
+                            if (
+                                !importSymbolNode.alias ||
+                                importSymbolNode.alias.value !== importSymbolNode.name.value
                             ) {
-                                // Py.typed packages follow the same rule as PEP 484 except
-                                // that if the symbol appears in the __all__ list, it is overridden
-                                // and becomes a externally-visible symbol. For now, add it to
-                                // the "potentially private" map.
-                                this._potentialPrivateSymbols.set(nameNode.value, symbol);
+                                if (this._fileInfo.isStubFile || this._fileInfo.isInPyTypedPackage) {
+                                    // PEP 484 indicates that imported symbols should not be
+                                    // considered "reexported" from a type stub file unless
+                                    // they are imported using the "as" form using a redundant form.
+                                    // Py.typed packages follow the same rule as PEP 484.
+                                    this._potentialHiddenSymbols.set(nameNode.value, symbol);
+                                }
                             }
                         }
                     }
@@ -1716,45 +1735,51 @@ export class Binder extends ParseTreeWalker {
         );
         this._addAntecedent(contextManagerExceptionTarget, this._currentFlowNode!);
 
-        const postContextManagerLabel = this._createBranchLabel();
+        const preWithSuiteNode = this._currentFlowNode!;
+        const postContextManagerLabel = this._createBranchLabel(preWithSuiteNode);
         this._addAntecedent(postContextManagerLabel, contextManagerExceptionTarget!);
 
-        this._useExceptTargets([contextManagerExceptionTarget], () => {
-            this.walk(node.suite);
-        });
+        postContextManagerLabel.affectedExpressions = this._trackCodeFlowExpressions(() => {
+            this._useExceptTargets([contextManagerExceptionTarget], () => {
+                this.walk(node.suite);
+            });
 
-        this._addAntecedent(postContextManagerLabel, this._currentFlowNode!);
-        this._currentFlowNode = postContextManagerLabel;
+            this._addAntecedent(postContextManagerLabel, this._currentFlowNode!);
+            this._currentFlowNode = postContextManagerLabel;
 
-        if (node.asyncToken) {
-            const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
-            if (!enclosingFunction || !enclosingFunction.isAsync) {
-                this._addError(Localizer.Diagnostic.asyncNotInAsyncFunction(), node.asyncToken);
+            if (node.asyncToken) {
+                const enclosingFunction = ParseTreeUtils.getEnclosingFunction(node);
+                if (!enclosingFunction || !enclosingFunction.isAsync) {
+                    this._addError(Localizer.Diagnostic.asyncNotInAsyncFunction(), node.asyncToken);
+                }
             }
-        }
+        });
 
         return false;
     }
 
     override visitTernary(node: TernaryNode): boolean {
+        const preTernaryFlowNode = this._currentFlowNode!;
         const trueLabel = this._createBranchLabel();
         const falseLabel = this._createBranchLabel();
-        const postExpressionLabel = this._createBranchLabel();
+        const postExpressionLabel = this._createBranchLabel(preTernaryFlowNode);
 
-        // Handle the test expression.
-        this._bindConditional(node.testExpression, trueLabel, falseLabel);
+        postExpressionLabel.affectedExpressions = this._trackCodeFlowExpressions(() => {
+            // Handle the test expression.
+            this._bindConditional(node.testExpression, trueLabel, falseLabel);
 
-        // Handle the "true" portion (the "if" expression).
-        this._currentFlowNode = this._finishFlowLabel(trueLabel);
-        this.walk(node.ifExpression);
-        this._addAntecedent(postExpressionLabel, this._currentFlowNode);
+            // Handle the "true" portion (the "if" expression).
+            this._currentFlowNode = this._finishFlowLabel(trueLabel);
+            this.walk(node.ifExpression);
+            this._addAntecedent(postExpressionLabel, this._currentFlowNode);
 
-        // Handle the "false" portion (the "else" expression).
-        this._currentFlowNode = this._finishFlowLabel(falseLabel);
-        this.walk(node.elseExpression);
-        this._addAntecedent(postExpressionLabel, this._currentFlowNode);
+            // Handle the "false" portion (the "else" expression).
+            this._currentFlowNode = this._finishFlowLabel(falseLabel);
+            this.walk(node.elseExpression);
+            this._addAntecedent(postExpressionLabel, this._currentFlowNode);
 
-        this._currentFlowNode = this._finishFlowLabel(postExpressionLabel);
+            this._currentFlowNode = this._finishFlowLabel(postExpressionLabel);
+        });
 
         return false;
     }
@@ -2279,11 +2304,13 @@ export class Binder extends ParseTreeWalker {
         return flowNode;
     }
 
-    private _createBranchLabel() {
-        const flowNode: FlowLabel = {
+    private _createBranchLabel(preBranchAntecedent?: FlowNode) {
+        const flowNode: FlowBranchLabel = {
             flags: FlowFlags.BranchLabel,
             id: getUniqueFlowNodeId(),
             antecedents: [],
+            preBranchAntecedent,
+            affectedExpressions: undefined,
         };
         return flowNode;
     }
@@ -2309,17 +2336,18 @@ export class Binder extends ParseTreeWalker {
             id: getUniqueFlowNodeId(),
             antecedents: [],
             expressions,
+            affectedExpressions: undefined,
             isAsync,
         };
         return flowNode;
     }
 
     private _createLoopLabel() {
-        const flowNode: FlowLoopLabel = {
+        const flowNode: FlowLabel = {
             flags: FlowFlags.LoopLabel,
             id: getUniqueFlowNodeId(),
             antecedents: [],
-            expressions: undefined,
+            affectedExpressions: undefined,
         };
         return flowNode;
     }
@@ -2891,17 +2919,12 @@ export class Binder extends ParseTreeWalker {
         }
     }
 
-    private _bindLoopStatement(preLoopLabel: FlowLoopLabel, postLoopLabel: FlowLabel, callback: () => void) {
-        const savedContinueTarget = this._currentContinueTarget;
-        const savedBreakTarget = this._currentBreakTarget;
+    private _trackCodeFlowExpressions(callback: () => void): Set<string> {
         const savedExpressions = this._currentScopeCodeFlowExpressions;
-        this._currentContinueTarget = preLoopLabel;
-        this._currentBreakTarget = postLoopLabel;
         this._currentScopeCodeFlowExpressions = new Set<string>();
-
         callback();
 
-        preLoopLabel.expressions = this._currentScopeCodeFlowExpressions;
+        const scopedExpressions = this._currentScopeCodeFlowExpressions;
 
         if (savedExpressions) {
             this._currentScopeCodeFlowExpressions.forEach((value) => {
@@ -2910,6 +2933,18 @@ export class Binder extends ParseTreeWalker {
         }
 
         this._currentScopeCodeFlowExpressions = savedExpressions;
+
+        return scopedExpressions;
+    }
+
+    private _bindLoopStatement(preLoopLabel: FlowLabel, postLoopLabel: FlowLabel, callback: () => void) {
+        const savedContinueTarget = this._currentContinueTarget;
+        const savedBreakTarget = this._currentBreakTarget;
+        this._currentContinueTarget = preLoopLabel;
+        this._currentBreakTarget = postLoopLabel;
+
+        preLoopLabel.affectedExpressions = this._trackCodeFlowExpressions(callback);
+
         this._currentContinueTarget = savedContinueTarget;
         this._currentBreakTarget = savedBreakTarget;
     }
@@ -2952,11 +2987,21 @@ export class Binder extends ParseTreeWalker {
                     }
                 }
 
-                if (isPrivateOrProtectedName(name)) {
-                    if (this._fileInfo.isStubFile || isPrivateName(name)) {
-                        symbol.setIsExternallyHidden();
-                    } else if (this._fileInfo.isInPyTypedPackage && this._currentScope.type === ScopeType.Module) {
-                        this._potentialPrivateSymbols.set(name, symbol);
+                if (this._currentScope.type === ScopeType.Module || this._currentScope.type === ScopeType.Builtin) {
+                    if (isPrivateOrProtectedName(name)) {
+                        if (isPrivateName(name)) {
+                            // Private names are obscured, so they are always externally hidden.
+                            symbol.setIsExternallyHidden();
+                        } else if (this._fileInfo.isStubFile || this._fileInfo.isInPyTypedPackage) {
+                            if (this._currentScope.type === ScopeType.Builtin) {
+                                // Don't include private-named symbols in the builtin scope.
+                                symbol.setIsExternallyHidden();
+                            } else {
+                                this._potentialPrivateSymbols.set(name, symbol);
+                            }
+                        } else {
+                            symbol.setIsPrivateMember();
+                        }
                     }
                 }
 
@@ -3191,7 +3236,10 @@ export class Binder extends ParseTreeWalker {
                         typeAnnotationNode = undefined;
 
                         // Type aliases are allowed only in the global scope.
-                        if (this._currentScope.type !== ScopeType.Module) {
+                        if (
+                            this._currentScope.type !== ScopeType.Module &&
+                            this._currentScope.type !== ScopeType.Builtin
+                        ) {
                             this._addError(Localizer.Diagnostic.typeAliasNotInModule(), typeAnnotation);
                         }
                     } else if (finalInfo.isFinal) {
