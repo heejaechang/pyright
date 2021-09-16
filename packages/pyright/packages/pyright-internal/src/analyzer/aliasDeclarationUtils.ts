@@ -10,6 +10,13 @@ import { ImportLookup, ImportLookupResult } from './analyzerFileInfo';
 import { Declaration, DeclarationType } from './declaration';
 import { Symbol } from './symbol';
 
+export interface ResolvedAliasInfo {
+    declaration: Declaration;
+    isPrivate: boolean;
+    privatePyTypedImported?: string;
+    privatePyTypedImporter?: string;
+}
+
 // If the specified declaration is an alias declaration that points to a symbol,
 // it resolves the alias and looks up the symbol, then returns the first declaration
 // associated with that symbol. It does this recursively if necessary. If a symbol
@@ -19,23 +26,33 @@ export function resolveAliasDeclaration(
     importLookup: ImportLookup,
     declaration: Declaration,
     resolveLocalNames: boolean
-): Declaration | undefined {
+): ResolvedAliasInfo | undefined {
     let curDeclaration: Declaration | undefined = declaration;
     const alreadyVisited: Declaration[] = [];
+    let isPrivate = false;
+    let isPrivatePyTypedImport = false;
+    let privatePyTypedImported: string | undefined;
+    let privatePyTypedImporter: string | undefined;
 
     while (true) {
-        if (curDeclaration.type !== DeclarationType.Alias) {
-            return curDeclaration;
-        }
-
-        if (!curDeclaration.symbolName) {
-            return curDeclaration;
+        if (curDeclaration.type !== DeclarationType.Alias || !curDeclaration.symbolName) {
+            return {
+                declaration: curDeclaration,
+                isPrivate,
+                privatePyTypedImported,
+                privatePyTypedImporter,
+            };
         }
 
         // If we are not supposed to follow local alias names and this
         // is a local name, don't continue to follow the alias.
         if (!resolveLocalNames && curDeclaration.usesLocalName) {
-            return curDeclaration;
+            return {
+                declaration: curDeclaration,
+                isPrivate,
+                privatePyTypedImported,
+                privatePyTypedImporter,
+            };
         }
 
         let lookupResult: ImportLookupResult | undefined;
@@ -50,6 +67,14 @@ export function resolveAliasDeclaration(
             if (curDeclaration.submoduleFallback) {
                 return resolveAliasDeclaration(importLookup, curDeclaration.submoduleFallback, resolveLocalNames);
             }
+            return undefined;
+        }
+
+        if (symbol.isPrivateMember()) {
+            isPrivate = true;
+        }
+
+        if (symbol.isExternallyHidden()) {
             return undefined;
         }
 
@@ -68,6 +93,18 @@ export function resolveAliasDeclaration(
         // we use all of the overloads if it's an overloaded function.
         curDeclaration = declarations[declarations.length - 1];
 
+        if (isPrivatePyTypedImport) {
+            privatePyTypedImported = privatePyTypedImported ?? curDeclaration?.moduleName;
+        }
+
+        if (symbol.isPrivatePyTypedImport()) {
+            isPrivatePyTypedImport = true;
+        }
+
+        if (isPrivatePyTypedImport) {
+            privatePyTypedImporter = privatePyTypedImporter ?? curDeclaration?.moduleName;
+        }
+
         // Make sure we don't follow a circular list indefinitely.
         if (alreadyVisited.find((decl) => decl === curDeclaration)) {
             // If the path path of the alias points back to the original path, use the submodule
@@ -82,7 +119,12 @@ export function resolveAliasDeclaration(
             ) {
                 return resolveAliasDeclaration(importLookup, curDeclaration.submoduleFallback, resolveLocalNames);
             }
-            return declaration;
+            return {
+                declaration,
+                isPrivate,
+                privatePyTypedImported,
+                privatePyTypedImporter,
+            };
         }
         alreadyVisited.push(curDeclaration);
     }

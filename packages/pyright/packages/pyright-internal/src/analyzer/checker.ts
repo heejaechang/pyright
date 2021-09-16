@@ -2571,38 +2571,52 @@ export class Checker extends ParseTreeWalker {
             return;
         }
 
-        // If this symbol is an import alias (i.e. it's a local name rather than the original
-        // imported name), skip the private check.
-        if (primaryDeclaration.type === DeclarationType.Alias && primaryDeclaration.usesLocalName) {
+        if (primaryDeclaration.type === DeclarationType.Alias) {
+            // If this symbol is an import alias (i.e. it's a local name rather than the
+            // original imported name), skip the private check.
+            if (primaryDeclaration.usesLocalName) {
+                return;
+            }
+
+            const resolvedAliasInfo = this._evaluator.resolveAliasDeclarationWithInfo(
+                primaryDeclaration,
+                /* resolveLocalNames */ true
+            );
+
+            if (!resolvedAliasInfo) {
+                return;
+            }
+
+            primaryDeclaration = resolvedAliasInfo.declaration;
+
+            // If the alias resolved to a stub file or py.typed source file
+            // and the declaration is marked "externally visible", it is
+            // exempt from private usage checks.
+            if (!resolvedAliasInfo.isPrivate) {
+                return;
+            }
+        }
+
+        if (primaryDeclaration.node === node) {
             return;
         }
 
-        primaryDeclaration = this._evaluator.resolveAliasDeclaration(primaryDeclaration, /* resolveLocalNames */ true);
-        if (!primaryDeclaration || primaryDeclaration.node === node) {
-            return;
-        }
-
-        let classOrModuleNode: ClassNode | ModuleNode | undefined;
+        let classNode: ClassNode | undefined;
         if (primaryDeclaration.node) {
-            classOrModuleNode = ParseTreeUtils.getEnclosingClassOrModule(primaryDeclaration.node);
+            classNode = ParseTreeUtils.getEnclosingClass(primaryDeclaration.node);
         }
 
-        // If this is the name of a class, find the module or class that contains it rather
+        // If this is the name of a class, find the class that contains it rather
         // than constraining the use of the class name within the class itself.
-        if (
-            primaryDeclaration.node &&
-            primaryDeclaration.node.parent &&
-            primaryDeclaration.node.parent === classOrModuleNode &&
-            classOrModuleNode.nodeType === ParseNodeType.Class
-        ) {
-            classOrModuleNode = ParseTreeUtils.getEnclosingClassOrModule(classOrModuleNode);
+        if (primaryDeclaration.node && primaryDeclaration.node.parent && primaryDeclaration.node.parent === classNode) {
+            classNode = ParseTreeUtils.getEnclosingClass(classNode);
         }
 
         // If it's a class member, check whether it's a legal protected access.
         let isProtectedAccess = false;
-        if (classOrModuleNode && classOrModuleNode.nodeType === ParseNodeType.Class) {
+        if (classNode) {
             if (isProtectedName) {
-                const declClassTypeInfo = this._evaluator.getTypeOfClass(classOrModuleNode);
+                const declClassTypeInfo = this._evaluator.getTypeOfClass(classNode);
                 if (declClassTypeInfo && isInstantiableClass(declClassTypeInfo.decoratedType)) {
                     // If it's a member defined in a stub file, we'll assume that it's part
                     // of the public contract even if it's named as though it's private.
@@ -2635,7 +2649,7 @@ export class Checker extends ParseTreeWalker {
             }
         }
 
-        if (classOrModuleNode && !ParseTreeUtils.isNodeContainedWithin(node, classOrModuleNode)) {
+        if (classNode && !ParseTreeUtils.isNodeContainedWithin(node, classNode)) {
             if (isProtectedAccess) {
                 this._evaluator.addDiagnostic(
                     this._fileInfo.diagnosticRuleSet.reportPrivateUsage,
@@ -2647,9 +2661,7 @@ export class Checker extends ParseTreeWalker {
                 this._evaluator.addDiagnostic(
                     this._fileInfo.diagnosticRuleSet.reportPrivateUsage,
                     DiagnosticRule.reportPrivateUsage,
-                    classOrModuleNode.nodeType === ParseNodeType.Class
-                        ? Localizer.Diagnostic.privateUsedOutsideOfClass().format({ name: nameValue })
-                        : Localizer.Diagnostic.privateUsedOutsideOfModule().format({ name: nameValue }),
+                    Localizer.Diagnostic.privateUsedOutsideOfClass().format({ name: nameValue }),
                     node
                 );
             }
@@ -3224,27 +3236,32 @@ export class Checker extends ParseTreeWalker {
                             }
                         }
                     } else if (!isAnyOrUnknown(typeOfSymbol)) {
-                        const decls = symbol.getDeclarations();
-                        if (decls.length > 0) {
-                            const lastDecl = decls[decls.length - 1];
-                            const diag = this._evaluator.addDiagnostic(
-                                this._fileInfo.diagnosticRuleSet.reportIncompatibleMethodOverride,
-                                DiagnosticRule.reportIncompatibleMethodOverride,
-                                Localizer.Diagnostic.methodOverridden().format({
-                                    name,
-                                    className: baseClassAndSymbol.classType.details.name,
-                                    type: this._evaluator.printType(typeOfSymbol, /* expandTypeAlias */ false),
-                                }),
-                                lastDecl.node
-                            );
-
-                            const origDecl = getLastTypedDeclaredForSymbol(baseClassAndSymbol.symbol);
-                            if (diag && origDecl) {
-                                diag.addRelatedInfo(
-                                    Localizer.DiagnosticAddendum.overriddenMethod(),
-                                    origDecl.path,
-                                    origDecl.range
+                        // Special-case overrides of methods in '_TypedDict', since
+                        // TypedDict attributes aren't manifest as attributes but rather
+                        // as named keys.
+                        if (!ClassType.isBuiltIn(baseClassAndSymbol.classType, '_TypedDict')) {
+                            const decls = symbol.getDeclarations();
+                            if (decls.length > 0) {
+                                const lastDecl = decls[decls.length - 1];
+                                const diag = this._evaluator.addDiagnostic(
+                                    this._fileInfo.diagnosticRuleSet.reportIncompatibleMethodOverride,
+                                    DiagnosticRule.reportIncompatibleMethodOverride,
+                                    Localizer.Diagnostic.methodOverridden().format({
+                                        name,
+                                        className: baseClassAndSymbol.classType.details.name,
+                                        type: this._evaluator.printType(typeOfSymbol, /* expandTypeAlias */ false),
+                                    }),
+                                    lastDecl.node
                                 );
+
+                                const origDecl = getLastTypedDeclaredForSymbol(baseClassAndSymbol.symbol);
+                                if (diag && origDecl) {
+                                    diag.addRelatedInfo(
+                                        Localizer.DiagnosticAddendum.overriddenMethod(),
+                                        origDecl.path,
+                                        origDecl.range
+                                    );
+                                }
                             }
                         }
                     }

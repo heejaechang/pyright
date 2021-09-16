@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.166",
+    "version": "1.1.169",
     "private": true,
     "license": "MIT",
     "author": {
@@ -381,6 +381,17 @@
                             "type": "string",
                             "description": "Diagnostics for incorrect usage of private or protected variables or functions. Protected class members begin with a single underscore _ and can be accessed only by subclasses. Private class members begin with a double underscore but do not end in a double underscore and can be accessed only within the declaring class. Variables and functions declared outside of a class are considered private if their names start with either a single or double underscore, and they cannot be accessed outside of the declaring module.",
                             "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportPrivateImportUsage": {
+                            "type": "string",
+                            "description": "Diagnostics for incorrect usage of symbol imported from a \"py.typed\" module that is not re-exported from that module.",
+                            "default": "error",
                             "enum": [
                                 "none",
                                 "information",

@@ -173,6 +173,10 @@ export interface DiagnosticRuleSet {
     // the owning class or module?
     reportPrivateUsage: DiagnosticLevel;
 
+    // Report usage of an import from a py.typed module that is
+    // not meant to be re-exported from that module.
+    reportPrivateImportUsage: DiagnosticLevel;
+
     // Report attempts to redefine variables that are in all-caps.
     reportConstantRedefinition: DiagnosticLevel;
 
@@ -312,6 +316,7 @@ export function getDiagLevelDiagnosticRules() {
         DiagnosticRule.reportUntypedBaseClass,
         DiagnosticRule.reportUntypedNamedTuple,
         DiagnosticRule.reportPrivateUsage,
+        DiagnosticRule.reportPrivateImportUsage,
         DiagnosticRule.reportConstantRedefinition,
         DiagnosticRule.reportIncompatibleMethodOverride,
         DiagnosticRule.reportIncompatibleVariableOverride,
@@ -385,6 +390,7 @@ export function getOffDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUntypedBaseClass: 'none',
         reportUntypedNamedTuple: 'none',
         reportPrivateUsage: 'none',
+        reportPrivateImportUsage: 'none',
         reportConstantRedefinition: 'none',
         reportIncompatibleMethodOverride: 'none',
         reportIncompatibleVariableOverride: 'none',
@@ -454,6 +460,7 @@ export function getBasicDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUntypedBaseClass: 'none',
         reportUntypedNamedTuple: 'none',
         reportPrivateUsage: 'none',
+        reportPrivateImportUsage: 'error',
         reportConstantRedefinition: 'none',
         reportIncompatibleMethodOverride: 'none',
         reportIncompatibleVariableOverride: 'none',
@@ -523,6 +530,7 @@ export function getStrictDiagnosticRuleSet(): DiagnosticRuleSet {
         reportUntypedBaseClass: 'error',
         reportUntypedNamedTuple: 'error',
         reportPrivateUsage: 'error',
+        reportPrivateImportUsage: 'error',
         reportConstantRedefinition: 'error',
         reportIncompatibleMethodOverride: 'error',
         reportIncompatibleVariableOverride: 'error',
@@ -1061,6 +1069,13 @@ export class ConfigOptions {
                 configObj.reportPrivateUsage,
                 DiagnosticRule.reportPrivateUsage,
                 defaultSettings.reportPrivateUsage
+            ),
+
+            // Read the "reportPrivateImportUsage" entry.
+            reportPrivateImportUsage: this._convertDiagnosticLevel(
+                configObj.reportPrivateImportUsage,
+                DiagnosticRule.reportPrivateImportUsage,
+                defaultSettings.reportPrivateImportUsage
             ),
 
             // Read the "reportConstantRedefinition" entry.

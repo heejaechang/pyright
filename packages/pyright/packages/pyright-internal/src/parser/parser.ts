@@ -1180,10 +1180,16 @@ export class Parser {
         if (!this._consumeTokenIfType(TokenType.Colon)) {
             this._addError(Localizer.Diagnostic.expectedColon(), nextToken);
 
-            // Try to perform parse recovery by consuming tokens until
-            // we find the end of the line.
+            // Try to perform parse recovery by consuming tokens.
             if (this._consumeTokensUntilType([TokenType.NewLine, TokenType.Colon])) {
-                this._getNextToken();
+                if (this._peekTokenType() === TokenType.Colon) {
+                    this._getNextToken();
+                } else if (this._peekToken(1).type !== TokenType.Indent) {
+                    // Bail so we resume the at the next statement.
+                    // We can't parse as a simple statement as we've skipped all but the newline.
+                    this._getNextToken();
+                    return suite;
+                }
             }
         }
 
@@ -1295,8 +1301,12 @@ export class Parser {
     private _parseForStatement(asyncToken?: KeywordToken): ForNode {
         const forToken = this._getKeywordToken(KeywordType.For);
 
-        const exprListResult = this._parseExpressionList(/* allowStar */ true);
-        const targetExpr = this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ false);
+        const targetExpr = this._parseExpressionListAsPossibleTuple(
+            ErrorExpressionCategory.MissingExpression,
+            Localizer.Diagnostic.expectedExpr(),
+            forToken
+        );
+
         let seqExpr: ExpressionNode;
         let forSuite: SuiteNode;
         let elseSuite: SuiteNode | undefined;
@@ -1391,8 +1401,11 @@ export class Parser {
 
         const forToken = this._getKeywordToken(KeywordType.For);
 
-        const exprListResult = this._parseExpressionList(/* allowStar */ true);
-        const targetExpr = this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ false);
+        const targetExpr = this._parseExpressionListAsPossibleTuple(
+            ErrorExpressionCategory.MissingExpression,
+            Localizer.Diagnostic.expectedExpr(),
+            forToken
+        );
         let seqExpr: ExpressionNode | undefined;
 
         if (!this._consumeTokenIfKeyword(KeywordType.In)) {
@@ -2586,6 +2599,23 @@ export class Parser {
         }
 
         return tupleNode;
+    }
+
+    private _parseExpressionListAsPossibleTuple(
+        errorCategory: ErrorExpressionCategory,
+        errorString: string,
+        errorToken: Token
+    ): ExpressionNode {
+        if (this._isNextTokenNeverExpression()) {
+            this._addError(errorString, errorToken);
+            return ErrorNode.create(errorToken, errorCategory);
+        }
+
+        const exprListResult = this._parseExpressionList(/* allowStar */ true);
+        if (exprListResult.parseError) {
+            return exprListResult.parseError;
+        }
+        return this._makeExpressionOrTuple(exprListResult, /* enclosedInParens */ false);
     }
 
     private _parseTestListAsExpression(errorCategory: ErrorExpressionCategory, errorString: string): ExpressionNode {
