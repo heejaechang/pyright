@@ -7,21 +7,19 @@
 
 import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
-import { getAllImportNames, getContainingImportStatement } from 'pyright-internal/analyzer/importStatementUtils';
+import {
+    getAllImportNames,
+    getContainingImportStatement,
+    getTextRangeForImportNameDeletion,
+} from 'pyright-internal/analyzer/importStatementUtils';
 import * as ParseTreeUtils from 'pyright-internal/analyzer/parseTreeUtils';
 import { Commands as PyrightCommands } from 'pyright-internal/commands/commands';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { DiagnosticCategory } from 'pyright-internal/common/diagnostic';
-import {
-    convertOffsetsToRange,
-    convertRangeToTextRange,
-    convertTextRangeToRange,
-} from 'pyright-internal/common/positionUtils';
-import { doRangesIntersect, doRangesOverlap, Position, Range, TextRange } from 'pyright-internal/common/textRange';
+import { convertOffsetsToRange, convertTextRangeToRange } from 'pyright-internal/common/positionUtils';
+import { doRangesIntersect, doRangesOverlap, TextRange } from 'pyright-internal/common/textRange';
 import { convertWorkspaceEdits } from 'pyright-internal/common/workspaceEditUtils';
 import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
-import { TokenizerOutput } from 'pyright-internal/parser/tokenizer';
-import { TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { ServerCommand } from './commandController';
 
@@ -65,7 +63,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
         }
 
         const lines = parseResult.tokenizerOutput.lines;
-        const importRange = convertOffsetsToRange(importNode.start, TextRange.getEnd(importNode), lines);
+        const importRange = convertTextRangeToRange(importNode, lines);
         const unusedImports = (
             await workspace.serviceInstance.getDiagnosticsForRange(filePath, importRange, token)
         ).filter(
@@ -93,7 +91,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
             return convertWorkspaceEdits(this._ls.fs, [
                 {
                     filePath: filePath,
-                    range: this._adjustRange(importRange, parseResult.tokenizerOutput),
+                    range: ParseTreeUtils.getFullStatementRange(importNode, parseResult.tokenizerOutput),
                     replacementText: '',
                 },
             ]);
@@ -109,19 +107,7 @@ export class RemoveUnusedImportCommand implements ServerCommand {
             return [];
         }
 
-        let editSpan: TextRange;
-        if (index === nameNodes.length - 1) {
-            // get span of "import A[|, B|]"
-            const start = TextRange.getEnd(nameNodes[index - 1]);
-            const length = TextRange.getEnd(nameNodes[index]) - start;
-            editSpan = { start, length };
-        } else {
-            // get span of "import [|A, |]B"
-            const start = nameNodes[index].start;
-            const length = nameNodes[index + 1].start - start;
-            editSpan = { start, length };
-        }
-
+        const editSpan = getTextRangeForImportNameDeletion(nameNodes, index);
         return convertWorkspaceEdits(this._ls.fs, [
             {
                 filePath,
@@ -129,56 +115,5 @@ export class RemoveUnusedImportCommand implements ServerCommand {
                 replacementText: '',
             },
         ]);
-    }
-
-    private _adjustRange(range: Range, tokenizerOutput: TokenizerOutput): Range {
-        // First, see whether there are other tokens except semicolon or new line on the same line.
-        const endPosition = this._getEndPositionIfMultipleStatementsAreOnSameLine(range, tokenizerOutput);
-        if (endPosition) {
-            return { start: range.start, end: endPosition };
-        }
-
-        // If not, delete the whole line.
-        if (range.end.line === tokenizerOutput.lines.count - 1) {
-            return range;
-        }
-
-        return { start: range.start, end: { line: range.end.line + 1, character: 0 } };
-    }
-
-    private _getEndPositionIfMultipleStatementsAreOnSameLine(
-        range: Range,
-        tokenizerOutput: TokenizerOutput
-    ): Position | undefined {
-        const textRange = convertRangeToTextRange(range, tokenizerOutput.lines);
-        if (!textRange) {
-            return undefined;
-        }
-
-        const tokenIndex = tokenizerOutput.tokens.getItemAtPosition(TextRange.getEnd(textRange));
-        if (tokenIndex < 0) {
-            return undefined;
-        }
-
-        let currentIndex = tokenIndex;
-        for (; currentIndex < tokenizerOutput.tokens.count; currentIndex++) {
-            const token = tokenizerOutput.tokens.getItemAt(currentIndex);
-            const tokenRange = convertTextRangeToRange(token, tokenizerOutput.lines);
-            if (range.end.line !== tokenRange.start.line) {
-                break;
-            }
-        }
-
-        for (let index = tokenIndex; index < currentIndex; index++) {
-            const token = tokenizerOutput.tokens.getItemAt(index);
-            if (token.type === TokenType.Semicolon || token.type === TokenType.NewLine) {
-                continue;
-            }
-
-            const tokenRange = convertTextRangeToRange(token, tokenizerOutput.lines);
-            return tokenRange.start;
-        }
-
-        return undefined;
     }
 }
