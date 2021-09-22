@@ -1650,7 +1650,7 @@ export class Binder extends ParseTreeWalker {
                     }
 
                     let submoduleFallback: AliasDeclaration | undefined;
-                    let modifiedPath = resolvedPath;
+                    let loadSymbolsFromPath = true;
                     if (implicitImport) {
                         submoduleFallback = {
                             type: DeclarationType.Alias,
@@ -1670,15 +1670,15 @@ export class Binder extends ParseTreeWalker {
                             node.module.leadingDots === 1 &&
                             node.module.nameParts.length === 0
                         ) {
-                            modifiedPath = '';
+                            loadSymbolsFromPath = false;
                         }
                     }
 
                     const aliasDecl: AliasDeclaration = {
                         type: DeclarationType.Alias,
                         node: importSymbolNode,
-                        path: modifiedPath,
-                        loadSymbolsFromPath: modifiedPath !== '',
+                        path: resolvedPath,
+                        loadSymbolsFromPath,
                         usesLocalName: !!importSymbolNode.alias,
                         symbolName: importedName,
                         submoduleFallback,
