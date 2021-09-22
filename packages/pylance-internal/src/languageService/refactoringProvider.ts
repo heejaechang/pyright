@@ -18,7 +18,7 @@ import {
 import * as ParseTreeUtils from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
 import { Scope } from 'pyright-internal/analyzer/scope';
-import { FunctionTypeResult, TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
+import { FunctionTypeResult, TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluatorTypes';
 import { FunctionType } from 'pyright-internal/analyzer/types';
 import { FileEditAction } from 'pyright-internal/common/editAction';
 import {

@@ -9,7 +9,7 @@ import { CancellationToken, ExecuteCommandParams } from 'vscode-languageserver';
 
 import { findNodeByOffset, printParseNodeType } from 'pyright-internal/analyzer/parseTreeUtils';
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
-import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
+import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluatorTypes';
 import {
     ClassType,
     ClassTypeFlags,
