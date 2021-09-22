@@ -1283,25 +1283,20 @@ export function getCallNodeAndActiveParameterIndex(
     // Find the call node that contains the specified node.
     let curNode: ParseNode | undefined = node;
     let callNode: CallNode | undefined;
+
     while (curNode !== undefined) {
+        // make sure we only look at callNodes when we are inside their arguments
         if (curNode.nodeType === ParseNodeType.Call) {
-            callNode = curNode;
-            break;
+            if (isOffsetInsideCallArgs(curNode, insertionOffset)) {
+                callNode = curNode;
+                break;
+            }
         }
         curNode = curNode.parent;
     }
 
     if (!callNode || !callNode.arguments) {
         return undefined;
-    }
-
-    const index = tokens.getItemAtPosition(callNode.leftExpression.start);
-    if (index >= 0 && index + 1 < tokens.count) {
-        const token = tokens.getItemAt(index + 1);
-        if (token.type === TokenType.OpenParenthesis && insertionOffset < TextRange.getEnd(token)) {
-            // position must be after '('
-            return undefined;
-        }
     }
 
     const endPosition = TextRange.getEnd(callNode);
@@ -1366,6 +1361,21 @@ export function getCallNodeAndActiveParameterIndex(
         activeIndex,
         activeOrFake,
     };
+
+    function isOffsetInsideCallArgs(node: CallNode, offset: number) {
+        let found = true;
+        const argmentStart =
+            node.leftExpression.length > 0 ? TextRange.getEnd(node.leftExpression) - 1 : node.leftExpression.start;
+        const index = tokens.getItemAtPosition(argmentStart);
+        if (index >= 0 && index + 1 < tokens.count) {
+            const token = tokens.getItemAt(index + 1);
+            if (token.type === TokenType.OpenParenthesis && insertionOffset < TextRange.getEnd(token)) {
+                // position must be after '('
+                found = false;
+            }
+        }
+        return found;
+    }
 
     function getTokenAt(tokens: TextRangeCollection<Token>, position: number) {
         const index = tokens.getItemAtPosition(position);
