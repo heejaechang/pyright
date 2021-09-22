@@ -61,6 +61,17 @@
             "program": "${workspaceFolder}/packages/pylance-internal/node_modules/jest/bin/jest"
         },
         {
+            "name": "Pylance jest selected test",
+            "type": "node",
+            "request": "launch",
+            "args": ["${fileBasenameNoExtension}", "--runInBand", "-t", "${selectedText}"],
+            "cwd": "${workspaceRoot}/packages/pylance-internal",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/packages/pylance-internal/node_modules/jest/bin/jest"
+        },
+        {
             "name": "Pylance fourslash current file",
             "type": "node",
             "request": "launch",
@@ -125,6 +136,17 @@
             "type": "node",
             "request": "launch",
             "args": ["${fileBasenameNoExtension}", "--runInBand"],
+            "cwd": "${workspaceRoot}/packages/pyright/packages/pyright-internal",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "disableOptimisticBPs": true,
+            "program": "${workspaceFolder}/packages/pyright/packages/pyright-internal/node_modules/jest/bin/jest"
+        },
+        {
+            "name": "Pyright jest selected test",
+            "type": "node",
+            "request": "launch",
+            "args": ["${fileBasenameNoExtension}", "--runInBand", "-t", "${selectedText}"],
             "cwd": "${workspaceRoot}/packages/pyright/packages/pyright-internal",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
