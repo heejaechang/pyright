@@ -19,6 +19,7 @@ import {
 } from 'vscode-languageserver-types';
 
 import { OperationCanceledException, throwIfCancellationRequested } from '../common/cancellationUtils';
+import { removeArrayElements } from '../common/collectionUtils';
 import { ConfigOptions, ExecutionEnvironment } from '../common/configOptions';
 import { ConsoleInterface, StandardConsole } from '../common/console';
 import { assert } from '../common/debug';
@@ -54,10 +55,12 @@ import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../language
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
+import { ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
 import { ImportLookupResult } from './analyzerFileInfo';
 import * as AnalyzerNodeInfo from './analyzerNodeInfo';
 import { CircularDependency } from './circularDependency';
+import { isAliasDeclaration } from './declaration';
 import { ImportResolver } from './importResolver';
 import { ImportResult, ImportType } from './importResult';
 import { findNodeByOffset, getDocString } from './parseTreeUtils';
@@ -372,6 +375,10 @@ export class Program {
 
     getTracked(): SourceFileInfo[] {
         return this._sourceFileList.filter((s) => s.isTracked);
+    }
+
+    getOpened(): SourceFileInfo[] {
+        return this._sourceFileList.filter((s) => s.isOpenByClient);
     }
 
     getFilesToAnalyzeCount() {
@@ -1027,7 +1034,7 @@ export class Program {
         }
 
         const sourceFile = sourceFileInfo.sourceFile;
-        const fileContents = sourceFile.getFileContents();
+        const fileContents = sourceFile.getOpenFileContents();
         if (fileContents === undefined) {
             // this only works with opened file
             return undefined;
@@ -1062,7 +1069,7 @@ export class Program {
         }
 
         const sourceFile = sourceFileInfo.sourceFile;
-        const fileContents = sourceFile.getFileContents();
+        const fileContents = sourceFile.getOpenFileContents();
         if (fileContents === undefined) {
             // this only works with opened file
             return [];
@@ -1319,22 +1326,16 @@ export class Program {
                 return undefined;
             }
 
-            let content: string | undefined = undefined;
+            const content = sourceFileInfo.sourceFile.getFileContent() ?? '';
             if (
                 options.indexingForAutoImportMode &&
                 !sourceFileInfo.sourceFile.isStubFile() &&
-                !sourceFileInfo.sourceFile.isThirdPartyPyTypedPresent() &&
-                sourceFileInfo.sourceFile.getClientVersion() === undefined
+                !sourceFileInfo.sourceFile.isThirdPartyPyTypedPresent()
             ) {
-                try {
-                    // Perf optimization. if py file doesn't contain __all__
-                    // No need to parse and bind.
-                    content = this._fs.readFileSync(filePath, 'utf8');
-                    if (content.indexOf('__all__') < 0) {
-                        return undefined;
-                    }
-                } catch (error) {
-                    content = undefined;
+                // Perf optimization. if py file doesn't contain __all__
+                // No need to parse and bind.
+                if (content.indexOf('__all__') < 0) {
+                    return undefined;
                 }
             }
 
@@ -1596,16 +1597,41 @@ export class Program {
                 return undefined;
             }
 
+            // We only allow renaming module alias, filter out any other alias decls.
+            removeArrayElements(referencesResult.declarations, (d) => {
+                if (!isAliasDeclaration(d)) {
+                    return false;
+                }
+
+                // We must have alias and decl node that point to import statement.
+                if (!d.usesLocalName || !d.node) {
+                    return true;
+                }
+
+                // d.node can't be ImportFrom if usesLocalName is true.
+                // but we are doing this for type checker.
+                if (d.node.nodeType === ParseNodeType.ImportFrom) {
+                    return true;
+                }
+
+                // Check alias and what we are renaming is same thing.
+                if (d.node.alias?.value !== referencesResult.symbolName) {
+                    return true;
+                }
+
+                return false;
+            });
+
+            if (referencesResult.declarations.length === 0) {
+                // There is no symbol we can rename.
+                return undefined;
+            }
+
             if (
                 !isDefaultWorkspace &&
                 referencesResult.declarations.some((d) => !this._isUserCode(this._getSourceFileInfoFromPath(d.path)))
             ) {
                 // Some declarations come from non-user code, so do not allow rename.
-                return undefined;
-            }
-
-            if (referencesResult.declarations.length === 0) {
-                // There is no symbol we can rename.
                 return undefined;
             }
 
@@ -1781,6 +1807,10 @@ export class Program {
         this._bindFile(sourceFileInfo);
 
         return sourceFileInfo.sourceFile.performQuickAction(command, args, token);
+    }
+
+    test_createSourceMapper(execEnv: ExecutionEnvironment) {
+        return this._createSourceMapper(execEnv, /*mapCompiled*/ false);
     }
 
     private _handleMemoryHighUsage() {
