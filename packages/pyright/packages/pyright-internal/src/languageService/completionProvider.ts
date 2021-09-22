@@ -37,6 +37,7 @@ import { isStubFile, SourceMapper } from '../analyzer/sourceMapper';
 import { Symbol, SymbolTable } from '../analyzer/symbol';
 import * as SymbolNameUtils from '../analyzer/symbolNameUtils';
 import { getLastTypedDeclaredForSymbol } from '../analyzer/symbolUtils';
+import { getTypedDictMembersForClass } from '../analyzer/typedDicts';
 import {
     getClassDocString,
     getModuleDocString,
@@ -44,7 +45,7 @@ import {
     getPropertyDocStringInherited,
     getVariableDocString,
 } from '../analyzer/typeDocStringUtils';
-import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluator';
+import { CallSignatureInfo, TypeEvaluator } from '../analyzer/typeEvaluatorTypes';
 import { printLiteralValue } from '../analyzer/typePrinter';
 import {
     ClassType,
@@ -1701,7 +1702,7 @@ export class CompletionProvider {
             return false;
         }
 
-        const entries = this._evaluator.getTypedDictMembersForClass(baseType, /* allowNarrowed */ true);
+        const entries = getTypedDictMembersForClass(this._evaluator, baseType, /* allowNarrowed */ true);
         const quoteValue = priorText ? this._getQuoteValueFromPriorText(priorText) : undefined;
 
         entries.forEach((_, key) => {

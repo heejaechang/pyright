@@ -69,7 +69,7 @@ test('Metaclass7', () => {
 
 test('AssignmentExpr1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignmentExpr1.py']);
-    TestUtils.validateResults(analysisResults, 4);
+    TestUtils.validateResults(analysisResults, 5);
 });
 
 test('AssignmentExpr2', () => {
@@ -377,7 +377,7 @@ test('MemberAccess9', () => {
 
 test('MemberAccess10', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess10.py']);
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('MemberAccess11', () => {
@@ -387,6 +387,11 @@ test('MemberAccess11', () => {
 
 test('MemberAccess12', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess12.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('MemberAccess13', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess13.py']);
     TestUtils.validateResults(analysisResults, 0);
 });
 
@@ -680,6 +685,14 @@ test('ParamSpec17', () => {
 
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec17.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
+test('ParamSpec18', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec18.py'], configOptions);
     TestUtils.validateResults(results, 0);
 });
 

@@ -15,7 +15,7 @@ import {
 import { ParseTreeWalker } from 'pyright-internal/analyzer/parseTreeWalker';
 import { Program } from 'pyright-internal/analyzer/program';
 import { isConstantName, isDunderName } from 'pyright-internal/analyzer/symbolNameUtils';
-import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluator';
+import { TypeEvaluator } from 'pyright-internal/analyzer/typeEvaluatorTypes';
 import { ClassType, FunctionTypeFlags, TypeCategory } from 'pyright-internal/analyzer/types';
 import { isProperty } from 'pyright-internal/analyzer/typeUtils';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';

@@ -1303,6 +1303,23 @@ export function removeTruthinessFromType(type: Type): Type {
     });
 }
 
+export function synthesizeTypeVarForSelfCls(classType: ClassType, isClsParam: boolean) {
+    const selfType = TypeVarType.createInstance(`__type_of_${isClsParam ? 'cls' : 'self'}_${classType.details.name}`);
+    const scopeId = getTypeVarScopeId(classType) ?? '';
+    selfType.details.isSynthesized = true;
+    selfType.details.isSynthesizedSelfCls = true;
+    selfType.nameWithScope = TypeVarType.makeNameWithScope(selfType.details.name, scopeId);
+    selfType.scopeId = scopeId;
+
+    // The self/cls parameter is allowed to skip the abstract class test
+    // because the caller is possibly passing in a non-abstract subclass.
+    selfType.details.boundType = ClassType.cloneAsInstance(
+        selfSpecializeClassType(classType, /* includeSubclasses */ true)
+    );
+
+    return isClsParam ? convertToInstantiable(selfType) : selfType;
+}
+
 // Returns the declared yield type if provided, or undefined otherwise.
 export function getDeclaredGeneratorYieldType(functionType: FunctionType): Type | undefined {
     const returnType = FunctionType.getSpecializedReturnType(functionType);
@@ -1704,9 +1721,51 @@ export function specializeTupleClass(
     return clonedClassType;
 }
 
+// If the type is a function or overloaded function that has a paramSpec
+// associated with it and P.args and P.kwargs at the end of the signature,
+// it removes these parameters from the function.
+export function removeParamSpecVariadicsFromSignature(type: FunctionType | OverloadedFunctionType) {
+    if (isFunction(type)) {
+        return _removeParamSpecVariadicsFromFunction(type);
+    }
+
+    const newOverloads: FunctionType[] = [];
+    let newTypeNeeded = false;
+
+    for (const overload of type.overloads) {
+        const newOverload = _removeParamSpecVariadicsFromFunction(overload);
+        newOverloads.push(newOverload);
+        if (newOverload !== overload) {
+            newTypeNeeded = true;
+        }
+    }
+
+    return newTypeNeeded ? OverloadedFunctionType.create(newOverloads) : type;
+}
+
+function _removeParamSpecVariadicsFromFunction(type: FunctionType): FunctionType {
+    if (!type.details.paramSpec) {
+        return type;
+    }
+
+    const paramCount = type.details.parameters.length;
+    if (paramCount <= 2) {
+        return type;
+    }
+
+    if (
+        type.details.parameters[paramCount - 2].category !== ParameterCategory.VarArgList ||
+        type.details.parameters[paramCount - 1].category !== ParameterCategory.VarArgDictionary
+    ) {
+        return type;
+    }
+
+    return FunctionType.cloneRemoveParamSpecVariadics(type);
+}
+
 // Recursively walks a type and calls a callback for each TypeVar, allowing
 // it to be replaced with something else.
-export function _transformTypeVars(
+function _transformTypeVars(
     type: Type,
     callbacks: TypeVarTransformer,
     recursionMap = new Map<string, TypeVarType>(),
