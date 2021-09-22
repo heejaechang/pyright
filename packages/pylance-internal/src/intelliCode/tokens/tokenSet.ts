@@ -55,13 +55,23 @@ export class TokenSet {
 
     findMethodPosition(mi: MethodInvokation): number {
         // Find correct spanstart for current method invocation
-        const end = positionBinarySearch(this.selectedTokens, mi.spanStart);
-        for (let i = this.selectedTokens.length - 1; i > end && i > 0; i--) {
-            const ti = this.selectedTokens[i];
-            if (ti.value === mi.value) {
-                return this.selectedTokens[i].token.start;
+        let startIdx = positionBinarySearch(this.selectedTokens, mi.spanStart);
+
+        // Binary search returns neg index of twos compliment of the next index if no exact match is found
+        // so exclude + 1
+        if (startIdx < 0) {
+            startIdx = ~startIdx;
+        }
+
+        if (startIdx >= 0 && startIdx < this.selectedTokens.length) {
+            for (let i = startIdx; i < this.selectedTokens.length; i++) {
+                const ti = this.selectedTokens[i];
+                if (ti.value === mi.value) {
+                    return ti.token.start;
+                }
             }
         }
+
         return -1;
     }
 

@@ -268,8 +268,10 @@ export class IntelliCodeCompletionListExtension implements CompletionListExtensi
             item.filterText = item.insertText || item.label;
         }
 
+        item.sortText = `00.${rank}.${item.label}`;
+        // VSCode will filter on `label` or `filterText` if its provided. We don't want the star character to be used
+        item.filterText = item.label.toLocaleLowerCase();
         item.label = `${IntelliCodeConstants.UnicodeStar}${item.label}`;
-        item.sortText = `0.${rank}`;
         item.preselect = rank === 0;
     }
 

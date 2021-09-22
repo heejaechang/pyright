@@ -66,6 +66,7 @@ a = b = 1
 y = 1
 x = np.hstack([x, np.random.randn(a, b - 1)])
 clf1 = LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto').fit(x, y)
+y = np.hstack([x, np.random.randn(a, b - 1)])
 `;
         const inf = getInference(code);
         expect(inf).toBeDefined();
@@ -76,11 +77,14 @@ clf1 = LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto').fit(x, y)
         verifyKeys(numpy!, ['hstack', 'random']);
         expect(numpy!.get('hstack')?.spanStart[0]).toEqual(91);
         expect(numpy!.get('random')?.spanStart[0]).toEqual(105);
+        expect(numpy!.get('hstack')?.spanStart[1]).toEqual(214);
+        expect(numpy!.get('random')?.spanStart[1]).toEqual(228);
 
         const numpy_random = inf!.get('numpy.random');
         expect(numpy_random).toBeDefined();
         verifyKeys(numpy_random!, ['randn']);
         expect(numpy_random!.get('randn')?.spanStart[0]).toEqual(112);
+        expect(numpy_random!.get('randn')?.spanStart[1]).toEqual(235);
 
         const skld = inf!.get('sklearn.LinearDiscriminantAnalysis');
         expect(skld).toBeDefined();
