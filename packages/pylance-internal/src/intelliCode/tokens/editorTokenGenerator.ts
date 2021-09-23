@@ -32,28 +32,29 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
 
         const sorted = ew.methodInvokations.sort((a, b) => b.spanStart - a.spanStart);
         let startIdx = sorted.findIndex((m) => m.spanStart < position);
+        if (startIdx < 0) {
+            return undefined;
+        }
 
         // Now that we found the span less than position move the idex one back, to a spanStart greater than position
         startIdx = startIdx === 0 ? startIdx : startIdx - 1;
 
-        if (startIdx >= 0) {
-            for (let i = startIdx; i < sorted.length; i++) {
-                const mi = sorted[i];
-                type = mi.key;
-                method = mi.value;
+        for (let i = startIdx; i < sorted.length; i++) {
+            const mi = sorted[i];
+            type = mi.key;
+            method = mi.value;
 
-                // Find correct spanstart for current method invocation
-                let mpos = ts.findMethodPosition(mi);
-                if (mpos > position) {
-                    continue;
-                }
-                // Extract current invocation for online use case, need to optimize for speed later.
-                if (mpos < position - 1) {
-                    mpos = position - 1;
-                }
-                spanStart = mpos;
-                break;
+            // Find correct spanstart for current method invocation
+            let mpos = ts.findMethodPosition(mi);
+            if (mpos > position) {
+                continue;
             }
+            // Extract current invocation for online use case, need to optimize for speed later.
+            if (mpos < position - 1) {
+                mpos = position - 1;
+            }
+            spanStart = mpos;
+            break;
         }
 
         if (spanStart < 0 || !type) {
