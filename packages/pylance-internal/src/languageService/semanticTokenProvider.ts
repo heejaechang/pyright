@@ -107,7 +107,7 @@ export function getSemanticTokens(
     }
 
     const parseResults = sourceFile.getParseResults();
-    if (parseResults === undefined || sourceFile.getFileContents() === undefined) {
+    if (parseResults === undefined || sourceFile.getOpenFileContents() === undefined) {
         return { data: [] };
     }
 

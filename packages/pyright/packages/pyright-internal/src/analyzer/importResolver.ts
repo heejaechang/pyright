@@ -58,6 +58,14 @@ export interface ModuleNameAndType {
     isLocalTypingsFile: boolean;
 }
 
+export function createImportedModuleDescriptor(moduleName: string): ImportedModuleDescriptor {
+    return {
+        leadingDots: 0,
+        nameParts: moduleName.split('.'),
+        importedSymbols: [],
+    };
+}
+
 type CachedImportResults = Map<string, ImportResult>;
 interface SupportedVersionRange {
     min: PythonVersion;
