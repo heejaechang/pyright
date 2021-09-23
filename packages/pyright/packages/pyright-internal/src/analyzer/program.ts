@@ -54,6 +54,7 @@ import { DefinitionFilter } from '../languageService/definitionProvider';
 import { IndexOptions, IndexResults, WorkspaceSymbolCallback } from '../languageService/documentSymbolProvider';
 import { HoverResults } from '../languageService/hoverProvider';
 import { ReferenceCallback, ReferencesResult } from '../languageService/referencesProvider';
+import { RenameModuleProvider } from '../languageService/renameModuleProvider';
 import { SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { ParseNodeType } from '../parser/parseNodes';
 import { ParseResults } from '../parser/parser';
@@ -1566,6 +1567,57 @@ export class Program {
                 completionItem,
                 token
             );
+        });
+    }
+
+    renameModule(filePath: string, newFilePath: string, token: CancellationToken): FileEditAction[] | undefined {
+        return this._runEvaluatorWithCancellationToken(token, () => {
+            const fileInfo = this._getSourceFileInfoFromPath(filePath);
+            if (!fileInfo) {
+                return undefined;
+            }
+
+            const renameModuleProvider = RenameModuleProvider.create(
+                this._importResolver,
+                this._configOptions,
+                this._evaluator!,
+                filePath,
+                newFilePath,
+                token
+            );
+            if (!renameModuleProvider) {
+                return undefined;
+            }
+
+            // _sourceFileList contains every user files that match "include" pattern including
+            // py file even if corresponding pyi exists.
+            for (const currentFileInfo of this._sourceFileList) {
+                // Make sure we only touch user code to prevent us
+                // from accidentally changing third party library or type stub.
+                if (!this._isUserCode(currentFileInfo)) {
+                    continue;
+                }
+
+                // If module name isn't mentioned in the current file, skip the file.
+                const content = currentFileInfo.sourceFile.getFileContent() ?? '';
+                if (content.indexOf(renameModuleProvider.symbolName) < 0) {
+                    continue;
+                }
+
+                this._bindFile(currentFileInfo, content);
+                const parseResult = currentFileInfo.sourceFile.getParseResults();
+                if (!parseResult) {
+                    continue;
+                }
+
+                renameModuleProvider.renameModuleReferences(currentFileInfo.sourceFile.getFilePath(), parseResult);
+
+                // This operation can consume significant memory, so check
+                // for situations where we need to discard the type cache.
+                this._handleMemoryHighUsage();
+            }
+
+            return renameModuleProvider.getEdits();
         });
     }
 

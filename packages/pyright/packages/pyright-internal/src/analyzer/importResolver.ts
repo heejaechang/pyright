@@ -513,6 +513,7 @@ export class ImportResolver {
         // Look for it in the root directory of the execution environment.
         if (execEnv.root) {
             moduleName = this.getModuleNameFromPath(execEnv.root, filePath);
+            importType = ImportType.Local;
         }
 
         for (const extraPath of execEnv.extraPaths) {
