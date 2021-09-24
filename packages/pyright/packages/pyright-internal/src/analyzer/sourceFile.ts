@@ -43,7 +43,7 @@ import { performQuickAction } from '../languageService/quickActions';
 import { ReferenceCallback, ReferencesProvider, ReferencesResult } from '../languageService/referencesProvider';
 import { SignatureHelpProvider, SignatureHelpResults } from '../languageService/signatureHelpProvider';
 import { Localizer } from '../localization/localize';
-import { ModuleNode } from '../parser/parseNodes';
+import { ModuleNode, NameNode } from '../parser/parseNodes';
 import { ModuleImport, ParseOptions, Parser, ParseResults } from '../parser/parser';
 import { Token } from '../parser/tokenizerTypes';
 import { AnalyzerFileInfo, ImportLookup } from './analyzerFileInfo';
@@ -716,6 +716,21 @@ export class SourceFile {
             evaluator,
             token
         );
+    }
+
+    getDeclarationForNode(
+        sourceMapper: SourceMapper,
+        node: NameNode,
+        evaluator: TypeEvaluator,
+        reporter: ReferenceCallback | undefined,
+        token: CancellationToken
+    ): ReferencesResult | undefined {
+        // If we have no completed analysis job, there's nothing to do.
+        if (!this._parseResults) {
+            return undefined;
+        }
+
+        return ReferencesProvider.getDeclarationForNode(sourceMapper, this._filePath, node, evaluator, reporter, token);
     }
 
     getDeclarationForPosition(
