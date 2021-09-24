@@ -27,7 +27,6 @@ import {
     getFileExtension,
     getFileName,
     getFileSystemEntriesFromDirEntries,
-    isDiskPathRoot,
     normalizePath,
     normalizePathCase,
 } from 'pyright-internal/common/pathUtils';
@@ -197,7 +196,6 @@ export class PylanceImportResolver extends ImportResolver {
     private _countedAbsolute = new Map<string, Set<string>>();
     private _countedRelative = new Map<string, Set<string>>();
 
-    private readonly _cachedHeuristicResults: ImportHeuristicCache;
     private readonly _importMetrics: ImportMetrics;
     private readonly _resolverId: string;
 
@@ -211,8 +209,6 @@ export class PylanceImportResolver extends ImportResolver {
         super(fs, configOptions, host);
 
         this._resolverId = resolverId?.toString() ?? 'N/A';
-
-        this._cachedHeuristicResults = new ImportHeuristicCache(() => this.getPythonSearchPaths([]));
         this._importMetrics = new ImportMetrics(this._resolverId);
     }
 
@@ -224,127 +220,6 @@ export class PylanceImportResolver extends ImportResolver {
         const importResult = this._resolveImport(sourceFilePath, execEnv, moduleDescriptor);
         this._addResultToImportMetrics(sourceFilePath, execEnv, moduleDescriptor, importResult);
         return importResult;
-    }
-
-    protected override _resolveImport(
-        sourceFilePath: string,
-        execEnv: ExecutionEnvironment,
-        moduleDescriptor: ImportedModuleDescriptor
-    ) {
-        const importResult = super._resolveImport(sourceFilePath, execEnv, moduleDescriptor);
-        if (importResult.isImportFound || moduleDescriptor.leadingDots > 0) {
-            return importResult;
-        }
-
-        sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
-        const origin = ensureTrailingDirectorySeparator(getDirectoryPath(sourceFilePath));
-
-        const importName = this.formatImportName(moduleDescriptor);
-        const result = this._cachedHeuristicResults.getImportResult(origin, importName, importResult);
-        if (result) {
-            // Already ran the heuristic for this import name on this location.
-            return this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
-        }
-
-        // Check whether the give file is something we care for the heuristic.
-        // Keep in sync with _addResultToImportMetrics.
-        const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-        if (!this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root)) {
-            return importResult;
-        }
-
-        const importPath: ImportPath = { importPath: undefined };
-
-        // Going up the given folder one by one until we can resolve the import.
-        let current = origin;
-        while (this._shouldWalkUp(current, root, execEnv)) {
-            const result = this.resolveAbsoluteImport(
-                current,
-                execEnv,
-                moduleDescriptor,
-                importName,
-                [],
-                /* allowPartial */ undefined,
-                /* allowNativeLib */ undefined,
-                /* useStubPackage */ false,
-                /* allowPyi */ true
-            );
-
-            this._cachedHeuristicResults.checked(current, importName, importPath);
-
-            if (result.isImportFound) {
-                // This will make cache to point to actual path that contains the module we found
-                importPath.importPath = current;
-
-                this._cachedHeuristicResults.add({
-                    importResult: result,
-                    path: current,
-                    importName,
-                });
-
-                return this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
-            }
-
-            let success;
-            [success, current] = this._tryWalkUp(current);
-            if (!success) {
-                break;
-            }
-        }
-
-        this._cachedHeuristicResults.checked(current, importName, importPath);
-        return importResult;
-    }
-
-    private _tryWalkUp(current: string): [success: boolean, path: string] {
-        if (isDiskPathRoot(current)) {
-            return [false, ''];
-        }
-
-        return [
-            true,
-            ensureTrailingDirectorySeparator(
-                normalizePathCase(this.fileSystem, normalizePath(combinePaths(current, '..')))
-            ),
-        ];
-    }
-
-    override getCompletionSuggestions(
-        sourceFilePath: string,
-        execEnv: ExecutionEnvironment,
-        moduleDescriptor: ImportedModuleDescriptor
-    ) {
-        const suggestions = super.getCompletionSuggestions(sourceFilePath, execEnv, moduleDescriptor);
-
-        const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-        const origin = ensureTrailingDirectorySeparator(
-            getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
-        );
-
-        let current = origin;
-        while (this._shouldWalkUp(current, root, execEnv)) {
-            this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, sourceFilePath, execEnv);
-
-            let success;
-            [success, current] = this._tryWalkUp(current);
-            if (!success) {
-                break;
-            }
-        }
-
-        return suggestions;
-    }
-
-    private _shouldWalkUp(current: string, root: string, execEnv: ExecutionEnvironment) {
-        return current.length > root.length || (current === root && !execEnv.root);
-    }
-
-    private _getImportHeuristicRoot(sourceFilePath: string, executionRoot: string | undefined) {
-        if (executionRoot) {
-            return ensureTrailingDirectorySeparator(normalizePathCase(this.fileSystem, normalizePath(executionRoot)));
-        }
-
-        return ensureTrailingDirectorySeparator(getDirectoryPath(sourceFilePath));
     }
 
     protected override getTypeshedPathEx(
@@ -418,7 +293,6 @@ export class PylanceImportResolver extends ImportResolver {
     override invalidateCache() {
         this.sendTelemetry();
         this._importMetrics.reset();
-        this._cachedHeuristicResults.reset();
         this._installedPackagesReported = false;
 
         for (const tmpfile of this._scrapedTmpFiles.values()) {
@@ -627,8 +501,8 @@ export class PylanceImportResolver extends ImportResolver {
                 // Match resolveImport's algorithm to check if is user code.
                 sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
 
-                const root = this._getImportHeuristicRoot(sourceFilePath, execEnv.root);
-                userUnresolved = this._cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root);
+                const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
+                userUnresolved = this.cachedParentImportResults.checkValidPath(this.fileSystem, sourceFilePath, root);
             }
 
             if (userUnresolved && this._telemetry) {
@@ -748,80 +622,6 @@ export function createPylanceImportResolver(
     telemetry?: TelemetryInterface
 ): PylanceImportResolver {
     return new PylanceImportResolver(fs, options, host, resolverId, telemetry);
-}
-
-type ImportPath = { importPath: string | undefined };
-type CacheEntry = { importResult: ImportResult; path: string; importName: string };
-
-class ImportHeuristicCache {
-    private readonly _importChecked = new Map<string, Map<string, ImportPath>>();
-    private readonly _cachedHeuristicResults = new Map<string, Map<string, ImportResult>>();
-
-    private _libPathCache: string[] | undefined = undefined;
-
-    constructor(private _importRootGetter: () => string[]) {
-        // empty
-    }
-
-    getImportResult(path: string, importName: string, importResult: ImportResult): ImportResult | undefined {
-        const result = this._cachedHeuristicResults.get(importName)?.get(path);
-        if (result) {
-            // We already checked for the importName at the path.
-            // Return the result if succeeded otherwise, return regular import result given.
-            return result ?? importResult;
-        }
-
-        const checked = this._importChecked.get(importName)?.get(path);
-        if (checked) {
-            // We already checked for the importName at the path.
-            if (!checked.importPath) {
-                return importResult;
-            }
-
-            return this._cachedHeuristicResults.get(importName)?.get(checked.importPath) ?? importResult;
-        }
-
-        return undefined;
-    }
-
-    checkValidPath(fs: FileSystem, sourceFilePath: string, root: string): boolean {
-        if (!sourceFilePath.startsWith(root)) {
-            // We don't search containing folders for libs.
-            return false;
-        }
-
-        this._libPathCache =
-            this._libPathCache ??
-            this._importRootGetter()
-                .map((r) => ensureTrailingDirectorySeparator(normalizePathCase(fs, normalizePath(r))))
-                .filter((r) => r !== root)
-                .filter((r) => r.startsWith(root));
-
-        if (this._libPathCache.some((p) => sourceFilePath.startsWith(p))) {
-            // Make sure it is not lib folders under user code root.
-            // ex) .venv folder
-            return false;
-        }
-
-        return true;
-    }
-
-    checked(path: string, importName: string, importPath: ImportPath) {
-        getOrAdd(this._importChecked, importName, () => new Map<string, ImportPath>()).set(path, importPath);
-    }
-
-    add(result: CacheEntry) {
-        getOrAdd(this._cachedHeuristicResults, result.importName, () => new Map<string, ImportResult>()).set(
-            result.path,
-            result.importResult
-        );
-    }
-
-    reset() {
-        this._importChecked.clear();
-        this._cachedHeuristicResults.clear();
-        this._libPathCache = undefined;
-    }
 }
 
 function importNameEditDistance(word1: string, word2: string, checkDottedPrefix = false) {
