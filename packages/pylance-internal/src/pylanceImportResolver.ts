@@ -501,8 +501,8 @@ export class PylanceImportResolver extends ImportResolver {
                 // Match resolveImport's algorithm to check if is user code.
                 sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
 
-                const root = this.getImportHeuristicRoot(sourceFilePath, execEnv.root);
-                userUnresolved = this.cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root);
+                const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
+                userUnresolved = this.cachedParentImportResults.checkValidPath(this.fileSystem, sourceFilePath, root);
             }
 
             if (userUnresolved && this._telemetry) {

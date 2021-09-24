@@ -1,9 +1,9 @@
 /*
- * importHeuristicCache.ts
+ * parentDirectoryCache.ts
  * Copyright (c) Microsoft Corporation.
  * Licensed under the MIT license.
  *
- * Cache to hold import heuristic result to make sure
+ * Cache to hold parent directory import result to make sure
  * we don't repeatedly search folders.
  */
 
@@ -16,9 +16,9 @@ export type ImportPath = { importPath: string | undefined };
 
 type CacheEntry = { importResult: ImportResult; path: string; importName: string };
 
-export class ImportHeuristicCache {
+export class ParentDirectoryCache {
     private readonly _importChecked = new Map<string, Map<string, ImportPath>>();
-    private readonly _cachedHeuristicResults = new Map<string, Map<string, ImportResult>>();
+    private readonly _cachedResults = new Map<string, Map<string, ImportResult>>();
 
     private _libPathCache: string[] | undefined = undefined;
 
@@ -27,7 +27,7 @@ export class ImportHeuristicCache {
     }
 
     getImportResult(path: string, importName: string, importResult: ImportResult): ImportResult | undefined {
-        const result = this._cachedHeuristicResults.get(importName)?.get(path);
+        const result = this._cachedResults.get(importName)?.get(path);
         if (result) {
             // We already checked for the importName at the path.
             // Return the result if succeeded otherwise, return regular import result given.
@@ -41,7 +41,7 @@ export class ImportHeuristicCache {
                 return importResult;
             }
 
-            return this._cachedHeuristicResults.get(importName)?.get(checked.importPath) ?? importResult;
+            return this._cachedResults.get(importName)?.get(checked.importPath) ?? importResult;
         }
 
         return undefined;
@@ -74,7 +74,7 @@ export class ImportHeuristicCache {
     }
 
     add(result: CacheEntry) {
-        getOrAdd(this._cachedHeuristicResults, result.importName, () => new Map<string, ImportResult>()).set(
+        getOrAdd(this._cachedResults, result.importName, () => new Map<string, ImportResult>()).set(
             result.path,
             result.importResult
         );
@@ -82,7 +82,7 @@ export class ImportHeuristicCache {
 
     reset() {
         this._importChecked.clear();
-        this._cachedHeuristicResults.clear();
+        this._cachedResults.clear();
         this._libPathCache = undefined;
     }
 }

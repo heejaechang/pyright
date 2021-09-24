@@ -43,8 +43,8 @@ import { equateStringsCaseInsensitive } from '../common/stringUtils';
 import * as StringUtils from '../common/stringUtils';
 import { isIdentifierChar, isIdentifierStartChar } from '../parser/characters';
 import { PyrightFileSystem } from '../pyrightFileSystem';
-import { ImportHeuristicCache, ImportPath } from './ImportHeuristicCache';
 import { ImplicitImport, ImportResult, ImportType } from './importResult';
+import { ImportPath, ParentDirectoryCache } from './parentDirectoryCache';
 import * as PythonPathUtils from './pythonPathUtils';
 import { getPyTypedInfo, PyTypedInfo } from './pyTypedUtils';
 import { isDunderName } from './symbolNameUtils';
@@ -98,20 +98,20 @@ export class ImportResolver {
     private _cachedTypeshedThirdPartyPackageRoots: string[] | undefined;
     private _cachedEntriesForPath = new Map<string, Dirent[]>();
 
-    protected cachedHeuristicResults: ImportHeuristicCache;
+    protected cachedParentImportResults: ParentDirectoryCache;
 
     constructor(
         public readonly fileSystem: FileSystem,
         protected _configOptions: ConfigOptions,
         public readonly host: Host
     ) {
-        this.cachedHeuristicResults = new ImportHeuristicCache(() => this.getPythonSearchPaths([]));
+        this.cachedParentImportResults = new ParentDirectoryCache(() => this.getPythonSearchPaths([]));
     }
 
     invalidateCache() {
         this._cachedImportResults = new Map<string | undefined, CachedImportResults>();
         this._cachedModuleNameResults = new Map<string, Map<string, ModuleNameAndType>>();
-        this.cachedHeuristicResults.reset();
+        this.cachedParentImportResults.reset();
 
         this._invalidateFileSystemCache();
 
@@ -153,18 +153,21 @@ export class ImportResolver {
             return importResult;
         }
 
+        // If the import is absolute and no other method works, try resolving the
+        // absolute in the importing file's directory, then the parent directory,
+        // and so on, until the import root is reached.
         sourceFilePath = normalizePathCase(this.fileSystem, normalizePath(sourceFilePath));
         const origin = ensureTrailingDirectorySeparator(getDirectoryPath(sourceFilePath));
 
-        const result = this.cachedHeuristicResults.getImportResult(origin, importName, importResult);
+        const result = this.cachedParentImportResults.getImportResult(origin, importName, importResult);
         if (result) {
             // Already ran the heuristic for this import name on this location.
             return this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
         }
 
         // Check whether the given file is something we care for the heuristic.
-        const root = this.getImportHeuristicRoot(sourceFilePath, execEnv.root);
-        if (!this.cachedHeuristicResults.checkValidPath(this.fileSystem, sourceFilePath, root)) {
+        const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
+        if (!this.cachedParentImportResults.checkValidPath(this.fileSystem, sourceFilePath, root)) {
             return importResult;
         }
 
@@ -185,13 +188,13 @@ export class ImportResolver {
                 /* allowPyi */ true
             );
 
-            this.cachedHeuristicResults.checked(current, importName, importPath);
+            this.cachedParentImportResults.checked(current, importName, importPath);
 
             if (result.isImportFound) {
                 // This will make cache to point to actual path that contains the module we found
                 importPath.importPath = current;
 
-                this.cachedHeuristicResults.add({
+                this.cachedParentImportResults.add({
                     importResult: result,
                     path: current,
                     importName,
@@ -207,7 +210,7 @@ export class ImportResolver {
             }
         }
 
-        this.cachedHeuristicResults.checked(current, importName, importPath);
+        this.cachedParentImportResults.checked(current, importName, importPath);
         return importResult;
     }
 
@@ -291,7 +294,7 @@ export class ImportResolver {
     ) {
         const suggestions = this._getCompletionSuggestionsStrict(sourceFilePath, execEnv, moduleDescriptor);
 
-        const root = this.getImportHeuristicRoot(sourceFilePath, execEnv.root);
+        const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
         const origin = ensureTrailingDirectorySeparator(
             getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
         );
@@ -2093,7 +2096,7 @@ export class ImportResolver {
         return current.length > root.length || (current === root && !execEnv.root);
     }
 
-    protected getImportHeuristicRoot(sourceFilePath: string, executionRoot: string | undefined) {
+    protected getParentImportResolutionRoot(sourceFilePath: string, executionRoot: string | undefined) {
         if (executionRoot) {
             return ensureTrailingDirectorySeparator(normalizePathCase(this.fileSystem, normalizePath(executionRoot)));
         }
