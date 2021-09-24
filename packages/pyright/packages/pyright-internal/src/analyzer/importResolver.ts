@@ -161,11 +161,11 @@ export class ImportResolver {
 
         const result = this.cachedParentImportResults.getImportResult(origin, importName, importResult);
         if (result) {
-            // Already ran the heuristic for this import name on this location.
+            // Already ran the parent directory resolution for this import name on this location.
             return this.filterImplicitImports(result, moduleDescriptor.importedSymbols);
         }
 
-        // Check whether the given file is something we care for the heuristic.
+        // Check whether the given file is in the parent directory import resolution cache.
         const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
         if (!this.cachedParentImportResults.checkValidPath(this.fileSystem, sourceFilePath, root)) {
             return importResult;
