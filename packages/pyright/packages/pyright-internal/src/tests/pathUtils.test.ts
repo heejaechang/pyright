@@ -158,6 +158,11 @@ test('getWildcardRoot with root', () => {
     assert.equal(p, normalizeSlashes('/'));
 });
 
+test('getWildcardRoot with drive letter', () => {
+    const p = getWildcardRoot('c:/', '.');
+    assert.equal(p, normalizeSlashes('c:'));
+});
+
 test('reducePathComponentsEmpty', () => {
     assert.equal(reducePathComponents([]).length, 0);
 });
