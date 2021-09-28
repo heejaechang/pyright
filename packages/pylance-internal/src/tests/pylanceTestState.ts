@@ -6,6 +6,7 @@ import {
     SemanticTokens,
     SemanticTokensClientCapabilities,
     SemanticTokensLegend,
+    TextDocumentEdit,
     TokenFormat,
     WorkspaceEdit,
 } from 'vscode-languageserver';
@@ -61,29 +62,47 @@ export class PylanceTestState extends TestState {
         return await this.verifyPylanceCommand(command, edits);
     }
 
-    async verifyPylanceCommand(command: Command, edits: string[]): Promise<any> {
+    async verifyPylanceCommand(command: Command, edits: string[] | WorkspaceEdit): Promise<any> {
         const emptyFiles = { ['']: `` };
-
-        // if (command?.arguments && command?.arguments[0]) {
-        //     HOST.log(command!.arguments[0]);
-        // }
-
         const commandResult = await super.verifyCommand(command, emptyFiles);
-
-        const workspaceEditResult = commandResult as WorkspaceEdit;
-
-        if (workspaceEditResult.changes !== undefined) {
-            for (const [url, changes] of Object.entries(workspaceEditResult.changes)) {
-                let index = 0;
-                for (const change of changes) {
-                    const actualText = change.newText;
-                    const expectedText: string = edits[index];
-                    if (actualText !== expectedText) {
-                        this.raiseError(
-                            `${command.title}\n${url} doesn't contain expected result:\n\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
-                        );
+        if (WorkspaceEdit.is(commandResult)) {
+            if (WorkspaceEdit.is(edits)) {
+                this.verifyWorkspaceEdit(edits, commandResult);
+            } else {
+                if (commandResult.changes !== undefined) {
+                    for (const [url, changes] of Object.entries(commandResult.changes)) {
+                        let index = 0;
+                        for (const change of changes) {
+                            const actualText = change.newText;
+                            const expectedText: string = edits[index];
+                            if (actualText !== expectedText) {
+                                this.raiseError(
+                                    `${command.title}\n${url} doesn't contain expected result:\n\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
+                                );
+                            }
+                            index++;
+                        }
                     }
-                    index++;
+                }
+
+                if (commandResult.documentChanges !== undefined) {
+                    for (const documentChange of commandResult.documentChanges) {
+                        if (TextDocumentEdit.is(documentChange)) {
+                            let index = 0;
+                            for (const change of documentChange.edits) {
+                                const actualText = change.newText;
+                                const expectedText: string = edits[index];
+                                if (actualText !== expectedText) {
+                                    this.raiseError(
+                                        `${
+                                            command.title
+                                        }\n${documentChange.textDocument.uri.toString()} doesn't contain expected result:\n\nexpected:\n${expectedText}\n\nactual:\n${actualText}`
+                                    );
+                                }
+                                index++;
+                            }
+                        }
+                    }
                 }
             }
         }
