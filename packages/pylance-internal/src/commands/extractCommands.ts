@@ -99,6 +99,7 @@ function _convertToCommandResults(ls: LanguageServerInterface, extractResults: E
     };
 
     const commandResult: CommandResult = {
+        label: 'Extract Method',
         data,
         edits,
     };

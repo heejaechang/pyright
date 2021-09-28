@@ -901,13 +901,13 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 if (WorkspaceEdit.is(result)) {
                     // Tell client to apply edits.
                     // Do not await; the client isn't expecting a result.
-                    await this._connection.workspace.applyEdit(result);
+                    this._connection.workspace.applyEdit({ label: `Command '${params.command}'`, edit: result });
                 }
 
                 if (CommandResult.is(result)) {
                     // Tell client to apply edits.
                     // Await so that we return after the edit is complete.
-                    await this._connection.workspace.applyEdit(result.edits);
+                    await this._connection.workspace.applyEdit({ label: result.label, edit: result.edits });
                 }
 
                 return result;
