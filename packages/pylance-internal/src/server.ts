@@ -480,6 +480,7 @@ export class PylanceServer extends LanguageServerBase {
             case Commands.createTypeStub:
             case PyRightCommands.createTypeStub:
             case PyRightCommands.restartServer:
+            case Commands.renameFile:
                 return true;
         }
         return false;
