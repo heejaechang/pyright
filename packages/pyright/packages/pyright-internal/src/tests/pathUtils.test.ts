@@ -153,6 +153,11 @@ test('getWildcardRoot2', () => {
     assert.equal(p, normalizeSlashes('/users/me'));
 });
 
+test('getWildcardRoot with root', () => {
+    const p = getWildcardRoot('/', '.');
+    assert.equal(p, normalizeSlashes('/'));
+});
+
 test('reducePathComponentsEmpty', () => {
     assert.equal(reducePathComponents([]).length, 0);
 });
