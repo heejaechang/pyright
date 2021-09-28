@@ -696,6 +696,14 @@ test('ParamSpec18', () => {
     TestUtils.validateResults(results, 0);
 });
 
+test('ParamSpec19', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec19.py'], configOptions);
+    TestUtils.validateResults(results, 0);
+});
+
 test('ClassVar1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classVar1.py']);
 
@@ -765,7 +773,7 @@ test('TypeVar8', () => {
 test('TypeVar9', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeVar9.py']);
 
-    TestUtils.validateResults(analysisResults, 5);
+    TestUtils.validateResults(analysisResults, 6);
 });
 
 test('TypeVar10', () => {
