@@ -1077,4 +1077,19 @@ export namespace Localizer {
         export const findingReferences = () => getRawString('CodeAction.findingReferences');
         export const organizeImports = () => getRawString('CodeAction.organizeImports');
     }
+
+    export namespace Refactoring {
+        export const moveFile = () =>
+            new ParameterizedString<{ oldModuleName: string; newModuleName: string }>(
+                getRawString('Refactoring.moveFile')
+            );
+        export const moveFileLabel = () =>
+            new ParameterizedString<{ oldModuleName: string; newModuleName: string }>(
+                getRawString('Refactoring.moveFileLabel')
+            );
+        export const moveFileDescription = () =>
+            new ParameterizedString<{ oldModuleName: string; newModuleName: string }>(
+                getRawString('Refactoring.moveFileDescription')
+            );
+    }
 }
