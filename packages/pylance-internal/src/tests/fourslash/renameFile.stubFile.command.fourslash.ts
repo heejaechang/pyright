@@ -32,13 +32,13 @@
             ],
             changeAnnotations: {
                 textEdit: {
-                    label: "Update all import references for 'module.pyi' to 'module1.pyi'?",
-                    description: "Update all import references for 'module.pyi' to 'module1.pyi'?",
+                    label: 'Update all import references for "module.pyi" to "module1.pyi"?',
+                    description: 'Update all import references for "module.pyi" to "module1.pyi"?',
                     needsConfirmation: true,
                 },
                 fileRename: {
-                    label: "Update all import references for 'module.pyi' to 'module1.pyi'?",
-                    description: "Update all import references for 'module.pyi' to 'module1.pyi'?",
+                    label: 'Update all import references for "module.pyi" to "module1.pyi"?',
+                    description: 'Update all import references for "module.pyi" to "module1.pyi"?',
                     needsConfirmation: false,
                 },
             },

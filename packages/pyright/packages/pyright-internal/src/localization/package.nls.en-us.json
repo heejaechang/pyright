@@ -541,8 +541,8 @@
         "organizeImports": "Organize Imports"
     },
     "Refactoring": {
-        "moveFile": "Do you want to update all import references for '{oldModuleName}' to '{newModuleName}'?",
-        "moveFileLabel": "Update all import references for '{oldModuleName}' to '{newModuleName}'?",
-        "moveFileDescription": "Update all import references for '{oldModuleName}' to '{newModuleName}'?"
+        "moveFile": "Do you want to update all import references for \"{oldModuleName}\" to \"{newModuleName}\"?",
+        "moveFileLabel": "Update all import references for \"{oldModuleName}\" to \"{newModuleName}\"?",
+        "moveFileDescription": "Update all import references for \"{oldModuleName}\" to \"{newModuleName}\"?"
     }
 }

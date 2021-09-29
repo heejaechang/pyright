@@ -61,13 +61,13 @@
             ],
             changeAnnotations: {
                 textEdit: {
-                    label: "Update all import references for 'mySelf.py' to 'renamedModule.py'?",
-                    description: "Update all import references for 'mySelf.py' to 'renamedModule.py'?",
+                    label: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
+                    description: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
                     needsConfirmation: true,
                 },
                 fileRename: {
-                    label: "Update all import references for 'mySelf.py' to 'renamedModule.py'?",
-                    description: "Update all import references for 'mySelf.py' to 'renamedModule.py'?",
+                    label: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
+                    description: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
                     needsConfirmation: false,
                 },
             },
