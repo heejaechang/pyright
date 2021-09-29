@@ -2094,6 +2094,13 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         }
     }
 
+    function addDeprecated(message: string, node: ParseNode) {
+        if (!isDiagnosticSuppressedForNode(node)) {
+            const fileInfo = AnalyzerNodeInfo.getFileInfo(node);
+            fileInfo.diagnosticSink.addDeprecatedWithTextRange(message, node);
+        }
+    }
+
     function addDiagnosticWithSuppressionCheck(
         diagLevel: DiagnosticLevel,
         message: string,
@@ -4530,11 +4537,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                                     boundMethodType &&
                                     (isFunction(boundMethodType) || isOverloadedFunction(boundMethodType))
                                 ) {
+                                    const typeVarMap = new TypeVarMap(getTypeVarScopeId(boundMethodType));
+                                    if (bindToClass) {
+                                        typeVarMap.addSolveForScope(getTypeVarScopeId(bindToClass));
+                                    }
+
                                     const callResult = validateCallArguments(
                                         errorNode,
                                         argList,
                                         boundMethodType,
-                                        /* typeVarMap */ undefined,
+                                        typeVarMap,
                                         /* skipUnknownArgCheck */ true
                                     );
 
@@ -9192,7 +9204,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     (flags & EvaluatorFlags.AllowForwardReferences) !== 0 ||
                     fileInfo.executionEnvironment.pythonVersion >= PythonVersion.V3_10;
                 if (!unionNotationSupported) {
-                    addError(Localizer.Diagnostic.unionSyntaxIllegal(), node, node.operatorToken);
+                    // If the left type is Any, we can't say for sure whether this
+                    // is an illegal syntax or a valid application of the "|" operator.
+                    if (!isAnyOrUnknown(leftType)) {
+                        addError(Localizer.Diagnostic.unionSyntaxIllegal(), node, node.operatorToken);
+                    }
                 }
 
                 return {
@@ -20120,7 +20136,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
             // If the dest has an "*args" but the source doesn't, report the incompatibility.
             // The converse situation is OK.
-            if (srcArgsIndex < 0 && destArgsIndex >= 0 && !destVariadicArgsList) {
+            if (srcArgsIndex < 0 && destArgsIndex >= 0 && !destVariadicArgsList && !isParamSpecInvolved) {
                 diag.createAddendum().addMessage(
                     Localizer.DiagnosticAddendum.argsParamMissing().format({
                         paramName: destParams[destArgsIndex].name!,
@@ -21133,6 +21149,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         addWarning,
         addInformation,
         addUnusedCode,
+        addDeprecated,
         addDiagnostic,
         addDiagnosticForTextRange,
         printType,

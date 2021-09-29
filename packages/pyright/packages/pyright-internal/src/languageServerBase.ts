@@ -177,6 +177,7 @@ interface ClientCapabilities {
     completionDocFormat: MarkupKind;
     completionSupportsSnippet: boolean;
     signatureDocFormat: MarkupKind;
+    supportsDeprecatedDiagnosticTag: boolean;
     supportsUnnecessaryDiagnosticTag: boolean;
     completionItemResolveSupportsAdditionalTextEdits: boolean;
 }
@@ -215,6 +216,7 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         completionDocFormat: MarkupKind.PlainText,
         completionSupportsSnippet: false,
         signatureDocFormat: MarkupKind.PlainText,
+        supportsDeprecatedDiagnosticTag: false,
         supportsUnnecessaryDiagnosticTag: false,
         completionItemResolveSupportsAdditionalTextEdits: false,
     };
@@ -1018,6 +1020,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
         this.client.supportsUnnecessaryDiagnosticTag = supportedDiagnosticTags.some(
             (tag) => tag === DiagnosticTag.Unnecessary
         );
+        this.client.supportsDeprecatedDiagnosticTag = supportedDiagnosticTags.some(
+            (tag) => tag === DiagnosticTag.Deprecated
+        );
         this.client.hasWindowProgressCapability = !!capabilities.window?.workDoneProgress;
         this.client.hasGoToDeclarationCapability = !!capabilities.textDocument?.declaration;
         this.client.completionItemResolveSupportsAdditionalTextEdits =
@@ -1265,6 +1270,14 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
                 if (!this.client.supportsUnnecessaryDiagnosticTag) {
                     return;
                 }
+            } else if (diag.category === DiagnosticCategory.Deprecated) {
+                vsDiag.tags = [DiagnosticTag.Deprecated];
+                vsDiag.severity = DiagnosticSeverity.Hint;
+
+                // If the client doesn't support "deprecated" tags, don't report.
+                if (!this.client.supportsDeprecatedDiagnosticTag) {
+                    return;
+                }
             }
 
             if (rule) {
@@ -1295,11 +1308,15 @@ export abstract class LanguageServerBase implements LanguageServerInterface {
             switch (category) {
                 case DiagnosticCategory.Error:
                     return DiagnosticSeverity.Error;
+
                 case DiagnosticCategory.Warning:
                     return DiagnosticSeverity.Warning;
+
                 case DiagnosticCategory.Information:
                     return DiagnosticSeverity.Information;
+
                 case DiagnosticCategory.UnusedCode:
+                case DiagnosticCategory.Deprecated:
                     return DiagnosticSeverity.Hint;
             }
         }
