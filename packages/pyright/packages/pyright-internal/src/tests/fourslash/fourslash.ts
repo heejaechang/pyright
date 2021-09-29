@@ -225,6 +225,7 @@ declare namespace _ {
             predicate: (m: Marker | undefined, d: T | undefined, text: string) => boolean
         ): Range[];
         getPositionRange(markerString: string): PositionRange;
+        expandPositionRange(range: PositionRange, start: number, end: number): PositionRange;
         convertPositionRange(range: Range): PositionRange;
         convertPathToUri(path: string): string;
 
