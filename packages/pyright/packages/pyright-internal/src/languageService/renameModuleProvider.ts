@@ -83,7 +83,7 @@ export class RenameModuleProvider {
             );
 
             // 2 means only last folder name has changed.
-            if (relativePaths.length !== 2) {
+            if (relativePaths.length !== 3 || relativePaths[1] !== '..' || relativePaths[2] === '..') {
                 return undefined;
             }
 
