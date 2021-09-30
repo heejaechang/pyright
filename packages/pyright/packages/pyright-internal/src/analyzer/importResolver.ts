@@ -306,7 +306,7 @@ export class ImportResolver {
 
         let current = origin;
         while (this._shouldWalkUp(current, root, execEnv)) {
-            this._getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, sourceFilePath, execEnv);
+            this._getCompletionSuggestionsAbsolute(sourceFilePath, execEnv, current, moduleDescriptor, suggestions);
 
             let success;
             [success, current] = this._tryWalkUp(current);
@@ -344,32 +344,32 @@ export class ImportResolver {
             // Look for it in the root directory of the execution environment.
             if (execEnv.root) {
                 this._getCompletionSuggestionsAbsolute(
+                    sourceFilePath,
+                    execEnv,
                     execEnv.root,
                     moduleDescriptor,
-                    suggestions,
-                    sourceFilePath,
-                    execEnv
+                    suggestions
                 );
             }
 
             for (const extraPath of execEnv.extraPaths) {
                 this._getCompletionSuggestionsAbsolute(
+                    sourceFilePath,
+                    execEnv,
                     extraPath,
                     moduleDescriptor,
-                    suggestions,
-                    sourceFilePath,
-                    execEnv
+                    suggestions
                 );
             }
 
             // Check for a typings file.
             if (this._configOptions.stubPath) {
                 this._getCompletionSuggestionsAbsolute(
+                    sourceFilePath,
+                    execEnv,
                     this._configOptions.stubPath,
                     moduleDescriptor,
-                    suggestions,
-                    sourceFilePath,
-                    execEnv
+                    suggestions
                 );
             }
 
@@ -380,11 +380,11 @@ export class ImportResolver {
             const pythonSearchPaths = this.getPythonSearchPaths(importFailureInfo);
             for (const searchPath of pythonSearchPaths) {
                 this._getCompletionSuggestionsAbsolute(
+                    sourceFilePath,
+                    execEnv,
                     searchPath,
                     moduleDescriptor,
-                    suggestions,
-                    sourceFilePath,
-                    execEnv
+                    suggestions
                 );
             }
         }
@@ -1531,11 +1531,11 @@ export class ImportResolver {
         typeshedPaths.forEach((typeshedPath) => {
             if (this.dirExistsCached(typeshedPath)) {
                 this._getCompletionSuggestionsAbsolute(
+                    sourceFilePath,
+                    execEnv,
                     typeshedPath,
                     moduleDescriptor,
-                    suggestions,
-                    sourceFilePath,
-                    execEnv
+                    suggestions
                 );
             }
         });
@@ -1789,7 +1789,7 @@ export class ImportResolver {
         }
 
         // Now try to match the module parts from the current directory location.
-        this._getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, sourceFilePath, execEnv);
+        this._getCompletionSuggestionsAbsolute(sourceFilePath, execEnv, curDir, moduleDescriptor, suggestions);
     }
 
     private _getFilesInDirectory(dirPath: string): string[] {
@@ -1808,11 +1808,11 @@ export class ImportResolver {
     }
 
     private _getCompletionSuggestionsAbsolute(
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
         rootPath: string,
         moduleDescriptor: ImportedModuleDescriptor,
-        suggestions: Set<string>,
-        sourceFilePath: string,
-        execEnv: ExecutionEnvironment
+        suggestions: Set<string>
     ) {
         // Starting at the specified path, walk the file system to find the
         // specified module.
@@ -1825,24 +1825,36 @@ export class ImportResolver {
             nameParts.push('');
         }
 
+        // We need to track this since a module might be resolvable using relative path
+        // but can't resolved by absolute path.
+        const leadingDots = moduleDescriptor.leadingDots;
         const parentNameParts = nameParts.slice(0, -1);
 
         // Handle the case where the user has typed the first
         // dot (or multiple) in a relative path.
         if (nameParts.length === 0) {
-            this._addFilteredSuggestionsAbsolute(dirPath, '', suggestions, parentNameParts, sourceFilePath, execEnv);
+            this._addFilteredSuggestionsAbsolute(
+                sourceFilePath,
+                execEnv,
+                dirPath,
+                '',
+                suggestions,
+                leadingDots,
+                parentNameParts
+            );
         } else {
             for (let i = 0; i < nameParts.length; i++) {
                 // Provide completions only if we're on the last part
                 // of the name.
                 if (i === nameParts.length - 1) {
                     this._addFilteredSuggestionsAbsolute(
+                        sourceFilePath,
+                        execEnv,
                         dirPath,
                         nameParts[i],
                         suggestions,
-                        parentNameParts,
-                        sourceFilePath,
-                        execEnv
+                        leadingDots,
+                        parentNameParts
                     );
                 }
 
@@ -1855,18 +1867,19 @@ export class ImportResolver {
     }
 
     private _addFilteredSuggestionsAbsolute(
-        dirPath: string,
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
+        currentPath: string,
         filter: string,
         suggestions: Set<string>,
-        parentNameParts: string[],
-        sourceFilePath: string,
-        execEnv: ExecutionEnvironment
+        leadingDots: number,
+        parentNameParts: string[]
     ) {
         // Enumerate all of the files and directories in the path, expanding links.
         const entries = getFileSystemEntriesFromDirEntries(
-            this.readdirEntriesCached(dirPath),
+            this.readdirEntriesCached(currentPath),
             this.fileSystem,
-            dirPath
+            currentPath
         );
 
         entries.files.forEach((file) => {
@@ -1886,7 +1899,13 @@ export class ImportResolver {
 
                 if (
                     !this._isUniqueValidSuggestion(fileWithoutExtension, suggestions) ||
-                    !this._isResolvableSuggestion(fileWithoutExtension, parentNameParts, sourceFilePath, execEnv)
+                    !this._isResolvableSuggestion(
+                        fileWithoutExtension,
+                        leadingDots,
+                        parentNameParts,
+                        sourceFilePath,
+                        execEnv
+                    )
                 ) {
                     return;
                 }
@@ -1902,7 +1921,7 @@ export class ImportResolver {
 
             if (
                 !this._isUniqueValidSuggestion(dir, suggestions) ||
-                !this._isResolvableSuggestion(dir, parentNameParts, sourceFilePath, execEnv)
+                !this._isResolvableSuggestion(dir, leadingDots, parentNameParts, sourceFilePath, execEnv)
             ) {
                 return;
             }
@@ -1914,16 +1933,25 @@ export class ImportResolver {
     // Fix for editable installed submodules where the suggested directory was a namespace directory that wouldn't resolve.
     // only used for absolute imports
     private _isResolvableSuggestion(
-        dir: string,
+        name: string,
+        leadingDots: number,
         parentNameParts: string[],
         sourceFilePath: string,
         execEnv: ExecutionEnvironment
     ) {
-        return this._resolveImport(sourceFilePath, execEnv, {
-            leadingDots: 0,
-            nameParts: [...parentNameParts, dir],
+        // We always resolve names based on sourceFilePath.
+        const moduleDescriptor = {
+            leadingDots: leadingDots,
+            nameParts: [...parentNameParts, name],
             importedSymbols: [],
-        }).isImportFound;
+        };
+
+        const importName = this.formatImportName(moduleDescriptor);
+        const importFailureInfo: string[] = [];
+
+        // Make sure we don't use parent folder resolution when checking whether the given name is resolvable.
+        return this._resolveImportStrict(importName, sourceFilePath, execEnv, moduleDescriptor, importFailureInfo)
+            .isImportFound;
     }
 
     private _isUniqueValidSuggestion(suggestionToAdd: string, suggestions: Set<string>) {
