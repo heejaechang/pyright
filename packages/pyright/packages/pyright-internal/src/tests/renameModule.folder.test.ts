@@ -45,7 +45,7 @@ test('folder move down', () => {
     assert(!edits);
 });
 
-test('simple folder rename - from import', () => {
+test('folder rename - from import', () => {
     const code = `
 // @filename: nested/__init__.py
 //// [|/*marker*/|]
@@ -63,7 +63,7 @@ test('simple folder rename - from import', () => {
     testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
 });
 
-test('simple folder rename - from ', () => {
+test('folder rename - from ', () => {
     const code = `
 // @filename: nested/__init__.py
 //// [|/*marker*/|]
@@ -80,7 +80,7 @@ test('simple folder rename - from ', () => {
     testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
 });
 
-test('simple folder rename - import ', () => {
+test('folder rename - import ', () => {
     const code = `
 // @filename: nested/__init__.py
 //// [|/*marker*/|]
@@ -98,7 +98,7 @@ test('simple folder rename - import ', () => {
     testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
 });
 
-test('simple folder rename - import dotted name', () => {
+test('folder rename - import dotted name', () => {
     const code = `
 // @filename: nested1/__init__.py
 //// # empty
@@ -117,4 +117,120 @@ test('simple folder rename - import dotted name', () => {
     const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
 
     testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested2', 'sub');
+});
+
+test('folder rename - multiple files', () => {
+    const code = `
+// @filename: nested/__init__.py
+//// [|/*marker*/|]
+//// def foo():
+////    pass
+
+// @filename: nested/module1.py
+//// def foo1():
+////    pass
+
+// @filename: nested/module2.py
+//// def foo2():
+////    pass
+
+// @filename: test1.py
+//// from [|nested|] import foo, module1
+//// from [|nested|].module2 import foo2
+//// module1.foo()
+        `;
+
+    const state = parseAndGetTestState(code).state;
+    const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
+
+    testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
+});
+
+test('folder rename - from alias', () => {
+    const code = `
+// @filename: nested/__init__.py
+//// [|/*marker*/|]
+//// def foo():
+////    pass
+
+// @filename: test1.py
+//// from . import [|nested|] as [|nested|]
+//// [|nested|].foo()
+        `;
+
+    const state = parseAndGetTestState(code).state;
+    const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
+
+    testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
+});
+
+test('folder rename - import alias', () => {
+    const code = `
+// @filename: nested/__init__.py
+//// [|/*marker*/|]
+//// def foo():
+////    pass
+
+// @filename: test1.py
+//// import [|nested|] as [|nested|]
+//// [|nested|].foo()
+        `;
+
+    const state = parseAndGetTestState(code).state;
+    const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
+
+    testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
+});
+
+test('folder rename - import dotted name alias', () => {
+    const code = `
+// @filename: nested/__init__.py
+//// # empty
+
+// @filename: nested/nested/__init__.py
+//// [|/*marker*/|]
+//// def foo():
+////    pass
+
+// @filename: test1.py
+//// import nested.[|nested|] as [|nested|]
+//// [|nested|].foo()
+        `;
+
+    const state = parseAndGetTestState(code).state;
+    const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
+
+    testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
+});
+
+test('folder rename - reexport', () => {
+    const code = `
+// @filename: nested/__init__.py
+//// from . import [|nested|]
+//// [|nested|].foo()
+
+// @filename: nested/nested/__init__.py
+//// [|/*marker*/|]
+//// def foo():
+////    pass
+
+// @filename: nested/nested/module.py
+//// from ..[|nested|] import foo
+
+// @filename: nested/nested/reexport.py
+//// from .. import [|nested|] as [|nested|]
+
+// @filename: test1.py
+//// import nested.[|nested|] as [|nested|]
+//// [|nested|].foo()
+
+// @filename: test2.py
+//// import nested.[|nested|].reexport
+//// nested.[|nested|].reexport.[|nested|].foo()
+        `;
+
+    const state = parseAndGetTestState(code).state;
+    const path = getDirectoryPath(state.getMarkerByName('marker').fileName);
+
+    testRenameModule(state, path, `${combinePaths(path, '..', 'sub')}`, 'nested', 'sub');
 });
