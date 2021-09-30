@@ -294,6 +294,11 @@ export class ImportResolver {
     ) {
         const suggestions = this._getCompletionSuggestionsStrict(sourceFilePath, execEnv, moduleDescriptor);
 
+        // We only do parent import resolution for absolute path.
+        if (moduleDescriptor.leadingDots > 0) {
+            return suggestions;
+        }
+
         const root = this.getParentImportResolutionRoot(sourceFilePath, execEnv.root);
         const origin = ensureTrailingDirectorySeparator(
             getDirectoryPath(normalizePathCase(this.fileSystem, normalizePath(sourceFilePath)))
@@ -323,11 +328,17 @@ export class ImportResolver {
 
         // Is it a relative import?
         if (moduleDescriptor.leadingDots > 0) {
-            this._getCompletionSuggestionsRelative(sourceFilePath, moduleDescriptor, suggestions);
+            this._getCompletionSuggestionsRelative(sourceFilePath, execEnv, moduleDescriptor, suggestions);
         } else {
             // First check for a typeshed file.
             if (moduleDescriptor.nameParts.length > 0) {
-                this._getCompletionSuggestionsTypeshedPath(execEnv, moduleDescriptor, true, suggestions);
+                this._getCompletionSuggestionsTypeshedPath(
+                    sourceFilePath,
+                    execEnv,
+                    moduleDescriptor,
+                    true,
+                    suggestions
+                );
             }
 
             // Look for it in the root directory of the execution environment.
@@ -353,11 +364,17 @@ export class ImportResolver {
 
             // Check for a typings file.
             if (this._configOptions.stubPath) {
-                this.getCompletionSuggestionsAbsolute(this._configOptions.stubPath, moduleDescriptor, suggestions);
+                this.getCompletionSuggestionsAbsolute(
+                    this._configOptions.stubPath,
+                    moduleDescriptor,
+                    suggestions,
+                    sourceFilePath,
+                    execEnv
+                );
             }
 
             // Check for a typeshed file.
-            this._getCompletionSuggestionsTypeshedPath(execEnv, moduleDescriptor, false, suggestions);
+            this._getCompletionSuggestionsTypeshedPath(sourceFilePath, execEnv, moduleDescriptor, false, suggestions);
 
             // Look for the import in the list of third-party packages.
             const pythonSearchPaths = this.getPythonSearchPaths(importFailureInfo);
@@ -1489,6 +1506,7 @@ export class ImportResolver {
     }
 
     private _getCompletionSuggestionsTypeshedPath(
+        sourceFilePath: string,
         execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
         isStdLib: boolean,
@@ -1512,7 +1530,13 @@ export class ImportResolver {
 
         typeshedPaths.forEach((typeshedPath) => {
             if (this.dirExistsCached(typeshedPath)) {
-                this.getCompletionSuggestionsAbsolute(typeshedPath, moduleDescriptor, suggestions);
+                this.getCompletionSuggestionsAbsolute(
+                    typeshedPath,
+                    moduleDescriptor,
+                    suggestions,
+                    sourceFilePath,
+                    execEnv
+                );
             }
         });
     }
@@ -1751,6 +1775,7 @@ export class ImportResolver {
 
     private _getCompletionSuggestionsRelative(
         sourceFilePath: string,
+        execEnv: ExecutionEnvironment,
         moduleDescriptor: ImportedModuleDescriptor,
         suggestions: Set<string>
     ) {
@@ -1764,7 +1789,7 @@ export class ImportResolver {
         }
 
         // Now try to match the module parts from the current directory location.
-        this.getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions);
+        this.getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, sourceFilePath, execEnv);
     }
 
     private _getFilesInDirectory(dirPath: string): string[] {
@@ -1786,8 +1811,8 @@ export class ImportResolver {
         rootPath: string,
         moduleDescriptor: ImportedModuleDescriptor,
         suggestions: Set<string>,
-        sourceFilePath?: string,
-        execEnv?: ExecutionEnvironment
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment
     ) {
         // Starting at the specified path, walk the file system to find the
         // specified module.
@@ -1834,8 +1859,8 @@ export class ImportResolver {
         filter: string,
         suggestions: Set<string>,
         parentNameParts: string[],
-        sourceFilePath?: string,
-        execEnv?: ExecutionEnvironment
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment
     ) {
         // Enumerate all of the files and directories in the path, expanding links.
         const entries = getFileSystemEntriesFromDirEntries(
@@ -1851,24 +1876,38 @@ export class ImportResolver {
             const fileWithoutExtension = stripFileExtension(file, /* multiDotExtension */ true);
 
             if (supportedFileExtensions.some((ext) => ext === fileExtension)) {
-                if (fileWithoutExtension !== '__init__') {
-                    if (!filter || StringUtils.isPatternInSymbol(filter, fileWithoutExtension)) {
-                        if (this._isUniqueValidSuggestion(fileWithoutExtension, suggestions)) {
-                            suggestions.add(fileWithoutExtension);
-                        }
-                    }
+                if (fileWithoutExtension === '__init__') {
+                    return;
                 }
+
+                if (filter && !StringUtils.isPatternInSymbol(filter, fileWithoutExtension)) {
+                    return;
+                }
+
+                if (
+                    !this._isUniqueValidSuggestion(fileWithoutExtension, suggestions) ||
+                    !this._isResolvableSuggestion(fileWithoutExtension, parentNameParts, sourceFilePath, execEnv)
+                ) {
+                    return;
+                }
+
+                suggestions.add(fileWithoutExtension);
             }
         });
 
         entries.directories.forEach((dir) => {
-            if (
-                (!filter || dir.startsWith(filter)) &&
-                this._isUniqueValidSuggestion(dir, suggestions) &&
-                this._isResolvableSuggestion(dir, parentNameParts, sourceFilePath, execEnv)
-            ) {
-                suggestions.add(dir);
+            if (filter && !dir.startsWith(filter)) {
+                return;
             }
+
+            if (
+                !this._isUniqueValidSuggestion(dir, suggestions) ||
+                !this._isResolvableSuggestion(dir, parentNameParts, sourceFilePath, execEnv)
+            ) {
+                return;
+            }
+
+            suggestions.add(dir);
         });
     }
 
@@ -1877,20 +1916,14 @@ export class ImportResolver {
     private _isResolvableSuggestion(
         dir: string,
         parentNameParts: string[],
-        sourceFilePath?: string,
-        execEnv?: ExecutionEnvironment
+        sourceFilePath: string,
+        execEnv: ExecutionEnvironment
     ) {
-        if (sourceFilePath && execEnv) {
-            const result = this._resolveImport(sourceFilePath, execEnv, {
-                leadingDots: 0,
-                nameParts: [...parentNameParts, dir],
-                importedSymbols: [],
-            });
-
-            return result.isImportFound;
-        }
-
-        return false;
+        return this._resolveImport(sourceFilePath, execEnv, {
+            leadingDots: 0,
+            nameParts: [...parentNameParts, dir],
+            importedSymbols: [],
+        }).isImportFound;
     }
 
     private _isUniqueValidSuggestion(suggestionToAdd: string, suggestions: Set<string>) {
