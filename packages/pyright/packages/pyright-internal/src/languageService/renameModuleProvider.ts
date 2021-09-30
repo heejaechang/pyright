@@ -36,12 +36,16 @@ import { TypeEvaluator } from '../analyzer/typeEvaluatorTypes';
 import { getOrAdd, removeArrayElements } from '../common/collectionUtils';
 import { ConfigOptions } from '../common/configOptions';
 import { isString } from '../common/core';
+import { assert } from '../common/debug';
 import { FileEditAction } from '../common/editAction';
 import { FileSystem } from '../common/fileSystem';
 import {
+    combinePaths,
     getDirectoryPath,
     getFileName,
     getRelativePathComponentsFromDirectory,
+    isDirectory,
+    isFile,
     stripFileExtension,
 } from '../common/pathUtils';
 import { convertOffsetToPosition, convertTextRangeToRange } from '../common/positionUtils';
@@ -62,8 +66,58 @@ export class RenameModuleProvider {
         importResolver: ImportResolver,
         configOptions: ConfigOptions,
         evaluator: TypeEvaluator,
+        path: string,
+        newPath: string,
+        token: CancellationToken
+    ) {
+        if (!importResolver.fileSystem.existsSync(path)) {
+            return undefined;
+        }
+
+        if (isFile(importResolver.fileSystem, path)) {
+            return this._create(importResolver, configOptions, evaluator, path, newPath, /* folder */ false, token);
+        } else if (isDirectory(importResolver.fileSystem, path)) {
+            // Make sure folder path is simple rename.
+            const relativePaths = getRelativePathComponentsFromDirectory(path, newPath, (f) =>
+                importResolver.fileSystem.realCasePath(f)
+            );
+
+            // 2 means only last folder name has changed.
+            if (relativePaths.length !== 3 || relativePaths[1] !== '..' || relativePaths[2] === '..') {
+                return undefined;
+            }
+
+            // We don't support namespace folder name. Currently, we don't have
+            // a way to find namespace folder references.
+            let fileNameForPackage = combinePaths(path, '__init__.pyi');
+            if (!importResolver.fileSystem.existsSync(fileNameForPackage)) {
+                fileNameForPackage = combinePaths(path, '__init__.py');
+                if (!importResolver.fileSystem.existsSync(fileNameForPackage)) {
+                    return undefined;
+                }
+            }
+
+            return this._create(
+                importResolver,
+                configOptions,
+                evaluator,
+                fileNameForPackage,
+                combinePaths(newPath, getFileName(fileNameForPackage)),
+                /* isFolder */ true,
+                token
+            );
+        }
+
+        return undefined;
+    }
+
+    private static _create(
+        importResolver: ImportResolver,
+        configOptions: ConfigOptions,
+        evaluator: TypeEvaluator,
         moduleFilePath: string,
         newModuleFilePath: string,
+        isFolder: boolean,
         token: CancellationToken
     ) {
         const execEnv = configOptions.findExecEnvironment(moduleFilePath);
@@ -99,6 +153,7 @@ export class RenameModuleProvider {
             newModuleFilePath,
             moduleName,
             newModuleName,
+            isFolder,
             moduleDecls,
             token
         );
@@ -117,6 +172,7 @@ export class RenameModuleProvider {
         private _newModuleFilePath: string,
         private _moduleNameAndType: ModuleNameAndType,
         private _newModuleNameAndType: ModuleNameAndType,
+        private _isFolder: boolean,
         private _moduleDecls: AliasDeclaration[],
         private _token: CancellationToken
     ) {
@@ -137,9 +193,35 @@ export class RenameModuleProvider {
         }
 
         this._onlyNameChanged = i === this._moduleNames.length - 1;
+        assert(!this._isFolder || this._onlyNameChanged, 'We only support simple rename for folder');
     }
 
-    renameModuleReferences(filePath: string, parseResults: ParseResults) {
+    renameReferences(filePath: string, parseResults: ParseResults) {
+        if (this._isFolder) {
+            return this._renameFolderReferences(filePath, parseResults);
+        } else {
+            return this._renameModuleReferences(filePath, parseResults);
+        }
+    }
+
+    private _renameFolderReferences(filePath: string, parseResults: ParseResults) {
+        const collector = new DocumentSymbolCollector(
+            this.symbolName,
+            this._moduleDecls,
+            this._evaluator!,
+            this._token,
+            parseResults.parseTree,
+            /*treatModuleImportAndFromImportSame*/ true
+        );
+
+        // We only support simple rename of folder. Change all occurrence of the old folder name
+        // to new name.
+        for (const result of collector.collect()) {
+            this._addResultWithTextRange(filePath, result.range, parseResults, this._newSymbolName);
+        }
+    }
+
+    private _renameModuleReferences(filePath: string, parseResults: ParseResults) {
         const collector = new DocumentSymbolCollector(
             this.symbolName,
             this._moduleDecls,
