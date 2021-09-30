@@ -306,7 +306,7 @@ export class ImportResolver {
 
         let current = origin;
         while (this._shouldWalkUp(current, root, execEnv)) {
-            this.getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, sourceFilePath, execEnv);
+            this._getCompletionSuggestionsAbsolute(current, moduleDescriptor, suggestions, sourceFilePath, execEnv);
 
             let success;
             [success, current] = this._tryWalkUp(current);
@@ -343,7 +343,7 @@ export class ImportResolver {
 
             // Look for it in the root directory of the execution environment.
             if (execEnv.root) {
-                this.getCompletionSuggestionsAbsolute(
+                this._getCompletionSuggestionsAbsolute(
                     execEnv.root,
                     moduleDescriptor,
                     suggestions,
@@ -353,7 +353,7 @@ export class ImportResolver {
             }
 
             for (const extraPath of execEnv.extraPaths) {
-                this.getCompletionSuggestionsAbsolute(
+                this._getCompletionSuggestionsAbsolute(
                     extraPath,
                     moduleDescriptor,
                     suggestions,
@@ -364,7 +364,7 @@ export class ImportResolver {
 
             // Check for a typings file.
             if (this._configOptions.stubPath) {
-                this.getCompletionSuggestionsAbsolute(
+                this._getCompletionSuggestionsAbsolute(
                     this._configOptions.stubPath,
                     moduleDescriptor,
                     suggestions,
@@ -379,7 +379,7 @@ export class ImportResolver {
             // Look for the import in the list of third-party packages.
             const pythonSearchPaths = this.getPythonSearchPaths(importFailureInfo);
             for (const searchPath of pythonSearchPaths) {
-                this.getCompletionSuggestionsAbsolute(
+                this._getCompletionSuggestionsAbsolute(
                     searchPath,
                     moduleDescriptor,
                     suggestions,
@@ -1530,7 +1530,7 @@ export class ImportResolver {
 
         typeshedPaths.forEach((typeshedPath) => {
             if (this.dirExistsCached(typeshedPath)) {
-                this.getCompletionSuggestionsAbsolute(
+                this._getCompletionSuggestionsAbsolute(
                     typeshedPath,
                     moduleDescriptor,
                     suggestions,
@@ -1789,7 +1789,7 @@ export class ImportResolver {
         }
 
         // Now try to match the module parts from the current directory location.
-        this.getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, sourceFilePath, execEnv);
+        this._getCompletionSuggestionsAbsolute(curDir, moduleDescriptor, suggestions, sourceFilePath, execEnv);
     }
 
     private _getFilesInDirectory(dirPath: string): string[] {
@@ -1807,7 +1807,7 @@ export class ImportResolver {
         return filesInDir;
     }
 
-    protected getCompletionSuggestionsAbsolute(
+    private _getCompletionSuggestionsAbsolute(
         rootPath: string,
         moduleDescriptor: ImportedModuleDescriptor,
         suggestions: Set<string>,
