@@ -13,6 +13,13 @@ import { CancellationToken } from 'vscode-languageserver';
 import { throwIfCancellationRequested } from '../common/cancellationUtils';
 import { addIfUnique, createMapFromItems } from '../common/collectionUtils';
 import { TextEditAction } from '../common/editAction';
+import { FileSystem } from '../common/fileSystem';
+import {
+    getDirectoryPath,
+    getFileName,
+    getRelativePathComponentsFromDirectory,
+    stripFileExtension,
+} from '../common/pathUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
 import { compareStringsCaseSensitive } from '../common/stringUtils';
 import { Position, Range, TextRange } from '../common/textRange';
@@ -674,4 +681,38 @@ export function getTextRangeForImportNameDeletion(
     }
 
     return editSpan;
+}
+
+export function getRelativePathBetweenFiles(fs: FileSystem, currentUserFilePath: string, targetUserFilePath: string) {
+    const relativePaths = getRelativePathComponentsFromDirectory(
+        getDirectoryPath(currentUserFilePath),
+        getDirectoryPath(targetUserFilePath),
+        (f) => fs.realCasePath(f)
+    );
+
+    // This assumes both file paths are under the same importing root.
+    // So this doesn't handle paths pointing to 2 different import roots.
+    // ex) user file A to library file B
+    let currentPaths = '.';
+    for (let i = 1; i < relativePaths.length; i++) {
+        const relativePath = relativePaths[i];
+        if (relativePath === '..') {
+            currentPaths += '.';
+        } else {
+            currentPaths += relativePath;
+        }
+
+        if (relativePath !== '..' && i !== relativePaths.length - 1) {
+            currentPaths += '.';
+        }
+    }
+
+    // __init__ makes the folder itself, not file inside of the folder, part of
+    // module path. Move up one more level.
+    const fileName = stripFileExtension(getFileName(targetUserFilePath));
+    if (fileName === '__init__') {
+        currentPaths += '.';
+    }
+
+    return currentPaths;
 }
