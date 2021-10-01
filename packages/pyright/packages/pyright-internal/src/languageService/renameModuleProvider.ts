@@ -13,7 +13,7 @@ import { createSynthesizedAliasDeclaration } from '../analyzer/declarationUtils'
 import { createImportedModuleDescriptor, ImportResolver, ModuleNameAndType } from '../analyzer/importResolver';
 import {
     getImportGroupFromModuleNameAndType,
-    getRelativePathBetweenFiles,
+    getRelativeModuleName,
     getTextEditsForAutoImportInsertion,
     getTextEditsForAutoImportSymbolAddition,
     getTextRangeForImportNameDeletion,
@@ -46,6 +46,7 @@ import {
     getRelativePathComponentsFromDirectory,
     isDirectory,
     isFile,
+    resolvePaths,
 } from '../common/pathUtils';
 import { convertOffsetToPosition, convertTextRangeToRange } from '../common/positionUtils';
 import { doRangesIntersect, extendRange, Range, rangesAreEqual, TextRange } from '../common/textRange';
@@ -158,17 +159,17 @@ export class RenameModuleProvider {
         );
     }
 
+    private readonly _newModuleFilePath: string;
     private readonly _moduleNames: string[];
     private readonly _newModuleNames: string[];
     private readonly _onlyNameChanged: boolean;
     private readonly _results = new Map<string, FileEditAction[]>();
-
     private readonly _aliasIntroduced = new Set<ImportAsNode>();
 
     private constructor(
         private _fs: FileSystem,
         private _evaluator: TypeEvaluator,
-        private _newModuleFilePath: string,
+        newModuleFilePath: string,
         private _moduleNameAndType: ModuleNameAndType,
         private _newModuleNameAndType: ModuleNameAndType,
         private _isFolder: boolean,
@@ -176,6 +177,8 @@ export class RenameModuleProvider {
         private _token: CancellationToken
     ) {
         // moduleName and newModuleName are always in the absolute path form.
+        this._newModuleFilePath = resolvePaths(newModuleFilePath);
+
         this._moduleNames = this._moduleName.split('.');
         this._newModuleNames = this._newModuleName.split('.');
 
@@ -528,25 +531,30 @@ export class RenameModuleProvider {
     }
 
     private _getNewModuleName(currentFilePath: string, isRelativePath: boolean, isLastPartImportName: boolean) {
-        if (!isRelativePath) {
-            if (isLastPartImportName) {
-                //ex) x.y.z used in "from x.y import z"
-                const newModuleName = this._newModuleName.substr(
-                    0,
-                    this._newModuleName.length - this._newSymbolName.length - 1
-                );
-                return newModuleName.length > 0 ? newModuleName : '.';
-            }
+        // If the existing code was using relative path, try to keep the relative path.
+        const moduleName = isRelativePath
+            ? getRelativeModuleName(this._fs, currentFilePath, this._newModuleFilePath)
+            : this._newModuleName;
 
-            // ex) x.y.z used in "from x.y.z import ..."
-            return this._newModuleName;
+        if (isLastPartImportName && moduleName.endsWith(this._newSymbolName)) {
+            const dotPrefix =
+                moduleName === this._newSymbolName
+                    ? 0
+                    : moduleName.length > this._newSymbolName.length + 1
+                    ? moduleName[moduleName.length - this._newSymbolName.length - 2] !== '.'
+                        ? 1
+                        : 0
+                    : 0;
+
+            const length = moduleName.length - this._newSymbolName.length - dotPrefix;
+
+            //ex) x.y.z used in "from x.y import z"
+            const newModuleName = moduleName.substr(0, length);
+            return newModuleName.length > 0 ? newModuleName : '.';
         }
 
-        // If the existing code was using relative path, try to keep the relative path.
-        const relativePaths = getRelativePathBetweenFiles(this._fs, currentFilePath, this._newModuleFilePath);
-        return isLastPartImportName
-            ? relativePaths
-            : relativePaths + (relativePaths[relativePaths.length - 1] === '.' ? '' : '.') + this._newSymbolName;
+        // ex) x.y.z used in "from x.y.z import ..."
+        return moduleName;
     }
 
     getEdits(): FileEditAction[] {

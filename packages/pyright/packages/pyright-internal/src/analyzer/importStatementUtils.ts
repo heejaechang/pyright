@@ -18,6 +18,7 @@ import {
     getDirectoryPath,
     getFileName,
     getRelativePathComponentsFromDirectory,
+    isFile,
     stripFileExtension,
 } from '../common/pathUtils';
 import { convertOffsetToPosition, convertPositionToOffset } from '../common/positionUtils';
@@ -683,12 +684,28 @@ export function getTextRangeForImportNameDeletion(
     return editSpan;
 }
 
-export function getRelativePathBetweenFiles(fs: FileSystem, currentUserFilePath: string, targetUserFilePath: string) {
-    const relativePaths = getRelativePathComponentsFromDirectory(
-        getDirectoryPath(currentUserFilePath),
-        getDirectoryPath(targetUserFilePath),
-        (f) => fs.realCasePath(f)
-    );
+export function getRelativeModuleName(fs: FileSystem, sourcePath: string, targetPath: string) {
+    let srcPath = sourcePath;
+    const inputIsFile = isFile(fs, sourcePath);
+    if (inputIsFile) {
+        srcPath = getDirectoryPath(sourcePath);
+    }
+
+    let symbolName: string | undefined;
+    let destPath = targetPath;
+    if (inputIsFile) {
+        destPath = getDirectoryPath(targetPath);
+
+        const fileName = stripFileExtension(getFileName(targetPath));
+        if (fileName === '__init__') {
+            symbolName = getFileName(destPath);
+            destPath = getDirectoryPath(destPath);
+        } else {
+            symbolName = fileName;
+        }
+    }
+
+    const relativePaths = getRelativePathComponentsFromDirectory(srcPath, destPath, (f) => fs.realCasePath(f));
 
     // This assumes both file paths are under the same importing root.
     // So this doesn't handle paths pointing to 2 different import roots.
@@ -707,11 +724,9 @@ export function getRelativePathBetweenFiles(fs: FileSystem, currentUserFilePath:
         }
     }
 
-    // __init__ makes the folder itself, not file inside of the folder, part of
-    // module path. Move up one more level.
-    const fileName = stripFileExtension(getFileName(targetUserFilePath));
-    if (fileName === '__init__') {
-        currentPaths += '.';
+    if (symbolName) {
+        currentPaths =
+            currentPaths[currentPaths.length - 1] === '.' ? currentPaths + symbolName : currentPaths + '.' + symbolName;
     }
 
     return currentPaths;
