@@ -183,9 +183,16 @@ export class Binder extends ParseTreeWalker {
     // Aliases of "sys".
     private _sysImportAliases: string[] = [];
 
+    // Aliases of "dataclasses".
+    private _dataclassesImportAliases: string[] = [];
+
     // Map of imports of specific symbols imported from "typing" and "typing_extensions"
     // and the names they alias to.
     private _typingSymbolAliases: Map<string, string> = new Map<string, string>();
+
+    // Map of imports of specific symbols imported from "dataclasses"
+    // and the names they alias to.
+    private _dataclassesSymbolAliases: Map<string, string> = new Map<string, string>();
 
     // List of names statically assigned to __all__ symbol.
     private _dunderAllNames: string[] | undefined;
@@ -206,6 +213,10 @@ export class Binder extends ParseTreeWalker {
     // Map of symbols at the module level that may be private depending
     // on whether they are listed in the __all__ list.
     private _potentialPrivateSymbols = new Map<string, Symbol>();
+
+    // Estimates the overall complexity of the code flow graph for
+    // the current function.
+    private _functionCodeFlowComplexity = 0;
 
     constructor(fileInfo: AnalyzerFileInfo, private _moduleSymbolOnly = false) {
         super();
@@ -488,6 +499,7 @@ export class Binder extends ParseTreeWalker {
             this._deferBinding(() => {
                 // Create a start node for the function.
                 this._currentFlowNode = this._createStartFlowNode();
+                this._functionCodeFlowComplexity = 0;
 
                 node.parameters.forEach((paramNode) => {
                     if (paramNode.name) {
@@ -528,10 +540,12 @@ export class Binder extends ParseTreeWalker {
                 // the function never returns.
                 this._addAntecedent(this._currentReturnTarget, this._currentFlowNode);
                 const returnFlowNode = this._finishFlowLabel(this._currentReturnTarget);
-                AnalyzerNodeInfo.setAfterFlowNode(node, returnFlowNode);
-            });
 
-            AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentScopeCodeFlowExpressions!);
+                AnalyzerNodeInfo.setAfterFlowNode(node, returnFlowNode);
+
+                AnalyzerNodeInfo.setCodeFlowExpressions(node, this._currentScopeCodeFlowExpressions!);
+                AnalyzerNodeInfo.setCodeFlowComplexity(node, this._functionCodeFlowComplexity);
+            });
         });
 
         this._createAssignmentTargetFlowNodes(node.name, /* walkTargets */ false, /* unbound */ false);
@@ -1364,6 +1378,9 @@ export class Binder extends ParseTreeWalker {
             this._currentFlowNode = isAfterElseAndExceptsReachable ? postFinallyNode : Binder._unreachableFlowNode;
         }
 
+        // Try blocks are expensive to analyze, so add to the complexity metric.
+        this._functionCodeFlowComplexity += 4;
+
         return false;
     }
 
@@ -1485,9 +1502,11 @@ export class Binder extends ParseTreeWalker {
 
             if (node.module.nameParts.length === 1) {
                 if (firstNamePartValue === 'typing' || firstNamePartValue === 'typing_extensions') {
-                    this._typingImportAliases.push(node.alias?.value || firstNamePartValue);
+                    this._typingImportAliases.push(node.alias?.value ?? firstNamePartValue);
                 } else if (firstNamePartValue === 'sys') {
-                    this._sysImportAliases.push(node.alias?.value || firstNamePartValue);
+                    this._sysImportAliases.push(node.alias?.value ?? firstNamePartValue);
+                } else if (firstNamePartValue === 'dataclasses') {
+                    this._dataclassesImportAliases.push(node.alias?.value ?? firstNamePartValue);
                 }
             }
         }
@@ -1497,6 +1516,7 @@ export class Binder extends ParseTreeWalker {
 
     override visitImportFrom(node: ImportFromNode): boolean {
         const typingSymbolsOfInterest = ['Final', 'TypeAlias', 'ClassVar', 'Required', 'NotRequired'];
+        const dataclassesSymbolsOfInterest = ['InitVar'];
         const importInfo = AnalyzerNodeInfo.getImportInfo(node.module);
 
         let resolvedPath = '';
@@ -1515,10 +1535,16 @@ export class Binder extends ParseTreeWalker {
             fileName === '__init__' && node.module.leadingDots === 1 && node.module.nameParts.length === 1;
 
         let isTypingImport = false;
+        let isDataclassesImport = false;
+
         if (node.module.nameParts.length === 1) {
             const firstNamePartValue = node.module.nameParts[0].value;
             if (firstNamePartValue === 'typing' || firstNamePartValue === 'typing_extensions') {
                 isTypingImport = true;
+            }
+
+            if (firstNamePartValue === 'dataclasses') {
+                isDataclassesImport = true;
             }
         }
 
@@ -1613,6 +1639,12 @@ export class Binder extends ParseTreeWalker {
                         this._typingSymbolAliases.set(s, s);
                     });
                 }
+
+                if (isDataclassesImport) {
+                    dataclassesSymbolsOfInterest.forEach((s) => {
+                        this._dataclassesSymbolAliases.set(s, s);
+                    });
+                }
             }
         } else {
             if (isModuleInitFile) {
@@ -1696,6 +1728,12 @@ export class Binder extends ParseTreeWalker {
                     if (isTypingImport) {
                         if (typingSymbolsOfInterest.some((s) => s === importSymbolNode.name.value)) {
                             this._typingSymbolAliases.set(nameNode.value, importSymbolNode.name.value);
+                        }
+                    }
+
+                    if (isDataclassesImport) {
+                        if (dataclassesSymbolsOfInterest.some((s) => s === importSymbolNode.name.value)) {
+                            this._dataclassesSymbolAliases.set(nameNode.value, importSymbolNode.name.value);
                         }
                     }
                 }
@@ -2367,6 +2405,7 @@ export class Binder extends ParseTreeWalker {
             antecedents: [],
             affectedExpressions: undefined,
         };
+
         return flowNode;
     }
 
@@ -2381,6 +2420,9 @@ export class Binder extends ParseTreeWalker {
         if (node.antecedents.length === 1 && node.flags === FlowFlags.BranchLabel) {
             return node.antecedents[0];
         }
+
+        // Add one to the code flow complexity for each antecedent.
+        this._functionCodeFlowComplexity += node.antecedents.length;
 
         return node;
     }
@@ -2958,13 +3000,21 @@ export class Binder extends ParseTreeWalker {
     private _bindLoopStatement(preLoopLabel: FlowLabel, postLoopLabel: FlowLabel, callback: () => void) {
         const savedContinueTarget = this._currentContinueTarget;
         const savedBreakTarget = this._currentBreakTarget;
+        const savedCodeFlowComplexity = this._functionCodeFlowComplexity;
+
         this._currentContinueTarget = preLoopLabel;
         this._currentBreakTarget = postLoopLabel;
+        this._functionCodeFlowComplexity = 1;
 
         preLoopLabel.affectedExpressions = this._trackCodeFlowExpressions(callback);
 
         this._currentContinueTarget = savedContinueTarget;
         this._currentBreakTarget = savedBreakTarget;
+
+        // For each loop, double the complexity of the complexity of the
+        // contained code flow. This reflects the fact that nested loops
+        // are very expensive to analyze.
+        this._functionCodeFlowComplexity = this._functionCodeFlowComplexity * 2 + savedCodeFlowComplexity;
     }
 
     private _addAntecedent(label: FlowLabel, antecedent: FlowNode) {
@@ -3306,6 +3356,13 @@ export class Binder extends ParseTreeWalker {
                     } else {
                         symbolWithScope.symbol.setIsInstanceMember();
                     }
+
+                    if (
+                        typeAnnotation.nodeType === ParseNodeType.Index &&
+                        this._isDataclassesAnnotation(typeAnnotation.baseExpression, 'InitVar')
+                    ) {
+                        symbolWithScope.symbol.setIsInitVar();
+                    }
                 }
 
                 declarationHandled = true;
@@ -3375,8 +3432,26 @@ export class Binder extends ParseTreeWalker {
     // time. We assume here that the code isn't making use of some custom type alias
     // to refer to the typing types.
     private _isTypingAnnotation(typeAnnotation: ExpressionNode, name: string): boolean {
+        return this._isKnownAnnotation(typeAnnotation, name, this._typingImportAliases, this._typingSymbolAliases);
+    }
+
+    private _isDataclassesAnnotation(typeAnnotation: ExpressionNode, name: string): boolean {
+        return this._isKnownAnnotation(
+            typeAnnotation,
+            name,
+            this._dataclassesImportAliases,
+            this._dataclassesSymbolAliases
+        );
+    }
+
+    private _isKnownAnnotation(
+        typeAnnotation: ExpressionNode,
+        name: string,
+        importAliases: string[],
+        symbolAliases: Map<string, string>
+    ) {
         if (typeAnnotation.nodeType === ParseNodeType.Name) {
-            const alias = this._typingSymbolAliases.get(typeAnnotation.value);
+            const alias = symbolAliases.get(typeAnnotation.value);
             if (alias === name) {
                 return true;
             }
@@ -3386,7 +3461,7 @@ export class Binder extends ParseTreeWalker {
                 typeAnnotation.memberName.value === name
             ) {
                 const baseName = typeAnnotation.leftExpression.value;
-                return this._typingImportAliases.some((alias) => alias === baseName);
+                return importAliases.some((alias) => alias === baseName);
             }
         }
 

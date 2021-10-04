@@ -186,6 +186,12 @@ test('Loops10', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Loops11', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['loops11.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
+});
+
 test('ForLoop1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['forLoop1.py']);
 
@@ -471,6 +477,12 @@ test('Enums6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums6.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Enums7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums7.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('TypeGuard1', () => {

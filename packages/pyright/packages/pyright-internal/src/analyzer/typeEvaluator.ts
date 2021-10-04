@@ -183,7 +183,6 @@ import {
     isNone,
     isOverloadedFunction,
     isParamSpec,
-    isPossiblyUnbound,
     isTypeSame,
     isTypeVar,
     isUnbound,
@@ -329,6 +328,7 @@ interface MatchArgsToParamsResult {
 interface ArgResult {
     isCompatible: boolean;
     isTypeIncomplete?: boolean | undefined;
+    skippedOverloadArg?: boolean;
 }
 
 interface ClassMemberLookup {
@@ -474,6 +474,11 @@ const maxReturnTypeInferenceStackSize = 3;
 // complex functions with many arguments can take too long to
 // analyze.
 const maxReturnTypeInferenceArgumentCount = 6;
+
+// What is the max complexity of the code flow graph that
+// we will analyze to determine the return type of a function
+// when its parameters are unannotated?
+const maxReturnTypeInferenceCodeFlowComplexity = 15;
 
 // How many entries in a list, set, or dict should we examine
 // when inferring the type? We need to cut it off at some point
@@ -3025,7 +3030,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             case ParseNodeType.Name: {
                 // Get the type to evaluate whether it's bound
                 // and to mark it accessed.
-                getTypeOfExpression(node, /* expectedType */ undefined, EvaluatorFlags.SkipUnboundCheck);
+                getTypeOfExpression(node);
                 break;
             }
 
@@ -3035,7 +3040,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     node,
                     baseTypeResult,
                     { method: 'del' },
-                    EvaluatorFlags.SkipUnboundCheck
+                    EvaluatorFlags.None
                 );
                 writeTypeCache(node.memberName, memberType.type, /* isIncomplete */ false);
                 writeTypeCache(node, memberType.type, /* isIncomplete */ false);
@@ -3048,12 +3053,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     undefined,
                     EvaluatorFlags.DoNotSpecialize
                 );
-                getTypeFromIndexWithBaseType(
-                    node,
-                    baseTypeResult.type,
-                    { method: 'del' },
-                    EvaluatorFlags.SkipUnboundCheck
-                );
+                getTypeFromIndexWithBaseType(node, baseTypeResult.type, { method: 'del' }, EvaluatorFlags.None);
                 writeTypeCache(node, UnboundType.create(), /* isIncomplete */ false);
                 break;
             }
@@ -3070,7 +3070,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 // type information is cached for the completion handler.
                 if (node.child) {
                     suppressDiagnostics(node.child, () => {
-                        getTypeOfExpression(node.child!, /* expectedType */ undefined, EvaluatorFlags.SkipUnboundCheck);
+                        getTypeOfExpression(node.child!, /* expectedType */ undefined);
                     });
                 }
                 break;
@@ -3245,31 +3245,6 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
             // Detect, report, and fill in missing type arguments if appropriate.
             type = reportMissingTypeArguments(node, type, flags);
-
-            // If there is a resolution cycle, don't report it as an unbound symbol
-            // at this time. It will be re-evaluated as the call stack unwinds, and
-            // its actual type will be known then. Also, if the node is unreachable
-            // but within a reachable statement (e.g. if False and <name>) then avoid
-            // reporting an unbound error.
-            if (!isIncomplete && !AnalyzerNodeInfo.isCodeUnreachable(node)) {
-                if ((flags & EvaluatorFlags.SkipUnboundCheck) === 0) {
-                    if (isUnbound(type)) {
-                        addDiagnostic(
-                            fileInfo.diagnosticRuleSet.reportUnboundVariable,
-                            DiagnosticRule.reportUnboundVariable,
-                            Localizer.Diagnostic.symbolIsUnbound().format({ name }),
-                            node
-                        );
-                    } else if (isPossiblyUnbound(type)) {
-                        addDiagnostic(
-                            fileInfo.diagnosticRuleSet.reportUnboundVariable,
-                            DiagnosticRule.reportUnboundVariable,
-                            Localizer.Diagnostic.symbolIsPossiblyUnbound().format({ name }),
-                            node
-                        );
-                    }
-                }
-            }
 
             setSymbolAccessed(fileInfo, symbol, node);
 
@@ -4220,6 +4195,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             let type: Type | undefined;
             let isTypeIncomplete = false;
 
+            if (memberInfo.symbol.isInitVar()) {
+                diag.addMessage(Localizer.DiagnosticAddendum.memberIsInitVar().format({ name: memberName }));
+                return undefined;
+            }
+
             if (usage.method === 'get') {
                 const typeResult = getTypeOfMemberInternal(errorNode, memberInfo);
                 if (typeResult) {
@@ -4514,13 +4494,16 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                                 let bindToClass: ClassType | undefined;
 
                                 // The "bind-to" class depends on whether the descriptor is defined
-                                // on the metaclass or the class.
-                                if (TypeBase.isInstantiable(subtype)) {
+                                // on the metaclass or the class. We handle properties specially here
+                                // because of the way we model the __get__ logic in the property class.
+                                if (ClassType.isPropertyClass(subtype) && !isAccessedThroughMetaclass) {
+                                    if (memberInfo && isInstantiableClass(memberInfo.classType)) {
+                                        bindToClass = memberInfo.classType;
+                                    }
+                                } else {
                                     if (isInstantiableClass(accessMethod.classType)) {
                                         bindToClass = accessMethod.classType;
                                     }
-                                } else if (memberInfo && isInstantiableClass(memberInfo.classType)) {
-                                    bindToClass = memberInfo.classType;
                                 }
 
                                 const boundMethodType = bindFunctionToClassOrObject(
@@ -5037,8 +5020,12 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         isInstantiableClass(concreteSubtype) && ClassType.isBuiltIn(concreteSubtype, 'Annotated');
                     const hasCustomClassGetItem =
                         isInstantiableClass(concreteSubtype) && ClassType.hasCustomClassGetItem(concreteSubtype);
+                    const isGenericClass =
+                        concreteSubtype.details.typeParameters?.length > 0 ||
+                        ClassType.isSpecialBuiltIn(concreteSubtype) ||
+                        ClassType.isBuiltIn(concreteSubtype, 'type');
 
-                    let typeArgs = getTypeArgs(node, flags, isAnnotatedClass, hasCustomClassGetItem);
+                    let typeArgs = getTypeArgs(node, flags, isAnnotatedClass, hasCustomClassGetItem || !isGenericClass);
                     if (!isAnnotatedClass) {
                         typeArgs = adjustTypeArgumentsForVariadicTypeVar(
                             typeArgs,
@@ -8069,20 +8056,33 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             // In practice, we will limit the number of passes to 2 because it can get
             // very expensive to go beyond this, and we don't see generally see cases
             // where more than two passes are needed.
-            const passCount = Math.min(typeVarMatchingCount, 2);
+            let passCount = Math.min(typeVarMatchingCount, 2);
             for (let i = 0; i < passCount; i++) {
                 useSpeculativeMode(errorNode, () => {
                     matchResults.argParams.forEach((argParam) => {
                         if (argParam.requiresTypeVarMatching) {
+                            // Populate the typeVarMap for the argument. If the argument
+                            // is an overload function, skip it during the first pass
+                            // because the selection of the proper overload may depend
+                            // on type arguments supplied by other function arguments.
                             const argResult = validateArgType(
                                 argParam,
                                 typeVarMap,
                                 type.details.name,
                                 skipUnknownArgCheck,
+                                /* skipOverloadArg */ i === 0,
                                 typeCondition
                             );
+
                             if (argResult.isTypeIncomplete) {
                                 isTypeIncomplete = true;
+                            }
+
+                            // If we skipped a overload arg during the first pass,
+                            // add another pass to ensure that we handle all of the
+                            // type variables.
+                            if (i === 0 && argResult.skippedOverloadArg) {
+                                passCount++;
                             }
                         }
                     });
@@ -8100,6 +8100,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 typeVarMap,
                 type.details.name,
                 skipUnknownArgCheck,
+                /* skipOverloadArg */ false,
                 typeCondition
             );
 
@@ -8331,6 +8332,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                             typeVarMap,
                             /* functionName */ '',
                             /* skipUnknownArgCheck */ false,
+                            /* skipOverloadArg */ false,
                             conditionFilter
                         )
                     ) {
@@ -8375,6 +8377,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         typeVarMap: TypeVarMap,
         functionName: string,
         skipUnknownCheck: boolean,
+        skipOverloadArg: boolean,
         conditionFilter: TypeCondition[] | undefined
     ): ArgResult {
         let argType: Type | undefined;
@@ -8460,6 +8463,35 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             return { isCompatible, isTypeIncomplete };
         }
 
+        // If we are asked to skip overload arguments, determine whether the argument
+        // is an explicit overload type, an overloaded class constructor, or a
+        // an overloaded callback protocol.
+        if (skipOverloadArg) {
+            if (isOverloadedFunction(argType)) {
+                return { isCompatible, isTypeIncomplete, skippedOverloadArg: true };
+            }
+
+            const concreteParamType = makeTopLevelTypeVarsConcrete(argParam.paramType);
+            if (isFunction(concreteParamType) || isOverloadedFunction(concreteParamType)) {
+                if (isInstantiableClass(argType)) {
+                    const constructor = createFunctionFromConstructor(argType);
+                    if (constructor && isOverloadedFunction(constructor)) {
+                        return { isCompatible, isTypeIncomplete, skippedOverloadArg: true };
+                    }
+                }
+
+                if (isClassInstance(argType)) {
+                    const callMember = lookUpObjectMember(argType, '__call__');
+                    if (callMember) {
+                        const memberType = getTypeOfMember(callMember);
+                        if (isOverloadedFunction(memberType)) {
+                            return { isCompatible, isTypeIncomplete, skippedOverloadArg: true };
+                        }
+                    }
+                }
+            }
+        }
+
         if (!canAssignType(argParam.paramType, argType, diag.createAddendum(), typeVarMap)) {
             // Mismatching parameter types are common in untyped code; don't bother spending time
             // printing types if the diagnostic is disabled.
@@ -8517,6 +8549,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     argParam.errorNode
                 );
             }
+
             return { isCompatible: false, isTypeIncomplete };
         }
 
@@ -11981,6 +12014,11 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 if (isInstantiableClass(argType)) {
                     if (ClassType.isEnumClass(argType)) {
                         classType.details.flags |= ClassTypeFlags.EnumClass;
+
+                        // Subclasses of one of the built-in enum classes are implicitly final.
+                        if (!ClassType.isBuiltIn(classType)) {
+                            classType.details.flags |= ClassTypeFlags.Final;
+                        }
                     }
 
                     // Determine if the class is abstract. Protocol classes support abstract methods
@@ -14290,11 +14328,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             ) {
                 // For global and nonlocal statements, allow forward references so
                 // we don't use code flow during symbol lookups.
-                getTypeOfExpression(
-                    node,
-                    /* expectedType */ undefined,
-                    EvaluatorFlags.AllowForwardReferences | EvaluatorFlags.SkipUnboundCheck
-                );
+                getTypeOfExpression(node, /* expectedType */ undefined, EvaluatorFlags.AllowForwardReferences);
                 return;
             }
         }
@@ -15157,10 +15191,18 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     // Have we already been here? If so, use the cached value.
                     const cachedEntry = getCacheEntry(curFlowNode, usedOuterScopeAlias);
                     if (cachedEntry) {
+                        if (!cachedEntry.isIncomplete) {
+                            return cachedEntry;
+                        }
+
                         // If the cached entry is incomplete, we can use it only if nothing
                         // has changed that may cause the previously-reported incomplete type to change.
-                        if (!cachedEntry.isIncomplete || cachedEntry.generationCount === flowIncompleteGeneration) {
-                            return cachedEntry;
+                        if (cachedEntry.generationCount === flowIncompleteGeneration) {
+                            return {
+                                type: cachedEntry?.type ? removeUnknownFromUnion(cachedEntry.type) : undefined,
+                                usedOuterScopeAlias,
+                                isIncomplete: true,
+                            };
                         }
                     }
 
@@ -15475,7 +15517,7 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
 
                         // The result is incomplete if one or more entries were incomplete.
                         if (sawIncomplete) {
-                            // If there is an "Unknown" type within an unknown type, remove
+                            // If there is an "Unknown" type within a union type, remove
                             // it. Otherwise we might end up resolving the cycle with a type
                             // that includes an undesirable unknown.
                             return {
@@ -15988,7 +16030,9 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                         addDiagnostic(
                             fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
                             DiagnosticRule.reportGeneralTypeIssues,
-                            Localizer.Diagnostic.typeArgsExpectingNone(),
+                            Localizer.Diagnostic.typeArgsExpectingNone().format({
+                                name: classType.aliasName || classType.details.name,
+                            }),
                             typeArgs[typeParameters.length].node
                         );
                     } else {
@@ -17040,22 +17084,37 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         if (type.inferredReturnType) {
             returnType = type.inferredReturnType;
         } else {
-            if (type.details.declaration) {
+            // Don't bother inferring the return type of __init__ because it's
+            // always None.
+            if (FunctionType.isInstanceMethod(type) && type.details.name === '__init__') {
+                returnType = NoneType.createInstance();
+            } else if (type.details.declaration) {
                 const functionNode = type.details.declaration.node;
 
-                // Temporarily disable speculative mode while we
-                // lazily evaluate the return type.
-                disableSpeculativeMode(() => {
-                    returnType = inferFunctionReturnType(functionNode, FunctionType.isAbstractMethod(type));
-                });
+                const codeFlowComplexity = AnalyzerNodeInfo.getCodeFlowComplexity(functionNode);
 
-                // Do we need to wrap this in an awaitable?
-                if (returnType && FunctionType.isWrapReturnTypeInAwait(type)) {
-                    returnType = createAwaitableReturnType(
-                        functionNode,
-                        returnType,
-                        !!type.details.declaration?.isGenerator
-                    );
+                // For very complex functions that have no annotated parameter types,
+                // don't attempt to infer the return type because it can be extremely
+                // expensive.
+                const parametersAreAnnotated =
+                    type.details.parameters.length <= 1 ||
+                    type.details.parameters.some((param) => param.hasDeclaredType);
+
+                if (parametersAreAnnotated || codeFlowComplexity < maxReturnTypeInferenceCodeFlowComplexity) {
+                    // Temporarily disable speculative mode while we
+                    // lazily evaluate the return type.
+                    disableSpeculativeMode(() => {
+                        returnType = inferFunctionReturnType(functionNode, FunctionType.isAbstractMethod(type));
+                    });
+
+                    // Do we need to wrap this in an awaitable?
+                    if (returnType && FunctionType.isWrapReturnTypeInAwait(type)) {
+                        returnType = createAwaitableReturnType(
+                            functionNode,
+                            returnType,
+                            !!type.details.declaration?.isGenerator
+                        );
+                    }
                 }
             }
 
@@ -18304,6 +18363,8 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                     }
                     return true;
                 }
+            } else if (isAnyOrUnknown(srcType)) {
+                return true;
             }
 
             diag.addMessage(
@@ -18806,47 +18867,23 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
                 return true;
             }
 
-            // If the dest is a constrained type variable and all of the types in
-            // the source are constrained using that same type variable and have
-            // compatible types, we'll consider it assignable.
-            const destTypeVar = destType;
-            if (
-                findSubtype(srcType, (srcSubtype) => {
-                    if (isTypeSame(destTypeVar, srcSubtype, /* ignorePseudoGeneric */ true)) {
-                        return false;
-                    }
-
-                    if (
-                        getTypeCondition(srcSubtype)?.find(
-                            (constraint) => constraint.typeVarName === TypeVarType.getNameWithScope(destTypeVar)
-                        )
-                    ) {
-                        if (
-                            destTypeVar.details.constraints.length === 0 ||
-                            destTypeVar.details.constraints.some((constraintType) => {
-                                return canAssignType(constraintType, srcSubtype, new DiagnosticAddendum());
-                            })
-                        ) {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                }) === undefined
-            ) {
+            // If the dest is a constrained or bound type variable and all of the
+            // types in the source are conditioned on that same type variable
+            // and have compatible types, we'll consider it assignable.
+            if (canAssignConditionalTypeToTypeVar(destType, srcType, recursionCount + 1)) {
                 return true;
             }
 
             // If the dest is a variadic type variable, and the source is a tuple
             // with a single entry that is the same variadic type variable, it's a match.
             if (
-                isVariadicTypeVar(destTypeVar) &&
+                isVariadicTypeVar(destType) &&
                 isClassInstance(srcType) &&
                 isTupleClass(srcType) &&
                 srcType.tupleTypeArguments &&
                 srcType.tupleTypeArguments.length === 1
             ) {
-                if (isTypeSame(destTypeVar, srcType.tupleTypeArguments[0])) {
+                if (isTypeSame(destType, srcType.tupleTypeArguments[0])) {
                     return true;
                 }
             }
@@ -19507,6 +19544,10 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
             }
 
             if (srcFunction) {
+                if (typeVarMap) {
+                    typeVarMap.addSolveForScope(getTypeVarScopeId(destType));
+                }
+
                 if (
                     canAssignFunction(
                         destType,
@@ -19592,6 +19633,60 @@ export function createTypeEvaluator(importLookup: ImportLookup, evaluatorOptions
         );
 
         return false;
+    }
+
+    function canAssignConditionalTypeToTypeVar(destType: TypeVarType, srcType: Type, recursionCount: number): boolean {
+        // The subType is assignable only if all of its subtypes are assignable.
+        return !findSubtype(srcType, (srcSubtype) => {
+            if (isTypeSame(destType, srcSubtype, /* ignorePseudoGeneric */ true, recursionCount + 1)) {
+                return false;
+            }
+
+            const destTypeVarName = TypeVarType.getNameWithScope(destType);
+
+            // Determine which conditions on this type apply to this type variable.
+            // There might be more than one of them.
+            const applicableConditions = (getTypeCondition(srcSubtype) ?? []).filter(
+                (constraint) => constraint.typeVarName === destTypeVarName
+            );
+
+            // If there are no applicable conditions, it's not assignable.
+            if (applicableConditions.length === 0) {
+                return true;
+            }
+
+            return !applicableConditions.some((condition) => {
+                if (destType.details.boundType) {
+                    assert(condition.constraintIndex === 0);
+
+                    return isTypeSame(
+                        destType.details.boundType,
+                        TypeBase.cloneForCondition(srcSubtype, /* condition */ undefined),
+                        /* ignorePseudoGeneric */ true,
+                        recursionCount + 1
+                    );
+                }
+
+                if (destType.details.constraints.length > 0) {
+                    assert(condition.constraintIndex < destType.details.constraints.length);
+                    const typeVarConstraint = destType.details.constraints[condition.constraintIndex];
+                    assert(typeVarConstraint !== undefined);
+
+                    return canAssignType(
+                        typeVarConstraint,
+                        srcSubtype,
+                        new DiagnosticAddendum(),
+                        /* typeVarMap */ undefined,
+                        /* flags */ undefined,
+                        recursionCount + 1
+                    );
+                }
+
+                // This is a non-bound and non-constrained type variable with a matching condition.
+                assert(condition.constraintIndex === 0);
+                return true;
+            });
+        });
     }
 
     // Synthesize a function that represents the constructor for this class
