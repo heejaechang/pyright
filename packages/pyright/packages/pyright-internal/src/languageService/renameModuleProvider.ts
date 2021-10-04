@@ -13,6 +13,7 @@ import { createSynthesizedAliasDeclaration } from '../analyzer/declarationUtils'
 import { createImportedModuleDescriptor, ImportResolver, ModuleNameAndType } from '../analyzer/importResolver';
 import {
     getImportGroupFromModuleNameAndType,
+    getRelativeModuleName,
     getTextEditsForAutoImportInsertion,
     getTextEditsForAutoImportSymbolAddition,
     getTextRangeForImportNameDeletion,
@@ -41,12 +42,11 @@ import { FileEditAction } from '../common/editAction';
 import { FileSystem } from '../common/fileSystem';
 import {
     combinePaths,
-    getDirectoryPath,
     getFileName,
     getRelativePathComponentsFromDirectory,
     isDirectory,
     isFile,
-    stripFileExtension,
+    resolvePaths,
 } from '../common/pathUtils';
 import { convertOffsetToPosition, convertTextRangeToRange } from '../common/positionUtils';
 import { doRangesIntersect, extendRange, Range, rangesAreEqual, TextRange } from '../common/textRange';
@@ -159,17 +159,17 @@ export class RenameModuleProvider {
         );
     }
 
+    private readonly _newModuleFilePath: string;
     private readonly _moduleNames: string[];
     private readonly _newModuleNames: string[];
     private readonly _onlyNameChanged: boolean;
     private readonly _results = new Map<string, FileEditAction[]>();
-
     private readonly _aliasIntroduced = new Set<ImportAsNode>();
 
     private constructor(
         private _fs: FileSystem,
         private _evaluator: TypeEvaluator,
-        private _newModuleFilePath: string,
+        newModuleFilePath: string,
         private _moduleNameAndType: ModuleNameAndType,
         private _newModuleNameAndType: ModuleNameAndType,
         private _isFolder: boolean,
@@ -177,6 +177,8 @@ export class RenameModuleProvider {
         private _token: CancellationToken
     ) {
         // moduleName and newModuleName are always in the absolute path form.
+        this._newModuleFilePath = resolvePaths(newModuleFilePath);
+
         this._moduleNames = this._moduleName.split('.');
         this._newModuleNames = this._newModuleName.split('.');
 
@@ -329,7 +331,16 @@ export class RenameModuleProvider {
                     // We don't have any sub modules, we can change module name to new one.
                     // Update whole module name to new name.
                     // ex) from [xxx.yyy] import zzz to from [aaa.bbb] import zzz
-                    this._addResultWithTextRange(filePath, moduleNameNode, parseResults, this._newModuleName);
+                    this._addResultWithTextRange(
+                        filePath,
+                        moduleNameNode,
+                        parseResults,
+                        this._getNewModuleName(
+                            filePath,
+                            moduleNameNode.leadingDots > 0,
+                            /* isLastPartImportName */ false
+                        )
+                    );
                     continue;
                 }
 
@@ -382,7 +393,11 @@ export class RenameModuleProvider {
                 }
 
                 const fromNode = nodeFound.parent?.parent as ImportFromNode;
-                const newModuleName = this._getNewModuleName(filePath, fromNode.module);
+                const newModuleName = this._getNewModuleName(
+                    filePath,
+                    fromNode.module.leadingDots > 0,
+                    /* isLastPartImportName */ true
+                );
 
                 // If the name bound to symbol re-exported, we don't need to update module name.
                 // Existing logic should make sure re-exported symbol name work as before after
@@ -515,46 +530,31 @@ export class RenameModuleProvider {
         return !decls.some((d) => isAliasDeclaration(d) && d.submoduleFallback);
     }
 
-    private _getNewModuleName(currentFilePath: string, moduleName: ModuleNameNode) {
-        if (moduleName.leadingDots === 0) {
-            const newModuleName = this._newModuleName.substr(
-                0,
-                this._newModuleName.length - this._newSymbolName.length - 1
-            );
+    private _getNewModuleName(currentFilePath: string, isRelativePath: boolean, isLastPartImportName: boolean) {
+        // If the existing code was using relative path, try to keep the relative path.
+        const moduleName = isRelativePath
+            ? getRelativeModuleName(this._fs, currentFilePath, this._newModuleFilePath)
+            : this._newModuleName;
+
+        if (isLastPartImportName && moduleName.endsWith(this._newSymbolName)) {
+            const dotPrefix =
+                moduleName === this._newSymbolName
+                    ? 0
+                    : moduleName.length > this._newSymbolName.length + 1
+                    ? moduleName[moduleName.length - this._newSymbolName.length - 2] !== '.'
+                        ? 1
+                        : 0
+                    : 0;
+
+            const length = moduleName.length - this._newSymbolName.length - dotPrefix;
+
+            //ex) x.y.z used in "from x.y import z"
+            const newModuleName = moduleName.substr(0, length);
             return newModuleName.length > 0 ? newModuleName : '.';
         }
 
-        // If the existing code was using relative path, try to keep the relative path.
-        const relativePaths = getRelativePathComponentsFromDirectory(
-            getDirectoryPath(currentFilePath),
-            getDirectoryPath(this._newModuleFilePath),
-            (f) => this._fs.realCasePath(f)
-        );
-
-        // Both file paths are pointing to user files. So we don't need to worry about
-        // relative path pointing to library files.
-        let relativeModuleName = '.';
-        for (let i = 1; i < relativePaths.length; i++) {
-            const relativePath = relativePaths[i];
-            if (relativePath === '..') {
-                relativeModuleName += '.';
-            } else {
-                relativeModuleName += relativePath;
-            }
-
-            if (relativePath !== '..' && i !== relativePaths.length - 1) {
-                relativeModuleName += '.';
-            }
-        }
-
-        // __init__ makes the folder itself not file inside of the folder part of
-        // module path. Move up one more level.
-        const fileName = stripFileExtension(getFileName(this._newModuleFilePath));
-        if (fileName === '__init__') {
-            relativeModuleName += '.';
-        }
-
-        return relativeModuleName;
+        // ex) x.y.z used in "from x.y.z import ..."
+        return moduleName;
     }
 
     getEdits(): FileEditAction[] {
