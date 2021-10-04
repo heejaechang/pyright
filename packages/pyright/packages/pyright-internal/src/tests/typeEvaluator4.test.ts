@@ -395,6 +395,11 @@ test('MemberAccess13', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('MemberAccess14', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['memberAccess14.py']);
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('DataClass1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass1.py']);
 
@@ -481,6 +486,18 @@ test('DataClass15', () => {
     TestUtils.validateResults(analysisResults, 3);
 });
 
+test('DataClass16', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['dataclass16.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('InitVar1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['initVar1.py']);
+
+    TestUtils.validateResults(analysisResults, 2, 1);
+});
+
 test('Callable1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable1.py']);
 
@@ -503,6 +520,12 @@ test('Callable4', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable4.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Callable5', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callable5.py']);
+
+    TestUtils.validateResults(analysisResults, 2);
 });
 
 test('ThreePartVersion1', () => {
