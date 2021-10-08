@@ -10,6 +10,9 @@
 // @library: true
 //// [|/*libFile*/|]
 
+// @filename: test1.ts
+//// # random file
+
 {
     const title = 'Rename File';
     const command = 'pylance.renameFile';

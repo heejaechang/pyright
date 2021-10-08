@@ -1,16 +1,19 @@
 /// <reference path="fourslash.ts" />
 
-// @filename: module1.py
+// @filename: renamedFolder/__init__.py
 //// [|/*marker1*/|]
-//// from . import [|mySelf|] as [|mySelf|]
+//// from . import module as module
 
-// @filename: renamedModule.py
+// @filename: renamedFolder/module.py
+//// def foo(): pass
+
+// @filename: renamedFolder/nested/__init__.py
 //// [|/*marker2*/|]
-//// from module1 import *
-//// [|mySelf|].foo()
-////
-//// def foo():
-////     pass
+//// from ...[|originalFolder|] import nested
+
+// @filename: renamedFolder/nested/module.py
+//// [|/*marker3*/|]
+//// from ... import [|originalFolder|]
 
 {
     const title = 'Rename File';
@@ -18,31 +21,25 @@
 
     const fileName1 = helper.getMarkerByName('marker1').fileName;
     const fileName2 = helper.getMarkerByName('marker2').fileName;
+    const fileName3 = helper.getMarkerByName('marker3').fileName;
 
     // @ts-ignore
     await helper.verifyPylanceCommand(
         {
             title,
             command,
-            arguments: [[{ oldUri: fileName2.replace('renamedModule', 'mySelf'), newUri: fileName2 }], true],
+            arguments: [
+                [
+                    {
+                        oldUri: helper.getDirectoryPath(fileName1.replace('renamedFolder', 'originalFolder')),
+                        newUri: helper.getDirectoryPath(fileName1),
+                    },
+                ],
+                true,
+            ],
         },
         {
             documentChanges: [
-                {
-                    textDocument: {
-                        uri: helper.convertPathToUri(fileName1),
-                        version: null,
-                    },
-                    edits: helper
-                        .getRangesByText()
-                        .get('mySelf')!
-                        .filter((r) => r.fileName === fileName1)
-                        .map((r) => ({
-                            annotationId: 'textEdit',
-                            newText: 'renamedModule',
-                            range: helper.convertPositionRange(r),
-                        })),
-                },
                 {
                     textDocument: {
                         uri: helper.convertPathToUri(fileName2),
@@ -50,19 +47,34 @@
                     },
                     edits: helper
                         .getRangesByText()
-                        .get('mySelf')!
+                        .get('originalFolder')!
                         .filter((r) => r.fileName === fileName2)
                         .map((r) => ({
                             annotationId: 'textEdit',
-                            newText: 'renamedModule',
+                            newText: 'renamedFolder',
+                            range: helper.convertPositionRange(r),
+                        })),
+                },
+                {
+                    textDocument: {
+                        uri: helper.convertPathToUri(fileName3),
+                        version: null,
+                    },
+                    edits: helper
+                        .getRangesByText()
+                        .get('originalFolder')!
+                        .filter((r) => r.fileName === fileName3)
+                        .map((r) => ({
+                            annotationId: 'textEdit',
+                            newText: 'renamedFolder',
                             range: helper.convertPositionRange(r),
                         })),
                 },
             ],
             changeAnnotations: {
                 textEdit: {
-                    label: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
-                    description: 'Update all import references for "mySelf.py" to "renamedModule.py"?',
+                    label: 'Update all import references for "originalFolder" to "renamedFolder"?',
+                    description: 'Update all import references for "originalFolder" to "renamedFolder"?',
                     needsConfirmation: true,
                 },
             },

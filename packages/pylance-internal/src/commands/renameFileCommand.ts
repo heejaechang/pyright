@@ -5,16 +5,21 @@ import { AnalyzerService } from 'pyright-internal/analyzer/service';
 import { isStubFile } from 'pyright-internal/analyzer/sourceMapper';
 import { ServerCommand } from 'pyright-internal/commands/commandController';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
+import { FileEditAction } from 'pyright-internal/common/editAction';
 import { FileSystem } from 'pyright-internal/common/fileSystem';
 import {
     changeAnyExtension,
+    combinePaths,
     convertPathToUri,
     convertUriToPath,
     ensureTrailingDirectorySeparator,
+    getDirectoryChangeKind,
     getFileExtension,
+    isDirectory,
+    isFile,
 } from 'pyright-internal/common/pathUtils';
 import { convertWorkspaceDocumentEdits } from 'pyright-internal/common/workspaceEditUtils';
-import { LanguageServerInterface } from 'pyright-internal/languageServerBase';
+import { LanguageServerInterface, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { AnalyzerServiceExecutor } from 'pyright-internal/languageService/analyzerServiceExecutor';
 import { Localizer } from 'pyright-internal/localization/localize';
 import { ReadOnlyAugmentedFileSystem } from 'pyright-internal/readonlyAugmentedFileSystem';
@@ -58,14 +63,91 @@ export class RenameFileCommand implements ServerCommand {
         }
 
         const args = renameArgs[0];
-        const oldFile = convertUriToPath(this._ls.fs, args.oldUri);
-        const newFile = convertUriToPath(this._ls.fs, args.newUri);
+        const oldPath = convertUriToPath(this._ls.fs, args.oldUri);
+        const newPath = convertUriToPath(this._ls.fs, args.newUri);
 
         // Old and new are same
-        if (oldFile === newFile) {
+        if (oldPath === newPath) {
             return undefined;
         }
 
+        if (isFile(this._ls.fs, newPath)) {
+            return await this._executeFileRename(oldPath, newPath, inTest, token);
+        } else if (isDirectory(this._ls.fs, newPath)) {
+            // We only support rename for directory yet.
+            return await this._executeDirectoryRename(oldPath, newPath, inTest, token);
+        }
+
+        return undefined;
+    }
+
+    private async _executeDirectoryRename(
+        oldDirectory: string,
+        newDirectory: string,
+        inTest: boolean,
+        token: CancellationToken
+    ) {
+        if (getDirectoryChangeKind(this._ls.fs, oldDirectory, newDirectory) !== 'Renamed') {
+            return undefined;
+        }
+
+        // Rename can't change workspace it belongs to.
+        const oldWorkspace = await this._ls.getWorkspaceForFile(oldDirectory);
+        const newWorkspace = await this._ls.getWorkspaceForFile(newDirectory);
+        if (oldWorkspace !== newWorkspace || !newWorkspace.rootPath) {
+            return undefined;
+        }
+
+        const oldDirectoryName = this._getNameRelativeToRoot(oldWorkspace, oldDirectory);
+        const newDirectoryName = this._getNameRelativeToRoot(newWorkspace, newDirectory);
+        if (!(await this._askUserConfirmation(oldDirectoryName, newDirectoryName, inTest, token))) {
+            return undefined;
+        }
+
+        // Create new service to do analysis. Existing service can have a race depending on
+        // when folder change is picked up.
+        const fileSystem = new MoveFileSystem(this._ls.fs, token);
+
+        // Put old folder back so that we can do rename on refactorService
+        fileSystem.moveFolderSync(newDirectory, oldDirectory);
+
+        const refactorService = await AnalyzerServiceExecutor.cloneService(
+            this._ls,
+            newWorkspace,
+            /*typeStubTargetImportName*/ undefined,
+            /*backgroundAnalysis*/ undefined,
+            fileSystem
+        );
+
+        // For any file belongs to the new folder, move back to the old folder.
+        const service = newWorkspace.serviceInstance;
+        for (const opened of service.backgroundAnalysisProgram.program.getOpened()) {
+            const sourceFile = opened.sourceFile;
+            const filePath = sourceFile.getFilePath();
+            if (!filePath.startsWith(newDirectory)) {
+                continue;
+            }
+
+            const version = sourceFile.getClientVersion();
+            if (version !== undefined) {
+                refactorService.setFileClosed(filePath);
+                refactorService.setFileOpened(
+                    fileSystem.convertToOldPath(oldDirectory, newDirectory, filePath),
+                    version,
+                    sourceFile!.getOpenFileContents()!
+                );
+            }
+        }
+
+        const edits = refactorService.renameModule(oldDirectory, newDirectory, token);
+        if (edits === undefined) {
+            return undefined;
+        }
+
+        return this._constructWorkspaceEdits(oldDirectoryName, newDirectoryName, edits, fileSystem);
+    }
+
+    private async _executeFileRename(oldFile: string, newFile: string, inTest: boolean, token: CancellationToken) {
         // We don't support renaming extension.
         const oldExt = getFileExtension(oldFile);
         const newExt = getFileExtension(newFile);
@@ -96,7 +178,7 @@ export class RenameFileCommand implements ServerCommand {
 
         // Create new service to do analysis. Existing service can have a race depending on
         // when file change is picked up.
-        const fileSystem = new MoveFileSystem(service.backgroundAnalysisProgram.importResolver.fileSystem);
+        const fileSystem = new MoveFileSystem(this._ls.fs, token);
         const refactorService = await AnalyzerServiceExecutor.cloneService(
             this._ls,
             newWorkspace,
@@ -128,27 +210,10 @@ export class RenameFileCommand implements ServerCommand {
             }
         }
 
-        const oldModuleName = oldFile.substr(ensureTrailingDirectorySeparator(oldWorkspace.rootPath).length);
-        const newModuleName = newFile.substr(ensureTrailingDirectorySeparator(newWorkspace.rootPath).length);
-        if (!inTest) {
-            // ** For now, let's keep the non-modal message since modal one can be very intrusive. one must
-            //    answer the question to do anything else. it is good when user want the rename otherwise, it is tedious
-            //    clicking no or close window on every single file rename.
-            //
-            //    It might be better if we just do the work always without asking and let user to drop the changes if they don't want
-            //    reference rename.
-            const prompt = await this._ls.window.showErrorMessage(
-                Localizer.Refactoring.moveFile().format({ oldModuleName, newModuleName }),
-                { title: 'Yes', id: 'Yes' },
-                { title: 'No', id: 'No' }
-            );
-
-            // These 2 checks will make sure we don't run 2 commands at the same time.
-            // It can happen due to the "await" above.
-            throwIfCancellationRequested(token);
-            if (!prompt || prompt.id === 'No') {
-                return undefined;
-            }
+        const oldModuleName = this._getNameRelativeToRoot(oldWorkspace, oldFile);
+        const newModuleName = this._getNameRelativeToRoot(newWorkspace, newFile);
+        if (!(await this._askUserConfirmation(oldModuleName, newModuleName, inTest, token))) {
+            return undefined;
         }
 
         // Put old file back so that we can do rename on refactorService
@@ -173,36 +238,17 @@ export class RenameFileCommand implements ServerCommand {
             return undefined;
         }
 
-        // Create change annotation
-        const textEditAnnotation = {
-            label: Localizer.Refactoring.moveFileLabel().format({ oldModuleName, newModuleName }),
-            description: Localizer.Refactoring.moveFileDescription().format({ oldModuleName, newModuleName }),
-            needsConfirmation: true,
-        };
-
-        // It looks like vscode UI doesn't support rename file confirmation.
-        const fileRenameAnnotation = {
-            label: Localizer.Refactoring.moveFileLabel().format({ oldModuleName, newModuleName }),
-            description: Localizer.Refactoring.moveFileDescription().format({ oldModuleName, newModuleName }),
-            needsConfirmation: false,
-        };
-
-        // Convert oldFileName to newFileName
-        const workspaceEdits = convertWorkspaceDocumentEdits(
-            this._ls.fs,
-            edits.map((e) => {
-                if (e.filePath === oldFile) {
-                    e.filePath = newFile;
-                }
-
-                return e;
-            }),
-            { textEdit: textEditAnnotation, fileRename: fileRenameAnnotation },
-            'textEdit'
-        );
+        const workspaceEdits = this._constructWorkspaceEdits(oldModuleName, newModuleName, edits, fileSystem);
 
         // Add rename event
         if (info!.stubFile && info!.pythonFile) {
+            // It looks like vscode UI doesn't support rename file confirmation.
+            workspaceEdits.changeAnnotations!['fileRename'] = {
+                label: Localizer.Refactoring.moveFileLabel().format({ oldModuleName, newModuleName }),
+                description: Localizer.Refactoring.moveFileDescription().format({ oldModuleName, newModuleName }),
+                needsConfirmation: false,
+            };
+
             workspaceEdits.documentChanges?.push(
                 RenameFile.create(
                     convertPathToUri(this._ls.fs, info!.pythonFile),
@@ -214,6 +260,56 @@ export class RenameFileCommand implements ServerCommand {
         }
 
         return workspaceEdits;
+    }
+
+    private _getNameRelativeToRoot(workspace: WorkspaceServiceInstance, path: string) {
+        return path.substr(ensureTrailingDirectorySeparator(workspace.rootPath).length);
+    }
+
+    private _constructWorkspaceEdits(oldName: string, newName: string, edits: FileEditAction[], fs: MoveFileSystem) {
+        // Create change annotation
+        const formatArgument = { oldModuleName: oldName, newModuleName: newName };
+        const textEditAnnotation = {
+            label: Localizer.Refactoring.moveFileLabel().format(formatArgument),
+            description: Localizer.Refactoring.moveFileDescription().format(formatArgument),
+            needsConfirmation: true,
+        };
+
+        // Convert oldFileName to newFileName
+        return convertWorkspaceDocumentEdits(
+            this._ls.fs,
+            edits.map((e) => {
+                const original = fs.getOriginalFilePath(e.filePath);
+                if (e.filePath !== original) {
+                    e.filePath = original;
+                }
+
+                return e;
+            }),
+            { textEdit: textEditAnnotation },
+            'textEdit'
+        );
+    }
+
+    private async _askUserConfirmation(oldName: string, newName: string, inTest: boolean, token: CancellationToken) {
+        if (inTest) {
+            return true;
+        }
+
+        const prompt = await this._ls.window.showErrorMessage(
+            Localizer.Refactoring.moveFile().format({ oldModuleName: oldName, newModuleName: newName }),
+            { title: 'Yes', id: 'Yes' },
+            { title: 'No', id: 'No' }
+        );
+
+        // These 2 checks will make sure we don't run 2 commands at the same time.
+        // It can happen due to the "await" above.
+        throwIfCancellationRequested(token);
+        if (!prompt || prompt.id === 'No') {
+            return false;
+        }
+
+        return true;
     }
 
     private _getStubAndFilePairInfo(
@@ -263,11 +359,39 @@ export class RenameFileCommand implements ServerCommand {
 }
 
 class MoveFileSystem extends ReadOnlyAugmentedFileSystem {
-    constructor(delegateeFS: FileSystem) {
+    constructor(delegateeFS: FileSystem, private _cancellationToken: CancellationToken) {
         super(delegateeFS);
     }
 
     moveFileSync(real: string, fake: string) {
         this._recordMovedEntry(fake, real);
+    }
+
+    moveFolderSync(real: string, fake: string) {
+        this._recordMovedEntry(fake, real, /*reversible*/ true, /*isFile*/ false);
+        this._moveFilesRecursive(real, fake, real);
+    }
+
+    convertToOldPath(oldPath: string, newPath: string, filePath: string) {
+        return combinePaths(oldPath, filePath.substr(ensureTrailingDirectorySeparator(newPath).length));
+    }
+
+    private _moveFilesRecursive(real: string, fake: string, basePath: string) {
+        throwIfCancellationRequested(this._cancellationToken);
+
+        for (const current of this._realFS.readdirEntriesSync(basePath)) {
+            const currentPath = combinePaths(basePath, current.name);
+
+            this._recordMovedEntry(
+                this.convertToOldPath(fake, real, currentPath),
+                currentPath,
+                /*reversible*/ true,
+                current.isFile()
+            );
+
+            if (current.isDirectory()) {
+                this._moveFilesRecursive(real, fake, currentPath);
+            }
+        }
     }
 }
