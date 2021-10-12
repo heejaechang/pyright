@@ -324,6 +324,10 @@ export class Checker extends ParseTreeWalker {
             if (ClassType.isTypedDictClass(classTypeResult.classType)) {
                 this._validateTypedDictClassSuite(node.suite);
             }
+
+            if (ClassType.isEnumClass(classTypeResult.classType)) {
+                this._validateEnumClassOverride(node, classTypeResult.classType);
+            }
         }
 
         this._scopedNodes.push(node);
@@ -340,7 +344,7 @@ export class Checker extends ParseTreeWalker {
             // parameters after this need to be flagged as an error.
             let sawParamSpecArgs = false;
 
-            // Report any unknown parameter types.
+            // Report any unknown or missing parameter types.
             node.parameters.forEach((param, index) => {
                 if (param.name) {
                     // Determine whether this is a P.args parameter.
@@ -370,7 +374,7 @@ export class Checker extends ParseTreeWalker {
                     );
                 }
 
-                // Allow unknown param types if the param is named '_'.
+                // Allow unknown and missing param types if the param is named '_'.
                 if (param.name && param.name.value !== '_') {
                     if (index < functionTypeResult.functionType.details.parameters.length) {
                         const paramType = functionTypeResult.functionType.details.parameters[index].type;
@@ -400,6 +404,26 @@ export class Checker extends ParseTreeWalker {
                                 Localizer.Diagnostic.paramTypePartiallyUnknown().format({
                                     paramName: param.name.value,
                                 }) + diagAddendum.getString(),
+                                param.name
+                            );
+                        }
+
+                        let hasAnnotation = false;
+
+                        if (functionTypeResult.functionType.details.parameters[index].typeAnnotation) {
+                            hasAnnotation = true;
+                        } else {
+                            // See if this is a "self" and "cls" parameter. They are exempt from this rule.
+                            if (isTypeVar(paramType) && paramType.details.isSynthesizedSelfCls) {
+                                hasAnnotation = true;
+                            }
+                        }
+
+                        if (!hasAnnotation) {
+                            this._evaluator.addDiagnostic(
+                                this._fileInfo.diagnosticRuleSet.reportMissingParameterType,
+                                DiagnosticRule.reportMissingParameterType,
+                                Localizer.Diagnostic.paramAnnotationMissing().format({ name: param.name.value }),
                                 param.name
                             );
                         }
@@ -2839,6 +2863,33 @@ export class Checker extends ParseTreeWalker {
                 );
             }
         }
+    }
+
+    // Validates that an enum class does not attempt to override another
+    // enum class that has already defined values.
+    private _validateEnumClassOverride(node: ClassNode, classType: ClassType) {
+        classType.details.baseClasses.forEach((baseClass, index) => {
+            if (isClass(baseClass) && ClassType.isEnumClass(baseClass)) {
+                // Determine whether the base enum class defines an enumerated value.
+                let baseEnumDefinesValue = false;
+
+                baseClass.details.fields.forEach((symbol) => {
+                    const symbolType = this._evaluator.getEffectiveTypeOfSymbol(symbol);
+                    if (isClassInstance(symbolType) && ClassType.isSameGenericClass(symbolType, baseClass)) {
+                        baseEnumDefinesValue = true;
+                    }
+                });
+
+                if (baseEnumDefinesValue) {
+                    this._evaluator.addDiagnostic(
+                        this._fileInfo.diagnosticRuleSet.reportGeneralTypeIssues,
+                        DiagnosticRule.reportGeneralTypeIssues,
+                        Localizer.Diagnostic.enumClassOverride().format({ name: baseClass.details.name }),
+                        node.arguments[index]
+                    );
+                }
+            }
+        });
     }
 
     // Verifies the rules specified in PEP 589 about TypedDict classes.

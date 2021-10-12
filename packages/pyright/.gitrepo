@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/microsoft/pyright.git
 	branch = main
-	commit = d5878534fc467fc70a5b5ac13b8a09c496ffd22e
+	commit = 484c98874385691bb3fbbd3ae4216c07870c8b9b
 	parent = cdef8d8d277cca09cc42b097c8dc5129c7a3c2f9
 	method = merge
 	cmdver = 0.4.1

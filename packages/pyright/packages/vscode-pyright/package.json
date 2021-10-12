@@ -2,7 +2,7 @@
     "name": "vscode-pyright",
     "displayName": "Pyright",
     "description": "VS Code static type checking for Python",
-    "version": "1.1.175",
+    "version": "1.1.177",
     "private": true,
     "license": "MIT",
     "author": {
@@ -512,6 +512,17 @@
                         "reportUnknownMemberType": {
                             "type": "string",
                             "description": "Diagnostics for class or instance variables that have an unknown type.",
+                            "default": "none",
+                            "enum": [
+                                "none",
+                                "information",
+                                "warning",
+                                "error"
+                            ]
+                        },
+                        "reportMissingParameterType": {
+                            "type": "string",
+                            "description": "Diagnostics for parameters that are missing a type annotation.",
                             "default": "none",
                             "enum": [
                                 "none",

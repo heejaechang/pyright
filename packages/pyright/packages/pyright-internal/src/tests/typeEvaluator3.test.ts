@@ -443,6 +443,12 @@ test('Classes7', () => {
     TestUtils.validateResults(analysisResults, 1);
 });
 
+test('Classes8', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['classes8.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('Enums1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums1.py']);
 
@@ -482,9 +488,7 @@ test('Enums6', () => {
 test('Enums7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['enums7.py']);
 
-    // This should generate 3 errors, but one of the checks is currently
-    // disabled. Once this is fixed, we can expect to see 3 errors.
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('TypeGuard1', () => {

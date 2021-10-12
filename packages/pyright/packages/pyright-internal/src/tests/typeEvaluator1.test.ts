@@ -295,6 +295,12 @@ test('TypeNarrowingIsNone2', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowingIsNoneTuple1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingIsNoneTuple1.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('TypeNarrowingLiteral1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingLiteral1.py']);
 
@@ -377,6 +383,12 @@ test('TypeNarrowingTypedDict2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingTypedDict2.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('TypeNarrowingTypedDict3', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingTypedDict3.py']);
+
+    TestUtils.validateResults(analysisResults, 4);
 });
 
 test('typeNarrowingCallable1', () => {
@@ -615,6 +627,12 @@ test('Function16', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function16.py']);
 
     TestUtils.validateResults(analysisResults, 4);
+});
+
+test('Function17', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['function17.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('Annotations1', () => {
@@ -1005,4 +1023,16 @@ test('Slots2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['slots2.py']);
 
     TestUtils.validateResults(analysisResults, 3);
+});
+
+test('Parameters1', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.diagnosticRuleSet.reportMissingParameterType = 'none';
+    const analysisResults1 = TestUtils.typeAnalyzeSampleFiles(['parameters1.py'], configOptions);
+    TestUtils.validateResults(analysisResults1, 0);
+
+    configOptions.diagnosticRuleSet.reportMissingParameterType = 'error';
+    const analysisResults2 = TestUtils.typeAnalyzeSampleFiles(['parameters1.py'], configOptions);
+    TestUtils.validateResults(analysisResults2, 1);
 });
