@@ -21,7 +21,6 @@ export enum Commands {
     dumpFileDebugInfo = 'pylance.dumpFileDebugInfo',
     completionAccepted = 'pylance.completionAccepted',
     executedClientCommand = 'pylance.executedClientCommand',
-    renameFile = 'pylance.renameFile',
 }
 
 export enum ClientCommands {

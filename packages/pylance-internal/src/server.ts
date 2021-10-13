@@ -31,7 +31,7 @@ import {
 
 import { AnalysisResults } from 'pyright-internal/analyzer/analysis';
 import { BackgroundAnalysisProgram } from 'pyright-internal/analyzer/backgroundAnalysisProgram';
-import { ImportResolver } from 'pyright-internal/analyzer/importResolver';
+import { ImportResolver, supportedFileExtensions } from 'pyright-internal/analyzer/importResolver';
 import { MaxAnalysisTime } from 'pyright-internal/analyzer/program';
 import { isPythonBinary } from 'pyright-internal/analyzer/pythonPathUtils';
 import type { BackgroundAnalysisBase } from 'pyright-internal/backgroundAnalysisBase';
@@ -71,7 +71,7 @@ import {
     normalCompletionAcceptedCommand,
 } from './commands/completionAcceptedCommand';
 import { mergeCommands } from './commands/multiCommand';
-import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
+import { IS_DEV, IS_INSIDERS, IS_PR, IS_RELEASE } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -88,6 +88,7 @@ import {
 import { CustomLSP } from './customLSP';
 import type { IntelliCodeExtension } from './intelliCode/extension';
 import { CodeActionProvider as PylanceCodeActionProvider } from './languageService/codeActionProvider';
+import { RenameFileProvider } from './languageService/renameFileProvider';
 import { getSemanticTokens, SemanticTokenProvider } from './languageService/semanticTokenProvider';
 import { createPylanceImportResolver } from './pylanceImportResolver';
 import { AnalysisTracker } from './services/analysisTracker';
@@ -375,6 +376,24 @@ export class PylanceServer extends LanguageServerBase {
             this.client.hasWatchFileCapability = false;
         }
 
+        if (!IS_RELEASE && params.capabilities.workspace?.fileOperations?.willRename) {
+            result.capabilities.workspace = {
+                fileOperations: {
+                    willRename: {
+                        filters: [
+                            {
+                                pattern: {
+                                    glob: `**/*.{${supportedFileExtensions.map((e) => e.substr(1)).join(',')}}`,
+                                    matches: 'file',
+                                },
+                            },
+                            { pattern: { glob: '**', matches: 'folder' } },
+                        ],
+                    },
+                },
+            };
+        }
+
         return result;
     }
 
@@ -448,6 +467,10 @@ export class PylanceServer extends LanguageServerBase {
             this._hostKind = params.isTrusted ? HostKind.FullAccess : HostKind.LimitedAccess;
             this.restart();
         });
+
+        this._connection.workspace.onWillRenameFiles(async (params, token) =>
+            RenameFileProvider.renameFiles(this, this._telemetry, params, token)
+        );
     }
 
     protected override createHost() {
@@ -480,7 +503,6 @@ export class PylanceServer extends LanguageServerBase {
             case Commands.createTypeStub:
             case PyRightCommands.createTypeStub:
             case PyRightCommands.restartServer:
-            case Commands.renameFile:
                 return true;
         }
         return false;

@@ -19,7 +19,6 @@ import { CompletionAcceptedCommand } from './completionAcceptedCommand';
 import { DumpFileDebugInfoCommand } from './dumpFileDebugInfoCommand';
 import { ExtractMethodCommand, ExtractVariableCommand } from './extractCommands';
 import { QuickActionCommand } from './quickActionCommand';
-import { RenameFileCommand } from './renameFileCommand';
 
 export interface ServerCommand {
     execute(cmdParams: ExecuteCommandParams, token: CancellationToken): Promise<any>;
@@ -37,7 +36,6 @@ const _userInitiatedTelemetryCommands: Set<string> = new Set([
     Commands.extractMethod,
     Commands.extractVariable,
     Commands.executedClientCommand,
-    Commands.renameFile,
 ]);
 
 export class CommandController extends PyrightCommandController {
@@ -46,7 +44,6 @@ export class CommandController extends PyrightCommandController {
     private _extractVariable: ExtractVariableCommand;
     private _dumpFileDebugInfo: DumpFileDebugInfoCommand;
     private _completionAccepted: CompletionAcceptedCommand;
-    private _renameFile: RenameFileCommand;
 
     private _pyrightCommandMap = new Map<string, string>([
         [Commands.createTypeStub, PyrightCommands.createTypeStub],
@@ -69,7 +66,6 @@ export class CommandController extends PyrightCommandController {
         this._extractVariable = new ExtractVariableCommand(_ls, hasVSCodeExtension);
         this._dumpFileDebugInfo = new DumpFileDebugInfoCommand(_ls);
         this._completionAccepted = new CompletionAcceptedCommand(_telemetry);
-        this._renameFile = new RenameFileCommand(_ls);
     }
 
     static supportedCommands() {
@@ -89,7 +85,6 @@ export class CommandController extends PyrightCommandController {
             Commands.dumpFileDebugInfo,
             Commands.completionAccepted,
             Commands.executedClientCommand,
-            Commands.renameFile,
         ];
     }
 
@@ -108,8 +103,6 @@ export class CommandController extends PyrightCommandController {
                 return await this._dumpFileDebugInfo.execute(cmdParams, token);
             case Commands.completionAccepted:
                 return await this._completionAccepted.execute(cmdParams, token);
-            case Commands.renameFile:
-                return await this._renameFile.execute(cmdParams, token);
         }
 
         const pyrightCommand = this._pyrightCommandMap.get(cmdParams.command);

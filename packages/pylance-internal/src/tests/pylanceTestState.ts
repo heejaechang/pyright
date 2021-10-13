@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import assert from 'assert';
 import {
     CancellationToken,
     Command,
@@ -11,12 +11,16 @@ import {
     WorkspaceEdit,
 } from 'vscode-languageserver';
 
+import { isArray } from 'pyright-internal/common/core';
 import { Range as PositionRange } from 'pyright-internal/common/textRange';
 import { FourSlashData, Range } from 'pyright-internal/tests/harness/fourslash/fourSlashTypes';
+import { TestLanguageService } from 'pyright-internal/tests/harness/fourslash/testLanguageService';
 import { HostSpecificFeatures, TestState } from 'pyright-internal/tests/harness/fourslash/testState';
 //import * as host from 'pyright-internal/tests/harness/host';
 import { stringify } from 'pyright-internal/tests/harness/utils';
 
+import { TelemetryEventInterface, TelemetryInterface } from '../common/telemetry';
+import { RenameFileProvider } from '../languageService/renameFileProvider';
 import { getSemanticTokens, SemanticTokenProvider } from '../languageService/semanticTokenProvider';
 import { updateInsertTextForAutoParensIfNeeded } from '../server';
 
@@ -107,7 +111,34 @@ export class PylanceTestState extends TestState {
             }
         }
 
+        if (!commandResult) {
+            // Make sure when we didn't get any result, we don't expect any result.
+            if (isArray(edits)) {
+                assert.strictEqual(0, edits.length);
+            } else {
+                assert.strictEqual(0, edits.changes ? Object.keys(edits.changes).length : 0);
+                assert.strictEqual(0, edits.documentChanges?.length ?? 0);
+                assert.strictEqual(0, edits.changeAnnotations ? Object.keys(edits.changeAnnotations).length : 0);
+            }
+        }
+
         return commandResult;
+    }
+
+    async verifyRenameFiles(oldPath: string, newPath: string, edits: WorkspaceEdit | null): Promise<any> {
+        const actualEdits = await RenameFileProvider.renameFiles(
+            new TestLanguageService(this.workspace, this.console, this.fs),
+            new TestTelemetryService(),
+            { files: [{ oldUri: this.convertPathToUri(oldPath), newUri: this.convertPathToUri(newPath) }] },
+            CancellationToken.None
+        );
+
+        if (actualEdits) {
+            assert(edits);
+            this.verifyWorkspaceEdit(edits, actualEdits);
+        } else {
+            assert.strictEqual(actualEdits, edits);
+        }
     }
 
     verifySemanticTokens(
@@ -295,5 +326,11 @@ export class PylanceTestState extends TestState {
         }
 
         super.verifyCompletionItem(expected, actual);
+    }
+}
+
+class TestTelemetryService implements TelemetryInterface {
+    sendTelemetry(event: TelemetryEventInterface): void {
+        // Do nothing.
     }
 }

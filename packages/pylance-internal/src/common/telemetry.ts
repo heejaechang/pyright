@@ -36,6 +36,7 @@ export enum TelemetryEventName {
     SETTINGS = 'settings',
     STARTUP_METRICS = 'startup_metrics',
     INSTALLED_PACKAGES = 'installed_packages',
+    RENAME_FILES = 'rename_files',
 }
 
 const statsDelayMs = 5 * 1000 * 60; // 5 minutes

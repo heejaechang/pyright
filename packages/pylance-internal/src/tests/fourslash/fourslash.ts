@@ -9,5 +9,6 @@ declare namespace _ {
         verifyExtractMethod(marker: string, edits: string[]): Promise<any>;
         verifyExtractVariable(marker: string, edits: string[]): Promise<any>;
         verifyPylanceCommand(command: Command, edits: string[] | WorkspaceEdit): Promise<any>;
+        verifyRenameFiles(oldPath: string, newPath: string, edits: WorkspaceEdit): Promise<any>;
     }
 }
