@@ -308,6 +308,8 @@ export namespace Localizer {
         export const duplicateUnpack = () => getRawString('Diagnostic.duplicateUnpack');
         export const ellipsisContext = () => getRawString('Diagnostic.ellipsisContext');
         export const ellipsisSecondArg = () => getRawString('Diagnostic.ellipsisSecondArg');
+        export const enumClassOverride = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.enumClassOverride'));
         export const exceptionTypeIncorrect = () =>
             new ParameterizedString<{ type: string }>(getRawString('Diagnostic.exceptionTypeIncorrect'));
         export const exceptionTypeNotClass = () =>
@@ -473,7 +475,7 @@ export namespace Localizer {
             );
         export const methodReturnsNonObject = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.methodReturnsNonObject'));
-        export const moduleContext = () => getRawString('Diagnostic.moduleContext');
+        export const moduleAsType = () => getRawString('Diagnostic.moduleAsType');
         export const moduleUnknownMember = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.moduleUnknownMember'));
         export const namedExceptAfterCatchAll = () => getRawString('Diagnostic.namedExceptAfterCatchAll');
@@ -550,6 +552,8 @@ export namespace Localizer {
         export const paramAfterKwargsParam = () => getRawString('Diagnostic.paramAfterKwargsParam');
         export const paramAlreadyAssigned = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramAlreadyAssigned'));
+        export const paramAnnotationMissing = () =>
+            new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramAnnotationMissing'));
         export const paramNameMissing = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.paramNameMissing'));
         export const paramSpecArgsKwargsUsage = () => getRawString('Diagnostic.paramSpecArgsKwargsUsage');
@@ -869,6 +873,8 @@ export namespace Localizer {
         export const dataclassFrozen = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.dataclassFrozen'));
         export const finalMethod = () => getRawString('DiagnosticAddendum.finalMethod');
+        export const functionParamDefaultMissing = () =>
+            new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.functionParamDefaultMissing'));
         export const functionParamName = () =>
             new ParameterizedString<{ destName: string; srcName: string }>(
                 getRawString('DiagnosticAddendum.functionParamName')
@@ -973,6 +979,8 @@ export namespace Localizer {
             new ParameterizedString<{ module: string }>(
                 getRawString('DiagnosticAddendum.privateImportFromPyTypedSource')
             );
+        export const propertyAccessFromProtocolClass = () =>
+            getRawString('DiagnosticAddendum.propertyAccessFromProtocolClass');
         export const propertyMethodIncompatible = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.propertyMethodIncompatible'));
         export const propertyMethodMissing = () =>

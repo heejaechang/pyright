@@ -187,7 +187,17 @@ export function mapSubtypes(type: Type, callback: (type: Type) => Type | undefin
             }
         });
 
-        return typeChanged ? combineTypes(newSubtypes) : type;
+        if (!typeChanged) {
+            return type;
+        }
+
+        const newType = combineTypes(newSubtypes);
+
+        // Do our best to retain type aliases.
+        if (newType.category === TypeCategory.Union) {
+            UnionType.addTypeAliasSource(newType, type);
+        }
+        return newType;
     }
 
     const transformedSubtype = callback(type);
@@ -1979,8 +1989,6 @@ function _transformTypeVarsInClassType(
                     specializationNeeded = true;
                     return transformedSelfCls;
                 }
-
-                return oldTypeArgType;
             }
 
             let newTypeArgType = _transformTypeVars(oldTypeArgType, callbacks, recursionSet, recursionLevel + 1);
