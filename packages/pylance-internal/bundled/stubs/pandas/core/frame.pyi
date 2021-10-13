@@ -57,7 +57,7 @@ class _iLocIndexerFrame(_iLocIndexer):
 
 class _LocIndexerFrame(_LocIndexer):
     @overload
-    def __getitem__(self, idx: Union[Union[IndexType, MaskType], List[StrLike], Tuple[Union[IndexType, MaskType, slice, List[StrLike]], Union[List[StrLike], slice, Series[bool]]]],) -> DataFrame: ...
+    def __getitem__(self, idx: Union[Union[IndexType, MaskType], List[StrLike], Tuple[Union[IndexType, MaskType, slice, List[StrLike], Tuple[Union[str, int, slice], ...]], Union[List[StrLike], slice, Series[bool]]]],) -> DataFrame: ...
     @overload
     def __getitem__(self, idx: Tuple[Union[StrLike, Tuple[StrLike, ...]], StrLike],) -> Scalar: ...
     @overload
@@ -67,11 +67,13 @@ class _LocIndexerFrame(_LocIndexer):
     @overload
     def __getitem__(self, idx: Tuple[Union[IndexType, MaskType], StrLike],) -> Series[Dtype]: ...    
     @overload
+    def __getitem__(self, idx: Tuple[Tuple[Union[StrLike, slice], ...], StrLike],) -> Series[Dtype]: ...
+    @overload
     def __getitem__(self, idx: Index) -> DataFrame: ...
 
     def __setitem__(
         self,
-        idx: Union[MaskType, StrLike, Tuple[Union[MaskType, Index, List[Scalar], Scalar], Union[MaskType, List[Scalar], Scalar]],],
+        idx: Union[MaskType, StrLike, Tuple[Union[MaskType, Index, Sequence[Scalar], Series[_bool], Scalar], Union[MaskType, Sequence[Scalar], Scalar]],],
         value: Union[Scalar, _np.ndarray, Series[Dtype], DataFrame],
     ) -> None: ...
 

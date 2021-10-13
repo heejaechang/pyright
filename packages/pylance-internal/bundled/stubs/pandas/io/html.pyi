@@ -1,6 +1,6 @@
 from pandas._typing import FilePathOrBuffer as FilePathOrBuffer
 from pandas.core.frame import DataFrame as DataFrame
-from typing import Any, Dict, Callable, Iterable, List, Mapping, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Union
 
 class _HtmlFrameParser:
     io = ...
