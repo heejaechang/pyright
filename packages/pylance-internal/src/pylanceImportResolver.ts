@@ -32,10 +32,10 @@ import {
 } from 'pyright-internal/common/pathUtils';
 import { PyrightFileSystem } from 'pyright-internal/pyrightFileSystem';
 
-import { IS_DEV, IS_INSIDERS, IS_PR } from './common/constants';
+import { IS_RELEASE } from './common/constants';
 import type { PylanceFullAccessHost } from './common/pylanceFullAccessHost';
 import {
-    addMeasurementsToEvent,
+    addMapToEvent,
     hashModuleNamesAndAddToEvent,
     hashString,
     TelemetryEvent,
@@ -132,7 +132,7 @@ export class ImportMetrics {
     }
 
     addUnresolvedModule(moduleName: string): void {
-        if (IS_INSIDERS || IS_DEV || IS_PR) {
+        if (!IS_RELEASE) {
             this._addModule(this._reportedUnresolvedModules, this._currentUnresolvedModules, moduleName);
         }
     }
@@ -164,7 +164,7 @@ export class ImportMetrics {
 
         //send import metrics
         const importEvent = new TelemetryEvent(TelemetryEventName.IMPORT_METRICS);
-        addMeasurementsToEvent(importEvent, this);
+        addMapToEvent(importEvent, this);
 
         addModuleNamesToEvent(
             'Native',
@@ -323,7 +323,7 @@ export class PylanceImportResolver extends ImportResolver {
     }
 
     private _sendInstalledPackagesTelemetry(telemetry: TelemetryInterface) {
-        if (this._installedPackagesReported || !(IS_INSIDERS || IS_DEV || IS_PR)) {
+        if (this._installedPackagesReported || IS_RELEASE) {
             return;
         }
 

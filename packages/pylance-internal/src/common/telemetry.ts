@@ -7,7 +7,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Connection } from 'vscode-languageserver';
 
-import { isString, isThenable } from 'pyright-internal/common/core';
+import { isNumber, isString, isThenable } from 'pyright-internal/common/core';
 import { assert, getSerializableError } from 'pyright-internal/common/debug';
 import { Duration, timingStats } from 'pyright-internal/common/timing';
 import { CompletionResults, MemberAccessInfo } from 'pyright-internal/languageService/completionProvider';
@@ -119,26 +119,13 @@ export function sendExceptionTelemetry(
     service?.sendTelemetry(new TelemetryEvent(eventName, e));
 }
 
-export function sendMeasurementsTelemetry(
-    service: TelemetryInterface | undefined,
-    eventName: TelemetryEventName,
-    metrics: Object
-) {
-    if (!service) {
-        return;
-    }
-
-    const te = new TelemetryEvent(eventName);
-    addMeasurementsToEvent(te, metrics);
-
-    service.sendTelemetry(te);
-}
-
-export function addMeasurementsToEvent(te: TelemetryEvent, metrics: Object) {
+export function addMapToEvent(te: TelemetryEvent, metrics: Object) {
     for (const [key, value] of Object.entries(metrics)) {
-        if (typeof value === 'number') {
+        if (isNumber(value)) {
             const current = te.Measurements[key] || 0;
             te.Measurements[key] = current + value;
+        } else if (isString(value)) {
+            te.Properties[key] = value;
         }
     }
     return te;
@@ -311,7 +298,8 @@ export namespace CompletionCoverage {
 
 export interface TrackPerfCustomMeasures {
     setCorrelationId: (id: string) => void;
-    addCustomMeasure: (name: string, measure: number, minimum?: number) => void;
+    addCustomMeasure: (name: string, value: number, minimum?: number, prefix?: string) => void;
+    addCustomProperty: (name: string, value: string, prefix?: string) => void;
 }
 
 export function trackPerf<T>(
@@ -350,7 +338,7 @@ export function trackPerf<T>(
 
     let map:
         | {
-              [key: string]: number;
+              [key: string]: number | string;
           }
         | undefined;
 
@@ -359,14 +347,21 @@ export function trackPerf<T>(
         setCorrelationId(id: string) {
             correlationId = id;
         },
-        addCustomMeasure(name: string, measure: number, minimum: number | undefined) {
+        addCustomMeasure(name: string, measure: number, minimum: number | undefined, prefix = 'custom_') {
             if (!map) {
                 map = {};
             }
 
             if (minimum === undefined || measure >= minimum) {
-                map[`custom_${name}`] = measure;
+                map[`${prefix}${name}`] = measure;
             }
+        },
+        addCustomProperty(name: string, value: string, prefix = 'custom_') {
+            if (!map) {
+                map = {};
+            }
+
+            map[`${prefix}${name}`] = value;
         },
     };
 
@@ -389,7 +384,7 @@ export function trackPerf<T>(
             const event = new TelemetryEvent(eventName);
 
             if (map) {
-                addMeasurementsToEvent(event, map);
+                addMapToEvent(event, map);
             }
 
             event.Measurements['readFileCallCount'] = timingStats.readFileTime.callCount - readCallCount;

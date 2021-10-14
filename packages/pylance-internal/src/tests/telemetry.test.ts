@@ -11,7 +11,6 @@ import { Connection, Telemetry } from 'vscode-languageserver';
 import {
     formatEventName,
     sendExceptionTelemetry,
-    sendMeasurementsTelemetry,
     TelemetryEvent,
     TelemetryEventName,
     TelemetryService,
@@ -30,25 +29,6 @@ describe('Telemetry', () => {
         const connection = instance(mockedConnection);
 
         ts = new TelemetryService(connection);
-    });
-
-    test('send measurements', () => {
-        const m: {
-            [key: string]: number;
-        } = {};
-
-        m['m1'] = 1;
-        m['m2'] = 2;
-        sendMeasurementsTelemetry(ts, TelemetryEventName.ANALYSIS_COMPLETE, m);
-
-        const [arg] = capture(mockedTelemetry.logEvent).first();
-        const te = arg as TelemetryEvent;
-
-        verify(mockedTelemetry.logEvent(te)).once();
-        assert(te instanceof TelemetryEvent);
-        expect(te.EventName === formatEventName(TelemetryEventName.ANALYSIS_COMPLETE));
-        expect(te.Measurements['m1']).toEqual(1);
-        expect(te.Measurements['m2']).toEqual(2);
     });
 
     [undefined, 'Stack'].forEach((stack) => {

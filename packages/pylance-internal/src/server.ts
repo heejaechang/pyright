@@ -71,7 +71,7 @@ import {
     normalCompletionAcceptedCommand,
 } from './commands/completionAcceptedCommand';
 import { mergeCommands } from './commands/multiCommand';
-import { IS_DEV, IS_INSIDERS, IS_PR, IS_RELEASE } from './common/constants';
+import { IS_INSIDERS, IS_INTERNAL } from './common/constants';
 import { wellKnownAbbreviationMap } from './common/importUtils';
 import { LogService } from './common/logger';
 import { Platform } from './common/platform';
@@ -135,6 +135,8 @@ export class PylanceServer extends LanguageServerBase {
     private _hasTrustedWorkspaceSupport?: boolean;
     private _hostKind: HostKind = HostKind.LimitedAccess;
 
+    private _renameFileEnabled = false;
+
     protected override _serverOptions!: PylanceServerOptions;
 
     constructor(
@@ -180,10 +182,13 @@ export class PylanceServer extends LanguageServerBase {
         // using JSON since it is a pure record type (no circular reference nor function)
         const serverSettings: PylanceServerSettings = JSON.parse(JSON.stringify(this._defaultSettings));
 
+        this._renameFileEnabled = (await this._inExperiment('pylanceRenameFile')) ?? false;
+
         if (IS_INSIDERS) {
             serverSettings.indexing = true;
-        } else if (IS_DEV || IS_PR) {
+        } else if (IS_INTERNAL) {
             serverSettings.indexing = true;
+            this._renameFileEnabled = true;
         } else {
             const indexingExperiment = await this._inExperiment('pylanceIndexingEnabled');
             serverSettings.indexing = indexingExperiment ?? false;
@@ -376,7 +381,7 @@ export class PylanceServer extends LanguageServerBase {
             this.client.hasWatchFileCapability = false;
         }
 
-        if (!IS_RELEASE && params.capabilities.workspace?.fileOperations?.willRename) {
+        if (params.capabilities.workspace?.fileOperations?.willRename) {
             result.capabilities.workspace = {
                 fileOperations: {
                     willRename: {
@@ -468,9 +473,13 @@ export class PylanceServer extends LanguageServerBase {
             this.restart();
         });
 
-        this._connection.workspace.onWillRenameFiles(async (params, token) =>
-            RenameFileProvider.renameFiles(this, this._telemetry, params, token)
-        );
+        this._connection.workspace.onWillRenameFiles(async (params, token) => {
+            if (!this._renameFileEnabled) {
+                return null;
+            }
+
+            return await RenameFileProvider.renameFiles(this, this._telemetry, params, token);
+        });
     }
 
     protected override createHost() {

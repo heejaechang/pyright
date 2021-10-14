@@ -18,7 +18,7 @@ import { convertWorkspaceDocumentEdits } from 'pyright-internal/common/workspace
 import { LanguageServerInterface, WorkspaceServiceInstance } from 'pyright-internal/languageServerBase';
 import { Localizer } from 'pyright-internal/localization/localize';
 
-import { TelemetryEvent, TelemetryEventName, TelemetryInterface } from '../common/telemetry';
+import { TelemetryEventName, TelemetryInterface, trackPerf, TrackPerfCustomMeasures } from '../common/telemetry';
 
 export class RenameFileProvider {
     static async renameFiles(
@@ -27,22 +27,38 @@ export class RenameFileProvider {
         cmdParams: RenameFilesParams,
         token: CancellationToken
     ): Promise<WorkspaceEdit | null> {
-        const provider = new RenameFileProvider(ls, telemetry);
-        return provider._renameFiles(cmdParams, token);
+        return trackPerf(
+            telemetry,
+            TelemetryEventName.RENAME_FILES,
+            async (s) => {
+                const provider = new RenameFileProvider(ls);
+                const results = await provider._renameFiles(cmdParams, token);
+                this._setMatrix(results.renameType, results.edits, s);
+
+                return (results.edits?.documentChanges?.length ?? 0) > 0 ? results.edits : null;
+            },
+            0
+        );
     }
 
-    constructor(private _ls: LanguageServerInterface, private _telemetry: TelemetryInterface) {}
+    constructor(private _ls: LanguageServerInterface) {}
 
-    private async _renameFiles(cmdParams: RenameFilesParams, token: CancellationToken): Promise<WorkspaceEdit | null> {
+    private async _renameFiles(
+        cmdParams: RenameFilesParams,
+        token: CancellationToken
+    ): Promise<{ renameType: string; edits: WorkspaceEdit | null }> {
+        let renameType = 'unknown';
+        let edits: WorkspaceEdit | null = null;
+
         if (cmdParams.files.length !== 1) {
             // We only support renaming 1 file at a time since file rename on filesystem and LSP call happens concurrently.
             // If text is changed inside of a file that got renamed as well we can't support those nested case for now.
-            return null;
+            return { renameType, edits };
         }
 
         if (!this._ls.supportAdvancedEdits) {
             // Client doesn't support capabilities needed for this command.
-            return null;
+            return { renameType, edits };
         }
 
         const args = cmdParams.files[0];
@@ -51,11 +67,8 @@ export class RenameFileProvider {
 
         // Old and new are same
         if (oldPath === newPath) {
-            return null;
+            return { renameType, edits };
         }
-
-        let renameType = 'unknown';
-        let edits: WorkspaceEdit | null = null;
 
         if (isFile(this._ls.fs, oldPath)) {
             renameType = 'file';
@@ -66,8 +79,7 @@ export class RenameFileProvider {
             edits = await this._executeDirectoryRename(oldPath, newPath, token);
         }
 
-        this._sendTelemetry(renameType, edits);
-        return (edits?.documentChanges?.length ?? 0) > 0 ? edits : null;
+        return { renameType, edits };
     }
 
     private async _executeDirectoryRename(oldDirectory: string, newDirectory: string, token: CancellationToken) {
@@ -262,18 +274,24 @@ export class RenameFileProvider {
         return { stubFile, pythonFile: resolvedPath };
     }
 
-    private _sendTelemetry(renameType: string, edits: WorkspaceEdit | null) {
-        const event = new TelemetryEvent(TelemetryEventName.RENAME_FILES);
+    private static _setMatrix(renameType: string, edits: WorkspaceEdit | null, state: TrackPerfCustomMeasures) {
+        state.addCustomProperty('type', renameType, /*prefix*/ '');
 
-        event.Properties['type'] = renameType;
         if (edits?.documentChanges) {
-            event.Measurements['affectedFilesCount'] = edits.documentChanges.length;
+            state.addCustomMeasure(
+                'affectedFilesCount',
+                edits.documentChanges.length,
+                /*minimum*/ undefined,
+                /*prefix*/ ''
+            );
         }
 
         if (renameType === 'file') {
-            event.Properties['fileRenamed'] = edits?.changeAnnotations?.['fileRename'] ? 'true' : 'false';
+            state.addCustomProperty(
+                'fileRenamed',
+                edits?.changeAnnotations?.['fileRename'] ? 'true' : 'false',
+                /*prefix*/ ''
+            );
         }
-
-        this._telemetry.sendTelemetry(event);
     }
 }

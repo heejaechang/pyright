@@ -17,3 +17,4 @@ export const IS_DEV = VERSION.indexOf('-dev') !== -1;
 export const IS_PR = VERSION.indexOf('-pr.') !== -1;
 
 export const IS_RELEASE = !IS_INSIDERS && !IS_DEV && !IS_PR;
+export const IS_INTERNAL = IS_DEV || IS_PR;
