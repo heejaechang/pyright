@@ -151,8 +151,8 @@ export const enum CanAssignFlags {
 
 interface TypeVarTransformer {
     transformTypeVar: (typeVar: TypeVarType) => Type;
-    transformVariadicTypeVar: (paramSpec: TypeVarType) => Type[] | undefined;
-    transformParamSpec: (paramSpec: TypeVarType) => ParamSpecValue | undefined;
+    transformVariadicTypeVar?: (paramSpec: TypeVarType) => Type[] | undefined;
+    transformParamSpec?: (paramSpec: TypeVarType) => ParamSpecValue | undefined;
     transformUnion?: (type: UnionType) => Type;
 }
 
@@ -633,16 +633,38 @@ export function isOpenEndedTupleClass(type: ClassType) {
 
 // Partially specializes a type within the context of a specified
 // (presumably specialized) class.
-export function partiallySpecializeType(type: Type, contextClassType: ClassType): Type {
+export function partiallySpecializeType(
+    type: Type,
+    contextClassType: ClassType,
+    exemptTypeVarReplacement = false
+): Type {
     // If the context class is not specialized (or doesn't need specialization),
     // then there's no need to do any more work.
-    if (ClassType.isGeneric(contextClassType)) {
+    if (ClassType.isUnspecialized(contextClassType)) {
         return type;
     }
 
     // Partially specialize the type using the specialized class type vars.
-    const typeVarMap = buildTypeVarMapFromSpecializedClass(contextClassType);
+    const typeVarMap = buildTypeVarMapFromSpecializedClass(
+        contextClassType,
+        /* makeConcrete */ undefined,
+        exemptTypeVarReplacement
+    );
     return applySolvedTypeVars(type, typeVarMap);
+}
+
+// If one of the exempt type variables appears within the type, it is replaced
+// with a clone that indicates the TypeVar should not be replaced when
+// applySolvedTypeVars is called.
+export function markTypeVarsReplacementExempt(type: Type, exemptTypeVars: TypeVarType[]): Type {
+    return _transformTypeVars(type, {
+        transformTypeVar: (typeVar: TypeVarType) => {
+            if (exemptTypeVars.some((exemptTypeVar) => isTypeSame(typeVar, exemptTypeVar))) {
+                return TypeVarType.cloneAsExemptFromReplacement(typeVar);
+            }
+            return typeVar;
+        },
+    });
 }
 
 // Specializes a (potentially generic) type by substituting
@@ -663,7 +685,7 @@ export function applySolvedTypeVars(
         transformTypeVar: (typeVar: TypeVarType) => {
             // If the type variable is unrelated to the scopes we're solving,
             // don't transform that type variable.
-            if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId)) {
+            if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId) && !typeVar.isExemptFromReplacement) {
                 let replacement = typeVarMap.getTypeVarType(typeVar, useNarrowBoundOnly);
                 if (replacement) {
                     if (TypeBase.isInstantiable(typeVar)) {
@@ -1055,7 +1077,7 @@ export function getTypeVarArgumentsRecursive(type: Type, recursionCount = 0): Ty
 // type parameters are used as type arguments. This is useful
 // for typing "self" or "cls" within a class's implementation.
 export function selfSpecializeClassType(type: ClassType, includeSubclasses = false): ClassType {
-    if (!ClassType.isGeneric(type) && !includeSubclasses) {
+    if (!ClassType.isUnspecialized(type) && !includeSubclasses) {
         return type;
     }
 
@@ -1152,7 +1174,11 @@ export function setTypeArgumentsRecursive(destType: Type, srcType: Type, typeVar
 // types. For example, if the generic type is Dict[_T1, _T2] and the
 // specialized type is Dict[str, int], it returns a map that associates
 // _T1 with str and _T2 with int.
-export function buildTypeVarMapFromSpecializedClass(classType: ClassType, makeConcrete = true): TypeVarMap {
+export function buildTypeVarMapFromSpecializedClass(
+    classType: ClassType,
+    makeConcrete = true,
+    exemptTypeVarReplacement = false
+): TypeVarMap {
     const typeParameters = ClassType.getTypeParameters(classType);
     let typeArguments = classType.typeArguments;
 
@@ -1161,6 +1187,8 @@ export function buildTypeVarMapFromSpecializedClass(classType: ClassType, makeCo
     // fill in concrete types.
     if (!typeArguments && !makeConcrete) {
         typeArguments = typeParameters;
+    } else if (exemptTypeVarReplacement) {
+        typeArguments = typeArguments?.map((typeArg) => markTypeVarsReplacementExempt(typeArg, typeParameters));
     }
 
     const typeVarMap = buildTypeVarMap(typeParameters, typeArguments, getTypeVarScopeId(classType));
@@ -1191,6 +1219,7 @@ export function buildTypeVarMap(
                                 category: param.category,
                                 name: param.name,
                                 hasDefault: !!param.hasDefault,
+                                isNameSynthesized: param.isNameSynthesized,
                                 type: param.type,
                             });
                         });
@@ -1761,7 +1790,7 @@ function _removeParamSpecVariadicsFromFunction(type: FunctionType): FunctionType
     }
 
     const paramCount = type.details.parameters.length;
-    if (paramCount <= 2) {
+    if (paramCount < 2) {
         return type;
     }
 
@@ -1935,32 +1964,35 @@ function _transformTypeVarsInClassType(
     const typeParams = ClassType.getTypeParameters(classType);
 
     const transformParamSpec = (paramSpec: TypeVarType) => {
-        const paramSpecEntries = callbacks.transformParamSpec(paramSpec);
-        if (paramSpecEntries) {
-            specializationNeeded = true;
+        if (callbacks.transformParamSpec) {
+            const paramSpecEntries = callbacks.transformParamSpec(paramSpec);
+            if (paramSpecEntries) {
+                specializationNeeded = true;
 
-            if (paramSpecEntries.concrete) {
-                // Create a function type from the param spec entries.
-                const functionType = FunctionType.createInstance('', '', '', FunctionTypeFlags.ParamSpecValue);
+                if (paramSpecEntries.concrete) {
+                    // Create a function type from the param spec entries.
+                    const functionType = FunctionType.createInstance('', '', '', FunctionTypeFlags.ParamSpecValue);
 
-                paramSpecEntries.concrete.parameters.forEach((entry) => {
-                    FunctionType.addParameter(functionType, {
-                        category: entry.category,
-                        name: entry.name,
-                        hasDefault: entry.hasDefault,
-                        hasDeclaredType: true,
-                        type: entry.type,
+                    paramSpecEntries.concrete.parameters.forEach((entry) => {
+                        FunctionType.addParameter(functionType, {
+                            category: entry.category,
+                            name: entry.name,
+                            hasDefault: entry.hasDefault,
+                            isNameSynthesized: entry.isNameSynthesized,
+                            hasDeclaredType: true,
+                            type: entry.type,
+                        });
                     });
-                });
 
-                return functionType;
-            }
+                    return functionType;
+                }
 
-            if (paramSpecEntries.paramSpec) {
-                return paramSpecEntries.paramSpec;
+                if (paramSpecEntries.paramSpec) {
+                    return paramSpecEntries.paramSpec;
+                }
+            } else {
+                return UnknownType.create();
             }
-        } else {
-            return UnknownType.create();
         }
 
         return paramSpec;
@@ -2059,9 +2091,11 @@ function _transformTypeVarsInClassType(
                 }
             });
         } else if (typeParams.length > 0) {
-            newVariadicTypeArgs = callbacks.transformVariadicTypeVar(typeParams[0]);
-            if (newVariadicTypeArgs) {
-                specializationNeeded = true;
+            if (callbacks.transformVariadicTypeVar) {
+                newVariadicTypeArgs = callbacks.transformVariadicTypeVar(typeParams[0]);
+                if (newVariadicTypeArgs) {
+                    specializationNeeded = true;
+                }
             }
         }
     }
@@ -2089,7 +2123,7 @@ function _transformTypeVarsInFunctionType(
     let functionType = sourceType;
 
     // Handle functions with a parameter specification in a special manner.
-    if (functionType.details.paramSpec) {
+    if (functionType.details.paramSpec && callbacks.transformParamSpec) {
         const paramSpec = callbacks.transformParamSpec(functionType.details.paramSpec);
         if (paramSpec) {
             functionType = FunctionType.cloneForParamSpec(functionType, paramSpec);
@@ -2126,6 +2160,7 @@ function _transformTypeVarsInFunctionType(
         );
 
         if (
+            callbacks.transformParamSpec &&
             argsParam.category === ParameterCategory.VarArgList &&
             kwargsParam.category === ParameterCategory.VarArgDictionary &&
             isParamSpec(argsParamType) &&
