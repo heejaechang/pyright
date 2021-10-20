@@ -20,8 +20,8 @@ import { ClassType, FunctionTypeFlags, TypeCategory } from 'pyright-internal/ana
 import { isProperty } from 'pyright-internal/analyzer/typeUtils';
 import { throwIfCancellationRequested } from 'pyright-internal/common/cancellationUtils';
 import { assertDefined } from 'pyright-internal/common/debug';
-import { convertOffsetsToRange, convertOffsetToPosition } from 'pyright-internal/common/positionUtils';
-import { doRangesOverlap, Range } from 'pyright-internal/common/textRange';
+import { convertOffsetToPosition, convertRangeToTextRange } from 'pyright-internal/common/positionUtils';
+import { Range, TextRange } from 'pyright-internal/common/textRange';
 import {
     CaseNode,
     ConstantNode,
@@ -180,15 +180,19 @@ class TokenWalker extends ParseTreeWalker {
     // This is only done for nodes whose info we need more than once during the
     // parse tree walk.
     private _cachedNodeTokenInfo = new Map<ParseNode, TokenInfo | undefined>();
+    private _range: TextRange | undefined;
 
     constructor(
         private _builder: SemanticTokensBuilder,
         private _parseResults: ParseResults,
         private _evaluator: TypeEvaluator,
-        private _range: Range | undefined,
+        range: Range | undefined,
         private _cancellationToken: CancellationToken
     ) {
         super();
+        if (range) {
+            this._range = convertRangeToTextRange(range, this._parseResults.tokenizerOutput.lines);
+        }
     }
 
     override visitSuite(node: SuiteNode) {
@@ -228,11 +232,19 @@ class TokenWalker extends ParseTreeWalker {
 
     // Emit keywords for match/case; VS Code doesn't have these in its TextMate grammar yet.
     override visitMatch(node: MatchNode) {
+        if (!this._isNodeInRange(node)) {
+            return false;
+        }
+
         this._pushKeyword(node);
         return true;
     }
 
     override visitCase(node: CaseNode) {
+        if (!this._isNodeInRange(node)) {
+            return false;
+        }
+
         this._pushKeyword(node);
         return true;
     }
@@ -248,12 +260,7 @@ class TokenWalker extends ParseTreeWalker {
             return true;
         }
 
-        const nodeRange = convertOffsetsToRange(
-            node.start,
-            node.start + node.length,
-            this._parseResults.tokenizerOutput.lines
-        );
-        return doRangesOverlap(nodeRange, this._range);
+        return TextRange.overlapsRange(this._range, node);
     }
 
     private _getParameterTokenType(decl: ParameterDeclaration): TokenTypes {
@@ -481,19 +488,30 @@ class TokenWalker extends ParseTreeWalker {
     }
 
     private _pushToken(node: ParseNode, tokenType: TokenTypes, tokenModifiers: TokenModifiers) {
-        if (node.length === 0) {
-            // Ignore tokens that come from error recovery.
-            return;
-        }
-
-        const pos = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
-        this._builder.push(pos.line, pos.character, node.length, tokenType, tokenModifiers);
+        this._push(node.start, node.length, tokenType, tokenModifiers);
     }
 
     private _pushKeyword(node: ParseNode) {
         const keywordLength = keywordLengths[node.nodeType];
         assertDefined(keywordLength, 'unknown keyword');
-        const pos = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
-        this._builder.push(pos.line, pos.character, keywordLength, TokenTypes.keyword, TokenModifiers.none);
+        this._push(node.start, keywordLength, TokenTypes.keyword, TokenModifiers.none);
+    }
+
+    private _push(start: number, length: number, tokenType: number, tokenModifiers: number) {
+        if (length === 0) {
+            // Ignore tokens that come from error recovery.
+            return;
+        }
+
+        if (this._range) {
+            const range = TextRange.create(start, length);
+            if (!TextRange.overlapsRange(range, this._range)) {
+                // Do not emit tokens outside the requested range.
+                return;
+            }
+        }
+
+        const pos = convertOffsetToPosition(start, this._parseResults.tokenizerOutput.lines);
+        this._builder.push(pos.line, pos.character, length, tokenType, tokenModifiers);
     }
 }

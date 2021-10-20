@@ -15,6 +15,7 @@
 ////     pass
 //// class class3:
 ////     pass
+//// def constant(a=True, b=False, c=None, d=__debug__): pass
 
 helper.verifySemanticTokens([
     {
