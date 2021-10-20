@@ -600,9 +600,8 @@ export namespace ClassType {
         return type1.literalValue === type2.literalValue;
     }
 
-    // Specifies whether the class type is generic (unspecialized)
-    // or specialized.
-    export function isGeneric(classType: ClassType) {
+    // Is the class generic but not specialized?
+    export function isUnspecialized(classType: ClassType) {
         return classType.details.typeParameters.length > 0 && classType.typeArguments === undefined;
     }
 
@@ -995,6 +994,7 @@ export interface FunctionType extends TypeBase {
 export interface ParamSpecEntry {
     category: ParameterCategory;
     name?: string | undefined;
+    isNameSynthesized?: boolean;
     hasDefault: boolean;
     type: Type;
 }
@@ -1188,7 +1188,7 @@ export namespace FunctionType {
                             category: specEntry.category,
                             name: specEntry.name,
                             hasDefault: specEntry.hasDefault,
-                            isNameSynthesized: false,
+                            isNameSynthesized: specEntry.isNameSynthesized,
                             hasDeclaredType: true,
                             type: specEntry.type,
                         };
@@ -1241,7 +1241,7 @@ export namespace FunctionType {
                     category: specEntry.category,
                     name: specEntry.name,
                     hasDefault: specEntry.hasDefault,
-                    isNameSynthesized: false,
+                    isNameSynthesized: specEntry.isNameSynthesized,
                     hasDeclaredType: true,
                     type: specEntry.type,
                 });
@@ -1717,6 +1717,12 @@ export interface TypeVarType extends TypeBase {
 
     // Represents access to "args" or "kwargs" of a ParamSpec.
     paramSpecAccess?: ParamSpecAccess;
+
+    // This TypeVar should not be replaced by a type when applying solved
+    // types from a TypeVarMap. This is used in cases where a generic class
+    // is specialized from within the class itself using its own type variables
+    // (e.g. a method in Foo[T] returns type Foo[List[T]]).
+    isExemptFromReplacement?: boolean;
 }
 
 export namespace TypeVarType {
@@ -1741,6 +1747,12 @@ export namespace TypeVarType {
         const newInstance: TypeVarType = { ...type };
         newInstance.flags &= ~(TypeFlags.Instance | TypeFlags.NonCallable);
         newInstance.flags |= TypeFlags.Instantiable;
+        return newInstance;
+    }
+
+    export function cloneAsExemptFromReplacement(type: TypeVarType) {
+        const newInstance: TypeVarType = { ...type };
+        newInstance.isExemptFromReplacement = true;
         return newInstance;
     }
 

@@ -29,6 +29,7 @@ import {
 import { getFileInfo } from './analyzerNodeInfo';
 import { getTypedDictMembersForClass } from './typedDicts';
 import { TypeEvaluator } from './typeEvaluatorTypes';
+import { enumerateLiteralsForType } from './typeGuards';
 import {
     AnyType,
     ClassType,
@@ -37,6 +38,8 @@ import {
     isClassInstance,
     isInstantiableClass,
     isNever,
+    isSameWithoutLiteralValue,
+    isUnion,
     isUnknown,
     NeverType,
     Type,
@@ -54,6 +57,7 @@ import {
     mapSubtypes,
     partiallySpecializeType,
     specializeTupleClass,
+    stripLiteralValue,
 } from './typeUtils';
 
 // PEP 634 indicates that several built-in classes are handled differently
@@ -75,8 +79,9 @@ const classPatternSpecialCases = [
 interface SequencePatternInfo {
     subtype: Type;
     entryTypes: Type[];
-    isIndeterminateLength: boolean;
-    isTuple: boolean;
+    isIndeterminateLength?: boolean;
+    isTuple?: boolean;
+    isObject?: boolean;
 }
 
 interface MappingPatternInfo {
@@ -142,6 +147,7 @@ function narrowTypeBasedOnSequencePattern(
     }
 
     let sequenceInfo = getSequencePatternInfo(evaluator, type, pattern.entries.length, pattern.starEntryIndex);
+
     // Further narrow based on pattern entry types.
     sequenceInfo = sequenceInfo.filter((entry) => {
         let isPlausibleMatch = true;
@@ -155,7 +161,9 @@ function narrowTypeBasedOnSequencePattern(
                 entry,
                 index,
                 pattern.entries.length,
-                pattern.starEntryIndex
+                pattern.starEntryIndex,
+                /* unpackStarEntry */ true,
+                /* isSubjectObject */ false
             );
 
             const narrowedEntryType = narrowTypeBasedOnPattern(
@@ -164,6 +172,7 @@ function narrowTypeBasedOnSequencePattern(
                 sequenceEntry,
                 /* isPositiveTest */ true
             );
+
             if (index === pattern.starEntryIndex) {
                 if (
                     isClassInstance(narrowedEntryType) &&
@@ -173,24 +182,41 @@ function narrowTypeBasedOnSequencePattern(
                 ) {
                     narrowedEntryTypes.push(...narrowedEntryType.tupleTypeArguments);
                 } else {
+                    narrowedEntryTypes.push(narrowedEntryType);
                     canNarrowTuple = false;
                 }
             } else {
                 narrowedEntryTypes.push(narrowedEntryType);
-            }
 
-            if (isNever(narrowedEntryType)) {
-                isPlausibleMatch = false;
+                if (isNever(narrowedEntryType)) {
+                    isPlausibleMatch = false;
+                }
             }
         });
 
-        // If this is a tuple, we can narrow it to a specific tuple type.
-        // Other sequences cannot be narrowed because we don't know if they
-        // are immutable (covariant).
-        if (isPlausibleMatch && canNarrowTuple) {
-            const tupleClassType = evaluator.getBuiltInType(pattern, 'tuple');
-            if (tupleClassType && isInstantiableClass(tupleClassType)) {
-                entry.subtype = ClassType.cloneAsInstance(specializeTupleClass(tupleClassType, narrowedEntryTypes));
+        if (isPlausibleMatch) {
+            // If this is a tuple, we can narrow it to a specific tuple type.
+            // Other sequences cannot be narrowed because we don't know if they
+            // are immutable (covariant).
+            if (canNarrowTuple) {
+                const tupleClassType = evaluator.getBuiltInType(pattern, 'tuple');
+                if (tupleClassType && isInstantiableClass(tupleClassType)) {
+                    entry.subtype = ClassType.cloneAsInstance(specializeTupleClass(tupleClassType, narrowedEntryTypes));
+                }
+            }
+
+            // If this is an object, we can narrow it to a specific Sequence type.
+            if (entry.isObject) {
+                const sequenceType = evaluator.getTypingType(pattern, 'Sequence');
+                if (sequenceType && isInstantiableClass(sequenceType)) {
+                    entry.subtype = ClassType.cloneAsInstance(
+                        ClassType.cloneForSpecialization(
+                            sequenceType,
+                            [stripLiteralValue(combineTypes(narrowedEntryTypes))],
+                            /* isTypeArgumentExplicit */ true
+                        )
+                    );
+                }
             }
         }
 
@@ -444,6 +470,25 @@ function narrowTypeBasedOnClassPattern(
         return NeverType.create();
     }
 
+    // Check for certain uses of type aliases that generate runtime exceptions.
+    if (classType.typeAliasInfo) {
+        if (isUnion(classType)) {
+            evaluator.addDiagnostic(
+                getFileInfo(pattern).diagnosticRuleSet.reportGeneralTypeIssues,
+                DiagnosticRule.reportGeneralTypeIssues,
+                Localizer.DiagnosticAddendum.typeNotClass().format({ type: evaluator.printType(classType) }),
+                pattern.className
+            );
+        } else if (isInstantiableClass(classType) && classType.typeArguments && classType.isTypeArgumentExplicit) {
+            evaluator.addDiagnostic(
+                getFileInfo(pattern).diagnosticRuleSet.reportGeneralTypeIssues,
+                DiagnosticRule.reportGeneralTypeIssues,
+                Localizer.DiagnosticAddendum.classPatternTypeAlias().format({ type: evaluator.printType(classType) }),
+                pattern.className
+            );
+        }
+    }
+
     return evaluator.mapSubtypesExpandTypeVars(
         classType,
         /* conditionFilter */ undefined,
@@ -564,34 +609,59 @@ function narrowTypeOfClassPatternArgument(
 
 function narrowTypeBasedOnValuePattern(
     evaluator: TypeEvaluator,
-    type: Type,
+    subjectType: Type,
     pattern: PatternValueNode,
     isPositiveTest: boolean
 ): Type {
-    if (!isPositiveTest) {
-        // Never narrow in negative case.
-        return type;
-    }
-
     const valueType = evaluator.getTypeOfExpression(pattern.expression).type;
     const narrowedSubtypes: Type[] = [];
 
     evaluator.mapSubtypesExpandTypeVars(
         valueType,
         /* conditionFilter */ undefined,
-        (leftSubtypeExpanded, leftSubtypeUnexpanded) => {
+        (valueSubtypeExpanded, valueSubtypeUnexpanded) => {
             narrowedSubtypes.push(
                 evaluator.mapSubtypesExpandTypeVars(
-                    type,
-                    getTypeCondition(leftSubtypeExpanded),
-                    (_, rightSubtypeUnexpanded) => {
-                        if (isNever(leftSubtypeExpanded) || isNever(rightSubtypeUnexpanded)) {
+                    subjectType,
+                    getTypeCondition(valueSubtypeExpanded),
+                    (_, subjectSubtypeUnexpanded) => {
+                        // If this is a negative test, see if it's an enum value.
+                        if (!isPositiveTest) {
+                            if (
+                                isClassInstance(subjectSubtypeUnexpanded) &&
+                                ClassType.isEnumClass(subjectSubtypeUnexpanded) &&
+                                !isLiteralType(subjectSubtypeUnexpanded) &&
+                                isClassInstance(valueSubtypeUnexpanded) &&
+                                isSameWithoutLiteralValue(subjectSubtypeUnexpanded, valueSubtypeUnexpanded) &&
+                                isLiteralType(valueSubtypeUnexpanded)
+                            ) {
+                                const allEnumTypes = enumerateLiteralsForType(evaluator, subjectSubtypeUnexpanded);
+                                if (allEnumTypes) {
+                                    return combineTypes(
+                                        allEnumTypes.filter(
+                                            (enumType) =>
+                                                !ClassType.isLiteralValueSame(valueSubtypeUnexpanded, enumType)
+                                        )
+                                    );
+                                }
+                            } else if (
+                                isClassInstance(subjectSubtypeUnexpanded) &&
+                                isClassInstance(valueSubtypeUnexpanded) &&
+                                ClassType.isLiteralValueSame(valueSubtypeUnexpanded, subjectSubtypeUnexpanded)
+                            ) {
+                                return undefined;
+                            }
+
+                            return subjectSubtypeUnexpanded;
+                        }
+
+                        if (isNever(valueSubtypeExpanded) || isNever(subjectSubtypeUnexpanded)) {
                             return NeverType.create();
                         }
 
-                        if (isAnyOrUnknown(leftSubtypeExpanded) || isAnyOrUnknown(rightSubtypeUnexpanded)) {
+                        if (isAnyOrUnknown(valueSubtypeExpanded) || isAnyOrUnknown(subjectSubtypeUnexpanded)) {
                             // If either type is "Unknown" (versus Any), propagate the Unknown.
-                            return isUnknown(leftSubtypeExpanded) || isUnknown(rightSubtypeUnexpanded)
+                            return isUnknown(valueSubtypeExpanded) || isUnknown(subjectSubtypeUnexpanded)
                                 ? UnknownType.create()
                                 : AnyType.create();
                         }
@@ -600,15 +670,15 @@ function narrowTypeBasedOnValuePattern(
                         // value subtype and matching subtype.
                         const returnType = evaluator.useSpeculativeMode(pattern.expression, () =>
                             evaluator.getTypeFromMagicMethodReturn(
-                                leftSubtypeExpanded,
-                                [rightSubtypeUnexpanded],
+                                valueSubtypeExpanded,
+                                [subjectSubtypeUnexpanded],
                                 '__eq__',
                                 pattern.expression,
                                 /* expectedType */ undefined
                             )
                         );
 
-                        return returnType ? leftSubtypeUnexpanded : undefined;
+                        return returnType ? valueSubtypeUnexpanded : undefined;
                     }
                 )
             );
@@ -693,20 +763,32 @@ function getSequencePatternInfo(
                 subtype,
                 entryTypes: [concreteSubtype],
                 isIndeterminateLength: true,
-                isTuple: false,
             });
-        } else if (isClassInstance(concreteSubtype)) {
+            return;
+        }
+
+        if (isClassInstance(concreteSubtype)) {
+            if (ClassType.isBuiltIn(concreteSubtype, 'object')) {
+                sequenceInfo.push({
+                    subtype,
+                    entryTypes: [convertToInstance(concreteSubtype)],
+                    isIndeterminateLength: true,
+                    isObject: true,
+                });
+                return;
+            }
+
             for (const mroClass of concreteSubtype.details.mro) {
                 if (!isInstantiableClass(mroClass)) {
                     break;
                 }
 
-                // Strings and bytes are explicitly excluded.
-                if (ClassType.isBuiltIn(mroClass, 'str')) {
-                    break;
-                }
-
-                if (ClassType.isBuiltIn(mroClass, 'bytes')) {
+                // Strings, bytes, and bytearray are explicitly excluded.
+                if (
+                    ClassType.isBuiltIn(mroClass, 'str') ||
+                    ClassType.isBuiltIn(mroClass, 'bytes') ||
+                    ClassType.isBuiltIn(mroClass, 'bytearray')
+                ) {
                     break;
                 }
 
@@ -723,6 +805,7 @@ function getSequencePatternInfo(
 
             if (mroClassToSpecialize) {
                 const specializedSequence = partiallySpecializeType(mroClassToSpecialize, concreteSubtype) as ClassType;
+
                 if (isTupleClass(specializedSequence)) {
                     if (specializedSequence.tupleTypeArguments) {
                         if (isOpenEndedTupleClass(specializedSequence)) {
@@ -756,7 +839,6 @@ function getSequencePatternInfo(
                                 : UnknownType.create(),
                         ],
                         isIndeterminateLength: true,
-                        isTuple: false,
                     });
                 }
             }
@@ -772,45 +854,56 @@ function getTypeForPatternSequenceEntry(
     sequenceInfo: SequencePatternInfo,
     entryIndex: number,
     entryCount: number,
-    starEntryIndex: number | undefined
+    starEntryIndex: number | undefined,
+    unpackStarEntry: boolean,
+    isSubjectObject: boolean
 ): Type {
     if (sequenceInfo.isIndeterminateLength) {
-        if (starEntryIndex === entryIndex) {
-            const tupleClassType = evaluator.getBuiltInType(node, 'tuple');
-            if (tupleClassType && isInstantiableClass(tupleClassType)) {
-                return ClassType.cloneAsInstance(
-                    specializeTupleClass(tupleClassType, [
-                        sequenceInfo.entryTypes[0],
-                        AnyType.create(/* isEllipsis */ true),
-                    ])
-                );
-            } else {
-                return UnknownType.create();
+        let entryType = sequenceInfo.entryTypes[0];
+
+        // If the subject is typed as an "object", then the star entry
+        // is simply a list[object]. Without this special case, the list
+        // will be typed based on the union of all elements in the sequence.
+        if (isSubjectObject) {
+            const objectType = evaluator.getBuiltInObject(node, 'object');
+            if (objectType && isClassInstance(objectType)) {
+                entryType = objectType;
             }
-        } else {
-            return sequenceInfo.entryTypes[0];
         }
-    } else if (starEntryIndex === undefined || entryIndex < starEntryIndex) {
-        return sequenceInfo.entryTypes[entryIndex];
-    } else if (entryIndex === starEntryIndex) {
-        // Create a tuple out of the entries that map to the star entry.
-        const starEntryTypes = sequenceInfo.entryTypes.slice(
-            starEntryIndex,
-            starEntryIndex + sequenceInfo.entryTypes.length - entryCount + 1
-        );
-        const tupleClassType = evaluator.getBuiltInType(node, 'tuple');
-        if (tupleClassType && isInstantiableClass(tupleClassType)) {
-            return ClassType.cloneAsInstance(specializeTupleClass(tupleClassType, starEntryTypes));
-        } else {
-            return UnknownType.create();
+
+        if (!unpackStarEntry && entryIndex === starEntryIndex && !isNever(entryType)) {
+            entryType = wrapTypeInList(evaluator, node, entryType);
         }
-    } else {
-        // The entry index is past the index of the star entry, so we need
-        // to index from the end of the sequence rather than the start.
-        const itemIndex = sequenceInfo.entryTypes.length - (entryCount - entryIndex);
-        assert(itemIndex >= 0 && itemIndex < sequenceInfo.entryTypes.length);
-        return sequenceInfo.entryTypes[itemIndex];
+
+        return entryType;
     }
+
+    if (starEntryIndex === undefined || entryIndex < starEntryIndex) {
+        return sequenceInfo.entryTypes[entryIndex];
+    }
+
+    if (entryIndex === starEntryIndex) {
+        // Create a list out of the entries that map to the star entry.
+        // Note that we strip literal types here.
+        const starEntryTypes = sequenceInfo.entryTypes
+            .slice(starEntryIndex, starEntryIndex + sequenceInfo.entryTypes.length - entryCount + 1)
+            .map((type) => stripLiteralValue(type));
+
+        let entryType = combineTypes(starEntryTypes);
+
+        if (!unpackStarEntry) {
+            entryType = wrapTypeInList(evaluator, node, entryType);
+        }
+
+        return entryType;
+    }
+
+    // The entry index is past the index of the star entry, so we need
+    // to index from the end of the sequence rather than the start.
+    const itemIndex = sequenceInfo.entryTypes.length - (entryCount - entryIndex);
+    assert(itemIndex >= 0 && itemIndex < sequenceInfo.entryTypes.length);
+
+    return sequenceInfo.entryTypes[itemIndex];
 }
 
 // Recursively assigns the specified type to the pattern and any capture
@@ -819,6 +912,7 @@ export function assignTypeToPatternTargets(
     evaluator: TypeEvaluator,
     type: Type,
     isTypeIncomplete: boolean,
+    isSubjectObject: boolean,
     pattern: PatternAtomNode
 ) {
     // Further narrow the type based on this pattern.
@@ -842,12 +936,14 @@ export function assignTypeToPatternTargets(
                             info,
                             index,
                             pattern.entries.length,
-                            pattern.starEntryIndex
+                            pattern.starEntryIndex,
+                            /* unpackStarEntry */ false,
+                            isSubjectObject
                         )
                     )
                 );
 
-                assignTypeToPatternTargets(evaluator, entryType, isTypeIncomplete, entry);
+                assignTypeToPatternTargets(evaluator, entryType, isTypeIncomplete, /* isSubjectObject */ false, entry);
             });
             break;
         }
@@ -858,7 +954,7 @@ export function assignTypeToPatternTargets(
             }
 
             pattern.orPatterns.forEach((orPattern) => {
-                assignTypeToPatternTargets(evaluator, type, isTypeIncomplete, orPattern);
+                assignTypeToPatternTargets(evaluator, type, isTypeIncomplete, isSubjectObject, orPattern);
 
                 // OR patterns are evaluated left to right, so we can narrow
                 // the type as we go.
@@ -943,8 +1039,20 @@ export function assignTypeToPatternTargets(
                 const valueType = combineTypes(valueTypes);
 
                 if (mappingEntry.nodeType === ParseNodeType.PatternMappingKeyEntry) {
-                    assignTypeToPatternTargets(evaluator, keyType, isTypeIncomplete, mappingEntry.keyPattern);
-                    assignTypeToPatternTargets(evaluator, valueType, isTypeIncomplete, mappingEntry.valuePattern);
+                    assignTypeToPatternTargets(
+                        evaluator,
+                        keyType,
+                        isTypeIncomplete,
+                        /* isSubjectObject */ false,
+                        mappingEntry.keyPattern
+                    );
+                    assignTypeToPatternTargets(
+                        evaluator,
+                        valueType,
+                        isTypeIncomplete,
+                        /* isSubjectObject */ false,
+                        mappingEntry.valuePattern
+                    );
                 } else if (mappingEntry.nodeType === ParseNodeType.PatternMappingExpandEntry) {
                     const dictClass = evaluator.getBuiltInType(pattern, 'dict');
                     const strType = evaluator.getBuiltInObject(pattern, 'str');
@@ -1014,7 +1122,13 @@ export function assignTypeToPatternTargets(
             });
 
             pattern.arguments.forEach((arg, index) => {
-                assignTypeToPatternTargets(evaluator, combineTypes(argTypes[index]), isTypeIncomplete, arg.pattern);
+                assignTypeToPatternTargets(
+                    evaluator,
+                    combineTypes(argTypes[index]),
+                    isTypeIncomplete,
+                    /* isSubjectObject */ false,
+                    arg.pattern
+                );
             });
             break;
         }
@@ -1026,4 +1140,17 @@ export function assignTypeToPatternTargets(
             break;
         }
     }
+}
+
+function wrapTypeInList(evaluator: TypeEvaluator, node: ParseNode, type: Type): Type {
+    if (isNever(type)) {
+        return type;
+    }
+
+    const listObjectType = convertToInstance(evaluator.getBuiltInObject(node, 'list'));
+    if (listObjectType && isClassInstance(listObjectType)) {
+        return ClassType.cloneForSpecialization(listObjectType, [type], /* isTypeArgumentExplicit */ true);
+    }
+
+    return UnknownType.create();
 }
