@@ -745,6 +745,26 @@
                             ]
                         }
                     }
+                },
+                "python.analysis.logLevel": {
+                    "type": "string",
+                    "default": "Information",
+                    "description": "Specifies the level of logging for the Output panel",
+                    "enum": [
+                        "Error",
+                        "Warning",
+                        "Information",
+                        "Trace"
+                    ]
+                },
+                "python.analysis.typeshedPaths": {
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Paths to look for typeshed modules.",
+                    "scope": "resource"
                 }
             }
         },
