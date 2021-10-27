@@ -124,6 +124,6 @@ export class TrainingLookBackTokenGenerator extends LookBackTokenGenerator {
             tokens[tokens.length - 3].value = type;
         }
 
-        return this.reduceFunctionCallArguments(tokens);
+        return tokens.map((t) => t.value);
     }
 }

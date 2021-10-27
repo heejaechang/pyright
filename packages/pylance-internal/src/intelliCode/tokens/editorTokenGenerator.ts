@@ -115,7 +115,7 @@ export class EditorLookBackTokenGenerator extends LookBackTokenGenerator {
 
         return {
             spanStart: spanStart,
-            lookbackTokens: this.reduceFunctionCallArguments(tokens),
+            lookbackTokens: tokens.map((t) => t.value),
             type: method ? `${type}.${method}` : type,
         };
 

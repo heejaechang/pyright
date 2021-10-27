@@ -128,7 +128,24 @@ z = b(1, 2, 3).fit(x, y)
         const fit = os!.get('fit');
         expect(fit?.spanStart[0]).toEqual(32);
 
-        const expectedTokens = ['\n', 'from', 'a', 'import', 'a.b', '\n', 'z', '=', 'a.b', '.', 'fit'];
+        const expectedTokens = [
+            '\n',
+            'from',
+            'a',
+            'import',
+            'a.b',
+            '\n',
+            'z',
+            '=',
+            'a.b',
+            '(',
+            'NUM_LIT',
+            'NUM_LIT',
+            'NUM_LIT',
+            ')',
+            '.',
+            'fit',
+        ];
         expect(fit!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
     });
 
@@ -158,6 +175,7 @@ tf.placeholder(tf.float32)
             'tensorflow',
             '.',
             'placeholder',
+            '(',
             'tensorflow',
             '.',
             'float32',
@@ -180,7 +198,7 @@ print("a: {}".format(a))
         const f = s!.get('format');
         expect(f?.spanStart[0]).toEqual(15);
 
-        const expectedTokens = ['\n', 'print', 'str', '.', 'format'];
+        const expectedTokens = ['\n', 'print', '(', 'str', '.', 'format'];
         expect(f!.lookbackTokens[0]).toIncludeSameMembers(expectedTokens);
     });
 });

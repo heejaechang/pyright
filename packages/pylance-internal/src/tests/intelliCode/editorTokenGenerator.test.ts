@@ -43,16 +43,16 @@ s. `;
 
     test('module member', () => {
         const code = `
-import os    
+import os
 os. `;
-        verifySingle(code, 'os', 17);
+        verifySingle(code, 'os', 13);
     });
 
     test('module member return 1', () => {
         const code = `
-import os    
+import os
 os.mkdir('dir'). `;
-        verifySingle(code, 'os.mkdir', 30);
+        verifySingle(code, 'os.mkdir', 26);
     });
 
     test('array element', () => {
@@ -67,9 +67,9 @@ x[1]. `;
 
     test('expression in braces', () => {
         const code = `
-import os    
+import os
 (os). `;
-        verifySingle(code, 'os', 19);
+        verifySingle(code, 'os', 15);
     });
 
     test('constant string', () => {
@@ -126,5 +126,61 @@ import os
 from a import b
 z = b(1, 2, 3).fit(x, y). `;
         verifySingle(code, 'a.b.fit', 41);
+    });
+
+    test('remove arguments only on trigger', () => {
+        const code = `
+from a import b
+c = b(1, 2, 3).fit(x, y)
+z = b(1, 2, 3).fit(x, y). `;
+        const expectedTokens = [
+            '\n',
+            'from',
+            'a',
+            'import',
+            'b',
+            '\n',
+            'c',
+            '=',
+            'b',
+            '(',
+            'NUM_LIT',
+            'NUM_LIT',
+            'NUM_LIT',
+            ')',
+            '.',
+            'fit',
+            '(',
+            'x',
+            'y',
+            ')',
+            '\n',
+            'z',
+            '=',
+            'b',
+            '(',
+            'NUM_LIT',
+            'NUM_LIT',
+            'NUM_LIT',
+            ')',
+            '.',
+            'fit',
+            '(',
+            'x',
+            'y',
+            ')',
+            '\n',
+            'a.b.fit',
+            '.',
+        ];
+        const ei = verifySingle(code, 'a.b.fit', 66);
+        expect(ei.lookbackTokens).toIncludeSameMembers(expectedTokens);
+    });
+
+    test('remove arguments inside call', () => {
+        const code = `
+import socket
+s = socket.socket(socket.AF_INET, socket. `;
+        verifySingle(code, 'socket', 55);
     });
 });

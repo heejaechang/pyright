@@ -8,7 +8,7 @@ import { ParseResults } from 'pyright-internal/parser/parser';
 import { IdentifierToken, Token, TokenType } from 'pyright-internal/parser/tokenizerTypes';
 
 import { IntelliCodeConstants, LiteralTokenValue } from '../types';
-import { TokenSet, TokenValuePair } from './tokenSet';
+import { TokenSet } from './tokenSet';
 
 export abstract class LookBackTokenGenerator {
     extractTokens(parseResults: ParseResults): TokenSet {
@@ -66,46 +66,6 @@ export abstract class LookBackTokenGenerator {
     // This function is used to check if the type of the invocation is unknown or null
     protected isTypeUnknown(type: string): boolean {
         return !type || type.startsWith(IntelliCodeConstants.UnresolvedType);
-    }
-
-    protected reduceFunctionCallArguments(tokens: TokenValuePair[]): string[] {
-        const braces: number[] = [];
-        const fnTracker: (Token | undefined)[] = []; // Tracks nested function calls like a(b(c()))
-
-        for (let i = 0; i < tokens.length; i++) {
-            const t = tokens[i].token;
-
-            switch (t.type) {
-                case TokenType.OpenParenthesis: {
-                    // Remember if this was a function call since we don't
-                    // want to wipe out tuple braces.
-                    const prevToken = i > 0 ? tokens[i - 1] : undefined;
-                    fnTracker.push(prevToken?.token);
-                    braces.push(i);
-                    if (prevToken?.token.type === TokenType.Identifier) {
-                        tokens[i].value = '';
-                    }
-                    break;
-                }
-
-                case TokenType.CloseParenthesis:
-                    if (braces.length > 0) {
-                        const openBraceIndex = braces.pop();
-                        const fnToken = fnTracker.pop(); // can pop undefined
-                        if (fnToken?.type === TokenType.Identifier) {
-                            // We only clear arguments on closing brace since
-                            // in case of a method invoke inside argument like in
-                            // 'a(b.x)' tokens come as 'a(b.x' and we don't want
-                            // b.x to be wiped out.
-                            for (let j = openBraceIndex!; j <= i; j++) {
-                                tokens[j].value = '';
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
-        return tokens.map((t) => t.value).filter((v) => v !== '');
     }
 
     private getTokenValue(t: Token, content: string): string {
