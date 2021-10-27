@@ -343,7 +343,7 @@ class TokenWalker extends ParseTreeWalker {
             return this._cachedNodeTokenInfo.get(node);
         }
 
-        if (!this._evaluator.isNodeReachable(node)) {
+        if (!this._evaluator.isNodeReachable(node, /* sourceNode */ undefined)) {
             return undefined;
         }
 
