@@ -36,6 +36,7 @@ import {
     OverloadedFunctionType,
     Type,
     TypeCondition,
+    TypeVarScopeId,
     TypeVarType,
 } from './types';
 import { CanAssignFlags, ClassMember } from './typeUtils';
@@ -239,7 +240,7 @@ export interface TypeEvaluator {
     verifyDeleteExpression: (node: ExpressionNode) => void;
 
     isAfterNodeReachable: (node: ParseNode) => boolean;
-    isNodeReachable: (node: ParseNode) => boolean;
+    isNodeReachable: (node: ParseNode, sourceNode: ParseNode | undefined) => boolean;
     suppressDiagnostics: (node: ParseNode, callback: () => void) => void;
 
     getDeclarationsForNameNode: (node: NameNode) => Declaration[] | undefined;
@@ -265,6 +266,12 @@ export interface TypeEvaluator {
         conditionFilter: TypeCondition[] | undefined,
         callback: (expandedSubtype: Type, unexpandedSubtype: Type) => Type | undefined
     ) => Type;
+    populateTypeVarMapBasedOnExpectedType: (
+        type: ClassType,
+        expectedType: Type,
+        typeVarMap: TypeVarMap,
+        liveTypeVarScopes: TypeVarScopeId[]
+    ) => boolean;
     getEffectiveTypeOfSymbol: (symbol: Symbol) => Type;
     getEffectiveTypeOfSymbolForUsage: (
         symbol: Symbol,

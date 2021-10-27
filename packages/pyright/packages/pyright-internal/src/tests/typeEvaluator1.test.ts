@@ -349,6 +349,12 @@ test('TypeNarrowingIsinstance5', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('TypeNarrowingIsinstance6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingIsinstance6.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
 test('TypeNarrowingIsinstance7', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['typeNarrowingIsinstance7.py']);
 
@@ -851,6 +857,12 @@ test('Operators6', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Operators7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['operators7.py']);
+
+    TestUtils.validateResults(analysisResults, 1);
+});
+
 test('Optional1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -1017,6 +1029,12 @@ test('NamedTuples5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples5.py']);
 
     TestUtils.validateResults(analysisResults, 0);
+});
+
+test('NamedTuples6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['namedTuples6.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Slots1', () => {

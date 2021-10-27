@@ -657,6 +657,10 @@ export class ConfigOptions {
     // Was this config initialized from JSON (pyrightconfig/pyproject)?
     initializedFromJson = false;
 
+    // Should we skip analysis of all functions and methods that have
+    // no parameter ore return type annotations?
+    analyzeUnannotatedFunctions = true;
+
     //---------------------------------------------------------------
     // Diagnostics Rule Set
 
@@ -695,6 +699,10 @@ export class ConfigOptions {
 
     // Run program in index generation mode.
     indexGenerationMode?: boolean | undefined;
+
+    // When a symbol cannot be resolved from an import, should it be
+    // treated as Any rather than Unknown?
+    evaluateUnknownImportsAsAny?: boolean;
 
     static getDiagnosticRuleSet(typeCheckingMode?: string): DiagnosticRuleSet {
         if (typeCheckingMode === 'strict') {

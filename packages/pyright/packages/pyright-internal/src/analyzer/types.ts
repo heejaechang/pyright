@@ -164,7 +164,7 @@ export namespace TypeBase {
         return typeClone;
     }
 
-    export function cloneForCondition(type: Type, condition: TypeCondition[] | undefined) {
+    export function cloneForCondition<T extends Type>(type: T, condition: TypeCondition[] | undefined): T {
         // Handle the common case where there are no conditions. In this case,
         // cloning isn't necessary.
         if (type.condition === undefined && condition === undefined) {
@@ -369,6 +369,10 @@ export const enum ClassTypeFlags {
 
     // Class is declared within a type stub file.
     DefinedInStub = 1 << 23,
+
+    // Class does not allow writing or deleting its instance variables
+    // through a member access. Used with named tuples.
+    ReadOnlyInstanceVariables = 1 << 24,
 }
 
 export interface DataClassBehaviors {
@@ -715,6 +719,10 @@ export namespace ClassType {
 
     export function isTupleClass(classType: ClassType) {
         return !!(classType.details.flags & ClassTypeFlags.TupleClass);
+    }
+
+    export function isReadOnlyInstanceVariables(classType: ClassType) {
+        return !!(classType.details.flags & ClassTypeFlags.ReadOnlyInstanceVariables);
     }
 
     export function getTypeParameters(classType: ClassType) {
@@ -1253,7 +1261,7 @@ export namespace FunctionType {
         return newFunction;
     }
 
-    export function cloneRemoveParamSpecVariadics(type: FunctionType) {
+    export function cloneRemoveParamSpecVariadics(type: FunctionType, paramSpec: TypeVarType) {
         const newFunction = create(
             type.details.name,
             type.details.fullName,
@@ -1271,6 +1279,10 @@ export namespace FunctionType {
             0,
             newFunction.details.parameters.length - 2
         );
+
+        if (!newFunction.details.paramSpec) {
+            newFunction.details.paramSpec = paramSpec;
+        }
 
         return newFunction;
     }
@@ -1474,6 +1486,7 @@ export namespace AnyType {
 export interface TypeCondition {
     typeVarName: string;
     constraintIndex: number;
+    isConstrainedTypeVar: boolean;
 }
 
 export namespace TypeCondition {
