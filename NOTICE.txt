@@ -3082,7 +3082,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---------------------------------------------------------
 
-pyright 1.1.180 - MIT
+pyright 1.1.182 - MIT
 https://github.com/Microsoft/pyright#readme
 
 
