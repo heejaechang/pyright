@@ -742,6 +742,8 @@ export class Program {
                 printTypeFlags: Program._getPrintTypeFlags(this._configOptions),
                 logCalls: this._configOptions.logTypeEvaluationTime,
                 minimumLoggingThreshold: this._configOptions.typeEvaluationTimeThreshold,
+                analyzeUnannotatedFunctions: this._configOptions.analyzeUnannotatedFunctions,
+                evaluateUnknownImportsAsAny: !!this._configOptions.evaluateUnknownImportsAsAny,
             },
             this._logTracker,
             this._configOptions.logTypeEvaluationTime

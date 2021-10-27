@@ -278,7 +278,7 @@ test('Final2', () => {
 
 test('Final3', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['final3.py']);
-    TestUtils.validateResults(analysisResults, 15);
+    TestUtils.validateResults(analysisResults, 21);
 });
 
 test('Final4', () => {
@@ -738,6 +738,14 @@ test('ParamSpec20', () => {
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec20.py'], configOptions);
     TestUtils.validateResults(results, 6);
+});
+
+test('ParamSpec21', () => {
+    const configOptions = new ConfigOptions('.');
+
+    configOptions.defaultPythonVersion = PythonVersion.V3_10;
+    const results = TestUtils.typeAnalyzeSampleFiles(['paramSpec21.py'], configOptions);
+    TestUtils.validateResults(results, 0);
 });
 
 test('ClassVar1', () => {
