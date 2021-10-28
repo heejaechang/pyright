@@ -40,7 +40,7 @@ module.exports = (_, { mode }) => {
                 {
                     sourceMap: false,
                     seed: 258096062,
-                    rotateStringArray: true,
+                    stringArrayRotate: true,
                     shuffleStringArray: true,
                     splitStrings: true,
                     splitStringsChunkLength: 10,
