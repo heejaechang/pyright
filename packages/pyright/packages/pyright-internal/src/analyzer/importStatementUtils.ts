@@ -669,7 +669,10 @@ export function getTextRangeForImportNameDeletion(
     nameNodeIndex: number
 ): TextRange {
     let editSpan: TextRange;
-    if (nameNodeIndex === nameNodes.length - 1) {
+    if (nameNodes.length === 1 && nameNodeIndex === 0) {
+        // get span of "import [|A|]"
+        editSpan = nameNodes[0];
+    } else if (nameNodeIndex === nameNodes.length - 1) {
         // get span of "import A[|, B|]"
         const start = TextRange.getEnd(nameNodes[nameNodeIndex - 1]);
         const length = TextRange.getEnd(nameNodes[nameNodeIndex]) - start;
