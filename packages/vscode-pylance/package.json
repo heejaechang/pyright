@@ -35,6 +35,16 @@
     "extensionDependencies": [
         "ms-python.python"
     ],
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "Python will not be executed; the latest Python version will be used for analysis and installed libraries will not be available."
+        },
+        "virtualWorkspaces": {
+            "supported": "limited",
+            "description": "Analysis is limited to opened files."
+        }
+    },
     "contributes": {
         "commands": [
             {
