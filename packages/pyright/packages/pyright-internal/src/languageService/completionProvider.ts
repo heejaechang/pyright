@@ -457,7 +457,10 @@ export class CompletionProvider {
                 }
             }
 
-            const dictionaryEntry = ParseTreeUtils.getAncestorNodeOfType(curNode, ParseNodeType.DictionaryKeyEntry);
+            const dictionaryEntry = ParseTreeUtils.getFirstAncestorOrSelfOfKind(
+                curNode,
+                ParseNodeType.DictionaryKeyEntry
+            );
             if (dictionaryEntry) {
                 if (dictionaryEntry.parent?.nodeType === ParseNodeType.Dictionary) {
                     const dictionaryNode = dictionaryEntry.parent;
