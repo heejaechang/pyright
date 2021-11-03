@@ -1207,7 +1207,8 @@ export namespace FunctionType {
                     (paramTypes.concrete.flags &
                         (FunctionTypeFlags.ClassMethod |
                             FunctionTypeFlags.StaticMethod |
-                            FunctionTypeFlags.ConstructorMethod)) |
+                            FunctionTypeFlags.ConstructorMethod |
+                            FunctionTypeFlags.ParamSpecValue)) |
                     FunctionTypeFlags.SynthesizedMethod;
 
                 // Update the specialized parameter types as well.
@@ -1585,7 +1586,7 @@ export interface UnionType extends TypeBase {
     subtypes: UnionableType[];
     literalStrMap?: Map<string, UnionableType> | undefined;
     literalIntMap?: Map<number, UnionableType> | undefined;
-    typeAliasSources?: UnionType[];
+    typeAliasSources?: Set<UnionType>;
 }
 
 export namespace UnionType {
@@ -1666,11 +1667,13 @@ export namespace UnionType {
             const sourcesToAdd = typeAliasSource.typeAliasInfo ? [typeAliasSource] : typeAliasSource.typeAliasSources;
 
             if (sourcesToAdd) {
-                if (unionType.typeAliasSources) {
-                    unionType.typeAliasSources.push(...sourcesToAdd);
-                } else {
-                    unionType.typeAliasSources = sourcesToAdd;
+                if (!unionType.typeAliasSources) {
+                    unionType.typeAliasSources = new Set<UnionType>();
                 }
+
+                sourcesToAdd.forEach((source) => {
+                    unionType.typeAliasSources!.add(source);
+                });
             }
         }
     }
@@ -2414,8 +2417,12 @@ export function combineTypes(subtypes: Type[], maxSubtypeCount?: number): Type {
 
     const newUnionType = UnionType.create();
     if (typeAliasSources.length > 0) {
-        newUnionType.typeAliasSources = typeAliasSources;
+        newUnionType.typeAliasSources = new Set<UnionType>();
+        typeAliasSources.forEach((source) => {
+            newUnionType.typeAliasSources!.add(source);
+        });
     }
+
     let hitMaxSubtypeCount = false;
 
     expandedTypes.forEach((subtype, index) => {

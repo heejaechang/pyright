@@ -17,6 +17,7 @@ import {
     ClassType,
     combineTypes,
     findSubtype,
+    FunctionParameter,
     FunctionType,
     FunctionTypeFlags,
     isAny,
@@ -149,6 +150,28 @@ export const enum CanAssignFlags {
     RetainLiteralsForTypeVar = 1 << 7,
 }
 
+export enum ParameterSource {
+    PositionOnly,
+    PositionOrKeyword,
+    KeywordOnly,
+}
+
+export interface ParameterDetails {
+    param: FunctionParameter;
+    index: number;
+    source: ParameterSource;
+}
+
+export interface ParameterListDetails {
+    variadicParamIndex?: number;
+    argsIndex?: number;
+    variadicArgsIndex?: number;
+    kwargsIndex?: number;
+    firstPositionOrKeywordIndex: number;
+    firstKeywordOnlyIndex?: number;
+    params: ParameterDetails[];
+}
+
 interface TypeVarTransformer {
     transformTypeVar: (typeVar: TypeVarType) => Type;
     transformVariadicTypeVar?: (paramSpec: TypeVarType) => Type[] | undefined;
@@ -157,6 +180,66 @@ interface TypeVarTransformer {
 }
 
 let synthesizedTypeVarIndexForExpectedType = 1;
+
+export function getParameterListDetails(type: FunctionType): ParameterListDetails {
+    const result: ParameterListDetails = {
+        firstPositionOrKeywordIndex: 0,
+        params: [],
+    };
+
+    const positionOnlyIndex = type.details.parameters.findIndex(
+        (p) => p.category === ParameterCategory.Simple && !p.name
+    );
+
+    if (positionOnlyIndex >= 0) {
+        result.firstPositionOrKeywordIndex = positionOnlyIndex;
+    }
+
+    let sawKeywordOnlySeparator = false;
+
+    type.details.parameters.forEach((param, index) => {
+        if (param.category === ParameterCategory.VarArgList) {
+            if (!sawKeywordOnlySeparator) {
+                result.firstKeywordOnlyIndex = result.params.length;
+                sawKeywordOnlySeparator = true;
+            }
+
+            if (param.name && result.argsIndex === undefined) {
+                result.argsIndex = result.params.length;
+
+                if (isVariadicTypeVar(param.type)) {
+                    result.variadicArgsIndex = result.params.length;
+                }
+            }
+        }
+
+        if (param.category === ParameterCategory.VarArgDictionary) {
+            if (result.kwargsIndex === undefined) {
+                result.kwargsIndex = result.params.length;
+            }
+        }
+
+        if (param.category === ParameterCategory.Simple) {
+            if (isVariadicTypeVar(param.type)) {
+                result.variadicParamIndex = index;
+            }
+        }
+
+        if (param.name) {
+            result.params.push({
+                param,
+                index,
+                source: sawKeywordOnlySeparator
+                    ? ParameterSource.KeywordOnly
+                    : positionOnlyIndex >= 0 && index < positionOnlyIndex
+                    ? ParameterSource.PositionOnly
+                    : ParameterSource.PositionOrKeyword,
+            });
+        }
+    });
+
+    return result;
+}
 
 export function isOptionalType(type: Type): boolean {
     if (isUnion(type)) {
@@ -590,13 +673,24 @@ export function isLiteralTypeOrUnion(type: Type): boolean {
     return false;
 }
 
-export function containsLiteralType(type: Type): boolean {
+export function containsLiteralType(type: Type, includeTypeArgs = false, recursionCount = 0): boolean {
+    if (recursionCount > maxTypeRecursionCount) {
+        return false;
+    }
+
     if (isClassInstance(type) && isLiteralType(type)) {
         return true;
     }
 
+    if (includeTypeArgs && isClass(type)) {
+        const typeArgs = type.tupleTypeArguments || type.typeArguments;
+        if (typeArgs) {
+            return typeArgs.some((typeArg) => containsLiteralType(typeArg, includeTypeArgs, recursionCount + 1));
+        }
+    }
+
     if (isUnion(type)) {
-        return type.subtypes.some((subtype) => isClassInstance(subtype) && isLiteralType(subtype));
+        return type.subtypes.some((subtype) => containsLiteralType(subtype, includeTypeArgs, recursionCount + 1));
     }
 
     return false;
@@ -632,10 +726,12 @@ export function isOpenEndedTupleClass(type: ClassType) {
 }
 
 // Partially specializes a type within the context of a specified
-// (presumably specialized) class.
+// (presumably specialized) class. Optionally specializes the `Self`
+// type variables, replacing them with selfClass.
 export function partiallySpecializeType(
     type: Type,
     contextClassType: ClassType,
+    selfClass?: ClassType,
     exemptTypeVarReplacement = false
 ): Type {
     // If the context class is not specialized (or doesn't need specialization),
@@ -650,7 +746,21 @@ export function partiallySpecializeType(
         /* makeConcrete */ undefined,
         exemptTypeVarReplacement
     );
+
+    if (selfClass) {
+        populateTypeVarMapForSelfType(typeVarMap, contextClassType, selfClass);
+    }
+
     return applySolvedTypeVars(type, typeVarMap);
+}
+
+export function populateTypeVarMapForSelfType(
+    typeVarMap: TypeVarMap,
+    contextClassType: ClassType,
+    selfClass: ClassType
+) {
+    const synthesizedSelfTypeVar = synthesizeTypeVarForSelfCls(contextClassType, /* isClsParam */ false);
+    typeVarMap.setTypeVarType(synthesizedSelfTypeVar, convertToInstance(selfClass));
 }
 
 // If one of the exempt type variables appears within the type, it is replaced
@@ -687,6 +797,19 @@ export function applySolvedTypeVars(
             // don't transform that type variable.
             if (typeVar.scopeId && typeVarMap.hasSolveForScope(typeVar.scopeId) && !typeVar.isExemptFromReplacement) {
                 let replacement = typeVarMap.getTypeVarType(typeVar, useNarrowBoundOnly);
+
+                // If there was no narrow bound but there is a wide bound that
+                // contains literals, we'll use the wide bound even if "useNarrowBoundOnly"
+                // is specified.
+                if (!replacement && useNarrowBoundOnly) {
+                    const wideType = typeVarMap.getTypeVarType(typeVar);
+                    if (wideType) {
+                        if (containsLiteralType(wideType, /* includeTypeArgs */ true)) {
+                            replacement = wideType;
+                        }
+                    }
+                }
+
                 if (replacement) {
                     if (TypeBase.isInstantiable(typeVar)) {
                         replacement = convertToInstantiable(replacement);
@@ -1342,8 +1465,8 @@ export function removeTruthinessFromType(type: Type): Type {
     });
 }
 
-export function synthesizeTypeVarForSelfCls(classType: ClassType, isClsParam: boolean) {
-    const selfType = TypeVarType.createInstance(`__type_of_${isClsParam ? 'cls' : 'self'}_${classType.details.name}`);
+export function synthesizeTypeVarForSelfCls(classType: ClassType, isClsParam: boolean): TypeVarType {
+    const selfType = TypeVarType.createInstance(`__type_of_self__`);
     const scopeId = getTypeVarScopeId(classType) ?? '';
     selfType.details.isSynthesized = true;
     selfType.details.isSynthesizedSelfCls = true;
@@ -1356,7 +1479,7 @@ export function synthesizeTypeVarForSelfCls(classType: ClassType, isClsParam: bo
         selfSpecializeClassType(classType, /* includeSubclasses */ true)
     );
 
-    return isClsParam ? convertToInstantiable(selfType) : selfType;
+    return isClsParam ? TypeVarType.cloneAsInstantiable(selfType) : selfType;
 }
 
 // Returns the declared yield type if provided, or undefined otherwise.
@@ -2231,7 +2354,7 @@ function _transformTypeVarsInFunctionType(
             variadicTypesToUnpack!.forEach((unpackedType) => {
                 FunctionType.addParameter(newFunctionType, {
                     category: ParameterCategory.Simple,
-                    name: `_p${newFunctionType.details.parameters.length}`,
+                    name: `__p${newFunctionType.details.parameters.length}`,
                     isNameSynthesized: true,
                     type: unpackedType,
                     hasDeclaredType: true,
@@ -2241,7 +2364,7 @@ function _transformTypeVarsInFunctionType(
             const param = { ...functionType.details.parameters[index] };
             param.type = paramType;
             if (param.name && param.isNameSynthesized) {
-                param.name = `_p${newFunctionType.details.parameters.length}`;
+                param.name = `__p${newFunctionType.details.parameters.length}`;
             }
 
             FunctionType.addParameter(newFunctionType, param);
@@ -2311,17 +2434,22 @@ export function requiresTypeArguments(classType: ClassType) {
     return false;
 }
 
-export function requiresSpecialization(type: Type, recursionCount = 0): boolean {
+export function requiresSpecialization(type: Type, ignorePseudoGeneric = false, recursionCount = 0): boolean {
     switch (type.category) {
         case TypeCategory.Class: {
+            if (ClassType.isPseudoGenericClass(type) && ignorePseudoGeneric) {
+                return false;
+            }
+
             if (type.typeArguments) {
                 if (recursionCount > maxTypeRecursionCount) {
                     return false;
                 }
 
                 return (
-                    type.typeArguments.find((typeArg) => requiresSpecialization(typeArg, recursionCount + 1)) !==
-                    undefined
+                    type.typeArguments.find((typeArg) =>
+                        requiresSpecialization(typeArg, ignorePseudoGeneric, recursionCount + 1)
+                    ) !== undefined
                 );
             }
 
@@ -2340,7 +2468,13 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
             }
 
             for (let i = 0; i < type.details.parameters.length; i++) {
-                if (requiresSpecialization(FunctionType.getEffectiveParameterType(type, i), recursionCount + 1)) {
+                if (
+                    requiresSpecialization(
+                        FunctionType.getEffectiveParameterType(type, i),
+                        ignorePseudoGeneric,
+                        recursionCount + 1
+                    )
+                ) {
                     return true;
                 }
             }
@@ -2350,11 +2484,11 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
                     ? type.specializedTypes.returnType
                     : type.details.declaredReturnType;
             if (declaredReturnType) {
-                if (requiresSpecialization(declaredReturnType, recursionCount + 1)) {
+                if (requiresSpecialization(declaredReturnType, ignorePseudoGeneric, recursionCount + 1)) {
                     return true;
                 }
             } else if (type.inferredReturnType) {
-                if (requiresSpecialization(type.inferredReturnType, recursionCount + 1)) {
+                if (requiresSpecialization(type.inferredReturnType, ignorePseudoGeneric, recursionCount + 1)) {
                     return true;
                 }
             }
@@ -2364,12 +2498,18 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
 
         case TypeCategory.OverloadedFunction: {
             return (
-                type.overloads.find((overload) => requiresSpecialization(overload, recursionCount + 1)) !== undefined
+                type.overloads.find((overload) =>
+                    requiresSpecialization(overload, ignorePseudoGeneric, recursionCount + 1)
+                ) !== undefined
             );
         }
 
         case TypeCategory.Union: {
-            return findSubtype(type, (subtype) => requiresSpecialization(subtype, recursionCount + 1)) !== undefined;
+            return (
+                findSubtype(type, (subtype) =>
+                    requiresSpecialization(subtype, ignorePseudoGeneric, recursionCount + 1)
+                ) !== undefined
+            );
         }
 
         case TypeCategory.TypeVar: {
@@ -2382,7 +2522,7 @@ export function requiresSpecialization(type: Type, recursionCount = 0): boolean 
             // if it has generic type arguments.
             if (type.typeAliasInfo?.typeArguments) {
                 return type.typeAliasInfo.typeArguments.some((typeArg) =>
-                    requiresSpecialization(typeArg, recursionCount + 1)
+                    requiresSpecialization(typeArg, ignorePseudoGeneric, recursionCount + 1)
                 );
             }
         }

@@ -17,17 +17,21 @@ import {
     ArgumentCategory,
     ArgumentNode,
     CallNode,
+    CaseNode,
     ClassNode,
     ExpressionNode,
     FunctionNode,
+    MatchNode,
     NameNode,
     ParameterCategory,
+    ParameterNode,
     ParseNode,
     RaiseNode,
 } from '../parser/parseNodes';
 import * as DeclarationUtils from './aliasDeclarationUtils';
 import { AnalyzerFileInfo } from './analyzerFileInfo';
 import { Declaration } from './declaration';
+import { SymbolWithScope } from './scope';
 import { Symbol } from './symbol';
 import {
     ClassType,
@@ -77,7 +81,7 @@ export const enum EvaluatorFlags {
 
     // The Generic class type is allowed in this context. It is
     // normally not allowed if ExpectingType is set.
-    GenericClassTypeAllowed = 1 << 9,
+    AllowGenericClassType = 1 << 9,
 
     // A type annotation restricts the types of expressions that are
     // allowed. If this flag is set, illegal type expressions are
@@ -106,6 +110,9 @@ export const enum EvaluatorFlags {
 
     // 'ClassVar' is not allowed in this context.
     ClassVarDisallowed = 1 << 17,
+
+    // 'Generic' cannot be used without type arguments in this context.
+    DisallowNakedGeneric = 1 << 18,
 }
 
 export interface TypeResult {
@@ -233,7 +240,11 @@ export interface TypeEvaluator {
     getTypeOfClass: (node: ClassNode) => ClassTypeResult | undefined;
     getTypeOfFunction: (node: FunctionNode) => FunctionTypeResult | undefined;
     getTypeForExpressionExpectingType: (node: ExpressionNode, allowFinal: boolean) => Type;
+    evaluateTypeForSubnode: (subnode: ParseNode, callback: () => void) => TypeResult | undefined;
     evaluateTypesForStatement: (node: ParseNode) => void;
+    evaluateTypesForMatchNode: (node: MatchNode) => void;
+    evaluateTypesForCaseNode: (node: CaseNode) => void;
+    evaluateTypeOfParameter: (node: ParameterNode) => void;
 
     getExpectedType: (node: ExpressionNode) => ExpectedTypeResult | undefined;
     verifyRaiseExceptionType: (node: RaiseNode) => void;
@@ -272,12 +283,16 @@ export interface TypeEvaluator {
         typeVarMap: TypeVarMap,
         liveTypeVarScopes: TypeVarScopeId[]
     ) => boolean;
+    lookUpSymbolRecursive: (node: ParseNode, name: string, honorCodeFlow: boolean) => SymbolWithScope | undefined;
+    getDeclaredTypeOfSymbol: (symbol: Symbol) => Type | undefined;
     getEffectiveTypeOfSymbol: (symbol: Symbol) => Type;
     getEffectiveTypeOfSymbolForUsage: (
         symbol: Symbol,
         usageNode?: NameNode,
         useLastDecl?: boolean
     ) => EffectiveTypeResult;
+    getInferredTypeOfDeclaration: (decl: Declaration) => Type | undefined;
+    getDeclaredTypeForExpression: (expression: ExpressionNode, usage?: EvaluatorUsage) => Type | undefined;
     getFunctionDeclaredReturnType: (node: FunctionNode) => Type | undefined;
     getFunctionInferredReturnType: (type: FunctionType, args?: ValidateArgTypeParams[]) => Type;
     getBestOverloadForArguments: (
@@ -315,7 +330,7 @@ export interface TypeEvaluator {
     canAssignType: (
         destType: Type,
         srcType: Type,
-        diag: DiagnosticAddendum,
+        diag?: DiagnosticAddendum,
         typeVarMap?: TypeVarMap,
         flags?: CanAssignFlags,
         recursionCount?: number
@@ -361,4 +376,6 @@ export interface TypeEvaluator {
 
     getTypeCacheSize: () => number;
     useSpeculativeMode: <T>(speculativeNode: ParseNode, callback: () => T) => T;
+
+    checkForCancellation: () => void;
 }

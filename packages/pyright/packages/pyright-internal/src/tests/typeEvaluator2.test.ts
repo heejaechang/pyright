@@ -15,7 +15,7 @@ import * as TestUtils from './testUtils';
 test('CallbackProtocol1', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol1.py']);
 
-    TestUtils.validateResults(analysisResults, 6);
+    TestUtils.validateResults(analysisResults, 8);
 });
 
 test('CallbackProtocol2', () => {
@@ -39,13 +39,19 @@ test('CallbackProtocol4', () => {
 test('CallbackProtocol5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol5.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('CallbackProtocol6', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol6.py']);
 
     TestUtils.validateResults(analysisResults, 2);
+});
+
+test('CallbackProtocol7', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['callbackProtocol7.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
 });
 
 test('Assignment1', () => {
@@ -57,7 +63,7 @@ test('Assignment1', () => {
 test('Assignment2', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['assignment2.py']);
 
-    TestUtils.validateResults(analysisResults, 2);
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('Assignment3', () => {
@@ -146,6 +152,12 @@ test('Super4', () => {
 
 test('Super5', () => {
     const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super5.py']);
+
+    TestUtils.validateResults(analysisResults, 0);
+});
+
+test('Super6', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['super6.py']);
 
     TestUtils.validateResults(analysisResults, 0);
 });

@@ -539,6 +539,12 @@ test('ThreePartVersion1', () => {
     TestUtils.validateResults(analysisResults, 0);
 });
 
+test('Generic1', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['generic1.py']);
+
+    TestUtils.validateResults(analysisResults, 9);
+});
+
 test('Unions1', () => {
     const configOptions = new ConfigOptions('.');
 
@@ -574,6 +580,12 @@ test('Unions3', () => {
     configOptions.defaultPythonVersion = PythonVersion.V3_10;
     const analysisResults3_10 = TestUtils.typeAnalyzeSampleFiles(['unions3.py'], configOptions);
     TestUtils.validateResults(analysisResults3_10, 0);
+});
+
+test('Unions4', () => {
+    const analysisResults = TestUtils.typeAnalyzeSampleFiles(['unions4.py']);
+
+    TestUtils.validateResults(analysisResults, 3);
 });
 
 test('ParamSpec1', () => {

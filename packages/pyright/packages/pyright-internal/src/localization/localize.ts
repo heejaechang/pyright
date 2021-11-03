@@ -641,6 +641,8 @@ export namespace Localizer {
         export const revealLocalsArgs = () => getRawString('Diagnostic.revealLocalsArgs');
         export const revealLocalsNone = () => getRawString('Diagnostic.revealLocalsNone');
         export const revealTypeArgs = () => getRawString('Diagnostic.revealTypeArgs');
+        export const selfTypeContext = () => getRawString('Diagnostic.selfTypeContext');
+        export const selfTypeWithTypedSelfOrCls = () => getRawString('Diagnostic.selfTypeWithTypedSelfOrCls');
         export const setterGetterTypeMismatch = () => getRawString('Diagnostic.setterGetterTypeMismatch');
         export const starPatternInAsPattern = () => getRawString('Diagnostic.starPatternInAsPattern');
         export const starPatternInOrPattern = () => getRawString('Diagnostic.starPatternInOrPattern');
@@ -676,13 +678,11 @@ export namespace Localizer {
             new ParameterizedString<{ name: string; className: string }>(getRawString('Diagnostic.symbolOverridden'));
         export const trailingCommaInFromImport = () => getRawString('Diagnostic.trailingCommaInFromImport');
         export const tryWithoutExcept = () => getRawString('Diagnostic.tryWithoutExcept');
+        export const tupleAssignmentMismatch = () =>
+            new ParameterizedString<{ type: string }>(getRawString('Diagnostic.tupleAssignmentMismatch'));
         export const tupleInAnnotation = () => getRawString('Diagnostic.tupleInAnnotation');
         export const tupleIndexOutOfRange = () =>
             new ParameterizedString<{ length: number; index: number }>(getRawString('Diagnostic.tupleIndexOutOfRange'));
-        export const tupleSizeMismatch = () =>
-            new ParameterizedString<{ expected: number; received: number }>(
-                getRawString('Diagnostic.tupleSizeMismatch')
-            );
         export const typeAliasIsRecursiveDirect = () =>
             new ParameterizedString<{ name: string }>(getRawString('Diagnostic.typeAliasIsRecursiveDirect'));
         export const typeAliasIsRecursiveIndirect = () =>
@@ -949,7 +949,6 @@ export namespace Localizer {
         export const overloadMethod = () => getRawString('DiagnosticAddendum.overloadMethod');
         export const overloadNotAssignable = () =>
             new ParameterizedString<{ name: string }>(getRawString('DiagnosticAddendum.overloadNotAssignable'));
-        export const overloadTooManyUnions = () => getRawString('DiagnosticAddendum.overloadTooManyUnions');
         export const overloadWithImplementation = () => getRawString('DiagnosticAddendum.overloadWithImplementation');
         export const overriddenMethod = () => getRawString('DiagnosticAddendum.overriddenMethod');
         export const overriddenSymbol = () => getRawString('DiagnosticAddendum.overriddenSymbol');
@@ -1010,6 +1009,8 @@ export namespace Localizer {
         export const seeVariableDeclaration = () => getRawString('DiagnosticAddendum.seeVariableDeclaration');
         export const tupleEntryTypeMismatch = () =>
             new ParameterizedString<{ entry: number }>(getRawString('DiagnosticAddendum.tupleEntryTypeMismatch'));
+        export const tupleAssignmentMismatch = () =>
+            new ParameterizedString<{ type: string }>(getRawString('DiagnosticAddendum.tupleAssignmentMismatch'));
         export const tupleSizeMismatch = () =>
             new ParameterizedString<{ expected: number; received: number }>(
                 getRawString('DiagnosticAddendum.tupleSizeMismatch')
