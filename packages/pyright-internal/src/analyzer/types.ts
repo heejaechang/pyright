@@ -2789,6 +2789,11 @@ export interface TypeVarType extends TypeBase<TypeCategory.TypeVar> {
     priv: TypeVarTypeDetailsPriv;
 }
 
+export interface TypeVarType extends TypeBase<TypeCategory.TypeVar> {
+    shared: TypeVarDetailsShared;
+    priv: TypeVarTypeDetailsPriv;
+}
+
 export namespace TypeVarType {
     export function createInstance(name: string) {
         return create(name, /* isParamSpec */ false, TypeFlags.Instance);

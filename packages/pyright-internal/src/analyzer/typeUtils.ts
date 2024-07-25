@@ -448,6 +448,15 @@ export interface MapSubtypesOptions {
     retainTypeAlias?: boolean;
 }
 
+export interface MapSubtypesOptions {
+    // Should subtypes in a union be sorted before iteration?
+    sortSubtypes?: boolean;
+
+    // Should unions retain redundant literal types if they
+    // are present in the original type?
+    skipElideRedundantLiterals?: boolean;
+}
+
 // Calls a callback for each subtype and combines the results
 // into a final type. It performs no memory allocations if the
 // transformed type is the same as the original.
